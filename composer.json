@@ -1,0 +1,33 @@
+{
+ "require": {
+  "securionpay/securionpay-php": "^2.6.0",
+  "smarty/smarty": "^5.1.0",
+  "gettext/gettext": "^4.8.11",
+  "ezyang/htmlpurifier": "^4.17",
+  "mobiledetect/mobiledetectlib": "^2.8",
+  "hybridauth/hybridauth": "^3.11",
+  "google/recaptcha": "^1.2",
+  "phpmailer/phpmailer": "^6.6",
+  "sonata-project/google-authenticator": "^2.3",
+  "fzaninotto/faker": "^1.9.2",
+  "twilio/sdk": "^6.37",
+  "taylanunutmaz/agora-token-builder": "^1.1",
+  "claviska/simpleimage": "^3.6",
+  "stripe/stripe-php": "^7.128",
+  "aws/aws-sdk-php": "^3.222",
+  "nicolab/php-ftp-client": "^2.0",
+  "google/cloud-storage": "^1.26",
+  "2checkout/2checkout-php": "^0.4.0",
+  "embed/embed": "^4.4",
+  "p3k/emoji-detector": "^1.0",
+  "authorizenet/authorizenet": "^2.0",
+  "cashfree/cashfree-pg": "^4.2",
+  "verotel/flexpay-php-client": "^5.1",
+  "symfony/yaml": "^5.4"
+ },
+ "config": {
+  "allow-plugins": {
+   "php-http/discovery": true
+  }
+ }
+}

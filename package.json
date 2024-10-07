@@ -21,6 +21,6 @@
   "tinymce-i18n": "^24.9.30",
   "triggeredautocomplete": "github:Dmitrytech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",
-  "zuck.js": "^1.6.0"
+  "zuck.js": "^2.1.0"
  }
 }

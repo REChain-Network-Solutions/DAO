@@ -18,7 +18,7 @@
   "slick-carousel": "^1.8.1",
   "theia-sticky-sidebar": "^1.7.0",
   "tinymce": "^7.6.0",
-  "tinymce-i18n": "^24.12.9",
+  "tinymce-i18n": "^24.12.30",
   "triggeredautocomplete": "github:Dmitrytech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",
   "zuck.js": "^2.1.0"

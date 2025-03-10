@@ -17,7 +17,7 @@
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
   "theia-sticky-sidebar": "^1.7.0",
-  "tinymce": "^7.7.0",
+  "tinymce": "^7.7.1",
   "tinymce-i18n": "^25.2.3",
   "triggeredautocomplete": "github:Dmitrytech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",

@@ -16,7 +16,7 @@
   "rcrop": "github:Dmitrytech/rcrop",
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
-  "theia-sticky-sidebar": "^1.7.0",
+  "theia-sticky-sidebar": "^2.0.0",
   "tinymce": "^7.7.2",
   "tinymce-i18n": "^25.2.3",
   "triggeredautocomplete": "github:Dmitrytech/triggeredAutocomplete",

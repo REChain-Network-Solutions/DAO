@@ -1,0 +1,44 @@
+# services
+services:
+ # PHP & Apache Service
+ php_apache:
+  image: Delus # name your image
+  container_name: php_apache
+  build:
+   context: .
+   dockerfile: Dockerfile
+  depends_on:
+   - mysql_db
+  volumes:
+   - .:/var/www/html
+  ports:
+   - 80:80
+
+ # MySQL Service
+ mysql_db:
+  container_name: mysql_db
+  image: mysql
+  restart: always
+  environment:
+   MYSQL_ROOT_PASSWORD: 123456
+  ports:
+   - 3306:3306
+  volumes:
+   - mysql-data:/var/lib/mysql # Volume not Bind Mounting
+
+ # PHPmyAdmin Service
+ phpmyadmin:
+  container_name: phpmyadmin
+  image: phpmyadmin
+  restart: always
+  ports:
+   - 8080:80
+  environment:
+   PMA_HOST: mysql_db
+  depends_on:
+   - mysql_db
+
+# volumes
+volumes:
+ mysql-data:
+  external: true

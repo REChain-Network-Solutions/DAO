@@ -1,4 +1,135 @@
-﻿#== v3.13 == ( 30-09-2024 )
+﻿#== v4.0.3 == ( 08-05-2025 )
+- [Fixed] Uploading Performance (Loading Issue)
+- [Fixed] Delete Merits Category
+- [Fixed] Yandex Upload Issue
+- [Fixed] Backbalze Upload Issue
+- [Fixed] Installer Check Issue
+- [Fixed] Minor Bugs
+
+#== v4.0.2 == ( 05-05-2025 )
+- [Fixed] Reels Issue When Newsfeed Caching Enabled
+- [Fixed] PWA JS Error
+- [Fixed] Minor Bugs
+
+#== v4.0.1 == ( 03-05-2025 )
+- [Fixed] PWA IOS Banner Issue
+- [Fixed] Chunk Uploads Issue
+- [Fixed] Backblaze Upload Issue
+- [Fixed] Cash On Delivery Issue
+- [Fixed] Login Issue
+- [Fixed] Minor Bugs
+
+#== v4.0 == ( 30-04-2025 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Delus PHP Dependencies
+- [Updated] Delus JS Dependencies
+
+- [Added] PWA
+- [Added] Admin Ability To Turn PWA On/Off
+- [Added] Docker Files
+- [Added] Newsfeed Merge
+- [Added] Newsfeed Caching
+- [Added] Enhance Newsfeed Infinite Scroll
+- [Added] Popular Posts Interval
+- [Added] Chunk Uploads
+- [Added] Admin Ability To Select Chunk Size
+- [Added] Image Compression with Cloud Storage
+- [Added] Google Translation Besides Yandex
+- [Added] Chat Translation Like Posts
+- [Added] Paid Live Streaming
+- [Added] Newsfeed Sorting Shortcut
+- [Added] Wallet Payment For Marketplace
+- [Added] Cash On Delivery In Marktplace
+- [Added] Admin Ability To Turn Cash On Delivery On/Off
+- [Added] Censored Domains
+- [Added] Admin Ability To Turn Censored Domains On/Off
+- [Added] Manage Moderators Permissions From Admin Panel
+- [Added] Hide From Suggestions List Privacy Settings
+- [Added] Post Option For Ads System
+- [Added] LiveKit For Audio/Video Calls
+- [Added] Agora For Audio/Video Calls
+- [Added] More 4 Places For Widgets
+- [Added] New Option To Crop Cover Picture
+- [Added] Reels Available For Non-Logged In Users
+- [Added] Newsfeed Scrolling Enhancement
+- [Added] MercadoPago Payment
+- [Added] In Mobile Swipe Left To Back
+- [Added] Admin Ability To Turn Mobile Swipe On/Off
+- [Added] Cronjob System
+- [Added] Admin Ability To Turn Cronjob System On/Off
+- [Added] My Offers To Side Menu
+- [Added] My Jobs To Side Menu
+- [Added] My Courses To Side Menu
+- [Added] Mask Uploaded File Path
+- [Added] Admin Ability To Turn Mask Uploaded File Path On/Off
+- [Added] [Verified, City, Country] Filters In People Finder
+- [Added] Admin Ability To Disable Default YouTube Player
+- [Added] HEIF/HEIC Images Support
+- [Added] Posts Schedule System
+- [Added] Posts Schedule Permission To Permissions Groups
+- [Added] Cloudflare Turnstile CAPTCHA
+- [Added] Custom Affiliates Levels (System Level)
+- [Added] Custom Affiliates Levels (Permissions Group Level)
+- [Added] Custom Affiliates Levels (User Level)
+- [Added] Content Monetization To Affiliates System
+- [Added] Pay The Referrer Who (Invited The Buyer|Invited The Seller)
+- [Added] Password Complexity System
+- [Added] Whitelist Providers
+- [Added] HLS/M3U8 Support For Video Player
+- [Added] Marketplace Automatic Delivery
+- [Added] Marketplace Automatic Delivery To Garbage Collector
+- [Added] Marketplace Automatic Delivery To Cronjob
+- [Added] Show/Hide Login Password
+- [Added] Announcement For All Visitors & Members
+- [Added] Reset All Users Wallet Balance & Transactions To Garbage Collector
+- [Added] Delete All Fake Users To Garbage Collector
+- [Added] Delete All Fake Pages To Garbage Collector
+- [Added] Delete All Fake Groups To Garbage Collector
+- [Added] Copy The Invitation Link
+- [Added] Smooth Scroll To New Posts
+- [Added] In Mobile Show All Settings Once Click Settings
+- [Added] In Mobile Show All Messages Once Click Messages
+- [Added] Publisher Embded Error Message Instead Of Modal
+- [Added] Change Profile, Page, Group & Event Layout Order
+- [Added] Delete Publisher Removed Uploads (Photos, Videos, Audios, Files) From Server
+- [Added] Ads Author Can See His Ads
+- [Added] Location Search For Products
+- [Added] User Ability To Lock Paid Post With Files
+- [Added] User 'Getting Started' toggle in admin user settings
+- [Added] Offers Read Permission To Permissions Groups
+- [Added] Select Custom User Group Now Mandatory If Enabled
+- [Added] Merits System
+
+- [Fixed] Minor Bugs
+- [Fixed] PayPal Duplicated Payments Log
+- [Fixed] Donate With Wallet Amount Issue
+- [Fixed] Wallet Transfer Max Set To 0 Issue
+- [Fixed] Reels Reactions By Click In Desktop
+- [Fixed] Up/Down Keys Popup Error
+- [Fixed] Stripe Recurring Payments
+- [Fixed] Video Quality Selector
+- [Fixed] Show All (Pages, Groups, Events) When Share Post
+- [Fixed] Show All (Pages, Groups, Events) In Ads Manager
+- [Fixed] Marketplace Order Payment Issue
+- [Fixed] Improve Transaction Handling In CoinPayments Webhook
+- [Fixed] Discover & Popular Posts With Country Filter
+- [Fixed] Notifications Counter Issue
+- [Fixed] Posts Loader Colors In Dark Mode
+- [Fixed] Pager Colors In Dark Mode
+- [Fixed] Events Images in UI-Box Listing
+- [Fixed] Edit Reels Comments/Replies Issue
+- [Fixed] Show Course Start & End Date
+- [Fixed] User Name In Activation Email Issue
+- [Fixed] Stories With Friends System Disabled Issue
+- [Fixed] Validate Amount For Wallet Operations To Ensure Non-Negative Values
+- [Fixed] Update user access checks to allow logged-in users to bypass public system restrictions
+- [Fixed] Disable Pull To Refresh in Android App for REELS
+- [Fixed] Emojis & Stickers Space Issue
+- [Fixed] Hide Points Card & Transaction with 0 Value 
+
+#== v3.13 == ( 30-09-2024 )
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization

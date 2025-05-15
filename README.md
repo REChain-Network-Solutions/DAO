@@ -101,7 +101,7 @@ This project is licensed under the BSD-3 License — see the [LICENSE](./LICENSE
 ## Join the Conversation 💬
 
 Get involved with the REChain DAO community:
-- **Email**: support@rechain.email
+- **Email**: support@rechain.network
 - **Website**: [rechain.network](https://www.rechain.network)
 - **Twitter**: [@REChainNetwork](https://twitter.com/rechain_inc)
 

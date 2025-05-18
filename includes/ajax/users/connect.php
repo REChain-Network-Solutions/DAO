@@ -3,8 +3,8 @@
 /**
  * ajax -> users -> connect
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 // fetch bootstrap
@@ -14,7 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // user access
-user_access(true);
+user_access(true, true, true);
 
 // check demo account
 if ($user->_data['user_demo']) {

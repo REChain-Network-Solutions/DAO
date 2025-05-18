@@ -3,8 +3,8 @@
 /**
  * class -> user
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 /* 
@@ -1859,7 +1859,7 @@ class User
       return $results;
     }
     /* validate country */
-    if (isset($country) && $country != "any" && !$this->check_country($country)) {
+    if (isset($country) && $country != "none" && !$this->check_country($country)) {
       return $results;
     }
     /* validate online status */
@@ -1873,10 +1873,10 @@ class User
     // prepare where statement
     $where = "";
     /* exclude the viewer & banned users */
-    $where .= sprintf("WHERE user_banned = '0' AND user_id != %s", secure($this->_data['user_id'], 'int'));
+    $where .= sprintf("WHERE users.user_id != '1' AND users.user_banned = '0' AND users.user_suggestions_hidden = '0' AND users.user_id != %s", secure($this->_data['user_id'], 'int'));
     /* exclude unactivated users if activation enabled */
     if ($system['activation_enabled']) {
-      $where .= " AND user_activated = '1'";
+      $where .= " AND users.user_activated = '1'";
     }
     /* query */
     if ($query) {
@@ -1887,7 +1887,7 @@ class User
       $where .= sprintf(" AND user_current_city = %s", secure($city));
     }
     /* country */
-    if ($country != "any") {
+    if ($country != "none") {
       $where .= sprintf(" AND user_country = %s", secure($country));
     }
     /* gender */
@@ -2942,14 +2942,14 @@ class User
     /* (check&get) user */
     $get_user = $db->query(sprintf("SELECT user_group FROM users WHERE user_id = %s", secure($user_id, 'int')));
     if ($get_user->num_rows == 0) {
-      _error(403);
+      throw new BadRequestException(__("User not found"));
     }
     $user = $get_user->fetch_assoc();
     // delete user
     $can_delete = false;
     /* target is (admin|moderator) */
     if ($user['user_group'] < 3) {
-      throw new Exception(__("You can not delete admin/morderator accounts"));
+      throw new BadRequestException(__("You can not delete admin/morderator accounts"));
     }
     /* viewer is (admin|moderator) */
     if ($this->_data['user_group'] < 3) {
@@ -3911,7 +3911,7 @@ class User
     if ($get_receiver->num_rows == 0) {
       return;
     }
-    if ($system['email_notifications'] || $system['onesignal_notification_enabled']) {
+    if ($system['email_notifications'] || $system['onesignal_notification_enabled'] || $system['onesignal_messenger_notification_enabled'] || $system['onesignal_timeline_notification_enabled']) {
       /* prepare receiver */
       $receiver = $get_receiver->fetch_assoc();
       $receiver['name'] = ($system['show_usernames_enabled']) ? $receiver['user_name'] : $receiver['user_firstname'] . " " . $receiver['user_lastname'];
@@ -3923,7 +3923,7 @@ class User
       $db->query(sprintf("UPDATE users SET user_live_notifications_counter = user_live_notifications_counter + 1 WHERE user_id = %s", secure($to_user_id, 'int')));
     }
     /* onesignal push notifications */
-    if ($system['onesignal_notification_enabled']) {
+    if ($system['onesignal_notification_enabled'] || $system['onesignal_messenger_notification_enabled'] || $system['onesignal_timeline_notification_enabled']) {
       /* set notification language to receiver's language */
       if ($receiver['user_language'] != DEFAULT_LOCALE) {
         $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $receiver['user_language'] . '/LC_MESSAGES/messages.po');
@@ -4476,23 +4476,23 @@ class User
       }
       /* prepare notification for web */
       $notification['full_message'] = html_entity_decode($this->_data['user_fullname'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
-      /* onesignal push notifications (web) */
-      $get_sessions = $db->query(sprintf("SELECT session_onesignal_user_id FROM users_sessions WHERE user_id = %s AND session_type = 'W' AND (session_onesignal_user_id IS NOT NULL OR session_onesignal_user_id != '')", secure($receiver['user_id'], 'int')));
-      while ($session = $get_sessions->fetch_assoc()) {
-        if($session['session_onesignal_user_id']) {
-          onesignal_notification($session['session_onesignal_user_id'], $notification);
-        }
-      }
-      /* prepare notification for apps */
+      /* prepare notification for mobile apps */
       $notification_mobile = $notification;
-      $notification_mobile['url'] = str_replace('https://', 'Delus://', $notification_mobile['url']);
       $notification_mobile['headings'] = $this->_data['user_fullname'];
       $notification_mobile['full_message'] = $notification_mobile['message'];
-      /* onesignal push notifications (apps) */
-      $get_sessions = $db->query(sprintf("SELECT session_onesignal_user_id FROM users_sessions WHERE user_id = %s AND session_type != 'W' AND (session_onesignal_user_id IS NOT NULL OR session_onesignal_user_id != '')", secure($receiver['user_id'], 'int')));
+      /* onesignal push notifications */
+      $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s AND (session_onesignal_user_id IS NOT NULL OR session_onesignal_user_id != '')", secure($receiver['user_id'], 'int')));
       while ($session = $get_sessions->fetch_assoc()) {
         if($session['session_onesignal_user_id']) {
-          onesignal_notification($session['session_onesignal_user_id'], $notification_mobile);
+          if($session['session_type'] == 'W') {
+            onesignal_notification($session['session_onesignal_user_id'], $notification, 'web');
+          } else {
+            onesignal_notification($session['session_onesignal_user_id'], $notification_mobile, 'web-view');
+            onesignal_notification($session['session_onesignal_user_id'], $notification_mobile, 'timeline');
+            if($action == 'chat_message') {
+              onesignal_notification($session['session_onesignal_user_id'], $notification_mobile, 'messenger');
+            }
+          }
         }
       }
     }
@@ -7824,7 +7824,7 @@ class User
       $where_query .= " AND (posts.post_type NOT IN ('profile_picture', 'profile_cover', 'page_picture', 'page_cover', 'group_picture', 'group_cover', 'event_cover'))";
     }
     /* posts caching system */
-    if ($this->_logged_in && $system['newsfeed_caching_enabled'] && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
+    if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
       $where_query .= " AND (posts.post_id NOT IN (SELECT post_id FROM posts_cache WHERE user_id = " . $this->_data['user_id'] . "))";
     }
     /* posts scheduling system (exclude scheduled & pending posts) */
@@ -7843,7 +7843,7 @@ class User
         $post = $this->get_post($post['post_id'], true, true); /* $full_details = true, $pass_privacy_check = true */
         if ($post) {
           /* posts caching system */
-          if ($this->_logged_in && $system['newsfeed_caching_enabled'] && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
+          if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
             $db->query(sprintf("INSERT INTO posts_cache (user_id, post_id, cache_date) VALUES (%s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($post['post_id'], 'int'), secure($date)));
           }
           $posts[] = $post;
@@ -23510,9 +23510,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'delus':
+        $social_id = "delus_id";
+        $social_connected = "delus_connected";
         break;
     }
     /* check if user connected or not */
@@ -23606,9 +23606,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'delus':
+        $social_id = "delus_id";
+        $social_connected = "delus_connected";
         break;
 
       default:

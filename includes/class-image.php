@@ -3,8 +3,8 @@
 /**
  * class -> image
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 class Image
@@ -24,28 +24,47 @@ class Image
   public function __construct($file)
   {
     /* check for the required GD extension */
-    if (extension_loaded('gd')) {
-      /* ignore JPEG warnings that cause imagecreatefromjpeg() to fail */
-      ini_set('gd.jpeg_ignore_warning', 1);
-    } else {
+    if (!extension_loaded('gd')) {
       throw new Exception(__("Required extension GD is not loaded"));
     }
+    /* ignore JPEG warnings that cause imagecreatefromjpeg() to fail */
+    ini_set('gd.jpeg_ignore_warning', 1);
+    /* set the temp file */
+    $is_temp_file = false;
     /*  check if image is heic or heif */
     if (preg_match('/\.heic$|\.heif$/i', $file)) {
       /* convert to jpg using imagick */
-      if (extension_loaded('imagick')) {
-        $imagick = new Imagick($file);
-        $imagick->setImageFormat('jpg');
-        $temp_file = tempnam(sys_get_temp_dir(), 'heic') . '.jpg';
-        $imagick->writeImage($temp_file);
-        $file = $temp_file;
-      } else {
+      if (!extension_loaded('imagick')) {
         throw new Exception(__("Required extension Imagick is not loaded"));
       }
+      $imagick = new Imagick($file);
+      $imagick->setImageFormat('jpg');
+      $temp_file = tempnam(sys_get_temp_dir(), 'heic') . '.jpg';
+      $imagick->writeImage($temp_file);
+      $file = $temp_file;
+      $is_temp_file = true;
+    }
+    /* if the file is a remote URL, download it first (to bypass allow_url_fopen) */
+    if (filter_var($file, FILTER_VALIDATE_URL)) {
+      $tmpFile = tempnam(sys_get_temp_dir(), 'img_');
+      $ch = curl_init($file);
+      $fp = fopen($tmpFile, 'wb');
+      curl_setopt($ch, CURLOPT_FILE, $fp);
+      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+      curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+      curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0');
+      curl_exec($ch);
+      curl_close($ch);
+      fclose($fp);
+      $file = $tmpFile;
+      $is_temp_file = true;
     }
     $img_info = @getimagesize($file);
     if (!$img_info) {
-      throw new Exception(__("The file type is not valid image"));
+      if ($is_temp_file && file_exists($file)) {
+        unlink($file);
+      }
+      throw new Exception(__("The file type is not a valid image"));
     }
     $this->_img_type = $img_info['mime'];
     $this->_img_width = $img_info[0];
@@ -113,6 +132,10 @@ class Image
       default:
         throw new Exception(__("The file type is not valid image"));
         break;
+    }
+    /* clean up the temp file */
+    if ($is_temp_file && file_exists($file)) {
+      unlink($file);
     }
   }
 

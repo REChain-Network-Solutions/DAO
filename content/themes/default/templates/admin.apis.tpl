@@ -95,7 +95,7 @@
     </div>
     <div class="card-footer text-end">
       <button type="button" class="btn btn-success js_admin-tester" data-handle="api">
-        <i class="fa fa-bolt mr10"></i> {__("Test API")}
+        <i class="fa fa-bolt mr10"></i> {__("Ping API")}
       </button>
       <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
     </div>

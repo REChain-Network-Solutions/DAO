@@ -3,8 +3,8 @@
 /**
  * APIs -> modules -> user -> router
  *
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 // get controller 
@@ -23,4 +23,9 @@ $app->post('/user/image_delete', function ($req, $res) {
 # [post] onesignal
 $app->post('/user/onesignal', function ($req, $res) {
   updateOnesignalId($req, $res);
+});
+
+# [post] delete
+$app->post('/user/delete', function ($req, $res) {
+  deleteUser($req, $res);
 });

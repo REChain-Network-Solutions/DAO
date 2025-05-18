@@ -124,20 +124,47 @@
             <ol>
               <li class="mb20">
                 {__("To get an access token, make an HTTP GET request to the following endpoint like this")}:
-                <pre class="mtb10">
-                                                &lt;?php
-                                                $app_id = "YOUR_APP_ID"; // your app id
-                                                $app_secret = "YOUR_APP_SECRET"; // your app secret
-                                                $auth_key = $_GET['auth_key']; // the returned auth key from previous step
+<pre class="mtb10">
+&lt;?php
 
-                                                $get = file_get_contents("{$system['system_url']}/api/authorize?app_id=$app_id&app_secret=$app_secret&auth_key=$auth_key");
+$app_id = "YOUR_APP_ID"; // your app id
+$app_secret = "YOUR_APP_SECRET"; // your app secret
+$auth_key = $_GET['auth_key']; // the returned auth key from previous step
 
-                                                $json = json_decode($get, true);
-                                                if(!empty($json['access_token'])) {
-                                                    $access_token = $json['access_token']; // your access token
-                                                }
-                                                ?&gt;                                                                                                
-                                                                </pre>
+// Prepare the POST data
+$postData = [
+  'app_id' => $app_id,
+  'app_secret' => $app_secret,
+  'auth_key' => $auth_key
+];
+
+// Initialize cURL
+$ch = curl_init('{$system['system_url']}/api/authorize');
+
+// Set cURL options for POST
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+
+// Execute request
+$response = curl_exec($ch);
+
+// Check for cURL errors
+if (curl_errno($ch)) {
+  die('cURL error: ' . curl_error($ch));
+}
+
+curl_close($ch);
+
+// Decode the JSON response
+$json = json_decode($response, true);
+
+// Use the access token if available
+if (!empty($json['access_token'])) {
+  $access_token = $json['access_token']; // your access token
+}
+?&gt;
+</pre>
                 {__("This")} <span class="badge bg-danger">access_token</span> {__("valid only for only one 1 hour, so once it got invalid you will need to genarte new one by redirect the user to the log in with link again")}.
               </li>
             </ol>
@@ -169,35 +196,35 @@
             <p>
               {__("You can retrive user info like this")}
             </p>
-            <pre>
-                                                if(!empty($json['access_token'])) {
-                                                    $access_token = $json['access_token']; // your access token
-                                                    $get = file_get_contents("{$system['system_url']}/api/get_user_info?access_token=$access_token");
-                                                }
-                                                            </pre>
+<pre>
+if(!empty($json['access_token'])) {
+    $access_token = $json['access_token']; // your access token
+    $get = file_get_contents("{$system['system_url']}/api/get_user_info?access_token=$access_token");
+}
+</pre>
             <p>
               {__("The result will be")}:
             </p>
-            <pre>
-                                                {
-                                                  "user_info": {
-                                                  "user_id": "",
-                                                  "user_name": "",
-                                                  "user_email": "",
-                                                  "user_firstname": "",
-                                                  "user_lastname": "",
-                                                  "user_gender": "",
-                                                  "user_birthdate": "",
-                                                  "user_picture": "",
-                                                  "user_cover": "",
-                                                  "user_registered": "",
-                                                  "user_verified": "",
-                                                  "user_relationship": "",
-                                                  "user_biography": "",
-                                                  "user_website": ""
-                                                  }
-                                                }
-                                                          </pre>
+<pre>
+{
+  "user_info": {
+  "user_id": "",
+  "user_name": "",
+  "user_email": "",
+  "user_firstname": "",
+  "user_lastname": "",
+  "user_gender": "",
+  "user_birthdate": "",
+  "user_picture": "",
+  "user_cover": "",
+  "user_registered": "",
+  "user_verified": "",
+  "user_relationship": "",
+  "user_biography": "",
+  "user_website": ""
+  }
+}
+</pre>
           </div>
         </div>
         <!-- docs -->
@@ -478,12 +505,12 @@
               {__("Add the following code in your site, inside the head tag")}:
             </h6>
             <pre>
-                                                &lt;script&gt;
-                                                  function SocialShare(url) {
-                                                      window.open('{$system['system_url']}/share?url=' + url, '', 'height=600,width=800');
-                                                  }
-                                                &lt;/script&gt;
-                                                </pre>
+                                                                        &lt;script&gt;
+                                                                          function SocialShare(url) {
+                                                                              window.open('{$system['system_url']}/share?url=' + url, '', 'height=600,width=800');
+                                                                          }
+                                                                        &lt;/script&gt;
+                                                                        </pre>
             <h6>
               {__("Then place the share button after changing the URL you want to share to your page HTML")}:
             </h6>

@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> reset
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 // fetch bootstrap
@@ -245,12 +245,12 @@ try {
         'wordpress_login_enabled' => secure('0'),
         'wordpress_appid' => secure(''),
         'wordpress_secret' => secure(''),
-        'Delus_login_enabled' => secure('0'),
-        'Delus_appid' => secure(''),
-        'Delus_secret' => secure(''),
-        'Delus_app_domain' => secure(''),
-        'Delus_app_name' => secure(''),
-        'Delus_app_icon' => secure(''),
+        'delus_login_enabled' => secure('0'),
+        'delus_appid' => secure(''),
+        'delus_secret' => secure(''),
+        'delus_app_domain' => secure(''),
+        'delus_app_name' => secure(''),
+        'delus_app_icon' => secure(''),
         'genders_disabled' => secure('0'),
         'show_usernames_enabled' => secure('0'),
         'disable_username_changes' => secure('0'),
@@ -287,6 +287,12 @@ try {
         'onesignal_notification_enabled' => secure('0'),
         'onesignal_app_id' => secure(''),
         'onesignal_api_key' => secure(''),
+        'onesignal_messenger_notification_enabled' => secure('0'),
+        'onesignal_messenger_app_id' => secure(''),
+        'onesignal_messenger_api_key' => secure(''),
+        'onesignal_timeline_notification_enabled' => secure('0'),
+        'onesignal_timeline_app_id' => secure(''),
+        'onesignal_timeline_api_key' => secure(''),
         'chat_translation_enabled' => secure('0'),
         'audio_call_enabled' => secure('0'),
         'video_call_enabled' => secure('0'),

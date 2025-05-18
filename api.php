@@ -3,8 +3,8 @@
 /**
  * api
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 // fetch bootstrap|bootloader
@@ -35,18 +35,18 @@ try {
 
     case 'authorize':
       // valid inputs
-      if (!isset($_GET['app_id']) || is_empty($_GET['app_id'])) {
+      if (!isset($_POST['app_id']) || is_empty($_POST['app_id'])) {
         return_json(['error' => true, 'message' => "Bad Request, invalid app_id"]);
       }
-      if (!isset($_GET['app_secret']) || is_empty($_GET['app_secret'])) {
+      if (!isset($_POST['app_secret']) || is_empty($_POST['app_secret'])) {
         return_json(['error' => true, 'message' => "Bad Request, invalid app_secret"]);
       }
-      if (!isset($_GET['auth_key']) || is_empty($_GET['auth_key'])) {
+      if (!isset($_POST['auth_key']) || is_empty($_POST['auth_key'])) {
         return_json(['error' => true, 'message' => "Bad Request, invalid auth_key"]);
       }
 
       // authorize app
-      $access_token = $user->authorize_app($_GET['app_id'], $_GET['app_secret'], $_GET['auth_key']);
+      $access_token = $user->authorize_app($_POST['app_id'], $_POST['app_secret'], $_POST['auth_key']);
       return_json(['access_token' => $access_token]);
       break;
 

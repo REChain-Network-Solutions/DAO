@@ -418,7 +418,7 @@
         {__("updated event cover")}
 
       {elseif $_post['post_type'] == "article"}
-        {__("added blog")} <a href="{$system['system_url']}/blogs/category/{$_post['blog']['category_id']}/{$_post['blog']['category_url']}" class="blog-category text-no-underline">{__($_post['blog']['category_name'])}</a>
+        {__("added blog")} {if $_post['blog']['category_name']}<a href="{$system['system_url']}/blogs/category/{$_post['blog']['category_id']}/{$_post['blog']['category_url']}" class="blog-category text-no-underline">{__($_post['blog']['category_name'])}</a>{/if}
 
       {elseif $_post['post_type'] == "product"}
         {__("added product for sale")}
@@ -442,7 +442,7 @@
         {__("added reel")}
 
       {elseif $_post['post_type'] == "video"}
-        {__("added video")} <span class="badge rounded-pill badge-lg bg-info">{__($_post['video']['category_name'])}</span>
+        {__("added video")} {if $_post['video']['category_name']}<span class="badge rounded-pill badge-lg bg-info">{__($_post['video']['category_name'])}</span>{/if}
 
       {elseif $_post['post_type'] == "audio"}
         {__("added audio")}
@@ -451,7 +451,7 @@
         {__("added file")}
 
       {elseif $_post['post_type'] == "merit"}
-        {__("sent merit")} <span class="badge rounded-pill badge-lg bg-info">{__($_post['merit']['category_name'])}</span>
+        {__("sent merit")} {if $_post['merit']['category_name']}<span class="badge rounded-pill badge-lg bg-info">{__($_post['merit']['category_name'])}</span>{/if}
 
       {/if}
 

@@ -2762,18 +2762,18 @@
 
             <div class="divider"></div>
 
-            <!-- Delus -->
+            <!-- delus -->
             <div class="form-table-row">
               <div class="avatar">
                 {include file='__svg_icons.tpl' icon="developers" class="main-icon" width="40px" height="40px"}
               </div>
               <div>
-                <div class="form-label h6 mb5">{__("Delus")}</div>
-                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other Delus website On and Off")}</div>
+                <div class="form-label h6 mb5">{__("delus")}</div>
+                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other delus website On and Off")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="Delus_login_enabled">
-                  <input type="checkbox" name="Delus_login_enabled" id="Delus_login_enabled" {if $system['Delus_login_enabled']}checked{/if}>
+                <label class="switch" for="delus_login_enabled">
+                  <input type="checkbox" name="delus_login_enabled" id="delus_login_enabled" {if $system['delus_login_enabled']}checked{/if}>
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -2781,11 +2781,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App ID")}
+                {__("delus App ID")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_appid" value="{$system['Delus_appid']}">
+                  <input type="text" class="form-control" name="delus_appid" value="{$system['delus_appid']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2794,11 +2794,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Secret")}
+                {__("delus App Secret")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_secret" value="{$system['Delus_secret']}">
+                  <input type="text" class="form-control" name="delus_secret" value="{$system['delus_secret']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2807,27 +2807,27 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Domain")}
+                {__("delus App Domain")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_app_domain" value="{$system['Delus_app_domain']}">
+                  <input type="text" class="form-control" name="delus_app_domain" value="{$system['delus_app_domain']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
                 <div class="form-text">
-                  {__("Please enter your Delus App Domain without http:// or https://")}
+                  {__("Please enter your delus App Domain without http:// or https://")}
                 </div>
               </div>
             </div>
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Name")}
+                {__("delus App Name")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_app_name" value="{$system['Delus_app_name']}">
+                  <input type="text" class="form-control" name="delus_app_name" value="{$system['delus_app_name']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2836,10 +2836,10 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Icon")}
+                {__("delus App Icon")}
               </label>
               <div class="col-md-9">
-                {if $system['Delus_app_icon'] == ''}
+                {if $system['delus_app_icon'] == ''}
                   <div class="x-image">
                     <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
@@ -2848,10 +2848,10 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="">
+                    <input type="hidden" class="js_x-image-input" name="delus_app_icon" value="">
                   </div>
                 {else}
-                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['Delus_app_icon']}')">
+                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['delus_app_icon']}')">
                     <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
                       <div class="progress x-progress">
@@ -2859,12 +2859,12 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="{$system['Delus_app_icon']}">
+                    <input type="hidden" class="js_x-image-input" name="delus_app_icon" value="{$system['delus_app_icon']}">
                   </div>
                 {/if}
               </div>
             </div>
-            <!-- Delus -->
+            <!-- delus -->
 
             <!-- success -->
             <div class="alert alert-success mt15 mb0 x-hidden"></div>
@@ -4319,46 +4319,154 @@
       <div class="tab-pane" id="Push">
         <form class="js_ajax-forms" data-url="admin/settings.php?edit=push_notifications">
           <div class="card-body">
+            <div class="heading-small mb20">
+              <i class="fa-solid fa-desktop mr5"></i>{__("Web Apps")}
+            </div>
+            <div class="pl-md-4">
+              <div class="form-table-row">
+                <div class="avatar">
+                  {include file='__svg_icons.tpl' icon="onesignal" width="40px" height="40px"}
+                </div>
+                <div>
+                  <div class="form-label h6">{__("OneSignal Push Notifications")} </div>
+                  <div class="form-text d-none d-sm-block">
+                    {__("Turn the OneSignal push notification for Web Apps and Web-View Apps")}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <label class="switch" for="onesignal_notification_enabled">
+                    <input type="checkbox" name="onesignal_notification_enabled" id="onesignal_notification_enabled" {if $system['onesignal_notification_enabled']}checked{/if}>
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+              </div>
 
-            <div class="form-table-row">
-              <div class="avatar">
-                {include file='__svg_icons.tpl' icon="onesignal" width="40px" height="40px"}
-              </div>
-              <div>
-                <div class="form-label h6">{__("OneSignal Push Notifications")}</div>
-                <div class="form-text d-none d-sm-block">{__("Turn the OneSignal push notification On and Off")}</div>
-              </div>
-              <div class="text-end">
-                <label class="switch" for="onesignal_notification_enabled">
-                  <input type="checkbox" name="onesignal_notification_enabled" id="onesignal_notification_enabled" {if $system['onesignal_notification_enabled']}checked{/if}>
-                  <span class="slider round"></span>
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal APP ID")}
                 </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_app_id" value="{$system['onesignal_app_id']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal REST API Key")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_api_key" value="{$system['onesignal_api_key']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
               </div>
             </div>
 
-            <div class="row form-group">
-              <label class="col-md-3 form-label">
-                {__("OneSignal APP ID")}
-              </label>
-              <div class="col-md-9">
-                {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="onesignal_app_id" value="{$system['onesignal_app_id']}">
-                {else}
-                  <input type="password" class="form-control" value="*********">
-                {/if}
+            <div class="divider dashed"></div>
+
+            <div class="heading-small mb20">
+              <i class="fa-solid fa-comments mr5"></i>{__("Messaging Apps")}
+            </div>
+            <div class="pl-md-4">
+              <div class="form-table-row">
+                <div class="avatar">
+                  {include file='__svg_icons.tpl' icon="onesignal" width="40px" height="40px"}
+                </div>
+                <div>
+                  <div class="form-label h6">{__("OneSignal Push Notifications")} </div>
+                  <div class="form-text d-none d-sm-block">
+                    {__("Turn the OneSignal push notification for Native Messenger Apps")}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <label class="switch" for="onesignal_messenger_notification_enabled">
+                    <input type="checkbox" name="onesignal_messenger_notification_enabled" id="onesignal_messenger_notification_enabled" {if $system['onesignal_messenger_notification_enabled']}checked{/if}>
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal APP ID")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_messenger_app_id" value="{$system['onesignal_messenger_app_id']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal REST API Key")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_messenger_api_key" value="{$system['onesignal_messenger_api_key']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
               </div>
             </div>
 
-            <div class="row form-group">
-              <label class="col-md-3 form-label">
-                {__("OneSignal REST API Key")}
-              </label>
-              <div class="col-md-9">
-                {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="onesignal_api_key" value="{$system['onesignal_api_key']}">
-                {else}
-                  <input type="password" class="form-control" value="*********">
-                {/if}
+            <div class="divider dashed"></div>
+
+            <div class="heading-small mb20">
+              <i class="fa-solid fa-mobile mr5"></i>{__("Timeline Apps")}
+            </div>
+            <div class="pl-md-4">
+              <div class="form-table-row">
+                <div class="avatar">
+                  {include file='__svg_icons.tpl' icon="onesignal" width="40px" height="40px"}
+                </div>
+                <div>
+                  <div class="form-label h6">{__("OneSignal Push Notifications")} </div>
+                  <div class="form-text d-none d-sm-block">
+                    {__("Turn the OneSignal push notification for Native Timeline Apps")}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <label class="switch" for="onesignal_timeline_notification_enabled">
+                    <input type="checkbox" name="onesignal_timeline_notification_enabled" id="onesignal_timeline_notification_enabled" {if $system['onesignal_timeline_notification_enabled']}checked{/if}>
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal APP ID")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_timeline_app_id" value="{$system['onesignal_timeline_app_id']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("OneSignal REST API Key")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="onesignal_timeline_api_key" value="{$system['onesignal_timeline_api_key']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
               </div>
             </div>
 

@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> settings
  * 
- * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @package delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
  */
 
 // fetch bootstrap
@@ -332,7 +332,7 @@ try {
       $_POST['linkedin_login_enabled'] = (isset($_POST['linkedin_login_enabled'])) ? '1' : '0';
       $_POST['vkontakte_login_enabled'] = (isset($_POST['vkontakte_login_enabled'])) ? '1' : '0';
       $_POST['wordpress_login_enabled'] = (isset($_POST['wordpress_login_enabled'])) ? '1' : '0';
-      $_POST['Delus_login_enabled'] = (isset($_POST['Delus_login_enabled'])) ? '1' : '0';
+      $_POST['delus_login_enabled'] = (isset($_POST['delus_login_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'social_login_enabled' => secure($_POST['social_login_enabled']),
@@ -354,12 +354,12 @@ try {
         'wordpress_login_enabled' => secure($_POST['wordpress_login_enabled']),
         'wordpress_appid' => secure($_POST['wordpress_appid']),
         'wordpress_secret' => secure($_POST['wordpress_secret']),
-        'Delus_login_enabled' => secure($_POST['Delus_login_enabled']),
-        'Delus_appid' => secure($_POST['Delus_appid']),
-        'Delus_secret' => secure($_POST['Delus_secret']),
-        'Delus_app_domain' => secure($_POST['Delus_app_domain']),
-        'Delus_app_name' => secure($_POST['Delus_app_name']),
-        'Delus_app_icon' => secure($_POST['Delus_app_icon'])
+        'delus_login_enabled' => secure($_POST['delus_login_enabled']),
+        'delus_appid' => secure($_POST['delus_appid']),
+        'delus_secret' => secure($_POST['delus_secret']),
+        'delus_app_domain' => secure($_POST['delus_app_domain']),
+        'delus_app_name' => secure($_POST['delus_app_name']),
+        'delus_app_icon' => secure($_POST['delus_app_icon'])
       ]);
       break;
 
@@ -545,11 +545,19 @@ try {
     case 'push_notifications':
       /* prepare */
       $_POST['onesignal_notification_enabled'] = (isset($_POST['onesignal_notification_enabled'])) ? '1' : '0';
+      $_POST['onesignal_messenger_notification_enabled'] = (isset($_POST['onesignal_messenger_notification_enabled'])) ? '1' : '0';
+      $_POST['onesignal_timeline_notification_enabled'] = (isset($_POST['onesignal_timeline_notification_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'onesignal_notification_enabled' => secure($_POST['onesignal_notification_enabled']),
         'onesignal_app_id' => secure($_POST['onesignal_app_id']),
-        'onesignal_api_key' => secure($_POST['onesignal_api_key'])
+        'onesignal_api_key' => secure($_POST['onesignal_api_key']),
+        'onesignal_messenger_notification_enabled' => secure($_POST['onesignal_messenger_notification_enabled']),
+        'onesignal_messenger_app_id' => secure($_POST['onesignal_messenger_app_id']),
+        'onesignal_messenger_api_key' => secure($_POST['onesignal_messenger_api_key']),
+        'onesignal_timeline_notification_enabled' => secure($_POST['onesignal_timeline_notification_enabled']),
+        'onesignal_timeline_app_id' => secure($_POST['onesignal_timeline_app_id']),
+        'onesignal_timeline_api_key' => secure($_POST['onesignal_timeline_api_key'])
       ]);
       break;
 

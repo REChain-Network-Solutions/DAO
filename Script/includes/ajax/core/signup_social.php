@@ -4,7 +4,7 @@
  * ajax -> core -> social signup
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
  */
 
 // fetch bootstrap
@@ -18,15 +18,10 @@ if ($user->_logged_in) {
   return_json(['callback' => 'window.location.reload();']);
 }
 
-// check if registration is closed
-if (!$system['registration_enabled']) {
-  return_json(['error' => true, 'message' => __('Registration is closed right now')]);
-}
-
 try {
 
   // signup
-  $user->social_signup($_POST['first_name'], $_POST['last_name'], $_POST['username'], $_POST['email'], $_POST['password'], $_POST['gender'], $_POST['custom_user_group'], $_POST['newsletter_agree'], $_POST['privacy_agree'], $_POST['avatar'], $_POST['provider'], $_POST['invitation_code']);
+  $user->social_signup($_POST);
 
   // return
   return_json(['callback' => 'window.location = site_path;']);

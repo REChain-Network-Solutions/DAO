@@ -3,8 +3,8 @@
 /**
  * functions
  *
- * @package delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
+ * @package Delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles..com/licenses/delus/verify.php';
+  $url = 'https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles..com/licenses/Delus/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -1102,7 +1102,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles..com/support'>" . "delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles..com/support'>" . "Delus Support" . ".</a></p>
                             </div>";
         break;
 
@@ -1780,7 +1780,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       $onesignal_app_id = $system['onesignal_app_id'];
       $onesignal_api_key = $system['onesignal_api_key'];
       if ($type == 'web-view') {
-        $notification['url'] = str_replace('https://', 'delus://', $notification['url']);
+        $notification['url'] = str_replace('https://', 'Delus://', $notification['url']);
       }
       break;
 
@@ -1790,7 +1790,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       }
       $onesignal_app_id = $system['onesignal_messenger_app_id'];
       $onesignal_api_key = $system['onesignal_messenger_api_key'];
-      $notification['url'] = str_replace('https://', 'delus_messenger://', $notification['url']);
+      $notification['url'] = str_replace('https://', 'Delus_messenger://', $notification['url']);
       break;
 
     case 'timeline':
@@ -1799,7 +1799,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       }
       $onesignal_app_id = $system['onesignal_timeline_app_id'];
       $onesignal_api_key = $system['onesignal_timeline_api_key'];
-      $notification['url'] = str_replace('https://', 'delus_timeline://', $notification['url']);
+      $notification['url'] = str_replace('https://', 'Delus_timeline://', $notification['url']);
       break;
   }
   $request_body = [
@@ -6044,7 +6044,7 @@ function moneypoolscash_wallet_token()
   global $system;
   $headers = [
     'Content-Type: application/json',
-    'User-Agent: delus',
+    'User-Agent: Delus',
     'API-KEY: ' . $system['moneypoolscash_api_key'],
   ];
   $request_body = [
@@ -6864,41 +6864,41 @@ function user_access($is_ajax = false, $bypass_subscription = false, $bypass_get
     if (!$user->_logged_in) {
       modal('LOGIN');
     }
-    /* check registration type */
-    if ($system['registration_type'] == "paid" && $user->_data['user_group'] > '1' && !$user->_data['user_subscribed'] && !$bypass_subscription) {
-      modal("MESSAGE", __("Subscription Needed"), __("Before you can interact with other users, you need to buy subscription package"));
-    }
     /* check user activated */
     if ($system['activation_enabled'] && !$user->_data['user_activated']) {
       modal("MESSAGE", __("Not Activated"), __("Before you can interact with other users, you need to confirm your email address"));
-    }
-    /* check user getted started */
-    if ($system['getting_started'] && !$user->_data['user_started'] && !$bypass_getting_started) {
-      modal("MESSAGE", __("Getting Started"), __("Before you can interact with other users, you need to complete your profile"));
     }
     /* check user approval */
     if ($system['users_approval_enabled'] && !$user->_data['user_approved'] && $user->_data['user_group'] >= '3') {
       modal("MESSAGE", __("Approval Needed"), __("Before you can interact with other users, you need to get approved by the admin"));
     }
-  } else {
-    if (!$user->_logged_in) {
-      user_login($oauth_app_id);
+    /* check user getted started */
+    if ($system['getting_started'] && !$user->_data['user_started'] && !$bypass_getting_started) {
+      modal("MESSAGE", __("Getting Started"), __("Before you can interact with other users, you need to complete your profile"));
     }
     /* check registration type */
     if ($system['registration_type'] == "paid" && $user->_data['user_group'] > '1' && !$user->_data['user_subscribed'] && !$bypass_subscription) {
-      redirect('/packages');
+      modal("MESSAGE", __("Subscription Needed"), __("Before you can interact with other users, you need to buy subscription package"));
+    }
+  } else {
+    if (!$user->_logged_in) {
+      user_login($oauth_app_id);
     }
     /* check user activated */
     if ($system['activation_enabled'] && $system['activation_required'] && !$user->_data['user_activated']) {
       _error('ACTIVATION');
     }
+    /* check user approval */
+    if ($system['users_approval_enabled'] && !$user->_data['user_approved'] && $user->_data['user_group'] >= '3') {
+      _error('APPROVAL');
+    }
     /* check user getted started */
     if ($system['getting_started'] && !$user->_data['user_started'] && !$bypass_getting_started) {
       redirect('/started');
     }
-    /* check user approval */
-    if ($system['users_approval_enabled'] && !$user->_data['user_approved'] && $user->_data['user_group'] >= '3') {
-      _error('APPROVAL');
+    /* check registration type */
+    if ($system['registration_type'] == "paid" && $user->_data['user_group'] > '1' && !$user->_data['user_subscribed'] && !$bypass_subscription) {
+      redirect('/packages');
     }
     /* check callback_redirect */
     if ($_SESSION['callback_redirect']) {
@@ -7501,19 +7501,37 @@ function minimize_css($file_path)
 
 
 /**
- * get_ip
+ * get_user_ip
  *
  * @return string
  */
 function get_user_ip()
 {
-  /* handle CloudFlare IP addresses */
-  return (isset($_SERVER["HTTP_CF_CONNECTING_IP"]) ? $_SERVER["HTTP_CF_CONNECTING_IP"] : $_SERVER['REMOTE_ADDR']);
+  /* check various proxy headers in order of preference */
+  $headers = [
+    'HTTP_CF_CONNECTING_IP', // CloudFlare
+    'HTTP_X_FORWARDED_FOR',  // Standard proxy header
+    'HTTP_X_REAL_IP',        // Nginx proxy header
+    'HTTP_CLIENT_IP',        // Client IP header
+    'REMOTE_ADDR'            // Fallback to remote address
+  ];
+  foreach ($headers as $header) {
+    if (isset($_SERVER[$header])) {
+      /* if X-Forwarded-For contains multiple IPs, get the first one */
+      if ($header === 'HTTP_X_FORWARDED_FOR') {
+        $ips = explode(',', $_SERVER[$header]);
+        return trim($ips[0]);
+      }
+      return $_SERVER[$header];
+    }
+  }
+  /* fallback to REMOTE_ADDR if no headers are found */
+  return $_SERVER['REMOTE_ADDR'];
 }
 
 
 /**
- * get_os
+ * get_user_os
  *
  * @return string
  */
@@ -7558,7 +7576,7 @@ function get_user_os()
 
 
 /**
- * get_browser
+ * get_user_browser
  *
  * @return string
  */

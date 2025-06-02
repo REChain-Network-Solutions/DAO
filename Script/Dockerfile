@@ -28,6 +28,10 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # enable apache rewrite mod
 RUN a2enmod rewrite
 
+# Configure Apache to trust proxy headers
+RUN echo "RemoteIPHeader X-Forwarded-For" >> /etc/apache2/apache2.conf && \
+    echo "RemoteIPInternalProxy 172.16.0.0/12" >> /etc/apache2/apache2.conf
+
 # restart server
 RUN service apache2 restart
 

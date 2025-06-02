@@ -4,7 +4,7 @@
  * modules -> started
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
  */
 
 // fetch bootloader
@@ -15,12 +15,17 @@ if (!$user->_logged_in) {
   user_login();
 }
 
-// check registration type
-if ($system['registration_type'] == "paid" && !$user->_data['user_subscribed']) {
-  redirect('/packages');
+// check user activated
+if ($system['activation_enabled'] && $system['activation_required'] && !$user->_data['user_activated']) {
+  _error('ACTIVATION');
 }
 
-// check if already getted started
+// check user approval
+if ($system['users_approval_enabled'] && !$user->_data['user_approved'] && $user->_data['user_group'] >= '3') {
+  _error('APPROVAL');
+}
+
+// check user getted started
 if (!$system['getting_started'] || $user->_data['user_started']) {
   redirect();
 }

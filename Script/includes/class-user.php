@@ -3,8 +3,8 @@
 /**
  * class -> user
  * 
- * @package delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
+ * @package Delus
+ * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
  */
 
 /* 
@@ -5043,7 +5043,9 @@ class User
     /* decode message text */
     $conversation['message_orginal'] = $this->decode_emojis($conversation['message']);
     $conversation['message_orginal'] = censored_words($conversation['message_orginal']);
+    $conversation['message_orginal'] = html_entity_decode($conversation['message_orginal'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $conversation['message'] = $this->_parse(["text" => $conversation['message'], "decode_mention" => false, "decode_hashtags" => false]);
+    $conversation['message'] = html_entity_decode($conversation['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     /* get last message */
     $conversation['last_message'] = $this->get_conversation_messages_by_id($conversation['last_message_id']);
     /* return */
@@ -5333,6 +5335,7 @@ class User
       $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
       $message['user_fullname'] = ($system['show_usernames_enabled']) ? $message['user_name'] : $message['user_firstname'] . " " . $message['user_lastname'];
       $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
+      $message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
       /* return */
       $messages[] = $message;
     }
@@ -5354,6 +5357,7 @@ class User
     $message = $get_messages->fetch_assoc();
     $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
     $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
+    $message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     return $message;
   }
 
@@ -6437,7 +6441,7 @@ class User
   {
     global $system;
     $channel_name = ($channel_name) ? $channel_name : get_hash_token();
-    $uid = ($uid == null)? null : mt_rand();
+    $uid = ($uid == null) ? mt_rand() : $uid;
     $role = ($is_host) ? TaylanUnutmaz\AgoraTokenBuilder\RtcTokenBuilder::RolePublisher : TaylanUnutmaz\AgoraTokenBuilder\RtcTokenBuilder::RoleAttendee;
     $expire_time = 36000;
     $current_timestamp = (new DateTime("now", new DateTimeZone('UTC')))->getTimestamp();
@@ -7824,7 +7828,7 @@ class User
       $where_query .= " AND (posts.post_type NOT IN ('profile_picture', 'profile_cover', 'page_picture', 'page_cover', 'group_picture', 'group_cover', 'event_cover'))";
     }
     /* posts caching system */
-    if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
+    if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && !in_array($filter, ['reel','video'])) {
       $where_query .= " AND (posts.post_id NOT IN (SELECT post_id FROM posts_cache WHERE user_id = " . $this->_data['user_id'] . "))";
     }
     /* posts scheduling system (exclude scheduled & pending posts) */
@@ -7843,7 +7847,7 @@ class User
         $post = $this->get_post($post['post_id'], true, true); /* $full_details = true, $pass_privacy_check = true */
         if ($post) {
           /* posts caching system */
-          if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && $filter != 'reel') {
+          if ($this->_logged_in && $system['newsfeed_caching_enabled'] && !isset($args['query']) && in_array($get, ['newsfeed', 'discover']) && !in_array($filter, ['reel','video'])) {
             $db->query(sprintf("INSERT INTO posts_cache (user_id, post_id, cache_date) VALUES (%s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($post['post_id'], 'int'), secure($date)));
           }
           $posts[] = $post;
@@ -22790,6 +22794,7 @@ class User
     }
     /* check password */
     $this->check_password($args['password']);
+    /* check gender */
     $args['gender'] = ($system['genders_disabled']) ? 1 : $args['gender'];
     if (!$system['genders_disabled'] && !$this->check_gender($args['gender'])) {
       throw new ValidationException(__("Please select a valid gender"));
@@ -23510,9 +23515,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'delus':
-        $social_id = "delus_id";
-        $social_connected = "delus_connected";
+      case 'Delus':
+        $social_id = "Delus_id";
+        $social_connected = "Delus_connected";
         break;
     }
     /* check if user connected or not */
@@ -23539,7 +23544,10 @@ class User
         page_header(__($system['system_title']) . " &rsaquo; " . __("Sign Up"));
         $smarty->assign('provider', $provider);
         $smarty->assign('user_profile', $user_profile);
-        $smarty->assign('genders', $this->get_genders());
+        if (!$system['genders_disabled']) {
+          $smarty->assign('genders', $this->get_genders());
+        }
+        $smarty->assign('custom_fields', $this->get_custom_fields());
         if ($system['select_user_group_enabled']) {
           $smarty->assign('user_groups', $this->get_users_groups());
         }
@@ -23552,24 +23560,14 @@ class User
   /**
    * social_signup
    * 
-   * @param string $first_name
-   * @param string $last_name
-   * @param string $username
-   * @param string $email
-   * @param string $password
-   * @param string $gender
-   * @param integer $custom_user_group
-   * @param boolean $newsletter_agree
-   * @param boolean $privacy_agree
-   * @param string $avatar
-   * @param string $provider
-   * @param string $invitation_code
+   * @param array $args
    * @return void
    */
-  public function social_signup($first_name, $last_name, $username, $email, $password, $gender, $custom_user_group, $newsletter_agree, $privacy_agree, $avatar, $provider, $invitation_code = "")
+  public function social_signup($args = [])
   {
     global $db, $system, $date;
-    switch ($provider) {
+    /* check provider */
+    switch ($args['provider']) {
       case 'facebook':
         $social_id = "facebook_id";
         $social_connected = "facebook_connected";
@@ -23606,86 +23604,159 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'delus':
-        $social_id = "delus_id";
-        $social_connected = "delus_connected";
+      case 'Delus':
+        $social_id = "Delus_id";
+        $social_connected = "Delus_connected";
         break;
 
       default:
-        _error(400);
-        break;
+        throw new BadRequestException(__("Invalid provider"));
     }
+    /* check if registration is enabled */
+    if (!$system['registration_enabled']) {
+      throw new AuthorizationException(__("Registration is closed right now"));
+    }
+    /* prepare */
+    $args['from_web'] = (isset($args['from_web'])) ? $args['from_web'] : true;
     /* check invitation code */
     if ($system['invitation_enabled']) {
-      if (!$this->check_invitation_code($invitation_code)) {
-        throw new Exception(__("The invitation code is invalid or expired"));
+      if (!$this->check_invitation_code($args['invitation_code'])) {
+        throw new ValidationException(__("The invitation code is invalid or expired"));
       }
     }
     /* check IP */
     $this->_check_ip();
-    if (is_empty($first_name) || is_empty($last_name) || is_empty($username) || is_empty($email) || is_empty($password)) {
-      throw new Exception(__("You must fill in all of the fields"));
+    /* validate */
+    if ($system['show_usernames_enabled']) {
+      $args['first_name'] = $args['username'];
+      $args['last_name'] = $args['username'];
+    } else {
+      if (!valid_name($args['first_name'])) {
+        throw new ValidationException(__("Your first name contains invalid characters"));
+      }
+      if (strlen($args['first_name']) < $system['name_min_length']) {
+        throw new ValidationException(__("Your first name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
+      }
+      if (!valid_name($args['last_name'])) {
+        throw new ValidationException(__("Your last name contains invalid characters"));
+      }
+      if (strlen($args['last_name']) < $system['name_min_length']) {
+        throw new ValidationException(__("Your last name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
+      }
     }
-    if (!valid_username($username)) {
+    if (!valid_username($args['username'])) {
       throw new Exception(__("Please enter a valid username (a-z0-9_.) with minimum 3 characters long"));
     }
-    if ($this->reserved_username($username)) {
-      throw new Exception(__("You can't use") . " " . $username . " " . __("as username"));
+    if ($this->reserved_username($args['username'])) {
+      throw new Exception(__("You can't use") . " " . $args['username'] . " " . __("as username"));
     }
-    if ($this->check_username($username)) {
-      throw new Exception(__("Sorry, it looks like") . " " . $username . " " . __("belongs to an existing account"));
+    if ($this->check_username($args['username'])) {
+      throw new Exception(__("Sorry, it looks like") . " " . $args['username'] . " " . __("belongs to an existing account"));
     }
-    if (!valid_email($email)) {
+    if (!valid_email($args['email'])) {
       throw new Exception(__("Please enter a valid email address"));
     }
-    if ($this->check_email($email)) {
+    if ($this->check_email($args['email'])) {
       throw new Exception(__("Sorry, it looks like") . " " . $email . " " . __("belongs to an existing account"));
     }
+    if ($system['activation_enabled'] && $system['activation_type'] == "sms") {
+      if (is_empty($args['phone'])) {
+        throw new ValidationException(__("Please enter a valid phone number"));
+      }
+      if ($this->check_phone($args['phone'])) {
+        throw new ValidationException(__("Sorry, it looks like") . " " . $args['phone'] . " " . __("belongs to an existing account"));
+      }
+    } else {
+      $args['phone'] = 'null';
+    }
     /* check password */
-    $this->check_password($password);
-    if (!valid_name($first_name)) {
-      throw new Exception(__("Your first name contains invalid characters"));
+    $this->check_password($args['password']);
+    /* check gender */
+    $args['gender'] = ($system['genders_disabled']) ? 1 : $args['gender'];
+    if (!$system['genders_disabled'] && !$this->check_gender($args['gender'])) {
+      throw new ValidationException(__("Please select a valid gender"));
     }
-    if (strlen($first_name) < $system['name_min_length']) {
-      throw new Exception(__("Your first name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
+    /* check age restriction */
+    if ($system['age_restriction']) {
+      if (!in_array($args['birth_month'], range(1, 12))) {
+        throw new ValidationException(__("Please select a valid birth month (1-12)"));
+      }
+      if (!in_array($args['birth_day'], range(1, 31))) {
+        throw new ValidationException(__("Please select a valid birth day (1-31)"));
+      }
+      if (!in_array($args['birth_year'], range(1905, 2017))) {
+        throw new ValidationException(__("Please select a valid birth year (1905-2017)"));
+      }
+      if (date("Y") - $args['birth_year'] < $system['minimum_age']) {
+        throw new ValidationException(__("Sorry, You must be") . " " . $system['minimum_age'] . " " . __("years old to register"));
+      }
+      $args['birth_date'] = $args['birth_year'] . '-' . $args['birth_month'] . '-' . $args['birth_day'];
+    } else {
+      $args['birth_date'] = 'null';
     }
-    if (!valid_name($last_name)) {
-      throw new Exception(__("Your last name contains invalid characters"));
-    }
-    if (strlen($last_name) < $system['name_min_length']) {
-      throw new Exception(__("Your last name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
-    }
-    $gender = ($system['genders_disabled']) ? 1 : $gender;
-    if (!$system['genders_disabled'] && !$this->check_gender($gender)) {
-      throw new Exception(__("Please select a valid gender"));
+    /* set custom fields */
+    $custom_fields = $this->set_custom_fields($args);
+    /* set custom user group */
+    if ($system['select_user_group_enabled']) {
+      /* check if user selected a custom user group */
+      if(!isset($args['custom_user_group']) || $args['custom_user_group'] == 'none') {
+        throw new ValidationException(__("Please select a valid user group"));
+      }
+      $custom_user_group = ($args['custom_user_group'] != '0' && $this->check_user_group($args['custom_user_group'])) ? $args['custom_user_group'] : '0';
+    } else {
+      $custom_user_group = ($system['default_custom_user_group'] != '0' && $this->check_user_group($system['default_custom_user_group'])) ? $system['default_custom_user_group'] : '0';
     }
     /* check newsletter agreement */
     $newsletter_agree = (isset($args['newsletter_agree'])) ? '1' : '0';
     /* check privacy agreement */
-    if (!isset($privacy_agree)) {
-      throw new Exception(__("You must read and agree to our terms and privacy policy"));
+    if (!isset($args['privacy_agree']) && $args['from_web']) {
+      throw new ValidationException(__("You must read and agree to our terms and privacy policy"));
     }
-    /* save avatar */
-    $image_name = save_picture_from_url($avatar);
-    /* set custom user group */
-    if ($system['select_user_group_enabled']) {
-      $custom_user_group = ($custom_user_group != '0' && $this->check_user_group($custom_user_group)) ? $custom_user_group : '0';
-    } else {
-      $custom_user_group = ($system['default_custom_user_group'] != '0' && $this->check_user_group($system['default_custom_user_group'])) ? $system['default_custom_user_group'] : '0';
-    }
+    /* generate verification code */
+    $email_verification_code = ($system['activation_enabled'] && $system['activation_type'] == "email") ? get_hash_key(6, true) : 'null';
+    $phone_verification_code = ($system['activation_enabled'] && $system['activation_type'] == "sms") ? get_hash_key(6, true) : 'null';
     /* check user approved */
     $user_approved = ($system['users_approval_enabled']) ? '0' : '1';
+    /* save avatar */
+    $avatar_name = save_picture_from_url($args['avatar']);
     /* register user */
-    $db->query(sprintf("INSERT INTO users (user_group_custom, user_name, user_email, user_password, user_firstname, user_lastname, user_gender, user_registered, user_activated, user_picture, $social_id, $social_connected, user_approved) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, '1', %s, %s, '1', %s)", secure($custom_user_group), secure($username), secure($email), secure(_password_hash($password)), secure(ucwords($first_name)), secure(ucwords($last_name)), secure($gender), secure($date), secure($image_name), secure($_SESSION['social_id']), secure($user_approved)));
+    $db->query(sprintf("INSERT INTO users (user_group_custom, user_name, user_email, user_phone, user_password, user_firstname, user_lastname, user_gender, user_birthdate, user_registered, user_email_verification_code, user_phone_verification_code, user_newsletter_enabled, user_approved, user_picture, $social_id, $social_connected) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '1')", secure($custom_user_group), secure($args['username']), secure($args['email']), secure($args['phone']), secure(_password_hash($args['password'])), secure(ucwords($args['first_name'])), secure(ucwords($args['last_name'])), secure($args['gender']), secure($args['birth_date']), secure($date), secure($email_verification_code), secure($phone_verification_code), secure($newsletter_agree), secure($user_approved), secure($avatar_name), secure($_SESSION['social_id'])));
     /* get user_id */
     $user_id = $db->insert_id;
     /* set default privacy */
     $this->_set_default_privacy($user_id);
-    /* affiliates system */
-    $this->process_affiliates("registration", $user_id);
+    /* insert custom fields values */
+    if ($custom_fields) {
+      foreach ($custom_fields as $field_id => $value) {
+        $db->query(sprintf("INSERT INTO custom_fields_values (value, field_id, node_id, node_type) VALUES (%s, %s, %s, 'user')", secure($value), secure($field_id, 'int'), secure($user_id, 'int')));
+      }
+    }
+    /* send activation */
+    if ($system['activation_enabled']) {
+      if ($system['activation_type'] == "email") {
+        /* prepare activation email */
+        $subject = __("Just one more step to get started on") . " " . html_entity_decode(__($system['system_title']), ENT_QUOTES);
+        $to_name = ($system['show_usernames_enabled'])? $args['username'] : $args['first_name'] . " " . $args['last_name'];
+        $body = get_email_template("activation_email", $subject, ["name" => $to_name, "email_verification_code" => $email_verification_code]);
+        /* send email */
+        if (!_email($args['email'], $subject, $body['html'], $body['plain'])) {
+          throw new Exception(__("Activation email could not be sent") . ", " . __("But you can login now"));
+        }
+      } else {
+        /* prepare activation SMS */
+        $message  = __($system['system_title']) . " " . __("Activation Code") . ": " . $phone_verification_code;
+        /* send SMS */
+        if (!sms_send($args['phone'], $message)) {
+          throw new Exception(__("Activation SMS could not be sent") . ", " . __("But you can login now"));
+        }
+      }
+    } else {
+      /* affiliates system (as activation disabled) */
+      $this->process_affiliates("registration", $user_id);
+    }
     /* update invitation code */
     if ($system['invitation_enabled']) {
-      $this->update_invitation_code($invitation_code, $user_id);
+      $this->update_invitation_code($args['invitation_code'], $user_id);
     }
     /* auto connect */
     $this->auto_friend($user_id);
@@ -23697,8 +23768,16 @@ class User
       /* send notification to admins */
       $this->notify_system_admins("pending_user", true, $user_id);
     }
-    /* set authentication cookies */
-    $this->_set_authentication_cookies($user_id);
+    /* set authentication */
+    if ($args['from_web']) {
+      $this->_set_authentication_cookies($user_id);
+    } else {
+      /* create JWT */
+      $jwt = $this->_set_authentication_JWT($user_id, $device_info);
+      /* create new user object */
+      $user = new User($jwt);
+      return ['token' => $jwt, 'user' => secure_user_values($user)];
+    }
   }
 
 

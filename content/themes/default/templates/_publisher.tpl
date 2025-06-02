@@ -711,7 +711,10 @@
                 {if $_post_as_page}
                   <input type="hidden" name="post_as_page" value="{$_page_id}">
                 {/if}
-                <button type="button" class="btn btn-primary ml5 js_publisher-btn js_publisher">{__("Post")}</button>
+                <button type="button" class="btn btn-primary ml5 js_publisher-btn js_publisher">
+                  <i class="fa-solid fa-paper-plane d-inline-block d-xl-none"></i>
+                  <span class="d-none d-xl-inline-block ml5">{__("Post")}</span>
+                </button>
               </div>
               <!-- publisher-buttons -->
             </div>

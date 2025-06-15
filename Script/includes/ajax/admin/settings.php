@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> settings
  * 
- * @package delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
+ * @package Delus
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // fetch bootstrap
@@ -332,7 +332,7 @@ try {
       $_POST['linkedin_login_enabled'] = (isset($_POST['linkedin_login_enabled'])) ? '1' : '0';
       $_POST['vkontakte_login_enabled'] = (isset($_POST['vkontakte_login_enabled'])) ? '1' : '0';
       $_POST['wordpress_login_enabled'] = (isset($_POST['wordpress_login_enabled'])) ? '1' : '0';
-      $_POST['delus_login_enabled'] = (isset($_POST['delus_login_enabled'])) ? '1' : '0';
+      $_POST['Delus_login_enabled'] = (isset($_POST['Delus_login_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'social_login_enabled' => secure($_POST['social_login_enabled']),
@@ -354,12 +354,12 @@ try {
         'wordpress_login_enabled' => secure($_POST['wordpress_login_enabled']),
         'wordpress_appid' => secure($_POST['wordpress_appid']),
         'wordpress_secret' => secure($_POST['wordpress_secret']),
-        'delus_login_enabled' => secure($_POST['delus_login_enabled']),
-        'delus_appid' => secure($_POST['delus_appid']),
-        'delus_secret' => secure($_POST['delus_secret']),
-        'delus_app_domain' => secure($_POST['delus_app_domain']),
-        'delus_app_name' => secure($_POST['delus_app_name']),
-        'delus_app_icon' => secure($_POST['delus_app_icon'])
+        'Delus_login_enabled' => secure($_POST['Delus_login_enabled']),
+        'Delus_appid' => secure($_POST['Delus_appid']),
+        'Delus_secret' => secure($_POST['Delus_secret']),
+        'Delus_app_domain' => secure($_POST['Delus_app_domain']),
+        'Delus_app_name' => secure($_POST['Delus_app_name']),
+        'Delus_app_icon' => secure($_POST['Delus_app_icon'])
       ]);
       break;
 
@@ -709,6 +709,7 @@ try {
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -733,6 +734,7 @@ try {
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -755,6 +757,7 @@ try {
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -779,6 +782,7 @@ try {
           'digitalocean_enabled' => '0',
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -803,6 +807,7 @@ try {
           'digitalocean_enabled' => '0',
           'wasabi_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -827,6 +832,7 @@ try {
           'digitalocean_enabled' => '0',
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
+          'cloudflare_r2_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -837,6 +843,32 @@ try {
         'yandex_cloud_region' => secure($_POST['yandex_cloud_region']),
         'yandex_cloud_key' => secure($_POST['yandex_cloud_key']),
         'yandex_cloud_secret' => secure($_POST['yandex_cloud_secret'])
+      ]);
+      break;
+
+    case 'cloudflare_r2':
+      /* prepare */
+      $_POST['cloudflare_r2_enabled'] = (isset($_POST['cloudflare_r2_enabled'])) ? '1' : '0';
+      /* if enabled is set -> disable all other options [s3|digitalocean|ftp] */
+      if ($_POST['cloudflare_r2_enabled']) {
+        update_system_options([
+          's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
+          'digitalocean_enabled' => '0',
+          'wasabi_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'ftp_enabled' => '0'
+        ]);
+      }
+      /* update */
+      update_system_options([
+        'cloudflare_r2_enabled' => secure($_POST['cloudflare_r2_enabled']),
+        'cloudflare_r2_bucket' => secure($_POST['cloudflare_r2_bucket']),
+        'cloudflare_r2_key' => secure($_POST['cloudflare_r2_key']),
+        'cloudflare_r2_secret' => secure($_POST['cloudflare_r2_secret']),
+        'cloudflare_r2_endpoint' => secure($_POST['cloudflare_r2_endpoint']),
+        'cloudflare_r2_custom_domain' => secure($_POST['cloudflare_r2_custom_domain'])
       ]);
       break;
 

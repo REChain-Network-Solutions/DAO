@@ -14,6 +14,13 @@
     </div>
 
     <!-- Changelog -->
+    <h3>Version <span class="badge bg-warning rounded-pill">4.0.6</span></h3>
+    <blockquote>Release Date: 17th June 2025</blockquote>
+    <ul class="change-log-list mb20">
+      <li>[Added] Cloudflare R2 Storage Support</li>
+      <li>[Fixed] Minor Bugs</li>
+    </ul>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.5</span></h3>
     <blockquote>Release Date: 27th May 2025</blockquote>
     <ul class="change-log-list mb20">

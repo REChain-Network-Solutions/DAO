@@ -4,7 +4,7 @@
  * ajax -> users -> image crop
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // fetch bootstrap
@@ -188,7 +188,7 @@ try {
   }
 
   // save profile picture
-  if ($system['s3_enabled'] || $system['google_cloud_enabled'] || $system['digitalocean_enabled'] || $system['wasabi_enabled'] || $system['backblaze_enabled'] || $system['yandex_cloud_enabled'] || $system['ftp_enabled']) {
+  if ($system['s3_enabled'] || $system['google_cloud_enabled'] || $system['digitalocean_enabled'] || $system['wasabi_enabled'] || $system['backblaze_enabled'] || $system['yandex_cloud_enabled'] || $system['cloudflare_r2_enabled'] || $system['ftp_enabled']) {
     $image_url = $system['system_uploads'] . '/' . $full_picture;
   } else {
     $image_url = ABSPATH . $system['uploads_directory'] . '/' . $full_picture;

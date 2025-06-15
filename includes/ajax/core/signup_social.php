@@ -4,7 +4,7 @@
  * ajax -> core -> social signup
  * 
  * @package Delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // fetch bootstrap

@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> reset
  * 
- * @package delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
+ * @package Delus
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // fetch bootstrap
@@ -245,12 +245,12 @@ try {
         'wordpress_login_enabled' => secure('0'),
         'wordpress_appid' => secure(''),
         'wordpress_secret' => secure(''),
-        'delus_login_enabled' => secure('0'),
-        'delus_appid' => secure(''),
-        'delus_secret' => secure(''),
-        'delus_app_domain' => secure(''),
-        'delus_app_name' => secure(''),
-        'delus_app_icon' => secure(''),
+        'Delus_login_enabled' => secure('0'),
+        'Delus_appid' => secure(''),
+        'Delus_secret' => secure(''),
+        'Delus_app_domain' => secure(''),
+        'Delus_app_name' => secure(''),
+        'Delus_app_icon' => secure(''),
         'genders_disabled' => secure('0'),
         'show_usernames_enabled' => secure('0'),
         'disable_username_changes' => secure('0'),
@@ -328,6 +328,11 @@ try {
         'wasabi_enabled' => secure('0'),
         'backblaze_enabled' => secure('0'),
         'yandex_cloud_enabled' => secure('0'),
+        'cloudflare_r2_enabled' => secure('0'),
+        'cloudflare_r2_bucket' => secure(''),
+        'cloudflare_r2_key' => secure(''),
+        'cloudflare_r2_secret' => secure(''),
+        'cloudflare_r2_endpoint' => secure(''),
         'ftp_enabled' => secure('0'),
         's3_bucket' => secure(''),
         's3_region' => secure(''),

@@ -1,10 +1,10 @@
-
 <?php
+
 /**
  * APIs -> modules -> monetization -> controller
  *
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // _initMonetizationPlans

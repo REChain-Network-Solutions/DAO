@@ -4,7 +4,7 @@
  * class -> user
  * 
  * @package Delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 /* 
@@ -1633,6 +1633,7 @@ class User
       return false;
     }
     $_user = $get_user->fetch_assoc();
+    $_user['user_picture_default'] = ($_user['user_picture']) ? false : true;
     $_user['user_picture'] = get_picture($_user['user_picture'], $_user['user_gender']);
     $_user['user_fullname'] = ($system['show_usernames_enabled']) ? $_user['user_name'] : $_user['user_firstname'] . " " . $_user['user_lastname'];
     return $_user;
@@ -5043,9 +5044,9 @@ class User
     /* decode message text */
     $conversation['message_orginal'] = $this->decode_emojis($conversation['message']);
     $conversation['message_orginal'] = censored_words($conversation['message_orginal']);
-    $conversation['message_orginal'] = html_entity_decode($conversation['message_orginal'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    //$conversation['message_orginal'] = html_entity_decode($conversation['message_orginal'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $conversation['message'] = $this->_parse(["text" => $conversation['message'], "decode_mention" => false, "decode_hashtags" => false]);
-    $conversation['message'] = html_entity_decode($conversation['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    //$conversation['message'] = html_entity_decode($conversation['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     /* get last message */
     $conversation['last_message'] = $this->get_conversation_messages_by_id($conversation['last_message_id']);
     /* return */
@@ -5335,7 +5336,7 @@ class User
       $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
       $message['user_fullname'] = ($system['show_usernames_enabled']) ? $message['user_name'] : $message['user_firstname'] . " " . $message['user_lastname'];
       $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
-      $message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      //$message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
       /* return */
       $messages[] = $message;
     }
@@ -5357,7 +5358,7 @@ class User
     $message = $get_messages->fetch_assoc();
     $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
     $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
-    $message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    //$message['message'] = html_entity_decode($message['message'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     return $message;
   }
 
@@ -5551,20 +5552,21 @@ class User
   public function get_chatbox($conversation_id)
   {
     global $db;
+    /* check if the viewer is already in chatbox */
+    $check_conversations_users = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_users WHERE conversation_id = %s AND user_id = %s", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
+    if ($check_conversations_users->fetch_assoc()['count'] == 0) {
+      /* insert the viewer */
+      $db->query(sprintf("INSERT INTO conversations_users (conversation_id, user_id, seen) VALUES (%s, %s, '1')", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
+    }
     /* get conversation */
     $conversation = $this->get_conversation($conversation_id);
     if ($conversation) {
-      /* check if the viewer is already in chatbox */
-      $check_conversations_users = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_users WHERE conversation_id = %s AND user_id = %s", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
-      if ($check_conversations_users->fetch_assoc()['count'] == 0) {
-        /* insert the viewer */
-        $db->query(sprintf("INSERT INTO conversations_users (conversation_id, user_id, seen) VALUES (%s, %s, '1')", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
-      }
       /* get conversation messages */
       $conversation['messages'] = $this->get_conversation_messages($conversation_id)['messages'];
       /* return */
+      return $conversation;
     }
-    return $conversation;
+    return false;
   }
 
 
@@ -7787,7 +7789,10 @@ class User
 
       case 'scheduled':
         $id = $this->_data['user_id'];
+        /* [1] get viewer posts */
         $where_query .= "WHERE (posts.user_id = $id AND posts.user_type = 'user' AND posts.is_schedule = '1' AND posts.time > NOW())";
+        /* [2] get viewer liked pages posts */
+        $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'page' AND posts.is_schedule = '1' AND posts.time > NOW())", $this->spread_ids($this->get_pages_ids()));
         break;
 
       case 'memories':
@@ -23433,7 +23438,7 @@ class User
     if ($system['getting_started_profile_image_required'] || $system['getting_started_location_required'] || $system['getting_started_education_required'] || $system['getting_started_work_required']) {
       $user_info = $this->get_user($this->_data['user_id']);
       /* check if profile image required */
-      if ($system['getting_started_profile_image_required'] && is_empty($user_info['user_picture'])) {
+      if ($system['getting_started_profile_image_required'] && $user_info['user_picture_default']) {
         throw new Exception(__("You must upload your profile image"));
       }
       /* check if location data required */

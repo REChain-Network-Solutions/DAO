@@ -2762,18 +2762,18 @@
 
             <div class="divider"></div>
 
-            <!-- delus -->
+            <!-- Delus -->
             <div class="form-table-row">
               <div class="avatar">
                 {include file='__svg_icons.tpl' icon="developers" class="main-icon" width="40px" height="40px"}
               </div>
               <div>
-                <div class="form-label h6 mb5">{__("delus")}</div>
-                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other delus website On and Off")}</div>
+                <div class="form-label h6 mb5">{__("Delus")}</div>
+                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other Delus website On and Off")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="delus_login_enabled">
-                  <input type="checkbox" name="delus_login_enabled" id="delus_login_enabled" {if $system['delus_login_enabled']}checked{/if}>
+                <label class="switch" for="Delus_login_enabled">
+                  <input type="checkbox" name="Delus_login_enabled" id="Delus_login_enabled" {if $system['Delus_login_enabled']}checked{/if}>
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -2781,11 +2781,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("delus App ID")}
+                {__("Delus App ID")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="delus_appid" value="{$system['delus_appid']}">
+                  <input type="text" class="form-control" name="Delus_appid" value="{$system['Delus_appid']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2794,11 +2794,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("delus App Secret")}
+                {__("Delus App Secret")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="delus_secret" value="{$system['delus_secret']}">
+                  <input type="text" class="form-control" name="Delus_secret" value="{$system['Delus_secret']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2807,27 +2807,27 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("delus App Domain")}
+                {__("Delus App Domain")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="delus_app_domain" value="{$system['delus_app_domain']}">
+                  <input type="text" class="form-control" name="Delus_app_domain" value="{$system['Delus_app_domain']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
                 <div class="form-text">
-                  {__("Please enter your delus App Domain without http:// or https://")}
+                  {__("Please enter your Delus App Domain without http:// or https://")}
                 </div>
               </div>
             </div>
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("delus App Name")}
+                {__("Delus App Name")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="delus_app_name" value="{$system['delus_app_name']}">
+                  <input type="text" class="form-control" name="Delus_app_name" value="{$system['Delus_app_name']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2836,10 +2836,10 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("delus App Icon")}
+                {__("Delus App Icon")}
               </label>
               <div class="col-md-9">
-                {if $system['delus_app_icon'] == ''}
+                {if $system['Delus_app_icon'] == ''}
                   <div class="x-image">
                     <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
@@ -2848,10 +2848,10 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="delus_app_icon" value="">
+                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="">
                   </div>
                 {else}
-                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['delus_app_icon']}')">
+                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['Delus_app_icon']}')">
                     <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
                       <div class="progress x-progress">
@@ -2859,12 +2859,12 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="delus_app_icon" value="{$system['delus_app_icon']}">
+                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="{$system['Delus_app_icon']}">
                   </div>
                 {/if}
               </div>
             </div>
-            <!-- delus -->
+            <!-- Delus -->
 
             <!-- success -->
             <div class="alert alert-success mt15 mb0 x-hidden"></div>
@@ -6520,6 +6520,107 @@
           </form>
           <!-- Yandex Cloud -->
 
+          <div class="divider"></div>
+
+          <!-- Cloudflare R2 -->
+          <form class="js_ajax-forms" data-url="admin/settings.php?edit=cloudflare_r2">
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="cloudflare" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Cloudflare R2")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Enable Cloudflare R2 storage")} ({__("Note: Enable this will disable all other options")})
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="cloudflare_r2_enabled">
+                  <input type="checkbox" name="cloudflare_r2_enabled" id="cloudflare_r2_enabled" {if $system['cloudflare_r2_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Bucket Name")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="cloudflare_r2_bucket" value="{$system['cloudflare_r2_bucket']}">
+                <div class="form-text">
+                  {__("Your Cloudflare R2 bucket name")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Access Key ID")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="cloudflare_r2_key" value="{$system['cloudflare_r2_key']}">
+                <div class="form-text">
+                  {__("Your Cloudflare R2 Access Key ID")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Access Key Secret")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="cloudflare_r2_secret" value="{$system['cloudflare_r2_secret']}">
+                <div class="form-text">
+                  {__("Your Cloudflare R2 Access Key Secret")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Endpoint")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="cloudflare_r2_endpoint" value="{$system['cloudflare_r2_endpoint']}">
+                <div class="form-text">
+                  {__("Your Cloudflare R2 Endpoint")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Custom Domain")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="cloudflare_r2_custom_domain" value="{$system['cloudflare_r2_custom_domain']}">
+                <div class="form-text">
+                  {__("Your Cloudflare R2 Custom Domain (Example: 'https://cloud.Delus.com')")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label"></label>
+              <div class="col-md-9">
+                <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
+                <button type="button" class="btn btn-danger js_admin-tester" data-handle="cloudflare_r2">
+                  <i class="fa fa-bolt mr10"></i> {__("Test Connection")}
+                </button>
+              </div>
+            </div>
+
+            <!-- success -->
+            <div class="alert alert-success mt15 mb0 x-hidden"></div>
+            <!-- success -->
+
+            <!-- error -->
+            <div class="alert alert-danger mt15 mb0 x-hidden"></div>
+            <!-- error -->
+          </form>
+          <!-- Cloudflare R2 -->
         </div>
       </div>
       <!-- Cloud -->

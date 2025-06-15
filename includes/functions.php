@@ -4,7 +4,7 @@
  * functions
  *
  * @package Delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles..com/licenses/Delus/verify.php';
+  $url = 'https://Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles..com/licenses/Delus/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -482,6 +482,9 @@ function init_system(&$system)
       $system['system_uploads'] = $endpoint . "/uploads";
     } elseif ($system['yandex_cloud_enabled']) {
       $endpoint = "https://storage.yandexcloud.net/" . $system['yandex_cloud_bucket'];
+      $system['system_uploads'] = $endpoint . "/uploads";
+    } elseif ($system['cloudflare_r2_enabled']) {
+      $endpoint = $system['cloudflare_r2_custom_domain'];
       $system['system_uploads'] = $endpoint . "/uploads";
     } elseif ($system['ftp_enabled']) {
       $system['system_uploads'] = $system['ftp_endpoint'];
@@ -1102,7 +1105,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles..com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles..com/support'>" . "Delus Support" . ".</a></p>
                             </div>";
         break;
 
@@ -2109,7 +2112,7 @@ function upload_file($from_web = false)
   }
 
   // check if user exceeds the max upload limit per day
-  if (!($user->_is_admin || $user->_is_moderator) && $system['max_daily_upload_size'] != "0") {
+  if (!($user->_is_admin || $user->_is_moderator) && $system['max_daily_upload_size'] && $system['max_daily_upload_size'] != "0") {
     $max_daily_upload_size = $system['max_daily_upload_size'] * 1024;
     /* get the user total upload size from users_uploads */
     $get_total_upload_size = $db->query(sprintf("SELECT SUM(file_size) AS total_upload_size FROM users_uploads WHERE user_id = %s AND DATE(insert_date) = CURDATE();", secure($user->_data['user_id'])));
@@ -2286,6 +2289,9 @@ function upload_file($from_web = false)
         } elseif ($system['yandex_cloud_enabled']) {
           /* Yandex Cloud */
           yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['cloudflare_r2_enabled']) {
+          /* Cloudflare R2 */
+          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
@@ -2622,6 +2628,9 @@ function upload_file($from_web = false)
         } elseif ($system['yandex_cloud_enabled']) {
           /* Yandex Cloud */
           yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['cloudflare_r2_enabled']) {
+          /* Cloudflare R2 */
+          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
@@ -2713,6 +2722,9 @@ function upload_file($from_web = false)
         } elseif ($system['yandex_cloud_enabled']) {
           /* Yandex Cloud */
           yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['cloudflare_r2_enabled']) {
+          /* Cloudflare R2 */
+          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
@@ -2804,9 +2816,12 @@ function upload_file($from_web = false)
         } elseif ($system['yandex_cloud_enabled']) {
           /* Yandex Cloud */
           yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['cloudflare_r2_enabled']) {
+          /* Cloudflare R2 */
+          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
-          ftpـupload($final_file_path, $final_file_name);
+          ftp_upload($final_file_path, $final_file_name);
         }
 
         // log the file size in the database (users_uploads)
@@ -2895,6 +2910,9 @@ function upload_file($from_web = false)
         } elseif ($system['yandex_cloud_enabled']) {
           /* Yandex Cloud */
           yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['cloudflare_r2_enabled']) {
+          /* Cloudflare R2 */
+          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
@@ -3485,6 +3503,78 @@ function yandex_cloud_upload($file_source, $file_name, $content_type = "")
 
 
 /**
+ * cloudflare_r2_test
+ *
+ * @return void
+ */
+function cloudflare_r2_test()
+{
+  global $system;
+  try {
+    $s3Client = Aws\S3\S3Client::factory([
+      'version'     => 'latest',
+      'endpoint'    => $system['cloudflare_r2_endpoint'],
+      'region' => 'auto',
+      'credentials' => [
+        'key'     => $system['cloudflare_r2_key'],
+        'secret'  => $system['cloudflare_r2_secret'],
+      ]
+    ]);
+    $buckets = $s3Client->listBuckets();
+    if (empty($buckets)) {
+      throw new Exception(__("There is no buckets in your account"));
+    }
+    if (!$s3Client->doesBucketExist($system['cloudflare_r2_bucket'])) {
+      throw new Exception(__("There is no bucket with this name in your account"));
+    }
+  } catch (Exception $e) {
+    if (DEBUGGING) {
+      throw new Exception($e->getMessage());
+    } else {
+      throw new Exception(__("Connection Failed, Please check your settings"));
+    }
+  }
+}
+
+
+/**
+ * cloudflare_r2_upload
+ *
+ * @param string $file_source
+ * @param string $file_name
+ * @param string $content_type
+ * @return void
+ */
+
+function cloudflare_r2_upload($file_source, $file_name, $content_type = "")
+{
+  global $system;
+  $s3Client = Aws\S3\S3Client::factory([
+    'version'     => 'latest',
+    'endpoint'    => $system['cloudflare_r2_endpoint'],
+    'region' => 'auto',
+    'credentials' => [
+      'key'     => $system['cloudflare_r2_key'],
+      'secret'  => $system['cloudflare_r2_secret'],
+    ]
+  ]);
+  $Key = 'uploads/' . $file_name;
+  $s3Client->putObject([
+    'Bucket' => $system['cloudflare_r2_bucket'],
+    'Key'    => $Key,
+    'Body'   => fopen($file_source, 'r+'),
+    'ContentDisposition' => 'inline',
+    'ContentType' => $content_type,
+    'ACL'    => 'public-read',
+  ]);
+  /* remove local file */
+  gc_collect_cycles();
+  if ($s3Client->doesObjectExist($system['cloudflare_r2_bucket'], $Key)) {
+    unlink($file_source);
+  }
+}
+
+/**
  * ftp_test
  *
  * @return void
@@ -3668,6 +3758,24 @@ function delete_uploads_file($file_name, $bypass_db_check = true)
         'Key'    => $Key,
       ]);
     }
+  } elseif ($system['cloudflare_r2_enabled']) {
+    /* Cloudflare R2 */
+    $s3Client = Aws\S3\S3Client::factory([
+      'version'     => 'latest',
+      'endpoint'    => $system['cloudflare_r2_endpoint'],
+      'region' => 'auto',
+      'credentials' => [
+        'key'     => $system['cloudflare_r2_key'],
+        'secret'  => $system['cloudflare_r2_secret'],
+      ]
+    ]);
+    $Key = 'uploads/' . $file_name;
+    if ($s3Client->doesObjectExist($system['cloudflare_r2_bucket'], $Key)) {
+      $s3Client->deleteObject([
+        'Bucket' => $system['cloudflare_r2_bucket'],
+        'Key'    => $Key,
+      ]);
+    }
   } elseif ($system['ftp_enabled']) {
     /* FTP */
     $ftp = new \FtpClient\FtpClient();
@@ -3725,6 +3833,9 @@ function save_file_to_cloud($path, $file_name)
   } elseif ($system['yandex_cloud_enabled']) {
     /* Yandex Cloud */
     yandex_cloud_upload($path, $file_name);
+  } elseif ($system['cloudflare_r2_enabled']) {
+    /* Cloudflare R2 */
+    cloudflare_r2_upload($path, $file_name);
   } elseif ($system['ftp_enabled']) {
     /* FTP */
     ftp_upload($path, $file_name);

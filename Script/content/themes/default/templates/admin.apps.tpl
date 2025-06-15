@@ -38,7 +38,7 @@
           </ul>
         </div>
       </div>
-      <a href="https://bit.ly/Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.Portfolio" class="btn btn-md btn-success" target="_blank">
+      <a href="https://bit.ly/BuyDelusMessagingApps" class="btn btn-md btn-success" target="_blank">
         <i class="fa-solid fa-cart-shopping mr5"></i>{__("Buy Now")}
       </a>
     </div>

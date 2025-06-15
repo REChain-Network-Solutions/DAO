@@ -4,7 +4,7 @@
  * ajax -> admin -> test
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
  */
 
 // fetch bootstrap
@@ -100,6 +100,13 @@ try {
     case 'yandex_cloud':
       /* test */
       yandex_cloud_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
+    case 'cloudflare_r2':
+      /* test */
+      cloudflare_r2_test();
       /* return */
       return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
       break;

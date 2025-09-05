@@ -16,7 +16,7 @@
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
   "theia-sticky-sidebar": "^1.7.0",
-  "tinymce": "^6.1.2",
+  "tinymce": "^7.2.0",
   "tinymce-i18n": "^23.5.29",
   "triggeredautocomplete": "github:Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!tech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",

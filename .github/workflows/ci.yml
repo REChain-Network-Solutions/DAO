@@ -188,7 +188,7 @@ jobs:
       if: github.event_name == 'pull_request'
 
     - name: Code scanning
-      uses: github/super-linter@v4
+      uses: github/super-linter@v7
       env:
         DEFAULT_BRANCH: main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

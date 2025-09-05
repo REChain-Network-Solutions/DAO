@@ -4,7 +4,7 @@
  * modules -> started
  * 
  * @package Delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 Handles.
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootloader

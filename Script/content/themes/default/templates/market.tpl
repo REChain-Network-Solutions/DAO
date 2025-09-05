@@ -60,7 +60,7 @@
           {/if}
         {/if}
       </ul>
-      {if $user->_data['can_sell_products']}
+      {if $system['market_enabled']}
         <div class="mt10 float-end">
           <button class="btn btn-md btn-primary d-none d-lg-block" data-toggle="modal" data-url="posts/product.php?do=create">
             <i class="fa fa-plus-circle mr5"></i>{__("Create Product")}

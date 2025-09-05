@@ -4,7 +4,7 @@
  * APIs -> modules -> monetization -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // _initMonetizationPlans

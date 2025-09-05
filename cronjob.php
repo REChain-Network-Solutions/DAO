@@ -4,7 +4,7 @@
  * cronjob
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootloader
@@ -32,7 +32,12 @@ if ($system['cronjob_reset_pro_packages'] && $system['packages_enabled']) {
   $user->check_users_package();
 }
 
-/* [3] merits reminder */
+/* [3] clear pending uploads */
+if ($system['cronjob_clear_pending_uploads']) {
+  clear_pending_uploads();
+}
+
+/* [4] merits reminder */
 if ($system['cronjob_merits_reminder'] && $system['merits_enabled'] && $system['merits_notifications_reminder']) {
   $user->merits_reminder();
 }

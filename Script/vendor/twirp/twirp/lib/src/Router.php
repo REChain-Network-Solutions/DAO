@@ -32,8 +32,8 @@ final class Router implements RequestHandlerInterface
     private $handlers = [];
 
     public function __construct(
-        ResponseFactoryInterface $responseFactory = null,
-        StreamFactoryInterface $streamFactory = null
+        ?ResponseFactoryInterface $responseFactory = null,
+        ?StreamFactoryInterface $streamFactory = null
     ) {
         if ($responseFactory === null) {
             $responseFactory = Psr17FactoryDiscovery::findResponseFactory();
@@ -52,9 +52,6 @@ final class Router implements RequestHandlerInterface
         $this->handlers[$path] = $handler;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         foreach ($this->handlers as $path => $handler) {

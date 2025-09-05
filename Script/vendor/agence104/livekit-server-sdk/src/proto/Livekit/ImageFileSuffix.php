@@ -19,10 +19,17 @@ class ImageFileSuffix
      * Generated from protobuf enum <code>IMAGE_SUFFIX_TIMESTAMP = 1;</code>
      */
     const IMAGE_SUFFIX_TIMESTAMP = 1;
+    /**
+     * Do not append any suffix and overwrite the existing image with the latest
+     *
+     * Generated from protobuf enum <code>IMAGE_SUFFIX_NONE_OVERWRITE = 2;</code>
+     */
+    const IMAGE_SUFFIX_NONE_OVERWRITE = 2;
 
     private static $valueToName = [
         self::IMAGE_SUFFIX_INDEX => 'IMAGE_SUFFIX_INDEX',
         self::IMAGE_SUFFIX_TIMESTAMP => 'IMAGE_SUFFIX_TIMESTAMP',
+        self::IMAGE_SUFFIX_NONE_OVERWRITE => 'IMAGE_SUFFIX_NONE_OVERWRITE',
     ];
 
     public static function name($value)

@@ -3,8 +3,8 @@
 /**
  * class -> image
  * 
- * @package delus
- * @author Dmitry Olegovich Sorokin - @sorydima , @sorydev , @durovshater Handles.
+ * @package Delus
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 class Image

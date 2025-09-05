@@ -79,7 +79,7 @@
                 </td>
                 <td>{$session['user_ip']}</td>
                 <td>
-                  <button data-bs-toggle="tooltip" title='{__("End Session")}' class="btn btn-sm btn-icon btn-rounded btn-danger js_session-deleter" data-id="{$session['session_id']}">
+                  <button data-bs-toggle="tooltip" title='{__("End Session")}' class="btn btn-sm btn-icon btn-rounded btn-danger js_session-deleter" data-id="{$session['session_id']}" {if $session['session_id'] == $user->_data['active_session_id']} onclick="localStorage.clear();" {/if}>
                     <i class="fa fa-trash-alt"></i>
                   </button>
                 </td>

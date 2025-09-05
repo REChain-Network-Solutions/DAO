@@ -4,14 +4,14 @@
  * APIs -> index
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // set API_STACK & API_BASE
 define('API_STACK', '/apis/php');
 $subdir = str_replace($_SERVER['DOCUMENT_ROOT'], '', dirname($_SERVER['SCRIPT_NAME']));
 $subdir = str_replace(API_STACK, '', $subdir);
-define('API_BASE', rtrim($subdir, '/') . API_STACK);
+define('API_BASE', rtrim($subdir, DIRECTORY_SEPARATOR) . API_STACK);
 
 
 // set ABSPATH
@@ -74,9 +74,8 @@ try {
 
 
 // init system
-global $system;
 try {
-  init_system($system);
+  $system = init_system();
 } catch (Exception $e) {
   apiError($e->getMessage());
 }
@@ -94,12 +93,10 @@ if (!$session_hash) {
 
 
 // init smarty
-global $smarty;
 $smarty = init_smarty();
 
 
 // get user
-global $user;
 require_once(ABSPATH . 'includes/class-user.php');
 try {
   $user = new User();
@@ -126,7 +123,7 @@ if ($user->_is_banned) {
 }
 
 
-// 🚀 Starting the mobile app ...
+// 🚀 Starting the APIs ...
 
 // log session
 $user->log_session();
@@ -136,9 +133,8 @@ $user->log_session();
 isUserAuthenticated();
 
 
-// init the app
+// init PHP Express
 require('libs/Express.php');
-global $app;
 $app = new Express();
 
 

@@ -29,7 +29,7 @@
       <!-- watch -->
 
       <!-- add -->
-      {if $user->_data['can_publish_posts'] || $user->_data['can_go_live'] || $user->_data['can_add_stories'] || $user->_data['can_write_blogs'] || $user->_data['can_sell_products'] || $user->_data['can_raise_funding'] || $user->_data['can_create_ads'] || $user->_data['can_create_pages'] || $user->_data['can_create_groups'] || $user->_data['can_create_events']}
+      {if $user->_data['can_publish_posts'] || $user->_data['can_go_live'] || $user->_data['can_add_stories'] || $user->_data['can_write_blogs'] || $system['market_enabled'] || $user->_data['can_raise_funding'] || $user->_data['can_create_ads'] || $system['pages_enabled'] || $system['groups_enabled'] || $system['events_enabled']}
         <div class="link">
           <a class="dropdown" href="#" data-bs-toggle="dropdown" data-display="static">
             {include file='__svg_icons.tpl' icon="header-plus" class="header-icon" width="24px" height="24px"}
@@ -62,7 +62,7 @@
                     <div class="mt5">{__("Blog")}</div>
                   </a>
                 {/if}
-                {if $user->_data['can_sell_products']}
+                {if $system['market_enabled']}
                   <div class="add-quick-item" data-toggle="modal" data-url="posts/product.php?do=create">
                     {include file='__svg_icons.tpl' icon="products" class="main-icon" width="24px" height="24px"}
                     <div class="mt5">{__("Product")}</div>
@@ -80,19 +80,19 @@
                     <div class="mt5">{__("Ads")}</div>
                   </a>
                 {/if}
-                {if $user->_data['can_create_pages']}
+                {if $system['pages_enabled']}
                   <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=page">
                     {include file='__svg_icons.tpl' icon="pages" class="main-icon" width="24px" height="24px"}
                     <div class="mt5">{__("Page")}</div>
                   </div>
                 {/if}
-                {if $user->_data['can_create_groups']}
+                {if $system['groups_enabled']}
                   <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=group">
                     {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="24px" height="24px"}
                     <div class="mt5">{__("Group")}</div>
                   </div>
                 {/if}
-                {if $user->_data['can_create_events']}
+                {if $system['events_enabled']}
                   <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=event">
                     {include file='__svg_icons.tpl' icon="events" class="main-icon" width="24px" height="24px"}
                     <div class="mt5">{__("Event")}</div>

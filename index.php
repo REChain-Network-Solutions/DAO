@@ -4,7 +4,7 @@
  * index
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootloader
@@ -485,18 +485,14 @@ try {
       $smarty->assign('top_merits_users', $user->get_merits_top_users());
     }
 
-    // get pro members & pages
-    if ($system['packages_enabled']) {
-      // get pro members
-      $pro_members = $user->get_pro_members();
-      /* assign variables */
-      $smarty->assign('pro_members', $pro_members);
-      // get promoted pages
-      if ($system['pages_enabled']) {
-        $promoted_pages = $user->get_pages(['promoted' => true]);
-        /* assign variables */
-        $smarty->assign('promoted_pages', $promoted_pages);
-      }
+    // get pro members
+    if ($system['packages_enabled'] && $system['pro_users_widget_enabled']) {
+      $smarty->assign('pro_members', $user->get_pro_members());
+    }
+
+    // get promoted pages
+    if ($system['packages_enabled'] && $system['pro_page_widget_enabled']) {
+      $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true]));
     }
 
     // get suggested people

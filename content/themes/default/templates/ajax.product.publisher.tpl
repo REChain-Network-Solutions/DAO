@@ -7,6 +7,7 @@
 </div>
 <form class="publisher-mini">
   <div class="modal-body">
+    <!-- digital product -->
     <div class="form-table-row">
       <div>
         <div class="form-label h6 mb5">{__("Digital Product")}</div>
@@ -19,11 +20,15 @@
         </label>
       </div>
     </div>
+    <!-- digital product -->
+    <!-- download url -->
     <div id="digital_product" class="x-hidden">
       <div class="form-group">
         <label class="form-label">{__("Download URL")}</label>
         <input name="product_url" type="text" class="form-control">
       </div>
+      <!-- download url -->
+      <!-- upload file -->
       <div class="form-group">
         <label class="form-label">{__("OR Upload your File")}</label>
         <div class="x-image">
@@ -40,12 +45,16 @@
           {__("Allowed file types")}: {$system['file_extensions']}
         </div>
       </div>
+      <!-- upload file -->
     </div>
     <div class="divider dashed"></div>
+    <!-- product name -->
     <div class="form-group">
       <label class="form-label">{__("Product Name")}</label>
       <input name="name" type="text" class="form-control">
     </div>
+    <!-- product name -->
+    <!-- total item units -->
     <div class="row">
       <div class="form-group col-md-8">
         <label class="form-label">{__("Total Item Units")}</label>
@@ -56,6 +65,8 @@
         <input name="price" type="number" class="form-control">
       </div>
     </div>
+    <!-- total item units -->
+    <!-- category -->
     <div class="row">
       <div class="form-group col-md-8">
         <label class="form-label">{__("Category")}</label>
@@ -73,19 +84,25 @@
         </select>
       </div>
     </div>
+    <!-- category -->
+    <!-- location -->
     <div class="form-group">
       <label class="form-label">{__("Location")}</label>
       <input name="location" type="text" class="form-control js_geocomplete">
     </div>
+    <!-- location -->
+    <!-- description -->
     <div class="form-group">
       <label class="form-label">{__("Description")}</label>
       <textarea name="message" rows="5" dir="auto" class="form-control"></textarea>
     </div>
+    <!-- description -->
     <!-- custom fields -->
     {if $custom_fields}
       {include file='__custom_fields.tpl' _custom_fields=$custom_fields _registration=true}
     {/if}
     <!-- custom fields -->
+    <!-- photos -->
     <div class="form-group">
       <label class="form-label">{__("Photos")}</label>
       <div class="attachments clearfix" data-type="photos">
@@ -96,6 +113,7 @@
         </ul>
       </div>
     </div>
+    <!-- photos -->
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

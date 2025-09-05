@@ -134,7 +134,7 @@
 
                 {if count($results) >= $system['search_results']}
                   <!-- see-more -->
-                  <div class="alert alert-post see-more mb20 js_see-more js_see-more-infinite" data-get="search_{$tab}" data-filter="{$query}">
+                  <div class="alert alert-post see-more js_see-more js_see-more-infinite" data-get="search_{$tab}" data-filter="{$query}">
                     <span>{__("More Results")}</span>
                     <div class="loader loader_small x-hidden"></div>
                   </div>

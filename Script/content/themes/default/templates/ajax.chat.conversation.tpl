@@ -20,12 +20,12 @@
       <div class="col-lg-6 text-start text-lg-end">
         {if !$conversation['multiple_recipients'] && !$conversation['node_id']}
           {if $system['video_call_enabled']}
-            <button type="button" class="btn btn-sm btn-light rounded-pill js_chat-call-start" data-type="video" data-uid="{$conversation['user_id']}" data-name="{$conversation['name']}">
+            <button type="button" class="btn btn-sm btn-light rounded-pill js_chat-call-start" data-type="video" data-uid="{$conversation['user_id']}" data-name="{$conversation['name']}" data-picture="{$conversation['picture']}">
               {include file='__svg_icons.tpl' icon="call_video" class="main-icon" width="16px" height="16px"}
             </button>
           {/if}
           {if $system['audio_call_enabled']}
-            <button type="button" class="btn btn-sm btn-light rounded-pill js_chat-call-start" data-type="audio" data-uid="{$conversation['user_id']}" data-name="{$conversation['name']}">
+            <button type="button" class="btn btn-sm btn-light rounded-pill js_chat-call-start" data-type="audio" data-uid="{$conversation['user_id']}" data-name="{$conversation['name']}" data-picture="{$conversation['picture']}">
               {include file='__svg_icons.tpl' icon="call_audio" class="main-icon" width="16px" height="16px"}
             </button>
           {/if}

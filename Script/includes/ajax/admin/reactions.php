@@ -4,7 +4,7 @@
  * ajax -> admin -> reactions
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -50,6 +50,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE system_reactions SET title = %s, color = %s, image = %s, reaction_order = %s, enabled = %s WHERE reaction_id = %s", secure($_POST['title']), secure($_POST['color']), secure($_POST['image']), secure($_POST['reaction_order']), secure($_POST['enabled']), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['image']]);
       /* return */
       return_json(['success' => true, 'message' => __("Reaction info have been updated")]);
       break;

@@ -175,7 +175,7 @@
 
 {elseif $get == 'followers' || $get == 'followings' || $get == 'subscribers' || $get == 'page_invites' || $get == 'group_members' || $get == 'group_invites'  || $get == 'event_going'  || $get == 'event_interested'  || $get == 'event_invited'  || $get == 'event_invites'}
   {foreach $data as $_user}
-    {include file='__feeds_user.tpl' _tpl="box" _darker=true _connection=$_user["connection"]}
+    {include file='__feeds_user.tpl' _tpl=$tpl _darker=true _connection=$_user["connection"]}
   {/foreach}
 
 

@@ -4,7 +4,7 @@
  * events
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootloader
@@ -17,12 +17,32 @@ if (!$system['events_enabled']) {
 
 try {
 
+  // get selected type
+  if (isset($_GET['type'])) {
+    /* get selected type */
+    if (in_array($_GET['type'], ['all', 'in_person', 'online'])) {
+      $selected_type = $_GET['type'];
+    } else {
+      $selected_type = null;
+    }
+    /* assign variables */
+    $smarty->assign('selected_type', $selected_type);
+  }
+
   // get selected country
   if (isset($_GET['country'])) {
     /* get selected country */
     $selected_country = $user->get_country_by_name($_GET['country']);
     /* assign variables */
     $smarty->assign('selected_country', $selected_country);
+  }
+
+  // get selected language
+  if (isset($_GET['language'])) {
+    /* get selected language */
+    $selected_language = $user->get_language_by_code($_GET['language']);
+    /* assign variables */
+    $smarty->assign('selected_language', $selected_language);
   }
 
   // get view content
@@ -40,7 +60,7 @@ try {
       $smarty->assign('categories', $user->get_categories("events_categories"));
 
       // get new events
-      $events = $user->get_events(['suggested' => true, 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['suggested' => true, 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "suggested_events");
@@ -74,7 +94,7 @@ try {
       $smarty->assign('categories', $categories);
 
       // get category events
-      $events = $user->get_events(['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['suggested' => true, 'category_id' => $_GET['category_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "category_events");
@@ -89,7 +109,7 @@ try {
       page_header(__("Going Events") . ' | ' . __($system['system_title']));
 
       // get going events
-      $events = $user->get_events(['filter' => 'going', 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['filter' => 'going', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "going_events");
@@ -104,7 +124,7 @@ try {
       page_header(__("Interested Events") . ' | ' . __($system['system_title']));
 
       // get interested events
-      $events = $user->get_events(['filter' => 'interested', 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['filter' => 'interested', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "interested_events");
@@ -119,7 +139,7 @@ try {
       page_header(__("Invited Events") . ' | ' . __($system['system_title']));
 
       // get invited events
-      $events = $user->get_events(['filter' => 'invited', 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['filter' => 'invited', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "invited_events");
@@ -134,7 +154,7 @@ try {
       page_header(__("My Events") . ' | ' . __($system['system_title']));
 
       // get events
-      $events = $user->get_events(['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id']]);
+      $events = $user->get_events(['managed' => true, 'user_id' => $user->_data['user_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('events', $events);
       $smarty->assign('get', "events");

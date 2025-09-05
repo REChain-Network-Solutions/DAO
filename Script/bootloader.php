@@ -4,7 +4,7 @@
  * bootloader
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -25,7 +25,7 @@ try {
     /* get online & offline friends */
     $detect = new Detection\MobileDetect();
     $smarty->assign('detect', $detect);
-    if ($system['chat_enabled'] && $user->_data['user_chat_enabled'] && $user->_data['user_privacy_chat'] != "me" && !($detect->isMobile() && !$detect->isTablet())) {
+    if ($system['chat_enabled'] && $user->_data['user_privacy_chat'] != "me" && !($detect->isMobile() && !$detect->isTablet())) {
       /* get sidebar friends */
       $sidebar_friends = $user->get_contacts()['data'];
       /* assign variables */
@@ -42,6 +42,11 @@ try {
       /* assign variables */
       $smarty->assign('countries', $countries);
     }
+
+    // get languages
+    $languages = $user->get_languages();
+    /* assign variables */
+    $smarty->assign('languages', $languages);
   }
 
   // init affiliates system

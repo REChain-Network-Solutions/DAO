@@ -4,7 +4,7 @@
  * groups
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootloader
@@ -25,6 +25,14 @@ try {
     $smarty->assign('selected_country', $selected_country);
   }
 
+  // get selected language
+  if (isset($_GET['language'])) {
+    /* get selected language */
+    $selected_language = $user->get_language_by_code($_GET['language']);
+    /* assign variables */
+    $smarty->assign('selected_language', $selected_language);
+  }
+
   // get view content
   switch ($_GET['view']) {
     case '':
@@ -40,7 +48,7 @@ try {
       $smarty->assign('categories', $user->get_categories("groups_categories"));
 
       // get new groups
-      $groups = $user->get_groups(['suggested' => true, 'country' => $selected_country['country_id']]);
+      $groups = $user->get_groups(['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('groups', $groups);
       $smarty->assign('get', "suggested_groups");
@@ -74,7 +82,7 @@ try {
       $smarty->assign('categories', $categories);
 
       // get category groups
-      $groups = $user->get_groups(['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id']]);
+      $groups = $user->get_groups(['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('groups', $groups);
       $smarty->assign('get', "category_groups");
@@ -89,7 +97,7 @@ try {
       page_header(__("Joined Groups") . ' | ' . __($system['system_title']));
 
       // get joined groups
-      $groups = $user->get_groups(['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id']]);
+      $groups = $user->get_groups(['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('groups', $groups);
       $smarty->assign('get', "joined_groups");
@@ -104,7 +112,7 @@ try {
       page_header(__("My Groups") . ' | ' . __($system['system_title']));
 
       // get managed groups
-      $groups = $user->get_groups(['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id']]);
+      $groups = $user->get_groups(['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
       /* assign variables */
       $smarty->assign('groups', $groups);
       $smarty->assign('get', "groups");

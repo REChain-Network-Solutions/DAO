@@ -4,7 +4,7 @@
  * ajax -> admin -> static
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -70,6 +70,14 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE static_pages SET page_title = %s, page_is_redirect = %s, page_redirect_url = %s, page_url = %s, page_text = %s, page_in_footer = %s, page_in_sidebar = %s, page_icon = %s, page_order = %s WHERE page_id = %s", secure($_POST['page_title']), secure($_POST['page_is_redirect']), secure($_POST['page_redirect_url']), secure($_POST['page_url']), secure($_POST['page_text']), secure($_POST['page_in_footer']), secure($_POST['page_in_sidebar']), secure($_POST['page_icon']), secure($_POST['page_order'], 'int'), secure($_GET['id'], 'int')));
+      /* extract hosted images from the text */
+      $uploaded_images = extract_uploaded_images_from_text($_POST['page_text']);
+      /* remove pending uploads */
+      if ($uploaded_images) {
+        remove_pending_uploads($uploaded_images);
+      }
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['page_icon']]);
       /* return */
       return_json(['success' => true, 'message' => __("Static page info have been updated")]);
       break;
@@ -106,6 +114,14 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO static_pages (page_title, page_is_redirect, page_redirect_url, page_url, page_text, page_in_footer, page_in_sidebar, page_icon, page_order) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($_POST['page_title']), secure($_POST['page_is_redirect']), secure($_POST['page_redirect_url']), secure($_POST['page_url']), secure($_POST['page_text']), secure($_POST['page_in_footer']), secure($_POST['page_in_sidebar']), secure($_POST['page_icon']), secure($_POST['page_order'], 'int')));
+      /* extract hosted images from the text */
+      $uploaded_images = extract_uploaded_images_from_text($_POST['page_text']);
+      /* remove pending uploads */
+      if ($uploaded_images) {
+        remove_pending_uploads($uploaded_images);
+      }
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['page_icon']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/static";']);
       break;

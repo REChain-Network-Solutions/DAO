@@ -4,7 +4,7 @@
  * functions
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles..com/licenses/Delus/verify.php';
+  $url = 'https://Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!.com/licenses/Delus/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -437,16 +437,28 @@ function init_db_connection($db_host = null, $db_user = null, $db_password = nul
 /**
  * init_system
  *
- * @param array &$system
- *
- * @return void
+ * @return array
  */
-function init_system(&$system)
+function init_system()
 {
   global $db, $gettextLoader, $gettextTranslator;
+
+  /* init system */
+  $system = [];
+
+  /* get system options */
   $get_system_options = $db->query("SELECT * FROM system_options");
   while ($system_option = $get_system_options->fetch_assoc()) {
     $system[$system_option['option_name']] = $system_option['option_value'];
+  }
+
+  /* check system JWT */
+  if (!$system['system_jwt_key']) {
+    $system['system_jwt_key'] = generate_jwt_key();
+    /* update */
+    update_system_options([
+      'system_jwt_key' => secure($system['system_jwt_key']),
+    ]);
   }
 
   /* set system version */
@@ -485,6 +497,9 @@ function init_system(&$system)
       $system['system_uploads'] = $endpoint . "/uploads";
     } elseif ($system['cloudflare_r2_enabled']) {
       $endpoint = $system['cloudflare_r2_custom_domain'];
+      $system['system_uploads'] = $endpoint . "/uploads";
+    } elseif ($system['pushr_enabled']) {
+      $endpoint = $system['pushr_hostname'];
       $system['system_uploads'] = $endpoint . "/uploads";
     } elseif ($system['ftp_enabled']) {
       $system['system_uploads'] = $system['ftp_endpoint'];
@@ -550,7 +565,7 @@ function init_system(&$system)
   /* get system languages */
   $get_system_languages = $db->query("SELECT * FROM system_languages WHERE enabled = '1' ORDER BY language_order");
   while ($language = $get_system_languages->fetch_assoc()) {
-    $language['flag'] = get_picture($language['flag'], 'flag');
+    $language['flag'] = get_picture($language['flag'], 'flag', $system);
     if ($language['default']) {
       $system['default_language'] = $language;
     }
@@ -625,6 +640,9 @@ function init_system(&$system)
   /* check if viewer IP banned */
   $check_banned_ip = $db->query(sprintf("SELECT COUNT(*) as count FROM blacklist WHERE node_type = 'ip' AND node_value = %s", secure(get_user_ip())));
   $system['viewer_ip_banned'] = ($check_banned_ip->fetch_assoc()['count'] > 0) ? true : false;
+
+  /* return */
+  return $system;
 }
 
 
@@ -663,6 +681,7 @@ function init_smarty()
   $smarty->registerPlugin('modifier', 'get_payment_vat_percentage', 'get_payment_vat_percentage');
   $smarty->registerPlugin('modifier', 'implode', 'implode');
   $smarty->registerPlugin('modifier', 'trim', 'trim');
+  $smarty->registerPlugin('modifier', 'filemtime', 'filemtime');
   return $smarty;
 }
 
@@ -836,18 +855,20 @@ function extarct_hash_token($file_name)
  * @param string $cookie_name
  * @param string $cookie_value
  * @param integer $is_expired
+ * @param boolean $is_httponly
  * @return void
  */
-function set_cookie($cookie_name, $cookie_value, $is_expired = false)
+function set_cookie($cookie_name, $cookie_value, $is_expired = false, $is_httponly = true)
 {
   $secured = (get_system_protocol() == "https") ? true : false;
   $expire_time = ($is_expired) ?  0 : time() + 2592000;
+  $httponly = ($is_httponly) ? true : false;
   $options = [
     'expires' => $expire_time,
     'path' => '/',
     'domain' => '',
     'secure' => $secured,
-    'httponly' => true,
+    'httponly' => $httponly,
     'samesite' => 'Lax'
   ];
   setcookie($cookie_name, $cookie_value, $options);
@@ -1105,7 +1126,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles..com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!.com/support'>" . "Delus Support" . ".</a></p>
                             </div>";
         break;
 
@@ -1605,20 +1626,32 @@ function sms_send($phone, $message)
       break;
 
     case 'msg91':
-      $request_params = [
-        'authkey' => $system['msg91_authkey'],
-        'mobiles' => $phone,
-        'message' => $message,
-        'sender' => uniqid(),
-        'route' => "4"
+      $request_body = [
+        'template_id' => $system['msg91_template_id'],
+        'short_url' => '0',
+        'recipients' => [
+          [
+            'mobiles' => $phone,
+            'VAR1' => $message
+          ]
+        ]
       ];
-      $query_string = http_build_query($request_params);
-      $url = "http://api.msg91.com/api/sendhttp.php?" . $query_string;
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, $url);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+      curl_setopt_array($ch, [
+        CURLOPT_URL => "https://control.msg91.com/api/v5/flow",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => "",
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_POSTFIELDS => json_encode($request_body),
+        CURLOPT_HTTPHEADER => [
+          "accept: application/json",
+          "authkey: " . $system['msg91_authkey'],
+          "content-type: application/json"
+        ]
+      ]);
       $response = curl_exec($ch);
       $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
       if (curl_errno($ch)) {
@@ -1729,21 +1762,32 @@ function sms_test()
       break;
 
     case 'msg91':
-      $message = urlencode(__("Test SMS from") . " " . __($system['system_title']));
-      $request_params = [
-        'authkey' => $system['msg91_authkey'],
-        'mobiles' => $system['system_phone'],
-        'message' => $message,
-        'sender' => uniqid(),
-        'route' => "4"
+      $request_body = [
+        'template_id' => $system['msg91_template_id'],
+        'short_url' => '0',
+        'recipients' => [
+          [
+            'mobiles' => $system['system_phone'],
+            'VAR1' => __("Test SMS from") . " " . __($system['system_title'])
+          ]
+        ]
       ];
-      $query_string = http_build_query($request_params);
-      $url = "http://api.msg91.com/api/sendhttp.php?" . $query_string;
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, $url);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+      curl_setopt_array($ch, [
+        CURLOPT_URL => "https://control.msg91.com/api/v5/flow",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => "",
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_POSTFIELDS => json_encode($request_body),
+        CURLOPT_HTTPHEADER => [
+          "accept: application/json",
+          "authkey: " . $system['msg91_authkey'],
+          "content-type: application/json"
+        ]
+      ]);
       $response = curl_exec($ch);
       $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
       if (curl_errno($ch)) {
@@ -2147,16 +2191,16 @@ function upload_file($from_web = false)
   switch ($_POST["type"]) {
     case 'photos':
       // check photos upload permission
-      if ($_POST['handle'] == 'publisher' && !$system['photos_enabled']) {
+      if (!$user->_is_admin && $_POST['handle'] == 'publisher' && !$system['photos_enabled']) {
         throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
       }
-      if ($_POST['handle'] == 'comment' && !$system['comments_photos_enabled']) {
+      if (!$user->_is_admin && $_POST['handle'] == 'comment' && !$system['comments_photos_enabled']) {
         throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
       }
-      if ($_POST['handle'] == 'chat' && !$system['chat_photos_enabled']) {
+      if (!$user->_is_admin && $_POST['handle'] == 'chat' && !$system['chat_photos_enabled']) {
         throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
       }
-      if ($_POST['handle'] == 'tinymce' && !$system['tinymce_photos_enabled']) {
+      if (!$user->_is_admin && $_POST['handle'] == 'tinymce' && !$system['tinymce_photos_enabled']) {
         throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
       }
 
@@ -2292,13 +2336,21 @@ function upload_file($from_web = false)
         } elseif ($system['cloudflare_r2_enabled']) {
           /* Cloudflare R2 */
           cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['pushr_enabled']) {
+          /* Pushr */
+          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
         }
 
-        // log the file size inside the database (users_uploads)
-        $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id']), secure($final_file_name), secure($final_file_size), secure($date)));
+        // add the file to the users uploads
+        add_user_uploads($final_file_name, $final_file_size);
+
+        // add the file to the pending uploads
+        if (!in_array($_POST['handle'], ['cover-user', 'picture-user', 'cover-page', 'picture-page', 'cover-group', 'picture-group', 'cover-event'])) {
+          add_pending_uploads($final_file_name, $final_file_size, $_POST['handle']);
+        }
 
         // check the handle
         switch ($_POST['handle']) {
@@ -2631,13 +2683,19 @@ function upload_file($from_web = false)
         } elseif ($system['cloudflare_r2_enabled']) {
           /* Cloudflare R2 */
           cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['pushr_enabled']) {
+          /* Pushr */
+          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
         }
 
-        // log the file size in the database (users_uploads)
-        $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id']), secure($final_file_name), secure($final_file_size), secure($date)));
+        // add the file to the users uploads
+        add_user_uploads($final_file_name, $final_file_size);
+
+        // add the file to the pending uploads
+        add_pending_uploads($final_file_name, $final_file_size, $handle);
 
         // return the file new name & exit
         if ($_POST["multiple"] == "true") {
@@ -2725,13 +2783,19 @@ function upload_file($from_web = false)
         } elseif ($system['cloudflare_r2_enabled']) {
           /* Cloudflare R2 */
           cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['pushr_enabled']) {
+          /* Pushr */
+          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
         }
 
-        // log the file size in the database (users_uploads)
-        $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id']), secure($final_file_name), secure($final_file_size), secure($date)));
+        // add the file to the users uploads
+        add_user_uploads($final_file_name, $final_file_size);
+
+        // add the file to the pending uploads
+        add_pending_uploads($final_file_name, $final_file_size, $handle);
 
         // return the file new name & exit
         if ($_POST["multiple"] == "true") {
@@ -2819,13 +2883,19 @@ function upload_file($from_web = false)
         } elseif ($system['cloudflare_r2_enabled']) {
           /* Cloudflare R2 */
           cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['pushr_enabled']) {
+          /* Pushr */
+          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
         }
 
-        // log the file size in the database (users_uploads)
-        $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id']), secure($final_file_name), secure($final_file_size), secure($date)));
+        // add the file to the users uploads
+        add_user_uploads($final_file_name, $final_file_size);
+
+        // add the file to the pending uploads
+        add_pending_uploads($final_file_name, $final_file_size, $handle);
 
         // return the file new name & exit
         if ($_POST["multiple"] == "true") {
@@ -2913,13 +2983,19 @@ function upload_file($from_web = false)
         } elseif ($system['cloudflare_r2_enabled']) {
           /* Cloudflare R2 */
           cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
+        } elseif ($system['pushr_enabled']) {
+          /* Pushr */
+          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
         } elseif ($system['ftp_enabled']) {
           /* FTP */
           ftp_upload($final_file_path, $final_file_name);
         }
 
-        // log the file size in the database (users_uploads)
-        $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id']), secure($final_file_name), secure($final_file_size), secure($date)));
+        // add the file to the users uploads
+        add_user_uploads($final_file_name, $final_file_size);
+
+        // add the file to the pending uploads
+        add_pending_uploads($final_file_name, $final_file_size, $handle);
 
         // return the file new name & exit
         if ($_POST["multiple"] == "true") {
@@ -3073,6 +3149,88 @@ function delete_avatar_cover_image($handle, $id = null)
   }
 }
 
+
+/**
+ * add_user_uploads
+ *
+ * @param string $file_name
+ * @param int $file_size
+ * @return void
+ */
+function add_user_uploads($file_name, $file_size)
+{
+  global $db, $user, $date;
+  $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($file_name), secure($file_size), secure($date)));
+}
+
+
+/**
+ * add_pending_uploads
+ *
+ * @param string $file_name
+ * @param int $file_size
+ * @param string $handle
+ * @return void
+ */
+function add_pending_uploads($file_name, $file_size, $handle)
+{
+  global $db, $user, $date;
+  $db->query(sprintf("INSERT INTO users_uploads_pending (user_id, file_name, file_size, handle, insert_date) VALUES (%s, %s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($file_name), secure($file_size), secure($handle), secure($date)));
+}
+
+
+/**
+ * remove_pending_uploads
+ *
+ * @param array $files
+ * @return void
+ */
+function remove_pending_uploads($files = [])
+{
+  global $db, $user;
+  foreach ($files as $file_name) {
+    if (empty($file_name)) continue;
+    $db->query(sprintf("DELETE FROM users_uploads_pending WHERE user_id = %s AND file_name = %s", secure($user->_data['user_id'], 'int'), secure($file_name)));
+  }
+}
+
+
+/**
+ * clear_pending_uploads
+ *
+ * @return void
+ */
+function clear_pending_uploads()
+{
+  global $db;
+  $pending_uploads = $db->query("SELECT * FROM users_uploads_pending");
+  while ($pending_upload = $pending_uploads->fetch_assoc()) {
+    delete_uploads_file($pending_upload['file_name']);
+  }
+}
+
+
+/**
+ * extract_uploaded_images_from_text
+ *
+ * @param string $text
+ * @return array
+ */
+function extract_uploaded_images_from_text($text)
+{
+  global $system;
+  $images = [];
+  preg_replace_callback('/<img[^>]+src="([^"]+)"[^>]*>/', function ($matches) use (&$images, $system) {
+    $src = $matches[1];
+    if (strpos($src, $system['system_uploads']) === 0) {
+      $relative_path = substr($src, strlen($system['system_uploads']));
+      $relative_path = ltrim($relative_path, '/');
+      $images[] = $relative_path;
+    }
+    return '';
+  }, $text);
+  return $images;
+}
 
 
 /* ------------------------------- */
@@ -3574,6 +3732,80 @@ function cloudflare_r2_upload($file_source, $file_name, $content_type = "")
   }
 }
 
+
+/**
+ * pushr_test
+ *
+ * @return void
+ */
+function pushr_test()
+{
+  global $system;
+  try {
+    $s3Client = Aws\S3\S3Client::factory([
+      'version'     => 'latest',
+      'endpoint'    => $system['pushr_endpoint'],
+      'region' => 'auto',
+      'credentials' => [
+        'key'     => $system['pushr_key'],
+        'secret'  => $system['pushr_secret'],
+      ]
+    ]);
+    $buckets = $s3Client->listBuckets();
+    if (empty($buckets)) {
+      throw new Exception(__("There is no buckets in your account"));
+    }
+    if (!$s3Client->doesBucketExist($system['pushr_bucket'])) {
+      throw new Exception(__("There is no bucket with this name in your account"));
+    }
+  } catch (Exception $e) {
+    if (DEBUGGING) {
+      throw new Exception($e->getMessage());
+    } else {
+      throw new Exception(__("Connection Failed, Please check your settings"));
+    }
+  }
+}
+
+
+/**
+ * pushr_upload
+ *
+ * @param string $file_source
+ * @param string $file_name
+ * @param string $content_type
+ * @return void
+ */
+
+function pushr_upload($file_source, $file_name, $content_type = "")
+{
+  global $system;
+  $s3Client = Aws\S3\S3Client::factory([
+    'version'     => 'latest',
+    'endpoint'    => $system['pushr_endpoint'],
+    'region' => 'auto',
+    'credentials' => [
+      'key'     => $system['pushr_key'],
+      'secret'  => $system['pushr_secret'],
+    ]
+  ]);
+  $Key = 'uploads/' . $file_name;
+  $s3Client->putObject([
+    'Bucket' => $system['pushr_bucket'],
+    'Key'    => $Key,
+    'Body'   => fopen($file_source, 'r+'),
+    'ContentDisposition' => 'inline',
+    'ContentType' => $content_type,
+    'ACL'    => 'public-read',
+  ]);
+  /* remove local file */
+  gc_collect_cycles();
+  if ($s3Client->doesObjectExist($system['pushr_bucket'], $Key)) {
+    unlink($file_source);
+  }
+}
+
+
 /**
  * ftp_test
  *
@@ -3649,14 +3881,16 @@ function delete_uploads_file($file_name, $bypass_db_check = true)
   if (!$file_name) {
     return;
   }
-  // delete from database
+  /* delete from pending uploads */
+  remove_pending_uploads([$file_name]);
+  /* delete from database */
   if (!$bypass_db_check) {
     $check_upload = $db->query(sprintf("SELECT COUNT(*) AS count FROM users_uploads WHERE file_name = %s", secure($file_name)));
     if ($check_upload->fetch_assoc()['count'] > 0) {
       $db->query(sprintf("DELETE FROM users_uploads WHERE file_name = %s", secure($file_name)));
     }
   }
-  // delete from server
+  /* delete from server */
   if ($system['s3_enabled']) {
     /* Amazon S3 */
     $s3Client = Aws\S3\S3Client::factory([
@@ -3776,6 +4010,24 @@ function delete_uploads_file($file_name, $bypass_db_check = true)
         'Key'    => $Key,
       ]);
     }
+  } elseif ($system['pushr_enabled']) {
+    /* Pushr */
+    $s3Client = Aws\S3\S3Client::factory([
+      'version'     => 'latest',
+      'endpoint'    => $system['pushr_endpoint'],
+      'region' => 'auto',
+      'credentials' => [
+        'key'     => $system['pushr_key'],
+        'secret'  => $system['pushr_secret'],
+      ]
+    ]);
+    $Key = 'uploads/' . $file_name;
+    if ($s3Client->doesObjectExist($system['pushr_bucket'], $Key)) {
+      $s3Client->deleteObject([
+        'Bucket' => $system['pushr_bucket'],
+        'Key'    => $Key,
+      ]);
+    }
   } elseif ($system['ftp_enabled']) {
     /* FTP */
     $ftp = new \FtpClient\FtpClient();
@@ -3836,6 +4088,9 @@ function save_file_to_cloud($path, $file_name)
   } elseif ($system['cloudflare_r2_enabled']) {
     /* Cloudflare R2 */
     cloudflare_r2_upload($path, $file_name);
+  } elseif ($system['pushr_enabled']) {
+    /* Pushr */
+    pushr_upload($path, $file_name);
   } elseif ($system['ftp_enabled']) {
     /* FTP */
     ftp_upload($path, $file_name);
@@ -6031,7 +6286,7 @@ function coinbase_check($coinbase_code)
   }
   curl_close($ch);
   $responseJson = json_decode($response, true);
-  if (!empty($responseJson) && $responseJson['data']['payments'][0]['status'] == 'CONFIRMED') {
+  if (!empty($responseJson) && isset($responseJson['data']['payments'][0]['transaction_id']) && ($responseJson['data']['payments'][0]['status'] == 'confirmed' || $responseJson['data']['payments'][0]['status'] == 'pending')) {
     return true;
   }
   return false;
@@ -6040,46 +6295,46 @@ function coinbase_check($coinbase_code)
 
 
 /* ------------------------------- */
-/* SecurionPay */
+/* Shift4 */
 /* ------------------------------- */
 
 /**
- * securionpay
+ * shift4
  *
  * @param string $price
  * @return string
  */
-function securionpay($price)
+function shift4($price)
 {
   global $system;
   $total = get_payment_total_value($price);
-  $securionPay = new SecurionPay\SecurionPayGateway($system['securionpay_api_secret']);
-  $checkoutCharge = new SecurionPay\Request\CheckoutRequestCharge();
+  $shift4 = new Shift4\Shift4Gateway($system['shift4_api_secret']);
+  $checkoutCharge = new Shift4\Request\CheckoutRequestCharge();
   $checkoutCharge->amount($total * 100)->currency($system['system_currency']);
-  $checkoutRequest = new SecurionPay\Request\CheckoutRequest();
+  $checkoutRequest = new Shift4\Request\CheckoutRequest();
   $checkoutRequest->charge($checkoutCharge);
-  $signedCheckoutRequest = $securionPay->signCheckoutRequest($checkoutRequest);
+  $signedCheckoutRequest = $shift4->signCheckoutRequest($checkoutRequest);
   return $signedCheckoutRequest;
 }
 
 
 /**
- * securionpay_check
+ * shift4_check
  *
  * @param string $charge_id
  * @return boolean
  */
-function securionpay_check($charge_id)
+function shift4_check($charge_id)
 {
   global $system;
-  /* SecurionPay */
-  $url = "https://api.securionpay.com/charges?limit=10";
+  /* Shift4 */
+  $url = "https://api.shift4.com/charges?limit=10";
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_URL, $url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
   curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
   curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_USERPWD, $system['securionpay_api_secret'] . ":password");
+  curl_setopt($ch, CURLOPT_USERPWD, $system['shift4_api_secret'] . ":password");
   $response = curl_exec($ch);
   $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   if (curl_errno($ch)) {
@@ -7030,12 +7285,12 @@ function user_access($is_ajax = false, $bypass_subscription = false, $bypass_get
 function user_login($oauth_app_id = null)
 {
   global $user, $smarty;
+  $smarty->assign('highlight', __("You must sign in to see this page"));
   $smarty->assign('genders', $user->get_genders());
   $smarty->assign('custom_fields', $user->get_custom_fields());
   if ($system['select_user_group_enabled']) {
     $smarty->assign('user_groups', $user->get_users_groups());
   }
-  $smarty->assign('highlight', __("You must sign in to see this page"));
   if ($oauth_app_id) {
     $smarty->assign('oauth_app_id', $oauth_app_id);
   }
@@ -7091,6 +7346,9 @@ function modal()
       break;
     case 'SUCCESS':
       return_json(["callback" => "modal('#modal-success', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
+      break;
+    case 'INFO':
+      return_json(["callback" => "modal('#modal-info', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
       break;
     default:
       if (isset($args[1])) {
@@ -7281,11 +7539,14 @@ function censored_words($text)
  *
  * @param string $picture
  * @param string $type
+ * @param array $system
  * @return string
  */
-function get_picture($picture, $type)
+function get_picture($picture, $type, $system = null)
 {
-  global $system;
+  if ($system == null) {
+    global $system;
+  }
   if ($picture == "") {
     switch ($type) {
       case 'page':
@@ -7528,6 +7789,218 @@ function blur_image($image_path, $image_type)
   } catch (Exception $e) {
     return $e->getMessage();
   }
+}
+
+
+
+/* ------------------------------- */
+/* Socket.io */
+/* ------------------------------- */
+
+/**
+ * socket_certificate_test
+ *
+ * @return bool
+ */
+function socket_certificate_test()
+{
+  global $system;
+  $certificate_path = $system['chat_socket_ssl_crt'] ?? null;
+  $key_path = $system['chat_socket_ssl_key'] ?? null;
+  if (!$certificate_path || !$key_path) {
+    throw new Exception(__("Certificate or key path is not configured"));
+  }
+  if (!file_exists($certificate_path)) {
+    throw new Exception(sprintf(__("Certificate file not found: %s"), $certificate_path));
+  }
+  if (!file_exists($key_path)) {
+    throw new Exception(sprintf(__("Key file not found: %s"), $key_path));
+  }
+  if (!is_readable($certificate_path)) {
+    throw new Exception(sprintf(__("Certificate file not readable: %s"), $certificate_path));
+  }
+  if (!is_readable($key_path)) {
+    throw new Exception(sprintf(__("Key file not readable: %s"), $key_path));
+  }
+  return true;
+}
+
+/**
+ * socket_io_action
+ *
+ * @param string $action
+ * @return string
+ */
+function socket_io_action($action)
+{
+  global $system;
+  $php_path = $system['php_bin_path'];
+  $script_path = __DIR__ . '/../sockets/' . $system['chat_socket_server'] . '/socket.php';
+  switch ($action) {
+    case 'status':
+      $response = shell_exec("$php_path $script_path status 2>&1");
+      break;
+    case 'start':
+      $response = shell_exec("$php_path $script_path start -d 2>&1");
+      break;
+    case 'stop':
+      $response = shell_exec("$php_path $script_path stop 2>&1");
+      break;
+  }
+  return $response;
+}
+
+
+/**
+ * get_all_sockets_user_ids
+ *
+ * @param object $io
+ * @return array
+ */
+function get_all_sockets_user_ids($io)
+{
+  return array_unique(array_column($io->sockets->sockets, 'userId')) ?? [];
+}
+
+
+/**
+ * get_all_sockets_by_user_id
+ *
+ * @param object $io
+ * @param int $user_id
+ * @return array
+ */
+function get_all_sockets_by_user_id($io, $user_id)
+{
+  $sockets = [];
+  foreach ($io->sockets->sockets as $socketId => $socket) {
+    if (isset($socket->userId) && $socket->userId == $user_id) {
+      $sockets[$socketId] = $socket;
+    }
+  }
+  return $sockets;
+}
+
+
+/**
+ * handle_typing_change
+ *
+ * @param object $io
+ * @param string $room
+ * @param object $socket
+ * @param object $user
+ * @param boolean $is_typing
+ * @return void
+ */
+function handle_typing_change($io, $room, $socket, $user, $is_typing)
+{
+  $conversation_id = str_replace('conversation_', '', $room);
+  $user_display_name = html_entity_decode(($GLOBALS['system']['show_usernames_enabled']) ? $user->_data['user_name'] : $user->_data['user_firstname'],    ENT_QUOTES);
+  init_room_typing_list($room);
+  if ($is_typing) {
+    add_typing_user($room, $socket->userId, $user_display_name);
+  } else {
+    remove_typing_user($room, $socket->userId);
+  }
+  /* broadcast typing list to other users in the room */
+  $room_clients = $io->sockets->in($room)->sockets;
+  foreach ($room_clients as $client) {
+    if (!isset($client->userId)) continue;
+    $other_typing_users = array_diff_key($GLOBALS['room_typing_list'][$room], [$client->userId => null]);
+    $typing_name_list = implode(', ', $other_typing_users);
+    $client->emit('event_server_typing', [
+      'conversation_id' => $conversation_id,
+      'typing_name_list' => $typing_name_list
+    ]);
+  }
+  print("💬 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Room: $room - Typing: " . ($is_typing ? 'true' : 'false') . "\n");
+  /* cleanup empty room typing list */
+  cleanup_empty_room_typing_list($room);
+  /* update typing status */
+  $user->update_conversation_typing_status($conversation_id, $is_typing);
+}
+
+
+/**
+ * init_room_typing_list
+ *
+ * @param string $room
+ * @return void
+ */
+function init_room_typing_list($room)
+{
+  if (!isset($GLOBALS['room_typing_list'][$room])) {
+    $GLOBALS['room_typing_list'][$room] = [];
+  }
+}
+
+/**
+ * add_typing_user
+ *
+ * @param string $room
+ * @param int $user_id
+ * @param string $user_display_name
+ * @return void
+ */
+function add_typing_user($room, $user_id, $user_display_name)
+{
+  if (!isset($GLOBALS['room_typing_list'][$room][$user_id])) {
+    $GLOBALS['room_typing_list'][$room][$user_id] = $user_display_name;
+  }
+}
+
+
+/**
+ * remove_typing_user
+ *
+ * @param string $room
+ * @param int $user_id
+ * @return void
+ */
+function remove_typing_user($room, $user_id)
+{
+  if (isset($GLOBALS['room_typing_list'][$room][$user_id])) {
+    unset($GLOBALS['room_typing_list'][$room][$user_id]);
+  }
+}
+
+
+/**
+ * clean_room_typing_list
+ *
+ * @param string $room
+ * @return void
+ */
+function cleanup_empty_room_typing_list($room)
+{
+  if (empty($GLOBALS['room_typing_list'][$room])) {
+    unset($GLOBALS['room_typing_list'][$room]);
+  }
+}
+
+
+/**
+ * cleanup_user_typing_list
+ *
+ * @param object $socket
+ * @return array
+ */
+function cleanup_user_typing_list($socket)
+{
+  $affected_rooms = [];
+  /* get only conversation rooms */
+  $conversation_rooms = array_filter($socket->rooms, function ($room) {
+    return strpos($room, 'conversation_') === 0;
+  });
+  /* filter only the typing rooms that match conversation rooms */
+  $typing_rooms = array_intersect_key($GLOBALS['room_typing_list'], array_flip($conversation_rooms));
+  /* get all rooms that the user is typing in */
+  foreach ($typing_rooms as $room => &$typing_users) {
+    if (isset($typing_users[$socket->userId])) {
+      $affected_rooms[] = $room;
+    }
+  }
+  return $affected_rooms;
 }
 
 

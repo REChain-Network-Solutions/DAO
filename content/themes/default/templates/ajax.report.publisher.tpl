@@ -7,7 +7,7 @@
 </div>
 <form class="js_ajax-forms" data-url="data/report.php?do=submit&id={$id}&handle={$handle}">
   <div class="modal-body">
-
+    <!-- category -->
     <div class="form-group">
       <label class="form-label">{__("Why you want to report this?")}</label>
       <select class="form-select" name="category" id="category">
@@ -16,7 +16,8 @@
         {/foreach}
       </select>
     </div>
-
+    <!-- category -->
+    <!-- reason -->
     <div class="row">
       <div class="col-md-12">
         <div class="form-group">
@@ -25,7 +26,7 @@
         </div>
       </div>
     </div>
-
+    <!-- reason -->
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

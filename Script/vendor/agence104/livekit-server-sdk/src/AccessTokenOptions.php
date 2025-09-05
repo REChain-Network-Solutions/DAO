@@ -2,35 +2,35 @@
 
 namespace Agence104\LiveKit;
 
+/**
+ * Defines the options for the AccessToken.
+ */
 class AccessTokenOptions {
 
   /**
    * The amount of time before expiration expressed in seconds as numeric value.
-   *
-   * @var int
    */
-  protected $ttl = 4 * 60 * 60;
+  protected ?int $ttl = NULL;
 
   /**
    * The display name for the participant, available as `Participant.name`.
-   *
-   * @var string|null
    */
-  protected $name;
+  protected ?string $name = NULL;
 
   /**
    * The Identity of the user, required for room join tokens.
-   *
-   * @var string
    */
-  protected $identity;
+  protected ?string $identity = NULL;
 
   /**
    * Custom metadata to be passed to participants.
-   *
-   * @var string|null
    */
-  protected $metadata;
+  protected ?string $metadata = NULL;
+
+  /**
+   * Custom attributes to be passed to participants.
+   */
+  protected ?array $attributes = NULL;
 
   /**
    * AccessTokenOptions class constructor.
@@ -47,14 +47,20 @@ class AccessTokenOptions {
   }
 
   /**
-   * @return int
+   * Get the time to live of the token.
+   *
+   * @return int|null
+   *   The time to live of the token.
    */
-  public function getTtl(): int {
+  public function getTtl(): ?int {
     return $this->ttl;
   }
 
   /**
+   * Set the time to live of the token.
+   *
    * @param int $ttl
+   *   The time to live of the token.
    *
    * @return $this
    */
@@ -64,14 +70,20 @@ class AccessTokenOptions {
   }
 
   /**
+   * Get the display name for the participant.
+   *
    * @return string|null
+   *   The display name for the participant.
    */
   public function getName(): ?string {
     return $this->name;
   }
 
   /**
+   * Set the display name for the participant.
+   *
    * @param string|null $name
+   *   The display name for the participant.
    *
    * @return $this
    */
@@ -81,14 +93,20 @@ class AccessTokenOptions {
   }
 
   /**
-   * @return null|string
+   * Get the identity of the participant.
+   *
+   * @return string|null
+   *   The identity of the participant.
    */
   public function getIdentity(): ?string {
     return $this->identity;
   }
 
   /**
+   * Set the identity of the participant.
+   *
    * @param string $identity
+   *   The identity of the participant.
    *
    * @return $this
    */
@@ -98,19 +116,48 @@ class AccessTokenOptions {
   }
 
   /**
+   * Get the metadata of the participant.
+   *
    * @return string|null
+   *   The metadata of the participant.
    */
   public function getMetadata(): ?string {
     return $this->metadata;
   }
 
   /**
+   * Set the metadata of the participant.
+   *
    * @param string|null $metadata
+   *   The metadata of the participant.
    *
    * @return $this
    */
   public function setMetadata(?string $metadata): self {
     $this->metadata = $metadata;
+    return $this;
+  }
+
+  /**
+   * Get the attributes of the participant.
+   *
+   * @return array<string, string>|null
+   *   The attributes of the participant.
+   */
+  public function getAttributes(): ?array {
+    return $this->attributes;
+  }
+
+  /**
+   * Set the attributes of the participant.
+   *
+   * @param array<string, string>|null $attributes
+   *   The attributes of the participant.
+   *
+   * @return $this
+   */
+  public function setAttributes(?array $attributes): self {
+    $this->attributes = $attributes;
     return $this;
   }
 

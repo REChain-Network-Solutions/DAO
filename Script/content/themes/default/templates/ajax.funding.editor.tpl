@@ -7,13 +7,13 @@
 </div>
 <form class="js_ajax-forms" data-url="posts/edit.php">
   <div class="modal-body">
-    <!-- funding title -->
+    <!-- title -->
     <div class="form-group">
       <label class="form-label">{__("Title")}</label>
       <input name="title" type="text" class="form-control" value="{$post['funding']['title']}">
     </div>
-    <!-- funding title -->
-    <!-- funding amount -->
+    <!-- title -->
+    <!-- amount -->
     <div class="form-group">
       <label class="form-label">{__("Amount You Would Like To Receive")}</label>
       <div class="input-money {$system['system_currency_dir']}">
@@ -21,13 +21,13 @@
         <input type="text" class="form-control" placeholder="0.00" name="amount" value="{$post['funding']['amount']}">
       </div>
     </div>
-    <!-- funding amount -->
-    <!-- funding description -->
+    <!-- amount -->
+    <!-- description -->
     <div class="form-group">
       <label class="form-label">{__("Description")}</label>
       <textarea name="description" rows="5" dir="auto" class="form-control">{$post['text_plain']}</textarea>
     </div>
-    <!-- funding description -->
+    <!-- description -->
     <!-- cover image -->
     <div class="form-group">
       <label class="form-label">{__("Cover Image")}</label>

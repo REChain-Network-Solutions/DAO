@@ -48,16 +48,16 @@
     {else}
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
     {/if}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Fonts [Poppins|Tajawal|Font-Awesome] -->
 
     <!-- CSS -->
     {if $system['language']['dir'] == "LTR"}
       <link href="{$system['system_url']}/node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-      <link href="{$system['system_url']}/content/themes/{$system['theme']}/css/style.min.css" rel="stylesheet">
+      <link href="{$system['system_url']}/content/themes/{$system['theme']}/css/style.min.css?v={$system['system_version']}" rel="stylesheet">
     {else}
       <link rel="stylesheet" href="{$system['system_url']}/node_modules/bootstrap/dist/css/bootstrap.rtl.min.css">
-      <link href="{$system['system_url']}/content/themes/{$system['theme']}/css/style.rtl.min.css" rel="stylesheet">
+      <link href="{$system['system_url']}/content/themes/{$system['theme']}/css/style.rtl.min.css?v={$system['system_version']}" rel="stylesheet">
     {/if}
     <!-- CSS -->
 

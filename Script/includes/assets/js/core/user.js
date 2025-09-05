@@ -2,7 +2,7 @@
  * user js
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // initialize API URLs
@@ -243,7 +243,7 @@ function data_heartbeat() {
       if (response.conversations) {
         $(".js_live-messages").find(".js_scroller").html("<ul>" + response.conversations + "</ul>");
         /* update live messages in messages page */
-        if (window.location.pathname.indexOf("messages") != -1) {
+        if (is_page('messages')) {
           if ($(".js_live-messages-alt").find(".js_scroller ul").length > 0) {
             $(".js_live-messages-alt").find(".js_scroller ul").html(response.conversations);
           } else {
@@ -252,7 +252,7 @@ function data_heartbeat() {
         }
         if (response.conversations_count > 0) {
           $(".js_live-messages").find("span.counter").text(response.conversations_count).show();
-          if (chat_sound) {
+          if (chat_sound && !chat_socket_enabled) {
             $("#chat-sound")[0].play();
           }
         } else {
@@ -320,7 +320,7 @@ function change_cover_picture(image_path) {
 }
 
 
-// initialize picture crop
+// init picture crop
 function init_picture_crop(node) {
   setTimeout(function () {
     $('#cropped-profile-picture').rcrop({
@@ -333,7 +333,7 @@ function init_picture_crop(node) {
 }
 
 
-// initialize picture position
+// init picture position
 function init_picture_position() {
   if (cover_crop_enabled) {
     var node = $('.js_init-position-picture');
@@ -394,7 +394,7 @@ function tagify_ajax(selector) {
           }
         }, 'json')
           .fail(function () {
-            modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+            show_error_modal();
           });
       });
     }
@@ -1160,24 +1160,7 @@ $(function () {
       if (loader) loader.hide();
       /* handle the response */
       if (response.callback) {
-        if (handle == "publisher") {
-          /* hide the attachment from publisher */
-          if ((type == "photos" && jQuery.isEmptyObject(publisher.data('photos'))) || type != "photos") {
-            /* hide attachments */
-            attachments.hide();
-            /* remove the type object from publisher data */
-            publisher.removeData(type);
-            /* handle publisher tab */
-            publisher_tab(publisher, type);
-          }
-          /* remove upload loader */
-          if (loader) loader.remove();
-          /* enable publisher button */
-          button_status(publisher_button, "reset");
-        } else if (handle == "publisher-mini") {
-          /* enable publisher button */
-          button_status(publisher_button, "reset");
-        }
+        _handle_error(false);
         eval(response.callback);
       } else {
         /* check type */
@@ -1401,7 +1384,7 @@ $(function () {
       }
     }
     /* handle error */
-    function _handle_error() {
+    function _handle_error(show_error_modal = true) {
       /* enable uploader input */
       uploader.prop('disabled', false);
       /* hide upload loader */
@@ -1425,7 +1408,9 @@ $(function () {
         /* enable publisher button */
         button_status(publisher_button, "reset");
       }
-      modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+      if (show_error_modal) {
+        show_error_modal();
+      }
     }
     /* handle chunked upload */
     var chunkSize = chunk_upload_size * 1024 * 1024;
@@ -1471,6 +1456,7 @@ $(function () {
         contentType: false,
         success: function (response) {
           if (response.callback) {
+            _handle_error(false);
             eval(response.callback);
           } else {
             currentChunkIndex++;
@@ -1556,7 +1542,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1586,7 +1572,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1610,7 +1596,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1635,7 +1621,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1660,7 +1646,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1685,7 +1671,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* cancel position picture */
@@ -1718,7 +1704,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1735,7 +1721,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1766,7 +1752,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }
   });
@@ -1784,7 +1770,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1823,7 +1809,7 @@ $(function () {
         parent.find('.loader').remove();
         accept.show();
         decline.show();
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* friend & unfriend */
@@ -1866,7 +1852,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* follow & unfollow */
@@ -1895,7 +1881,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* favorite & unfavorite */
@@ -1924,7 +1910,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* block user */
@@ -1947,7 +1933,7 @@ $(function () {
         .fail(function () {
           /* button reset */
           button_status(_this, "reset");
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1971,7 +1957,7 @@ $(function () {
         .fail(function () {
           /* button reset */
           button_status(_this, "reset");
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1988,7 +1974,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }, true);
   });
@@ -2008,7 +1994,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* like & unlike page */
@@ -2037,7 +2023,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* boost & unboost page */
@@ -2066,7 +2052,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* page admin addation & remove */
@@ -2096,7 +2082,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* page member remove */
@@ -2119,7 +2105,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* group join & leave */
@@ -2154,7 +2140,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* group request (accept|decline) */
@@ -2178,7 +2164,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* group admin addation & remove */
@@ -2208,7 +2194,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* group member remove */
@@ -2231,7 +2217,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* event go & ungo */
@@ -2260,7 +2246,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* event interest & uninterest */
@@ -2289,7 +2275,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* invite (page|group|event) */
@@ -2320,7 +2306,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* delete (page|group|event) */
@@ -2344,7 +2330,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2364,7 +2350,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2381,7 +2367,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2409,7 +2395,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* remove connected account */
@@ -2431,7 +2417,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* remove connected account */
@@ -2452,7 +2438,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -2470,7 +2456,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2488,7 +2474,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2521,7 +2507,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
     return false;
@@ -2549,7 +2535,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* remove from cart */
@@ -2565,7 +2551,7 @@ $(function () {
         }
       }, "json")
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2586,7 +2572,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* checkout */
@@ -2607,7 +2593,7 @@ $(function () {
         }
       }, "json")
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2634,7 +2620,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* delete address */
@@ -2667,7 +2653,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2691,7 +2677,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2714,7 +2700,7 @@ $(function () {
       $('#js_ads-potential-reach-loader').hide();
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* change campaign type */
@@ -2785,7 +2771,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* delete app */
@@ -2801,7 +2787,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2818,7 +2804,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2838,7 +2824,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });

@@ -233,6 +233,18 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
+                {__("Event Type")}
+              </label>
+              <div class="col-md-9">
+                <select class="form-select" name="is_online">
+                  <option {if $data['event_is_online'] == 0}selected{/if} value="0">{__("In Person")}</option>
+                  <option {if $data['event_is_online'] == 1}selected{/if} value="1">{__("Online")}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
                 {__("Select Privacy")}
               </label>
               <div class="col-md-9">

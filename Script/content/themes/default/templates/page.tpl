@@ -507,7 +507,7 @@
                   {/if}
                   {if $spage['page_social_twitter']}
                     <a target="_blank" href="{$spage['page_social_twitter']}" class="btn-icon-social">
-                      {include file='__svg_icons.tpl' icon="twitter" width="24px" height="24px"}
+                      {include file='__svg_icons.tpl' icon="x" width="24px" height="24px"}
                     </a>
                   {/if}
                   {if $spage['page_social_youtube']}
@@ -1358,6 +1358,15 @@
                           </select>
                         </div>
                         <div class="form-group">
+                          <label class="form-label" for="language">{__("Language")}</label>
+                          <select class="form-select" name="language">
+                            <option value="none">{__("Select Language")}</option>
+                            {foreach $languages as $language}
+                              <option value="{$language['language_id']}" {if $spage['page_language'] == $language['language_id']}selected{/if}>{$language['title']}</option>
+                            {/foreach}
+                          </select>
+                        </div>
+                        <div class="form-group">
                           <label class="form-label" for="description">{__("About")}</label>
                           <textarea class="form-control" name="description" id="description">{$spage['page_description']}</textarea>
                         </div>
@@ -1465,7 +1474,7 @@
                             <label class="form-label">{__("Twitter Profile URL")}</label>
                             <div class="input-group">
                               <span class="input-group-text bg-transparent">
-                                {include file='__svg_icons.tpl' icon="twitter" width="22px" height="22px"}
+                                {include file='__svg_icons.tpl' icon="x" width="22px" height="22px"}
                               </span>
                               <input type="text" class="form-control" name="twitter" value="{$spage['page_social_twitter']}">
                             </div>

@@ -48,7 +48,7 @@
           </li>
         {/if}
       </ul>
-      {if $user->_data['can_create_events']}
+      {if $system['events_enabled']}
         <div class="mt10 float-end">
           <button class="btn btn-md btn-primary d-none d-lg-block" data-toggle="modal" data-url="modules/add.php?type=event">
             <i class="fa fa-plus-circle mr5"></i>{__("Create Event")}
@@ -116,12 +116,43 @@
 
     <!-- content panel -->
     <div class="{if $view == "" || $view == "category"}col-md-8 col-lg-9 sg-offcanvas-mainbar{else}col-12 sg-offcanvas-mainbar{/if}">
-      <!-- location filter -->
-      {if $system['newsfeed_location_filter_enabled']}
-        <div class="posts-filter">
-          <span>{$view_title}</span>
-          <div class="float-end">
-            <a href="#" data-bs-toggle="dropdown" class="countries-filter">
+
+      <div class="posts-filter">
+        <span>{$view_title}</span>
+        <div class="float-end">
+          <!-- type filter (in person or online) -->
+          <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+            <i class="fa fa-table fa-fw"></i>
+            {if $selected_type}
+              {if $selected_type == "all"}
+                {__("All Types")}
+              {/if}
+              {if $selected_type == "in_person"}
+                {__("In Person")}
+              {/if}
+              {if $selected_type == "online"}
+                {__("Online")}
+              {/if}
+            {else}
+              {__("All Types")}
+            {/if}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end countries-dropdown">
+            <a class="dropdown-item" href="?type=all{if $selected_country}&country={$selected_country['country_name']}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
+              {__("All")}
+            </a>
+            <a class="dropdown-item" href="?type=in_person{if $selected_country}&country={$selected_country['country_name']}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
+              {__("In Person")}
+            </a>
+            <a class="dropdown-item" href="?type=online{if $selected_country}&country={$selected_country['country_name']}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
+              {__("Online")}
+            </a>
+          </div>
+          <!-- type filter (in person or online) -->
+
+          <!-- location filter -->
+          {if $system['newsfeed_location_filter_enabled']}
+            <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
               <i class="fa fa-globe fa-fw"></i>
               {if $selected_country}
                 <span>{$selected_country['country_name']}</span>
@@ -131,20 +162,44 @@
             </a>
             <div class="dropdown-menu dropdown-menu-end countries-dropdown">
               <div class="js_scroller">
-                <a class="dropdown-item" href="?country=all">
+                <a class="dropdown-item" href="?country=all{if $selected_type}&type={$selected_type}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
                   {__("All Countries")}
                 </a>
                 {foreach $countries as $country}
-                  <a class="dropdown-item" href="?country={$country['country_name_native']}">
+                  <a class="dropdown-item" href="?country={$country['country_name_native']}{if $selected_type}&type={$selected_type}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
                     {$country['country_name']}
                   </a>
                 {/foreach}
               </div>
             </div>
+          {/if}
+          <!-- location filter -->
+
+          <!-- language filter -->
+          <a href="#" data-bs-toggle="dropdown" class="countries-filter">
+            <i class="fa fa-language fa-fw"></i>
+            {if $selected_language}
+              <span>{$selected_language['title']}</span>
+            {else}
+              <span>{__("All Languages")}</span>
+            {/if}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end countries-dropdown">
+            <div class="js_scroller">
+              <a class="dropdown-item" href="?language=all{if $selected_type}&type={$selected_type}{/if}{if $selected_country}&country={$selected_country['country_name']}{/if}">
+                {__("All Languages")}
+              </a>
+              {foreach $languages as $language}
+                <a class="dropdown-item" href="?language={$language['code']}{if $selected_type}&type={$selected_type}{/if}{if $selected_country}&country={$selected_country['country_name']}{/if}">
+                  {$language['title']}
+                </a>
+              {/foreach}
+            </div>
           </div>
+          <!-- language filter -->
         </div>
-      {/if}
-      <!-- location filter -->
+      </div>
+
 
       <!-- content -->
       <div>

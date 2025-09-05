@@ -13,7 +13,7 @@
       {/foreach}
     </ul>
     <!-- see-more -->
-    <div class="alert alert-post see-more mt20 js_see-more" data-get="profile_photos" data-id="{$id}" data-type='{$type}' data-filter="{$filter}">
+    <div class="alert alert-post see-more js_see-more" data-get="profile_photos" data-id="{$id}" data-type='{$type}' data-filter="{$filter}">
       <span>{__("See More")}</span>
       <div class="loader loader_small x-hidden"></div>
     </div>

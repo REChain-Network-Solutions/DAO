@@ -1,4 +1,60 @@
-﻿#== v4.0.3 == ( 08-05-2025 )
+﻿#== v4.1 == ( 31-8-2025 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Delus PHP Dependencies
+- [Updated] Delus JS Dependencies
+
+- [Added] Socket.io Support
+- [Added] New Sound for Notifications, Chat Messages & Calls
+- [Added] Handle Browser Cache Issues
+- [Added] Event Type (Online|In Person)
+- [Added] Exclude Past Events From Discover
+- [Added] Event Creation Post
+- [Added] Group Creation Post
+- [Added] Languages Filter to Pages
+- [Added] Languages Filter to Groups
+- [Added] Languages Filter to Events
+- [Added] Clear Pending Uploads To Garbage Collector
+- [Added] Clear Pending Uploads To Cronjob
+- [Added] Pushr Cloud Storage Support
+- [Added] Custom Landing Wallpaper
+- [Added] Enable/Disable Pro Users Widget
+- [Added] Enable/Disable Pro Pages Widget
+- [Added] Prioritizes Friends & Followings in Reactions
+- [Added] Schema.org Support for Blogs
+- [Added] Max Name Length
+- [Added] Include Affiliate Link With Invitation Link
+- [Added] MSG91 New APIs Support
+
+- [Fixed] Minor Bugs
+- [Fixed] Email Notifications Issues
+- [Fixed] Custom Field Value With Mutiple lines
+- [Fixed] Fake User Generator Random Image Issue
+- [Fixed] Fake User Generator Gender Issue
+- [Fixed] Cover Image Limit Error Issue
+
+#== v4.0.6 == ( 17-06-2025 )
+- [Added] Cloudflare R2 Storage Support
+- [Fixed] Minor Bugs
+
+#== v4.0.5 == ( 27-05-2025 )
+- [Fixed] User IP When Running Delus with Docker
+- [Fixed] Watch Module When Newsfeed Caching Enabled
+- [Fixed] User Access Checks When Approval System Enabled
+- [Fixed] LiveStreaming Recording Issue
+- [Fixed] Messages with Special Characters in Delus Messaging Apps
+- [Fixed] Minor Bugs
+
+#== v4.0.4 == ( 18-05-2025 )
+- [Added] OneSignal Sections for Messaging & Timeline Apps
+- [Fixed] Vkontakte Social Login
+- [Fixed] Bypass allow_url_fopen Error
+- [Fixed] Fine People with Location Issue
+- [Fixed] Yandex Upload Issue
+- [Fixed] Minor Bugs
+
+#== v4.0.3 == ( 08-05-2025 )
 - [Fixed] Uploading Performance (Loading Issue)
 - [Fixed] Delete Merits Category
 - [Fixed] Yandex Upload Issue

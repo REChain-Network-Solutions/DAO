@@ -34,7 +34,7 @@
           <a href="{$system['system_url']}/jobs">{__("Discover")}</a>
         </li>
       </ul>
-      {if $user->_data['can_create_jobs']}
+      {if $system['jobs_enabled']}
         <div class="mt10 float-end">
           <button class="btn btn-md btn-primary d-none d-lg-block" data-toggle="modal" data-url="posts/job.php?do=create">
             <i class="fa fa-plus-circle mr5"></i>{__("Create Job")}

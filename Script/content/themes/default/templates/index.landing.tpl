@@ -1,13 +1,13 @@
 {include file='_head.tpl'}
 {include file='_header.tpl'}
 
-{if $system['landing_page_template'] == "elengine"}
+{if $system['landing_page_template'] == "Delus"}
 
   <style>
     {if $system['language']['dir'] == "LTR"}
-      {minimize_css("../css/elengine.css")}
+      {minimize_css("../css/Delus.css")}
     {else}
-      {minimize_css("../css/elengine.rtl.css")}
+      {minimize_css("../css/Delus.rtl.css")}
     {/if}
   </style>
 
@@ -38,7 +38,7 @@
 
         <div class="col-lg-7 col-md-6 p-md-0 align-self-center">
           <div class="fr_welcome_bg">
-            <img class="position-absolute fr_welcome_bg_img" src="{$system['system_url']}/content/themes/{$system['theme']}/images/landing/welcome.jpg" alt="{__($system['system_title'])}">
+            <img class="position-absolute fr_welcome_bg_img" src="{if $system['system_wallpaper_default']}{$system['system_url']}/content/themes/{$system['theme']}/images/landing/welcome.jpg{else}{$system['system_uploads']}/{$system['system_wallpaper']}{/if}" alt="{__($system['system_title'])}">
             <div class="d-flex align-items-end fr_welcome_img">
               <svg width="1171" height="241" viewBox="0 0 1171 241" fill="none" xmlns="http://www.w3.org/2000/svg" class="svg_blur">
                 <g opacity="0.5" filter="url(#filter0_f)">
@@ -106,6 +106,12 @@
   </div>
 
 {else}
+
+  <style>
+    .landing-left:before {
+      background-image: url({if $system['system_wallpaper_default']}{$system['system_url']}/content/themes/{$system['theme']}/images/landing/welcome.jpg{else}{$system['system_uploads']}/{$system['system_wallpaper']}{/if});
+    }
+  </style>
 
   <div class="container-fluid">
     <div class="row landing-row">

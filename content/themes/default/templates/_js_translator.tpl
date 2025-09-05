@@ -55,7 +55,7 @@
 {__("No Answer")}
 {__("You can not connect to this user")}
 {__("You have an active call already")}
-{__("The recipient declined the call")}
+{__("Declined the call")}
 {__("Connection has been lost")}
 {__("Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results")}
 {__("Total")}

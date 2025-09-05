@@ -4,7 +4,7 @@
  * ajax -> admin -> games
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -35,6 +35,8 @@ try {
       $_POST['game_genres'] = implode(',', $_POST['game_genres']);
       /* insert */
       $db->query(sprintf("INSERT INTO games (title, description, genres, source, thumbnail) VALUES (%s, %s, %s, %s, %s)", secure($_POST['title']), secure($_POST['description']), secure($_POST['game_genres']), secure($_POST['source']), secure($_POST['thumbnail'])));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['thumbnail']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/games";']);
       break;
@@ -51,6 +53,8 @@ try {
       $_POST['game_genres'] = implode(',', $_POST['game_genres']);
       /* update */
       $db->query(sprintf("UPDATE games SET title = %s, description = %s, genres = %s, source = %s, thumbnail = %s WHERE game_id = %s", secure($_POST['title']), secure($_POST['description']), secure($_POST['game_genres']), secure($_POST['source']), secure($_POST['thumbnail']), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['thumbnail']]);
       /* return */
       return_json(['success' => true, 'message' => __("Game info have been updated")]);
       break;

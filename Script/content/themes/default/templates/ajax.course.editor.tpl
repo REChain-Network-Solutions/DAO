@@ -21,7 +21,7 @@
       </div>
       <!-- location -->
     </div>
-    <!-- course fees -->
+    <!-- fees -->
     <div class="form-group">
       <label class="form-label">{__("Course Fees")}</label>
       <div>
@@ -35,7 +35,7 @@
         </div>
       </div>
     </div>
-    <!-- course fees -->
+    <!-- fees -->
     <!-- start/end date -->
     <div class="row">
       <div class="form-group col-md-6">

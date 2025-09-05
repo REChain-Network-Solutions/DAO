@@ -80,6 +80,44 @@
           </div>
         </div>
 
+        <div class="divider"></div>
+
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Pro Users Widget")}</div>
+            <div class="form-text d-none d-sm-block">
+              {__("Enable pro users widget to be displayed on the home page")}
+            </div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="pro_users_widget_enabled">
+              <input type="checkbox" name="pro_users_widget_enabled" id="pro_users_widget_enabled" {if $system['pro_users_widget_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="pages" class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Pro Pages Widget")}</div>
+            <div class="form-text d-none d-sm-block">
+              {__("Enable pro page widget to be displayed on the home page")}
+            </div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="pro_page_widget_enabled">
+              <input type="checkbox" name="pro_page_widget_enabled" id="pro_page_widget_enabled" {if $system['pro_page_widget_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
         <!-- success -->
         <div class="alert alert-success mt15 mb0 x-hidden"></div>
         <!-- success -->

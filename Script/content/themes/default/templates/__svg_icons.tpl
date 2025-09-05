@@ -572,13 +572,17 @@
 
     {include file='../images/svg/razorpay.svg'}
 
+  {elseif $icon == "cashfree"}
+
+    {include file='../images/svg/cashfree.svg'}
+
   {elseif $icon == "coinbase"}
 
     {include file='../images/svg/coinbase.svg'}
 
-  {elseif $icon == "securionpay"}
+  {elseif $icon == "shift4"}
 
-    {include file='../images/svg/securionpay.svg'}
+    {include file='../images/svg/shift4.svg'}
 
   {elseif $icon == "stripe"}
 
@@ -892,9 +896,9 @@
 
     {include file='../images/svg/google.svg'}
 
-  {elseif $icon == "twitter"}
+  {elseif $icon == "x"}
 
-    {include file='../images/svg/twitter.svg'}
+    {include file='../images/svg/x.svg'}
 
   {elseif $icon == "linkedin"}
 
@@ -960,6 +964,14 @@
 
     {include file='../images/svg/myfatoorah.svg'}
 
+  {elseif $icon == "flutterwave"}
+
+    {include file='../images/svg/flutterwave.svg'}
+
+  {elseif $icon == "mercadopago"}
+
+    {include file='../images/svg/mercadopago.svg'}
+
   {elseif $icon == "reels"}
 
     {include file='../images/svg/reels.svg'}
@@ -1024,6 +1036,25 @@
 
     {include file='../images/svg/my-box.svg'}
 
+  {elseif $icon == "php"}
+
+    {include file='../images/svg/php.svg'}
+
+  {elseif $icon == "nodejs"}
+
+    {include file='../images/svg/nodejs.svg'}
+
+  {elseif $icon == "socketio"}
+
+    {include file='../images/svg/socketio.svg'}
+
+  {elseif $icon == "ssl-sign"}
+
+    {include file='../images/svg/ssl-sign.svg'}
+
+  {elseif $icon == "pushr"}
+
+    {include file='../images/svg/pushr.svg'}
   {/if}
 
 </div>

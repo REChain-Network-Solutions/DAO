@@ -8,12 +8,12 @@
 <form class="js_ajax-forms" data-url="posts/job.php?do=publish">
   <div class="modal-body">
     <div class="row">
-      <!-- job title -->
+      <!-- title -->
       <div class="form-group col-md-6">
         <label class="form-label">{__("Title")}</label>
         <input name="title" type="text" class="form-control">
       </div>
-      <!-- job title -->
+      <!-- title -->
       <!-- location -->
       <div class="form-group col-md-6">
         <label class="form-label">{__("Location")}</label>
@@ -56,7 +56,7 @@
     </div>
     <!-- salary range -->
     <div class="row">
-      <!-- job type -->
+      <!-- type -->
       <div class="form-group col-md-6">
         <label class="form-label">{__("Type")}</label>
         <select class="form-select" name="type">
@@ -67,7 +67,7 @@
           <option value="contract">{__("Contract")}</option>
         </select>
       </div>
-      <!-- job type -->
+      <!-- type -->
       <!-- category -->
       <div class="form-group col-md-6">
         <label class="form-label">{__("Category")}</label>

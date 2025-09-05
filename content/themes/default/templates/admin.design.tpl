@@ -78,28 +78,6 @@
 
       <div class="row form-group">
         <label class="col-md-3 form-label">
-          {__("Landing Page")}
-        </label>
-        <div class="col-md-9">
-          <div class="form-check form-check-inline">
-            <input type="radio" name="landing_page_template" id="default_landing" value="default" class="form-check-input" {if $system['landing_page_template'] == "default"}checked{/if}>
-            <label class="form-check-label" for="default_landing">{__("Default")}</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input type="radio" name="landing_page_template" id="elengine_landing" value="elengine" class="form-check-input" {if $system['landing_page_template'] == "elengine"}checked{/if}>
-            <label class="form-check-label" for="elengine_landing">{__("Elengine")}</label>
-            <small>(<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/elengine_landing.png">{__("preview")}</a>)</small>
-          </div>
-          <div class="form-text">
-            {__("Note: You can get the whole Elengine theme from")} <a target="_blank" href="https://bit.ly/DelusElengineTheme">{__("Here")}</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="row form-group">
-        <label class="col-md-3 form-label">
           {__("Logo")} ({__("Light Mode")})
         </label>
         <div class="col-md-9">
@@ -157,6 +135,77 @@
               <input type="hidden" class="js_x-image-input" name="system_logo_dark" value="{$system['system_logo_dark']}">
             </div>
           {/if}
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-table-row">
+        <div class="avatar">
+          {include file='__svg_icons.tpl' icon="home" class="main-icon" width="40px" height="40px"}
+        </div>
+        <div>
+          <div class="form-label h6">{__("Default Wallpaper")}</div>
+          <div class="form-text d-none d-sm-block">
+            {__("Use the default")} (<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/landing/welcome.jpg">{__("preview")}</a>) ({__("Disable it to use your custom uploaded image")})
+          </div>
+        </div>
+        <div class="text-end">
+          <label class="switch" for="system_wallpaper_default">
+            <input type="checkbox" name="system_wallpaper_default" id="system_wallpaper_default" {if $system['system_wallpaper_default']}checked{/if}>
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="row form-group">
+        <label class="col-md-3 form-label">
+          {__("Custom Wallpaper")}
+        </label>
+        <div class="col-md-9">
+          {if $system['system_wallpaper'] == ''}
+            <div class="x-image">
+              <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
+              <div class="x-image-loader">
+                <div class="progress x-progress">
+                  <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+              <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
+              <input type="hidden" class="js_x-image-input" name="system_wallpaper" value="">
+            </div>
+          {else}
+            <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_wallpaper']}')">
+              <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
+              <div class="x-image-loader">
+                <div class="progress x-progress">
+                  <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+              <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
+              <input type="hidden" class="js_x-image-input" name="system_wallpaper" value="{$system['system_wallpaper']}">
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <div class="row form-group">
+        <label class="col-md-3 form-label">
+          {__("Landing Page Layout")}
+        </label>
+        <div class="col-md-9">
+          <div class="form-check form-check-inline">
+            <input type="radio" name="landing_page_template" id="default_landing" value="default" class="form-check-input" {if $system['landing_page_template'] == "default"}checked{/if}>
+            <label class="form-check-label" for="default_landing">{__("Default")}</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input type="radio" name="landing_page_template" id="Delus_landing" value="Delus" class="form-check-input" {if $system['landing_page_template'] == "Delus"}checked{/if}>
+            <label class="form-check-label" for="Delus_landing">{__("Delus")}</label>
+            <small>(<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/Delus_landing.png">{__("preview")}</a>)</small>
+          </div>
+          <div class="form-text">
+            {__("Note: You can get the whole Delus theme from")} <a target="_blank" href="https://bit.ly/DelusTheme">{__("Here")}</a>
+          </div>
         </div>
       </div>
 

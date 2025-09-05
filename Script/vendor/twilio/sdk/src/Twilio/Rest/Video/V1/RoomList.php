@@ -71,12 +71,16 @@ class RoomList extends ListResource
                 $options['maxParticipants'],
             'RecordParticipantsOnConnect' =>
                 Serialize::booleanToString($options['recordParticipantsOnConnect']),
+            'TranscribeParticipantsOnConnect' =>
+                Serialize::booleanToString($options['transcribeParticipantsOnConnect']),
             'VideoCodecs' =>
                 $options['videoCodecs'],
             'MediaRegion' =>
                 $options['mediaRegion'],
             'RecordingRules' =>
                 Serialize::jsonObject($options['recordingRules']),
+            'TranscriptionsConfiguration' =>
+                Serialize::jsonObject($options['transcriptionsConfiguration']),
             'AudioOnly' =>
                 Serialize::booleanToString($options['audioOnly']),
             'MaxParticipantDuration' =>
@@ -115,7 +119,7 @@ class RoomList extends ListResource
      *                        efficient page size, i.e. min(limit, 1000)
      * @return RoomInstance[] Array of results
      */
-    public function read(array $options = [], int $limit = null, $pageSize = null): array
+    public function read(array $options = [], ?int $limit = null, $pageSize = null): array
     {
         return \iterator_to_array($this->stream($options, $limit, $pageSize), false);
     }
@@ -139,7 +143,7 @@ class RoomList extends ListResource
      *                        efficient page size, i.e. min(limit, 1000)
      * @return Stream stream of results
      */
-    public function stream(array $options = [], int $limit = null, $pageSize = null): Stream
+    public function stream(array $options = [], ?int $limit = null, $pageSize = null): Stream
     {
         $limits = $this->version->readLimits($limit, $pageSize);
 

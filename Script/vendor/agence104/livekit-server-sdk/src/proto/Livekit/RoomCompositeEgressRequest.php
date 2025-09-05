@@ -34,6 +34,12 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
      */
     protected $audio_only = false;
     /**
+     * only applies to audio_only egress (default DEFAULT_MIXING)
+     *
+     * Generated from protobuf field <code>.livekit.AudioMixing audio_mixing = 15;</code>
+     */
+    protected $audio_mixing = 0;
+    /**
      * (default false)
      *
      * Generated from protobuf field <code>bool video_only = 4;</code>
@@ -61,6 +67,12 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .livekit.ImageOutput image_outputs = 14;</code>
      */
     private $image_outputs;
+    /**
+     * extra webhooks to call for this request
+     *
+     * Generated from protobuf field <code>repeated .livekit.WebhookConfig webhooks = 16;</code>
+     */
+    private $webhooks;
     protected $output;
     protected $options;
 
@@ -76,6 +88,8 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
      *           (optional)
      *     @type bool $audio_only
      *           (default false)
+     *     @type int $audio_mixing
+     *           only applies to audio_only egress (default DEFAULT_MIXING)
      *     @type bool $video_only
      *           (default false)
      *     @type string $custom_base_url
@@ -91,6 +105,8 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
      *     @type \Livekit\StreamOutput[]|\Google\Protobuf\Internal\RepeatedField $stream_outputs
      *     @type \Livekit\SegmentedFileOutput[]|\Google\Protobuf\Internal\RepeatedField $segment_outputs
      *     @type \Livekit\ImageOutput[]|\Google\Protobuf\Internal\RepeatedField $image_outputs
+     *     @type \Livekit\WebhookConfig[]|\Google\Protobuf\Internal\RepeatedField $webhooks
+     *           extra webhooks to call for this request
      * }
      */
     public function __construct($data = NULL) {
@@ -172,6 +188,32 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->audio_only = $var;
+
+        return $this;
+    }
+
+    /**
+     * only applies to audio_only egress (default DEFAULT_MIXING)
+     *
+     * Generated from protobuf field <code>.livekit.AudioMixing audio_mixing = 15;</code>
+     * @return int
+     */
+    public function getAudioMixing()
+    {
+        return $this->audio_mixing;
+    }
+
+    /**
+     * only applies to audio_only egress (default DEFAULT_MIXING)
+     *
+     * Generated from protobuf field <code>.livekit.AudioMixing audio_mixing = 15;</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setAudioMixing($var)
+    {
+        GPBUtil::checkEnum($var, \Livekit\AudioMixing::class);
+        $this->audio_mixing = $var;
 
         return $this;
     }
@@ -470,6 +512,32 @@ class RoomCompositeEgressRequest extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Livekit\ImageOutput::class);
         $this->image_outputs = $arr;
+
+        return $this;
+    }
+
+    /**
+     * extra webhooks to call for this request
+     *
+     * Generated from protobuf field <code>repeated .livekit.WebhookConfig webhooks = 16;</code>
+     * @return \Google\Protobuf\Internal\RepeatedField
+     */
+    public function getWebhooks()
+    {
+        return $this->webhooks;
+    }
+
+    /**
+     * extra webhooks to call for this request
+     *
+     * Generated from protobuf field <code>repeated .livekit.WebhookConfig webhooks = 16;</code>
+     * @param \Livekit\WebhookConfig[]|\Google\Protobuf\Internal\RepeatedField $var
+     * @return $this
+     */
+    public function setWebhooks($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Livekit\WebhookConfig::class);
+        $this->webhooks = $arr;
 
         return $this;
     }

@@ -1,0 +1,34 @@
+==========================================================
+== If you running Delus v 2.5 you can upgrade to 2.5.1 ==
+==========================================================
+
+!!! IMPORTANT !!!
+==============================================================================================================
+== Backup your database and your website files just in case something wrong happened                        ==
+== Uninstall any Delus plugin(s) from your Delus both files and any database changes made by this plugin  ==
+== If you can't do it ask the plugin author(s) for support and help                                         ==
+==============================================================================================================
+
+1- Shutdown your system from the admin panel
+2- Upload all files located in the "Update_2.5.1" folder to your live server and replace all files/folders inside this folder
+3- Empty both folders "content/themes/default/templates_compiled" and "content/themes/default/cache"
+4- Remove any browser cache and cookies (Check this to learn how: https://goo.gl/oE7BoR)
+5- Go to your admin panel and make site live again
+
+And That's it, Have Fun :)
+
+=======================================================================================================
+
+Don't forget to check Delus blog for a lot of tutorials:
+https://blog.Delus.com/
+
+If you need help/support:
+Open support ticket here and our team will help you: http://support.Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!.com/
+** Kindly make sure you don't have expired support **
+
+==================================
+== Common Problems After Update ==
+==================================
+
+Just In case you have problem in Translation?
+- Copy "gettext.inc" file from "Update 2.5 to 2.5.1" folder to 'includes/libs/gettext' folder

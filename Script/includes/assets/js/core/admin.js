@@ -2,7 +2,7 @@
  * admin js
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // initialize API URLs
@@ -42,7 +42,7 @@ function tagify_ajax(selector) {
           }
         }, 'json')
           .fail(function () {
-            modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+            show_error_modal();
           });
       });
     }
@@ -90,7 +90,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -142,7 +142,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -161,7 +161,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -185,7 +185,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -202,7 +202,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -221,7 +221,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -237,7 +237,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -256,7 +256,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -272,7 +272,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -300,7 +300,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -447,7 +447,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }, true);
   });
@@ -466,7 +466,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }, true);
   });
@@ -485,7 +485,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }, true);
   });

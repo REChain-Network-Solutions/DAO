@@ -15,6 +15,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
         'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+        '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
         'fb4ca2d97fe7ba6af750497425204e70' => __DIR__ . '/..' . '/sentry/sentry/src/functions.php',
         'b067bc7112e384b61c701452d53a14a8' => __DIR__ . '/..' . '/mtdowling/jmespath.php/src/JmesPath.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
@@ -27,6 +28,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
     );
 
     public static $prefixLengthsPsr4 = array (
+        'W' => 
+        array (
+            'Workerman\\' => 10,
+        ),
         'V' => 
         array (
             'Verotel\\' => 8,
@@ -39,6 +44,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         ),
         'S' => 
         array (
+            'Symfony\\Polyfill\\Php83\\' => 23,
             'Symfony\\Polyfill\\Php80\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
@@ -50,8 +56,8 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'Stripe\\' => 7,
             'Sonata\\GoogleAuthenticator\\' => 27,
             'Smarty\\' => 7,
+            'Shift4\\' => 7,
             'Sentry\\' => 7,
-            'SecurionPay\\' => 12,
         ),
         'R' => 
         array (
@@ -69,6 +75,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'Psr\\Http\\Client\\' => 16,
             'Psr\\Container\\' => 14,
             'Psr\\Cache\\' => 10,
+            'PHPSocketIO\\' => 12,
             'PHPMailer\\PHPMailer\\' => 20,
         ),
         'M' => 
@@ -147,6 +154,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         array (
             'Composer\\CaBundle\\' => 18,
             'Clue\\StreamFilter\\' => 18,
+            'Channel\\' => 8,
             'Cashfree\\' => 9,
         ),
         'B' => 
@@ -161,6 +169,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
     );
 
     public static $prefixDirsPsr4 = array (
+        'Workerman\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/workerman',
+        ),
         'Verotel\\' => 
         array (
             0 => __DIR__ . '/..' . '/verotel/flexpay-php-client/src/Verotel',
@@ -176,6 +188,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         'TaylanUnutmaz\\AgoraTokenBuilder\\' => 
         array (
             0 => __DIR__ . '/..' . '/taylanunutmaz/agora-token-builder/src',
+        ),
+        'Symfony\\Polyfill\\Php83\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-php83',
         ),
         'Symfony\\Polyfill\\Php80\\' => 
         array (
@@ -221,13 +237,13 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         array (
             0 => __DIR__ . '/..' . '/smarty/smarty/src',
         ),
+        'Shift4\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/shift4/shift4-php/lib/Shift4',
+        ),
         'Sentry\\' => 
         array (
             0 => __DIR__ . '/..' . '/sentry/sentry/src',
-        ),
-        'SecurionPay\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/securionpay/securionpay-php/lib/SecurionPay',
         ),
         'Rize\\' => 
         array (
@@ -273,6 +289,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         'Psr\\Cache\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/cache/src',
+        ),
+        'PHPSocketIO\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/phpsocket.io/src',
         ),
         'PHPMailer\\PHPMailer\\' => 
         array (
@@ -479,6 +499,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         array (
             0 => __DIR__ . '/..' . '/clue/stream-filter/src',
         ),
+        'Channel\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/channel/src',
+        ),
         'Cashfree\\' => 
         array (
             0 => __DIR__ . '/..' . '/cashfree/cashfree-pg/lib',
@@ -561,13 +585,24 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         'AWS\\CRT\\Options' => __DIR__ . '/..' . '/aws/aws-crt-php/src/AWS/CRT/Options.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
+        'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',
+        'DateInvalidOperationException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidOperationException.php',
+        'DateInvalidTimeZoneException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidTimeZoneException.php',
+        'DateMalformedIntervalStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedIntervalStringException.php',
+        'DateMalformedPeriodStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedPeriodStringException.php',
+        'DateMalformedStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedStringException.php',
+        'DateObjectError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateObjectError.php',
+        'DateRangeError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateRangeError.php',
         'GPBMetadata\\GrpcGcp' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/GPBMetadata/GrpcGcp.php',
         'Grpc\\Gcp\\AffinityConfig' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/Grpc/Gcp/AffinityConfig.php',
         'Grpc\\Gcp\\AffinityConfig_Command' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/Grpc/Gcp/AffinityConfig_Command.php',
         'Grpc\\Gcp\\ApiConfig' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/Grpc/Gcp/ApiConfig.php',
         'Grpc\\Gcp\\ChannelPoolConfig' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/Grpc/Gcp/ChannelPoolConfig.php',
         'Grpc\\Gcp\\MethodConfig' => __DIR__ . '/..' . '/google/grpc-gcp/src/generated/Grpc/Gcp/MethodConfig.php',
+        'Override' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/Override.php',
         'PhpToken' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/PhpToken.php',
+        'SQLite3Exception' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/SQLite3Exception.php',
         'Stringable' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Stringable.php',
         'UnhandledMatchError' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/UnhandledMatchError.php',
         'ValueError' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/ValueError.php',

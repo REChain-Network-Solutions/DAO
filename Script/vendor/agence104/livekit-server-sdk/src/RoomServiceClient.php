@@ -2,52 +2,59 @@
 
 namespace Agence104\LiveKit;
 
-use Twirp\Context;
-use Livekit\Room;
-use Livekit\SendDataRequest;
-use Livekit\ParticipantInfo;
-use Livekit\SendDataResponse;
-use Livekit\ListRoomsRequest;
 use Livekit\CreateRoomRequest;
 use Livekit\DeleteRoomRequest;
-use Livekit\ListRoomsResponse;
 use Livekit\DeleteRoomResponse;
-use Livekit\MuteRoomTrackRequest;
-use Livekit\ParticipantPermission;
-use Livekit\MuteRoomTrackResponse;
-use Livekit\RoomParticipantIdentity;
+use Livekit\ForwardParticipantRequest;
+use Livekit\ForwardParticipantResponse;
 use Livekit\ListParticipantsRequest;
-use Livekit\UpdateParticipantRequest;
 use Livekit\ListParticipantsResponse;
-use Livekit\UpdateRoomMetadataRequest;
+use Livekit\ListRoomsRequest;
+use Livekit\ListRoomsResponse;
+use Livekit\MoveParticipantRequest;
+use Livekit\MoveParticipantResponse;
+use Livekit\MuteRoomTrackRequest;
+use Livekit\MuteRoomTrackResponse;
+use Livekit\ParticipantInfo;
+use Livekit\ParticipantPermission;
 use Livekit\RemoveParticipantResponse;
+use Livekit\Room;
+use Livekit\RoomParticipantIdentity;
+use Livekit\RoomServiceClient as LKRoomServiceClient;
+use Livekit\SendDataRequest;
+use Livekit\SendDataResponse;
+use Livekit\UpdateParticipantRequest;
+use Livekit\UpdateRoomMetadataRequest;
 use Livekit\UpdateSubscriptionsRequest;
 use Livekit\UpdateSubscriptionsResponse;
 
+/**
+ * Defines the room service client.
+ */
 class RoomServiceClient extends BaseServiceClient {
 
   /**
    * The Twirp RPC adapter for client implementation.
-   *
-   * @var \Livekit\RoomServiceClient
    */
-  protected $rpc;
+  protected LKRoomServiceClient $rpc;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(?string $host = NULL, ?string $apiKey = NULL, ?string $apiSecret = NULL) {
-    parent::__construct($host,$apiKey, $apiSecret);
-
-    $this->rpc = new \Livekit\RoomServiceClient($this->host);
+    parent::__construct($host, $apiKey, $apiSecret);
+    $this->rpc = new LKRoomServiceClient($this->host);
   }
 
   /**
-   * Creates a new room. Explicit room creation is not required, since rooms
-   * will be automatically created when the first participant joins. This method
-   * can be used to customize room settings.
+   * Creates a new room.
+   *
+   * Explicit room creation is not required, since rooms should be
+   * automatically created when the first participant joins. This
+   * method can be used to customize room settings.
    *
    * @param \Agence104\LiveKit\RoomCreateOptions $createOptions
+   *   The room create options.
    *
    * @return \Livekit\Room
    *   The Room object.
@@ -148,8 +155,7 @@ class RoomServiceClient extends BaseServiceClient {
   }
 
   /**
-   * Get information on a specific participant, including the tracks that the
-   * participant has published.
+   * Get participant info including their published tracks.
    *
    * @param string $roomName
    *   The name of the room.
@@ -173,9 +179,11 @@ class RoomServiceClient extends BaseServiceClient {
   }
 
   /**
-   * Removes a participant in the room. This will disconnect the participant
-   * and will emit a Disconnected event for that participant. Even after being
-   * removed, the participant can still re-join the room.
+   * Removes a participant in the room.
+   *
+   * This will disconnect the participant and will emit a Disconnected event
+   * for that participant. Even after being removed, the participant can
+   * still re-join the room.
    *
    * @param string $roomName
    *   The name of the room.
@@ -194,6 +202,71 @@ class RoomServiceClient extends BaseServiceClient {
       new RoomParticipantIdentity([
         'room' => $roomName,
         'identity' => $identity,
+      ])
+    );
+  }
+
+  /**
+   * Forward a participant's track(s) to another room.
+   *
+   * The forwarding will stop when the participant leaves the room or
+   * `RemoveParticipant` has been called in the destination room. A participant
+   * can be forwarded to multiple rooms. The destination room will be created if
+   * it does not exist.
+   *
+   * @param string $roomName
+   *   The name of the room.
+   * @param string $identity
+   *   The identity of the participant.
+   * @param string $destinationRoom
+   *   The name of the destination room.
+   *
+   * @return \Livekit\ForwardParticipantResponse
+   *   The ForwardParticipantResponse object.
+   */
+  public function forwardParticipant(string $roomName, string $identity, string $destinationRoom): ForwardParticipantResponse {
+    $videoGrant = new VideoGrant();
+    $videoGrant->setRoomName($roomName);
+    $videoGrant->setRoomAdmin();
+    $videoGrant->setDestinationRoom($destinationRoom);
+    return $this->rpc->ForwardParticipant(
+      $this->authHeader($videoGrant),
+      new ForwardParticipantRequest([
+        'room' => $roomName,
+        'identity' => $identity,
+        'destination_room' => $destinationRoom,
+      ])
+    );
+  }
+
+  /**
+   * Move a connected participant to a different room.
+   *
+   * The participant will be removed from the current room and added to the
+   * destination room. From other observers' perspective, the participant
+   * would've disconnected from the previous room and joined the new one.
+   *
+   * @param string $roomName
+   *   The name of the room.
+   * @param string $identity
+   *   The identity of the participant.
+   * @param string $destinationRoom
+   *   The name of the destination room.
+   *
+   * @return \Livekit\MoveParticipantResponse
+   *   The MoveParticipantResponse object.
+   */
+  public function moveParticipant(string $roomName, string $identity, string $destinationRoom): MoveParticipantResponse {
+    $videoGrant = new VideoGrant();
+    $videoGrant->setRoomName($roomName);
+    $videoGrant->setRoomAdmin();
+    $videoGrant->setDestinationRoom($destinationRoom);
+    return $this->rpc->MoveParticipant(
+      $this->authHeader($videoGrant),
+      new MoveParticipantRequest([
+        'room' => $roomName,
+        'identity' => $identity,
+        'destination_room' => $destinationRoom,
       ])
     );
   }
@@ -230,7 +303,7 @@ class RoomServiceClient extends BaseServiceClient {
   }
 
   /**
-   * Updates a participant's metadata or permissions.
+   * Updates a participant's metadata, permissions, name or attributes.
    *
    * @param string $roomName
    *   The name of the room.
@@ -238,13 +311,25 @@ class RoomServiceClient extends BaseServiceClient {
    *   The identity of the participant.
    * @param string|null $metadata
    *   Optional, the metadata to update.
-   * @param ParticipantPermission|null $permission
+   * @param \Livekit\ParticipantPermission|null $permission
    *   Optional, the new permissions to assign to the participant.
+   * @param string|null $name
+   *   Optional, the display name to update.
+   * @param array|null $attributes
+   *   Optional, attributes to update.
+   *   To delete attributes, set their value to empty string.
    *
    * @return \Livekit\ParticipantInfo
    *   The ParticipantInfo object.
    */
-  public function updateParticipant(string $roomName, string $identity, string $metadata = NULL, ParticipantPermission $permission = NULL): ParticipantInfo {
+  public function updateParticipant(
+    string $roomName,
+    string $identity,
+    ?string $metadata = NULL,
+    ?ParticipantPermission $permission = NULL,
+    ?string $name = NULL,
+    ?array $attributes = NULL
+  ): ParticipantInfo {
     $videoGrant = new VideoGrant();
     $videoGrant->setRoomName($roomName);
     $videoGrant->setRoomAdmin();
@@ -255,6 +340,8 @@ class RoomServiceClient extends BaseServiceClient {
         'identity' => $identity,
         'metadata' => $metadata ?? '',
         'permission' => $permission,
+        'name' => $name ?? '',
+        'attributes' => $attributes ?? [],
       ])
     );
   }
@@ -299,13 +386,16 @@ class RoomServiceClient extends BaseServiceClient {
    *   The payload to send.
    * @param int $kind
    *   The delivery reliability.
-   * @param string[] $destinationSids
-   *   Optional, when empty, message is sent to everyone.
+   * @param string[] $destinationIdentities
+   *   Optional, list of participant identities to receive packet,
+   *   leave blank to send the packet to everyone.
+   * @param string|null $topic
+   *   Optional, topic for the packet.
    *
    * @return \Livekit\SendDataResponse
    *   The SendDataResponse object.
    */
-  public function sendData(string $roomName, string $data, int $kind, array $destinationSids = []): SendDataResponse {
+  public function sendData(string $roomName, string $data, int $kind, array $destinationIdentities = [], ?string $topic = NULL): SendDataResponse {
     $videoGrant = new VideoGrant();
     $videoGrant->setRoomName($roomName);
     $videoGrant->setRoomAdmin();
@@ -315,7 +405,9 @@ class RoomServiceClient extends BaseServiceClient {
         'room' => $roomName,
         'data' => $data,
         'kind' => $kind,
-        'destination_sids' => $destinationSids,
+        'destination_identities' => $destinationIdentities,
+        'topic' => $topic,
+        'nonce' => random_bytes(16),
       ])
     );
   }

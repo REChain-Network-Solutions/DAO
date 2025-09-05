@@ -4,28 +4,25 @@ namespace Agence104\LiveKit;
 
 use Twirp\Context;
 
+/**
+ * Base class for all LiveKit service clients.
+ */
 abstract class BaseServiceClient {
 
   /**
    * The hostname including protocol, can be set in env var LIVEKIT_URL.
-   *
-   * @var string
    */
-  protected $host;
+  protected string $host;
 
   /**
    * The API Key, can be set in env var LIVEKIT_API_KEY.
-   *
-   * @var string
    */
-  protected $apiKey;
+  protected string $apiKey;
 
   /**
    * The API Secret, can be set in env var LIVEKIT_API_SECRET.
-   *
-   * @var string
    */
-  protected $apiSecret;
+  protected string $apiSecret;
 
   /**
    * BaseServiceClient Class Constructor.
@@ -60,19 +57,27 @@ abstract class BaseServiceClient {
    *
    * @param \Agence104\LiveKit\VideoGrant $videoGrant
    *   The grants to apply on the AccessToken.
+   * @param \Agence104\LiveKit\SIPGrant|null $sipGrant
+   *   The SIP grants to apply on the AccessToken.
    *
    * @return array
    *   If everything worked, then the header values are returned,
    *   else an empty array is returned.
    */
-  protected function authHeader(VideoGrant $videoGrant): array {
+  protected function authHeader(VideoGrant $videoGrant, ?SIPGrant $sipGrant = NULL): array {
     $tokenOptions = (new AccessTokenOptions())
-      ->setTtl(10 * 60); // 10 minutes.
+      // 10 minutes.
+      ->setTtl(10 * 60);
 
     try {
       $accessToken = (new AccessToken($this->apiKey, $this->apiSecret))
         ->init($tokenOptions)
         ->setGrant($videoGrant);
+
+      if ($sipGrant) {
+        $accessToken->setSipGrant($sipGrant);
+      }
+
       return Context::withHttpRequestHeaders([], [
         "Authorization" => "Bearer " . $accessToken->toJwt(),
       ]);

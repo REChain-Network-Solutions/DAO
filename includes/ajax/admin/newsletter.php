@@ -4,7 +4,7 @@
  * ajax -> admin -> newsletter
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // set execution time
@@ -113,6 +113,12 @@ try {
     }
     /* post async notification */
     $user->post_notification_async(__("Newsletter email has been sent successfully"));
+    /* extract hosted images from the text */
+    $uploaded_images = extract_uploaded_images_from_text($_POST['message']);
+    /* remove pending uploads */
+    if ($uploaded_images) {
+      remove_pending_uploads($uploaded_images);
+    }
   }
 
   /* return */

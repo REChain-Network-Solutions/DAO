@@ -2449,6 +2449,18 @@
               </div>
             </div>
 
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Name Maximum Length")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="name_max_length" value="{$system['name_max_length']}">
+                <div class="form-text">
+                  {__("The First and Last name maximum length")}
+                </div>
+              </div>
+            </div>
+
             <!-- success -->
             <div class="alert alert-success mt15 mb0 x-hidden"></div>
             <!-- success -->
@@ -2578,14 +2590,14 @@
 
             <div class="divider"></div>
 
-            <!-- twitter -->
+            <!-- X -->
             <div class="form-table-row">
               <div class="avatar">
-                {include file='__svg_icons.tpl' icon="twitter" width="40px" height="40px"}
+                {include file='__svg_icons.tpl' icon="x" width="40px" height="40px"}
               </div>
               <div>
-                <div class="form-label h6 mb5">{__("Twitter")}</div>
-                <div class="form-text d-none d-sm-block">{__("Turn registration/login via Twitter On and Off")}</div>
+                <div class="form-label h6 mb5">{__("X")}</div>
+                <div class="form-text d-none d-sm-block">{__("Turn registration/login via X On and Off")}</div>
               </div>
               <div class="text-end">
                 <label class="switch" for="twitter_login_enabled">
@@ -2597,7 +2609,7 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Twitter App ID")}
+                {__("X API Key")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
@@ -2610,7 +2622,7 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Twitter App Secret")}
+                {__("X API Secret")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
@@ -2620,7 +2632,7 @@
                 {/if}
               </div>
             </div>
-            <!-- twitter -->
+            <!-- X -->
 
             <div class="divider"></div>
 
@@ -2702,7 +2714,7 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Vkontakte App Secret")}
+                {__("Vkontakte Secure Key")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
@@ -2735,7 +2747,7 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("WordPress App ID")}
+                {__("WordPress Client ID")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
@@ -2748,7 +2760,7 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("WordPress App Secret")}
+                {__("WordPress Client Secret")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
@@ -4070,6 +4082,14 @@
               {/if}
             </div>
           </div>
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Msg91 Template ID")}
+            </label>
+            <div class="col-md-9">
+              <input type="text" class="form-control" name="msg91_template_id" value="{$system['msg91_template_id']}">
+            </div>
+          </div>
         </div>
         <!-- Msg91 -->
 
@@ -4508,6 +4528,11 @@
             <i class="fa fa-phone fa-fw mr5"></i><strong>{__("Audio/Video Calls")}</strong>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#ChatSocket" data-bs-toggle="tab">
+            <i class="fa-solid fa-bolt fa-fw mr5"></i><strong>{__("Socket.io")}</strong>
+          </a>
+        </li>
       </ul>
       <!-- panel nav -->
     </div>
@@ -4816,7 +4841,7 @@
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="agora_app_id" value="{$system['agora_app_id']}">
+                  <input type="text" class="form-control" name="agora_call_app_id" value="{$system['agora_call_app_id']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -4829,7 +4854,7 @@
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="agora_app_certificate" value="{$system['agora_app_certificate']}">
+                  <input type="text" class="form-control" name="agora_call_app_certificate" value="{$system['agora_call_app_certificate']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -4850,6 +4875,208 @@
         </form>
       </div>
       <!-- Audio/Video Calls -->
+
+      <!-- Socket.io -->
+      <div class="tab-pane" id="ChatSocket">
+        <form class="js_ajax-forms" data-url="admin/settings.php?edit=chat_socket">
+          <div class="card-body">
+
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="socketio" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Chat Socket Enabled")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Turn the chat socket system On and Off")}<br>
+                  {__("If disabled the default ajax system will be enabled")}
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="chat_socket_enabled">
+                  <input type="checkbox" name="chat_socket_enabled" id="chat_socket_enabled" {if $system['chat_socket_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="divider dashed"></div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Socket Server")}
+              </label>
+              <div class="col-md-9">
+                <div>
+                  <!-- PHP -->
+                  <input class="x-hidden input-label" type="radio" name="chat_socket_server" value="php" id="socket_php" {if $system['chat_socket_server'] == "php"}checked{/if} />
+                  <label class="button-label" for="socket_php">
+                    <div class="icon">
+                      {include file='__svg_icons.tpl' icon="php" width="32px" height="32px"}
+                    </div>
+                    <div class="title">{__("PHP")}</div>
+                  </label>
+                  <!-- PHP -->
+                  <!-- NodeJS -->
+                  <input class="x-hidden input-label" type="radio" name="chat_socket_server" value="nodejs" id="socket_nodejs" {if $system['chat_socket_server'] == "nodejs"}checked{/if} disabled />
+                  <label class="button-label" for="socket_nodejs">
+                    <div class="icon">
+                      {include file='__svg_icons.tpl' icon="nodejs" width="52px" height="32px"}
+                    </div>
+                    <div class="title">{__("NodeJS")}</div>
+                  </label>
+                  <!-- NodeJS -->
+                </div>
+                <div class="form-text">
+                  {__("Select your default Socket.io server")}<br />
+                </div>
+              </div>
+            </div>
+
+            <!-- PHP bin path -->
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("PHP Path")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="php_bin_path" value="{$system['php_bin_path']}" placeholder="php">
+                <div class="form-text">
+                  {__("The path to the PHP binary")}
+                </div>
+              </div>
+            </div>
+            <!-- PHP bin path -->
+
+            <!-- NodeJS bin path -->
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("NodeJS Path")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="nodejs_bin_path" value="{$system['nodejs_bin_path']}" placeholder="node" disabled>
+                <div class="form-text">
+                  {__("The path to the NodeJS binary")}
+                </div>
+              </div>
+            </div>
+            <!-- NodeJS bin path -->
+
+            <div class="divider dashed"></div>
+
+            <div class="form-table-row">
+              <div>
+                <div class="form-label h6">{__("Chat Socket Proxied")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Turn the chat socket server proxied On and Off")}
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="chat_socket_proxied">
+                  <input type="checkbox" name="chat_socket_proxied" id="chat_socket_proxied" {if $system['chat_socket_proxied']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Socket Port")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="chat_socket_port" value="{$system['chat_socket_port']}" placeholder="3000">
+                <div class="form-text">
+                  {__("The port number for the chat socket server (default: 3000)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("SSL Certificate Path")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="chat_socket_ssl_crt" value="{$system['chat_socket_ssl_crt']}">
+                <div class="form-text">
+                  {__("The path to the SSL certificate (.crt)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("SSL Certificate Key Path")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="chat_socket_ssl_key" value="{$system['chat_socket_ssl_key']}">
+                <div class="form-text">
+                  {__("The path to the SSL certificate key (.key)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="verification" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("SSL Verify Peer")}</div>
+                <div class="form-text d-none d-sm-block">{__("Enable SSL certificate verification")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="chat_socket_ssl_verify_peer">
+                  <input type="checkbox" name="chat_socket_ssl_verify_peer" id="chat_socket_ssl_verify_peer" {if $system['chat_socket_ssl_verify_peer']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="ssl-sign" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("SSL Allow Self Signed")}</div>
+                <div class="form-text d-none d-sm-block">{__("Allow self-signed SSL certificates")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="chat_socket_ssl_allow_self_signed">
+                  <input type="checkbox" name="chat_socket_ssl_allow_self_signed" id="chat_socket_ssl_allow_self_signed" {if $system['chat_socket_ssl_allow_self_signed']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- success -->
+            <div class="alert alert-success mt15 mb0 x-hidden" style="font-size: 13px; background: #000; border-color: #000;"></div>
+            <!-- success -->
+
+            <!-- error -->
+            <div class="alert alert-danger mt15 mb0 x-hidden"></div>
+            <!-- error -->
+
+          </div>
+          <div class="card-footer d-flex justify-content-between align-items-center">
+            <div>
+              <button type="button" class="btn btn-warning btn-sm rounded-pill js_admin-tester" style="padding: 8px 12px;" data-handle="chat_socket_status" title="{__("Check Status")}">
+                <i class="fa fa-bolt fa-fw"></i> {__("Status")}
+              </button>
+              <button type="button" class="btn btn-success btn-sm rounded-pill js_admin-tester" style="padding: 8px 12px;" data-handle="chat_socket_start" title="{__("Start")}">
+                <i class="fa fa-play fa-fw"></i> {__("Start")}
+              </button>
+              <button type="button" class="btn btn-danger btn-sm rounded-pill js_admin-tester" style="padding: 8px 12px;" data-handle="chat_socket_stop" title="{__("Stop")}">
+                <i class="fa fa-stop fa-fw"></i> {__("Stop")}
+              </button>
+            </div>
+            <div>
+              <button type="button" class="btn btn-danger js_admin-tester" data-handle="socket_certificate">
+                <i class="fa fa-bolt mr10"></i> {__("Check Certificate")}
+              </button>
+              <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <!-- Socket.io -->
     </div>
 
   {elseif $sub_view == "live"}
@@ -6621,6 +6848,108 @@
             <!-- error -->
           </form>
           <!-- Cloudflare R2 -->
+
+          <div class="divider"></div>
+
+          <!-- Pushr -->
+          <form class="js_ajax-forms" data-url="admin/settings.php?edit=pushr">
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="pushr" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Pushr")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Enable Pushr")} ({__("Note: Enable this will disable all other options")})
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="pushr_enabled">
+                  <input type="checkbox" name="pushr_enabled" id="pushr_enabled" {if $system['pushr_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Bucket Name")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="pushr_bucket" value="{$system['pushr_bucket']}">
+                <div class="form-text">
+                  {__("Your Pushr bucket name")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Access Key")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="pushr_key" value="{$system['pushr_key']}">
+                <div class="form-text">
+                  {__("Your Pushr Access Key")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Secret Key")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="pushr_secret" value="{$system['pushr_secret']}">
+                <div class="form-text">
+                  {__("Your Pushr Secret Key")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Region Endpoint")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="pushr_endpoint" value="{$system['pushr_endpoint']}">
+                <div class="form-text">
+                  {__("Your Pushr Region Endpoint")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("CDN Hostname")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="pushr_hostname" value="{$system['pushr_hostname']}">
+                <div class="form-text">
+                  {__("Your Pushr CDN Hostname (Example: 'https://XXXX.s3.de01.sonic.r-cdn.com')")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label"></label>
+              <div class="col-md-9">
+                <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
+                <button type="button" class="btn btn-danger js_admin-tester" data-handle="pushr">
+                  <i class="fa fa-bolt mr10"></i> {__("Test Connection")}
+                </button>
+              </div>
+            </div>
+
+            <!-- success -->
+            <div class="alert alert-success mt15 mb0 x-hidden"></div>
+            <!-- success -->
+
+            <!-- error -->
+            <div class="alert alert-danger mt15 mb0 x-hidden"></div>
+            <!-- error -->
+          </form>
+          <!-- Pushr -->
         </div>
       </div>
       <!-- Cloud -->
@@ -7761,7 +8090,7 @@
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  <img width="40px" height="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/cashfree.png">
+                  {include file='__svg_icons.tpl' icon="cashfree" width="40px" height="40px"}
                 </div>
                 <div>
                   <div class="form-label h6">{__("Cashfree Enabled")}</div>
@@ -7856,19 +8185,19 @@
 
             <div class="divider"></div>
 
-            <!-- SecurionPay (Shift4) -->
+            <!-- Shift4 -->
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  {include file='__svg_icons.tpl' icon="securionpay" width="40px" height="40px"}
+                  {include file='__svg_icons.tpl' icon="shift4" width="40px" height="40px"}
                 </div>
                 <div>
-                  <div class="form-label h6">{__("SecurionPay Enabled")} ({__("Shift4")})</div>
-                  <div class="form-text d-none d-sm-block">{__("Enable payments via SecurionPay")}</div>
+                  <div class="form-label h6">{__("Shift4 Enabled")}</div>
+                  <div class="form-text d-none d-sm-block">{__("Enable payments via Shift4")}</div>
                 </div>
                 <div class="text-end">
-                  <label class="switch" for="securionpay_enabled">
-                    <input type="checkbox" name="securionpay_enabled" id="securionpay_enabled" {if $system['securionpay_enabled']}checked{/if}>
+                  <label class="switch" for="shift4_enabled">
+                    <input type="checkbox" name="shift4_enabled" id="shift4_enabled" {if $system['shift4_enabled']}checked{/if}>
                     <span class="slider round"></span>
                   </label>
                 </div>
@@ -7880,7 +8209,7 @@
                 </label>
                 <div class="col-md-9">
                   {if !$user->_data['user_demo']}
-                    <input type="text" class="form-control" name="securionpay_api_key" value="{$system['securionpay_api_key']}">
+                    <input type="text" class="form-control" name="shift4_api_key" value="{$system['shift4_api_key']}">
                   {else}
                     <input type="password" class="form-control" value="*********">
                   {/if}
@@ -7893,14 +8222,14 @@
                 </label>
                 <div class="col-md-9">
                   {if !$user->_data['user_demo']}
-                    <input type="text" class="form-control" name="securionpay_api_secret" value="{$system['securionpay_api_secret']}">
+                    <input type="text" class="form-control" name="shift4_api_secret" value="{$system['shift4_api_secret']}">
                   {else}
                     <input type="password" class="form-control" value="*********">
                   {/if}
                 </div>
               </div>
             </div>
-            <!-- SecurionPay (Shift4) -->
+            <!-- Shift4 -->
 
             <div class="divider"></div>
 
@@ -8134,7 +8463,7 @@
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  <img height="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/flutterwave.png">
+                  {include file='__svg_icons.tpl' icon="flutterwave" width="40px" height="40px"}
                 </div>
                 <div>
                   <div class="form-label h6">{__("Flutterwave Enabled")}</div>
@@ -8259,7 +8588,7 @@
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  <img width="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/mercadopago.png">
+                  {include file='__svg_icons.tpl' icon="mercadopago" width="40px" height="40px"}
                 </div>
                 <div>
                   <div class="form-label h6">{__("MercadoPago Enabled")}</div>

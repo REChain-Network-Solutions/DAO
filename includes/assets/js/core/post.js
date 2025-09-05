@@ -2,7 +2,7 @@
  * post js
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // initialize API URLs
@@ -426,26 +426,6 @@ function end_live_audience() {
   $(window).off('beforeunload');
   window.location.reload();
 };
-function join_club_livestream() {
-  /* initialize vars */
-  var lightbox = $('.livebox');
-  var live_post_id = lightbox.data('live-post-id');
-  /* get live post */
-  $.post(api['live/reaction'], { 'do': 'join', 'post_id': live_post_id }, async function (response) {
-    /* check the response */
-    if (response.callback) {
-      eval(response.callback);
-    } else {
-      if (response.live_ended) {
-        /* show live status */
-        $('#js_live-status').html('<i class="fas fa-exclamation-circle mr5"></i>' + __['Live Ended']).addClass("error");
-      } else {
-        /* init agora client */
-        await join(response.agora_channel_name, response.agora_audience_token, response.agora_audience_uid);
-      }
-    }
-  }, 'json');
-}
 
 
 $(function () {
@@ -494,7 +474,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1206,7 +1186,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* publisher schedule toggle */
@@ -1274,7 +1254,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* publish new product */
@@ -1312,7 +1292,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* publish new photos to album */
@@ -1350,7 +1330,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* publish new review */
@@ -1369,7 +1349,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -1503,7 +1483,7 @@ $(function () {
             }
           },
           error: function () {
-            modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+            show_error_modal();
           }
         });
       };
@@ -1740,7 +1720,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* edit privacy */
@@ -1756,7 +1736,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* delete post */
@@ -1780,7 +1760,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1805,7 +1785,7 @@ $(function () {
       .fail(function () {
         /* button reset */
         button_status(_this, "reset");
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* delete blog */
@@ -1822,7 +1802,7 @@ $(function () {
         window.location = site_path + "/blogs";
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -1840,7 +1820,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unsold post */
@@ -1857,7 +1837,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* closed post */
@@ -1874,7 +1854,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unclosed job */
@@ -1891,7 +1871,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* save post */
@@ -1908,7 +1888,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unsave post */
@@ -1925,7 +1905,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* boost post */
@@ -1942,7 +1922,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unboost post */
@@ -1959,7 +1939,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* pin post */
@@ -1976,7 +1956,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unpin post */
@@ -1993,7 +1973,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* monetize post */
@@ -2010,7 +1990,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });;
+        show_error_modal();;
       });
   });
   /* unmonetize post */
@@ -2027,7 +2007,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });;
+        show_error_modal();;
       });
   });
   /* hide post */
@@ -2044,7 +2024,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unhide post */
@@ -2061,7 +2041,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* hide author */
@@ -2079,7 +2059,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unhide author */
@@ -2097,7 +2077,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* disable comments */
@@ -2117,7 +2097,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* enable comments */
@@ -2137,7 +2117,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* disallow post */
@@ -2158,7 +2138,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2177,7 +2157,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* show shared post attachments */
@@ -2273,7 +2253,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   $('body').on('mouseup', '.js_poll-vote input', function (event) {
@@ -2364,17 +2344,17 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   }
   $('body').on('keydown', 'textarea.js_post-comment', function (event) {
-    if ($(window).width() >= 970 && (event.keyCode == 13 && event.shiftKey == 0)) {
+    if (!is_mobile() && (event.originalEvent.key == 'Enter' && event.shiftKey == 0)) {
       event.preventDefault();
       _comment(this);
     }
   });
   $('body').on('click', 'li.js_post-comment', function () {
-    if ($(window).width() < 970) {
+    if (is_mobile()) {
       _comment(this);
     }
   });
@@ -2434,17 +2414,17 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   }
   $('body').on('keydown', 'textarea.js_post-reply', function (event) {
-    if ($(window).width() >= 970 && (event.keyCode == 13 && event.shiftKey == 0)) {
+    if (!is_mobile() && (event.originalEvent.key == 'Enter' && event.shiftKey == 0)) {
       event.preventDefault();
       _reply(this);
     }
   });
   $('body').on('click', 'li.js_post-reply', function () {
-    if ($(window).width() < 970) {
+    if (is_mobile()) {
       _reply(this);
     }
   });
@@ -2464,7 +2444,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2508,7 +2488,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -2567,19 +2547,19 @@ $(function () {
   }
   /* reactions toggle */
   $('body').on('mouseenter', '.reactions-wrapper', function () {
-    if (current_page != 'reels' && !is_iPad() && $(window).width() >= 970) {
+    if (current_page != 'reels' && !is_iPad() && !is_mobile()) {
       /* desktop -> show the reactions */
       _show_reactions(this);
     }
   });
   $('body').on('mouseleave', '.reactions-wrapper', function () {
-    if (current_page != 'reels' && !is_iPad() && $(window).width() >= 970) {
+    if (current_page != 'reels' && !is_iPad() && !is_mobile()) {
       /* desktop -> hide the reactions */
       _hide_reactions(this);
     }
   });
   $('body').on('click', '.reactions-wrapper', function () {
-    if (current_page == 'reels' || is_iPad() || $(window).width() < 970) {
+    if (current_page == 'reels' || is_iPad() || is_mobile()) {
       /* mobile -> toggle the reactions */
       if ($(this).find('.reactions-container:first').is(":visible")) {
         /* hide the reactions */
@@ -2628,7 +2608,7 @@ $(function () {
           }
         }, 'json')
           .fail(function () {
-            modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+            show_error_modal();
           });
       }
     }
@@ -2697,7 +2677,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     } else {
       /* [2] user react */
@@ -2721,7 +2701,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }
   });
@@ -2766,7 +2746,7 @@ $(function () {
           }, 2500);
         },
         error: function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         }
       });
     } else if (typeof yandex_key !== 'undefined' && yandex_key) {
@@ -2784,10 +2764,10 @@ $(function () {
             post.find('.post-text-translation:first').removeClass("x-notifier");
           }, 2500);
         }).fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
       }).fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
     } else {
       modal('#modal-message', { title: __['Error'], message: __['Translation service not available!'] });
@@ -2833,7 +2813,7 @@ $(function () {
           }, 2500);
         },
         error: function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         }
       });
     } else if (typeof yandex_key !== 'undefined' && yandex_key) {
@@ -2853,10 +2833,10 @@ $(function () {
             _this.find('.text:first').removeClass("x-notifier");
           }, 2500);
         }).fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
       }).fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
     } else {
       modal('#modal-message', { title: __['Error'], message: __['Translation service not available!'] });
@@ -2876,7 +2856,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2899,7 +2879,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });
@@ -2918,7 +2898,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* unpin photo */
@@ -2936,7 +2916,7 @@ $(function () {
       }
     }, 'json')
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -2956,7 +2936,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
       /* hide the confimation */
       $('#modal').modal('hide');
@@ -2978,7 +2958,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
       /* hide the confimation */
       $('#modal').modal('hide');
@@ -3003,7 +2983,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
   });

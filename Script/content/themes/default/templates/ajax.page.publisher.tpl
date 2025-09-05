@@ -7,10 +7,13 @@
 </div>
 <form class="js_ajax-forms" data-url="modules/create.php?type=page&do=create">
   <div class="modal-body">
+    <!-- name -->
     <div class="form-group">
       <label class="form-label" for="title">{__("Name Your Page")}</label>
       <input type="text" class="form-control" name="title" id="title">
     </div>
+    <!-- name -->
+    <!-- username -->
     <div class="form-group">
       <label class="form-label" for="username">{__("Page Username")}</label>
       <div class="input-group">
@@ -21,6 +24,8 @@
         {__("Can only contain alphanumeric characters (A–Z, 0–9) and periods ('.')")}
       </div>
     </div>
+    <!-- username -->
+    <!-- category -->
     <div class="form-group">
       <label class="form-label" for="category">{__("Category")}</label>
       <select class="form-select" name="category" id="category">
@@ -30,6 +35,8 @@
         {/foreach}
       </select>
     </div>
+    <!-- category -->
+    <!-- country -->
     <div class="form-group">
       <label class="form-label" for="country">{__("Country")}</label>
       <select class="form-select" name="country">
@@ -39,10 +46,24 @@
         {/foreach}
       </select>
     </div>
+    <!-- country -->
+    <!-- language -->
+    <div class="form-group">
+      <label class="form-label" for="language">{__("Language")}</label>
+      <select class="form-select" name="language">
+        <option value="none">{__("Select Language")}</option>
+        {foreach $languages as $language}
+          <option value="{$language['language_id']}">{$language['title']}</option>
+        {/foreach}
+      </select>
+    </div>
+    <!-- language -->
+    <!-- description -->
     <div class="form-group">
       <label class="form-label" for="description">{__("About")}</label>
       <textarea class="form-control" name="description" name="description"></textarea>
     </div>
+    <!-- description -->
     <!-- custom fields -->
     {if $custom_fields}
       {include file='__custom_fields.tpl' _custom_fields=$custom_fields _registration=true}

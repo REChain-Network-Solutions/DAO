@@ -4,7 +4,7 @@
  * ajax -> admin -> settings
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -319,7 +319,8 @@ try {
         'getting_started_education_required' => secure($_POST['getting_started_education_required']),
         'newsletter_consent' => secure($_POST['newsletter_consent']),
         'max_accounts' => secure($_POST['max_accounts'], 'int'),
-        'name_min_length' => secure($_POST['name_min_length'], 'int')
+        'name_min_length' => secure($_POST['name_min_length'], 'int'),
+        'name_max_length' => secure($_POST['name_max_length'], 'int'),
       ]);
       break;
 
@@ -361,6 +362,8 @@ try {
         'Delus_app_name' => secure($_POST['Delus_app_name']),
         'Delus_app_icon' => secure($_POST['Delus_app_icon'])
       ]);
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['Delus_app_icon']]);
       break;
 
     case 'accounts':
@@ -492,6 +495,7 @@ try {
         'infobip_username' => secure($_POST['infobip_username']),
         'infobip_password' => secure($_POST['infobip_password']),
         'msg91_authkey' => secure($_POST['msg91_authkey']),
+        'msg91_template_id' => secure($_POST['msg91_template_id']),
         'system_phone' => secure($_POST['system_phone'])
       ]);
       break;
@@ -596,9 +600,31 @@ try {
         'twilio_apisecret' => secure($_POST['twilio_apisecret']),
         'livekit_api_key' => secure($_POST['livekit_api_key']),
         'livekit_api_secret' => secure($_POST['livekit_api_secret']),
-        'livekit_ws_url' => secure($_POST['livekit_ws_url'])
+        'livekit_ws_url' => secure($_POST['livekit_ws_url']),
+        'agora_call_app_id' => secure($_POST['agora_call_app_id']),
+        'agora_call_app_certificate' => secure($_POST['agora_call_app_certificate'])
       ]);
       break;
+
+    case 'chat_socket':
+      /* prepare */
+      $_POST['chat_socket_enabled'] = (isset($_POST['chat_socket_enabled'])) ? '1' : '0';
+      $_POST['chat_socket_proxied'] = (isset($_POST['chat_socket_proxied'])) ? '1' : '0';
+      $_POST['chat_socket_ssl_verify_peer'] = (isset($_POST['chat_socket_ssl_verify_peer'])) ? '1' : '0';
+      $_POST['chat_socket_ssl_allow_self_signed'] = (isset($_POST['chat_socket_ssl_allow_self_signed'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'chat_socket_enabled' => secure($_POST['chat_socket_enabled']),
+        'chat_socket_server' => secure($_POST['chat_socket_server']),
+        'php_bin_path' => secure($_POST['php_bin_path']),
+        'nodejs_bin_path' => secure($_POST['nodejs_bin_path']),
+        'chat_socket_port' => secure($_POST['chat_socket_port']),
+        'chat_socket_proxied' => secure($_POST['chat_socket_proxied']),
+        'chat_socket_ssl_crt' => secure($_POST['chat_socket_ssl_crt']),
+        'chat_socket_ssl_key' => secure($_POST['chat_socket_ssl_key']),
+        'chat_socket_ssl_verify_peer' => secure($_POST['chat_socket_ssl_verify_peer']),
+        'chat_socket_ssl_allow_self_signed' => secure($_POST['chat_socket_ssl_allow_self_signed']),
+      ]);
 
     case 'live':
       /* prepare */
@@ -696,6 +722,8 @@ try {
         'max_file_size' => secure($_POST['max_file_size']),
         'file_extensions' => secure($_POST['file_extensions']),
       ]);
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['watermark_icon'], $_POST['watermark_videos_icon']]);
       break;
 
     case 's3':
@@ -710,6 +738,7 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -735,6 +764,7 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -758,6 +788,7 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -783,6 +814,7 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -808,6 +840,7 @@ try {
           'wasabi_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -833,6 +866,7 @@ try {
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
           'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -858,6 +892,7 @@ try {
           'wasabi_enabled' => '0',
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
+          'pushr_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -869,6 +904,33 @@ try {
         'cloudflare_r2_secret' => secure($_POST['cloudflare_r2_secret']),
         'cloudflare_r2_endpoint' => secure($_POST['cloudflare_r2_endpoint']),
         'cloudflare_r2_custom_domain' => secure($_POST['cloudflare_r2_custom_domain'])
+      ]);
+      break;
+
+    case 'pushr':
+      /* prepare */
+      $_POST['pushr_enabled'] = (isset($_POST['pushr_enabled'])) ? '1' : '0';
+      /* if enabled is set -> disable all other options [s3|digitalocean|ftp] */
+      if ($_POST['pushr_enabled']) {
+        update_system_options([
+          's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
+          'digitalocean_enabled' => '0',
+          'wasabi_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
+          'ftp_enabled' => '0'
+        ]);
+      }
+      /* update */
+      update_system_options([
+        'pushr_enabled' => secure($_POST['pushr_enabled']),
+        'pushr_bucket' => secure($_POST['pushr_bucket']),
+        'pushr_key' => secure($_POST['pushr_key']),
+        'pushr_secret' => secure($_POST['pushr_secret']),
+        'pushr_endpoint' => secure($_POST['pushr_endpoint']),
+        'pushr_hostname' => secure($_POST['pushr_hostname'])
       ]);
       break;
 
@@ -925,7 +987,7 @@ try {
       $_POST['razorpay_enabled'] = (isset($_POST['razorpay_enabled'])) ? '1' : '0';
       $_POST['cashfree_enabled'] = (isset($_POST['cashfree_enabled'])) ? '1' : '0';
       $_POST['coinbase_enabled'] = (isset($_POST['coinbase_enabled'])) ? '1' : '0';
-      $_POST['securionpay_enabled'] = (isset($_POST['securionpay_enabled'])) ? '1' : '0';
+      $_POST['shift4_enabled'] = (isset($_POST['shift4_enabled'])) ? '1' : '0';
       $_POST['moneypoolscash_enabled'] = (isset($_POST['moneypoolscash_enabled'])) ? '1' : '0';
       $_POST['moneypoolscash_payouts_enabled'] = (isset($_POST['moneypoolscash_payouts_enabled'])) ? '1' : '0';
       $_POST['myfatoorah_enabled'] = (isset($_POST['myfatoorah_enabled'])) ? '1' : '0';
@@ -973,9 +1035,9 @@ try {
         'cashfree_client_secret' => secure($_POST['cashfree_client_secret']),
         'coinbase_enabled' => secure($_POST['coinbase_enabled']),
         'coinbase_api_key' => secure($_POST['coinbase_api_key']),
-        'securionpay_enabled' => secure($_POST['securionpay_enabled']),
-        'securionpay_api_key' => secure($_POST['securionpay_api_key']),
-        'securionpay_api_secret' => secure($_POST['securionpay_api_secret']),
+        'shift4_enabled' => secure($_POST['shift4_enabled']),
+        'shift4_api_key' => secure($_POST['shift4_api_key']),
+        'shift4_api_secret' => secure($_POST['shift4_api_secret']),
         'moneypoolscash_enabled' => secure($_POST['moneypoolscash_enabled']),
         'moneypoolscash_payouts_enabled' => secure($_POST['moneypoolscash_payouts_enabled']),
         'moneypoolscash_api_key' => secure($_POST['moneypoolscash_api_key']),
@@ -1360,12 +1422,14 @@ try {
       $_POST['cronjob_enabled'] = (isset($_POST['cronjob_enabled'])) ? '1' : '0';
       $_POST['cronjob_undelivered_orders'] = (isset($_POST['cronjob_undelivered_orders'])) ? '1' : '0';
       $_POST['cronjob_reset_pro_packages'] = (isset($_POST['cronjob_reset_pro_packages'])) ? '1' : '0';
+      $_POST['cronjob_clear_pending_uploads'] = (isset($_POST['cronjob_clear_pending_uploads'])) ? '1' : '0';
       $_POST['cronjob_merits_reminder'] = (isset($_POST['cronjob_merits_reminder'])) ? '1' : '0';
       /* update */
       update_system_options([
         'cronjob_enabled' => secure($_POST['cronjob_enabled']),
         'cronjob_undelivered_orders' => secure($_POST['cronjob_undelivered_orders']),
         'cronjob_reset_pro_packages' => secure($_POST['cronjob_reset_pro_packages']),
+        'cronjob_clear_pending_uploads' => secure($_POST['cronjob_clear_pending_uploads']),
         'cronjob_merits_reminder' => secure($_POST['cronjob_merits_reminder']),
       ]);
       break;
@@ -1424,6 +1488,8 @@ try {
         'pwa_192_icon' => secure($_POST['pwa_192_icon']),
         'pwa_512_icon' => secure($_POST['pwa_512_icon']),
       ]);
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['pwa_192_icon'], $_POST['pwa_512_icon']]);
       break;
 
     case 'apis':

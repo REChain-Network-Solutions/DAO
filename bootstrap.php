@@ -4,12 +4,11 @@
  * bootstrap
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // set ABSPATH
-define('ABSPATH', __DIR__ . '/');
-
+define('ABSPATH', __DIR__ . DIRECTORY_SEPARATOR);
 
 // get system version & exceptions
 require(ABSPATH . 'includes/sys_ver.php');
@@ -73,9 +72,8 @@ try {
 
 
 // init system
-global $system;
 try {
-  init_system($system);
+  $system = init_system();
 } catch (Exception $e) {
   _error(__("Error"), $e->getMessage());
 }
@@ -89,12 +87,10 @@ if (!$session_hash) {
 
 
 // init smarty
-global $smarty;
 $smarty = init_smarty();
 
 
 // get user
-global $user;
 require_once(ABSPATH . 'includes/class-user.php');
 try {
   $user = new User();
@@ -128,7 +124,6 @@ $user->log_session();
 
 
 // get emojis
-global $emojis;
 $emojis = $user->get_emojis();
 
 
@@ -142,7 +137,7 @@ if ($user->_is_admin) {
 }
 
 
-// assign global varibles
+// assign variables
 $smarty->assign('secret', $_SESSION['secret']);
 $smarty->assign('session_hash', $session_hash);
 $smarty->assign('date', $date);

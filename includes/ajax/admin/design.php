@@ -4,7 +4,7 @@
  * ajax -> admin -> design
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -32,9 +32,9 @@ try {
   $_POST['system_theme_mode_select'] = (isset($_POST['system_theme_mode_select'])) ? '1' : '0';
   $_POST['system_back_swipe'] = (isset($_POST['system_back_swipe'])) ? '1' : '0';
   $_POST['system_favicon_default'] = (isset($_POST['system_favicon_default'])) ? '1' : '0';
-  $_POST['system_favicon'] = ($_POST['system_favicon_default']) ? '' : $_POST['system_favicon'];
+  $system_favicon = ($_POST['system_favicon_default']) ? '' : $_POST['system_favicon'];
   $_POST['system_ogimage_default'] = (isset($_POST['system_ogimage_default'])) ? '1' : '0';
-  $_POST['system_ogimage'] = ($_POST['system_ogimage_default']) ? '' : $_POST['system_ogimage'];
+  $system_ogimage = ($_POST['system_ogimage_default']) ? '' : $_POST['system_ogimage'];
   $_POST['play_store_badge_enabled'] = (isset($_POST['play_store_badge_enabled'])) ? '1' : '0';
   $_POST['appgallery_badge_enabled'] = (isset($_POST['appgallery_badge_enabled'])) ? '1' : '0';
   $_POST['app_store_badge_enabled'] = (isset($_POST['app_store_badge_enabled'])) ? '1' : '0';
@@ -45,13 +45,15 @@ try {
     'system_theme_night_on' => secure($_POST['system_theme_night_on']),
     'system_theme_mode_select' => secure($_POST['system_theme_mode_select']),
     'system_back_swipe' => secure($_POST['system_back_swipe']),
-    'landing_page_template' => secure($_POST['landing_page_template']),
     'system_logo' => secure($_POST['system_logo']),
     'system_logo_dark' => secure($_POST['system_logo_dark']),
+    'system_wallpaper_default' => secure($_POST['system_wallpaper_default']),
+    'system_wallpaper' => secure($_POST['system_wallpaper']),
+    'landing_page_template' => secure($_POST['landing_page_template']),
     'system_favicon_default' => secure($_POST['system_favicon_default']),
-    'system_favicon' => secure($_POST['system_favicon']),
+    'system_favicon' => secure($system_favicon),
     'system_ogimage_default' => secure($_POST['system_ogimage_default']),
-    'system_ogimage' => secure($_POST['system_ogimage']),
+    'system_ogimage' => secure($system_ogimage),
     'play_store_badge_enabled' => secure($_POST['play_store_badge_enabled']),
     'appgallery_badge_enabled' => secure($_POST['appgallery_badge_enabled']),
     'appgallery_store_link' => secure($_POST['appgallery_store_link']),
@@ -75,6 +77,8 @@ try {
     'custome_js_header' => secure($_POST['custome_js_header']),
     'custome_js_footer' => secure($_POST['custome_js_footer'])
   ]);
+  /* remove pending uploads */
+  remove_pending_uploads([$_POST['system_logo'], $_POST['system_logo_dark'], $_POST['system_wallpaper'], $_POST['system_favicon'], $_POST['system_ogimage']]);
   /* return */
   return_json(['callback' => 'window.location.reload();']);
 } catch (Exception $e) {

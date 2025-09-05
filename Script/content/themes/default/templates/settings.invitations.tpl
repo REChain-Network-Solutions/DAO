@@ -84,7 +84,7 @@
               <td>
                 {if !$invitation_code['used']}
                   <div class="d-inline-block" data-bs-toggle="tooltip" title='{__("Share")}'>
-                    <button data-toggle="modal" data-url="users/invitations.php?do=share&code={$invitation_code['code']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
+                    <button data-toggle="modal" data-url="users/invitations.php?do=share&code={$invitation_code['code']}{if $system['affiliates_enabled']}&ref={$user->_data['user_name']}{/if}" class="btn btn-sm btn-icon btn-rounded btn-primary">
                       <i class="fa fa-link"></i>
                     </button>
                   </div>

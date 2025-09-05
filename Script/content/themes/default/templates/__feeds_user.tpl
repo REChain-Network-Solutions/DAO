@@ -55,9 +55,15 @@
           </button>
 
         {elseif $_connection == "remove"}
-          <button type="button" class="btn btn-sm btn-success {if !$_no_action}btn-delete{/if} js_friend-remove" data-uid="{$_user['user_id']}">
-            <i class="fa fa-check mr5"></i>{__("Friends")}
-          </button>
+          {if $system['friends_enabled']}
+            <button type="button" class="btn btn-sm btn-success {if !$_no_action}btn-delete{/if} js_friend-remove" data-uid="{$_user['user_id']}">
+              <i class="fa fa-check mr5"></i>{__("Friends")}
+            </button>
+          {else}
+            <button type="button" class="btn btn-sm btn-info js_unfollow" data-uid="{$_user['user_id']}">
+              <i class="fa fa-check mr5"></i>{__("Following")}
+            </button>
+          {/if}
           {if $_top_friends}
             <button type="button" class="btn btn-sm btn-warning {if $_user['top_friend']}js_friend-unfavorite{else}js_friend-favorite{/if}" data-uid="{$_user['user_id']}">
               {if $_user['top_friend']}
@@ -179,9 +185,15 @@
             </button>
 
           {elseif $_connection == "remove"}
-            <button type="button" class="btn btn-sm btn-success {if !$_no_action}btn-delete{/if} js_friend-remove" data-uid="{$_user['user_id']}">
-              <i class="fa fa-check mr5"></i>{__("Friends")}
-            </button>
+            {if $system['friends_enabled']}
+              <button type="button" class="btn btn-sm btn-success {if !$_no_action}btn-delete{/if} js_friend-remove" data-uid="{$_user['user_id']}">
+                <i class="fa fa-check mr5"></i>{__("Friends")}
+              </button>
+            {else}
+              <button type="button" class="btn btn-sm btn-info js_unfollow" data-uid="{$_user['user_id']}">
+                <i class="fa fa-check mr5"></i>{__("Following")}
+              </button>
+            {/if}
 
           {elseif $_connection == "follow"}
             <button type="button" class="btn btn-sm js_follow" data-uid="{$_user['user_id']}">

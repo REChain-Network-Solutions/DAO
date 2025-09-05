@@ -4,7 +4,7 @@
  * ajax -> admin -> announcements
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -49,6 +49,12 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE announcements SET name = %s, title = %s, type = %s, code = %s, start_date = %s, end_date = %s WHERE announcement_id = %s", secure($_POST['name']), secure($_POST['title']), secure($_POST['type']), secure($_POST['code']), secure($_POST['start_date'], 'datetime'), secure($_POST['end_date'], 'datetime'), secure($_GET['id'], 'int')));
+      /* extract hosted images from the text */
+      $uploaded_images = extract_uploaded_images_from_text($_POST['code']);
+      /* remove pending uploads */
+      if ($uploaded_images) {
+        remove_pending_uploads($uploaded_images);
+      }
       /* return */
       return_json(['success' => true, 'message' => __("Announcement info have been updated")]);
       break;
@@ -72,6 +78,12 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO announcements (name, title, type, code, start_date, end_date) VALUES (%s, %s, %s, %s, %s, %s)", secure($_POST['name']), secure($_POST['title']), secure($_POST['type']), secure($_POST['code']), secure($_POST['start_date'], 'datetime'), secure($_POST['end_date'], 'datetime')));
+      /* extract hosted images from the text */
+      $uploaded_images = extract_uploaded_images_from_text($_POST['code']);
+      /* remove pending uploads */
+      if ($uploaded_images) {
+        remove_pending_uploads($uploaded_images);
+      }
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/announcements";']);
       break;

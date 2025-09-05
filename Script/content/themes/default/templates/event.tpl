@@ -367,20 +367,29 @@
                       {__($event['event_category_name'])}
                     </div>
                   </li>
-                  {if $event['event_location']}
-                    <!-- event location -->
+                  {if $event['event_is_online']}
                     <li>
                       <div class="about-list-item">
                         {include file='__svg_icons.tpl' icon="map" class="main-icon" width="24px" height="24px"}
-                        {$event['event_location']}
+                        {__("Online Event")}
                       </div>
                     </li>
-                    {if $system['geolocation_enabled']}
-                      <div style="margin-left: -20px; margin-right: -20px;">
-                        <iframe width="100%" frameborder="0" style="border:0;" src="https://www.google.com/maps/embed/v1/place?key={$system['geolocation_key']}&amp;q={$event['event_location']}&amp;language=en"></iframe>
-                      </div>
+                  {else}
+                    {if $event['event_location']}
+                      <!-- event location -->
+                      <li>
+                        <div class="about-list-item">
+                          {include file='__svg_icons.tpl' icon="map" class="main-icon" width="24px" height="24px"}
+                          {$event['event_location']}
+                        </div>
+                      </li>
+                      {if $system['geolocation_enabled']}
+                        <div style="margin-left: -20px; margin-right: -20px;">
+                          <iframe width="100%" frameborder="0" style="border:0;" src="https://www.google.com/maps/embed/v1/place?key={$system['geolocation_key']}&amp;q={$event['event_location']}&amp;language=en"></iframe>
+                        </div>
+                      {/if}
+                      <!-- event location -->
                     {/if}
-                    <!-- event location -->
                   {/if}
                   <li class="divider mtb10"></li>
                   <li>
@@ -1088,6 +1097,13 @@
                       <label class="form-label">{__("End Date")}</label>
                       <input type="datetime-local" class="form-control" name="end_date" value="{$event['event_end_date']}">
                     </div>
+                    <div class="form-group">
+                      <label class="form-label" for="is_online">{__("Event Type")}</label>
+                      <select class="form-select" name="is_online" id="is_online">
+                        <option {if $event['event_is_online'] == 0}selected{/if} value="0">{__("In Person")}</option>
+                        <option {if $event['event_is_online'] == 1}selected{/if} value="1">{__("Online")}</option>
+                      </select>
+                    </div>
                     {if !$event['event_page']}
                       <div class="form-group">
                         <label class="form-label" for="privacy">{__("Select Privacy")}</label>
@@ -1108,7 +1124,7 @@
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="location">{__("Location")}</label>
-                      <input type="text" class="form-control" name="location" id="location" value="{$event['event_location']}">
+                      <input type="text" class="form-control" name="location" id="location" value="{$event['event_location']}" {if $event['event_is_online'] == 1}disabled{/if}>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="country">{__("Country")}</label>
@@ -1116,6 +1132,15 @@
                         <option value="none">{__("Select Country")}</option>
                         {foreach $countries as $country}
                           <option value="{$country['country_id']}" {if $event['event_country'] == $country['country_id']}selected{/if}>{$country['country_name']}</option>
+                        {/foreach}
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="language">{__("Language")}</label>
+                      <select class="form-select" name="language">
+                        <option value="none">{__("Select Language")}</option>
+                        {foreach $languages as $language}
+                          <option value="{$language['language_id']}" {if $event['event_language'] == $language['language_id']}selected{/if}>{$language['title']}</option>
                         {/foreach}
                       </select>
                     </div>
@@ -1261,6 +1286,14 @@
       $('#sponsored_event').fadeIn();
     } else {
       $('#sponsored_event').hide();
+    }
+  });
+  /* event type */
+  $('#is_online').on('change', function() {
+    if ($(this).val() == 1) {
+      $('#location').prop('disabled', true);
+    } else {
+      $('#location').prop('disabled', false);
     }
   });
 </script>

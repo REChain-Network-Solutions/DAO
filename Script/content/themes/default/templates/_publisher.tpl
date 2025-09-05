@@ -351,7 +351,7 @@
                     </a>
                   </li>
                 {/if}
-                {if $user->_data['can_sell_products'] && in_array($_handle, ['me', 'page', 'group','event'])}
+                {if $system['market_enabled'] && in_array($_handle, ['me', 'page', 'group','event'])}
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="product" data-toggle="modal" data-url="posts/product.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="products" class="main-icon mr5" width="24px" height="24px"}
@@ -367,7 +367,7 @@
                     </div>
                   </li>
                 {/if}
-                {if $user->_data['can_create_offers'] && in_array($_handle, ['me', 'page', 'group','event'])}
+                {if $system['offers_enabled'] && in_array($_handle, ['me', 'page', 'group','event'])}
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="offer" data-toggle="modal" data-url="posts/offer.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="offers" class="main-icon mr5" width="24px" height="24px"}
@@ -375,7 +375,7 @@
                     </div>
                   </li>
                 {/if}
-                {if $user->_data['can_create_jobs'] && in_array($_handle, ['me', 'page', 'group','event'])}
+                {if $system['jobs_enabled'] && in_array($_handle, ['me', 'page', 'group','event'])}
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="job" data-toggle="modal" data-url="posts/job.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="jobs" class="main-icon mr5" width="24px" height="24px"}

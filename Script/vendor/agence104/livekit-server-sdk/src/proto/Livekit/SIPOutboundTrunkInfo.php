@@ -37,6 +37,12 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
      */
     protected $address = '';
     /**
+     * country where the call terminates as ISO 3166-1 alpha-2 (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). This will be used by the livekit infrastructure to route calls.
+     *
+     * Generated from protobuf field <code>string destination_country = 14;</code>
+     */
+    protected $destination_country = '';
+    /**
      * SIP Transport used for outbound call.
      *
      * Generated from protobuf field <code>.livekit.SIPTransport transport = 5;</code>
@@ -73,6 +79,26 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> headers_to_attributes = 10;</code>
      */
     private $headers_to_attributes;
+    /**
+     * Map LiveKit attributes to SIP X-* headers when sending BYE or REFER requests.
+     * Keys are the names of attributes and values are the names of X-* headers they will be mapped to.
+     *
+     * Generated from protobuf field <code>map<string, string> attributes_to_headers = 11;</code>
+     */
+    private $attributes_to_headers;
+    /**
+     * Map SIP headers from 200 OK to sip.h.* participant attributes automatically.
+     * When the names of required headers is known, using headers_to_attributes is strongly recommended.
+     * When mapping 200 OK headers to follow-up request headers with attributes_to_headers map,
+     * lowercase header names should be used, for example: sip.h.x-custom-header.
+     *
+     * Generated from protobuf field <code>.livekit.SIPHeaderOptions include_headers = 12;</code>
+     */
+    protected $include_headers = 0;
+    /**
+     * Generated from protobuf field <code>.livekit.SIPMediaEncryption media_encryption = 13;</code>
+     */
+    protected $media_encryption = 0;
 
     /**
      * Constructor.
@@ -88,6 +114,8 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
      *     @type string $address
      *           Hostname or IP that SIP INVITE is sent too.
      *           Note that this is not a SIP URI and should not contain the 'sip:' protocol prefix.
+     *     @type string $destination_country
+     *           country where the call terminates as ISO 3166-1 alpha-2 (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). This will be used by the livekit infrastructure to route calls.
      *     @type int $transport
      *           SIP Transport used for outbound call.
      *     @type string[]|\Google\Protobuf\Internal\RepeatedField $numbers
@@ -102,6 +130,15 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
      *     @type array|\Google\Protobuf\Internal\MapField $headers_to_attributes
      *           Map SIP X-* headers from 200 OK to SIP participant attributes.
      *           Keys are the names of X-* headers and values are the names of attributes they will be mapped to.
+     *     @type array|\Google\Protobuf\Internal\MapField $attributes_to_headers
+     *           Map LiveKit attributes to SIP X-* headers when sending BYE or REFER requests.
+     *           Keys are the names of attributes and values are the names of X-* headers they will be mapped to.
+     *     @type int $include_headers
+     *           Map SIP headers from 200 OK to sip.h.* participant attributes automatically.
+     *           When the names of required headers is known, using headers_to_attributes is strongly recommended.
+     *           When mapping 200 OK headers to follow-up request headers with attributes_to_headers map,
+     *           lowercase header names should be used, for example: sip.h.x-custom-header.
+     *     @type int $media_encryption
      * }
      */
     public function __construct($data = NULL) {
@@ -207,6 +244,32 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->address = $var;
+
+        return $this;
+    }
+
+    /**
+     * country where the call terminates as ISO 3166-1 alpha-2 (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). This will be used by the livekit infrastructure to route calls.
+     *
+     * Generated from protobuf field <code>string destination_country = 14;</code>
+     * @return string
+     */
+    public function getDestinationCountry()
+    {
+        return $this->destination_country;
+    }
+
+    /**
+     * country where the call terminates as ISO 3166-1 alpha-2 (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). This will be used by the livekit infrastructure to route calls.
+     *
+     * Generated from protobuf field <code>string destination_country = 14;</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDestinationCountry($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->destination_country = $var;
 
         return $this;
     }
@@ -365,6 +428,88 @@ class SIPOutboundTrunkInfo extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->headers_to_attributes = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Map LiveKit attributes to SIP X-* headers when sending BYE or REFER requests.
+     * Keys are the names of attributes and values are the names of X-* headers they will be mapped to.
+     *
+     * Generated from protobuf field <code>map<string, string> attributes_to_headers = 11;</code>
+     * @return \Google\Protobuf\Internal\MapField
+     */
+    public function getAttributesToHeaders()
+    {
+        return $this->attributes_to_headers;
+    }
+
+    /**
+     * Map LiveKit attributes to SIP X-* headers when sending BYE or REFER requests.
+     * Keys are the names of attributes and values are the names of X-* headers they will be mapped to.
+     *
+     * Generated from protobuf field <code>map<string, string> attributes_to_headers = 11;</code>
+     * @param array|\Google\Protobuf\Internal\MapField $var
+     * @return $this
+     */
+    public function setAttributesToHeaders($var)
+    {
+        $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->attributes_to_headers = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Map SIP headers from 200 OK to sip.h.* participant attributes automatically.
+     * When the names of required headers is known, using headers_to_attributes is strongly recommended.
+     * When mapping 200 OK headers to follow-up request headers with attributes_to_headers map,
+     * lowercase header names should be used, for example: sip.h.x-custom-header.
+     *
+     * Generated from protobuf field <code>.livekit.SIPHeaderOptions include_headers = 12;</code>
+     * @return int
+     */
+    public function getIncludeHeaders()
+    {
+        return $this->include_headers;
+    }
+
+    /**
+     * Map SIP headers from 200 OK to sip.h.* participant attributes automatically.
+     * When the names of required headers is known, using headers_to_attributes is strongly recommended.
+     * When mapping 200 OK headers to follow-up request headers with attributes_to_headers map,
+     * lowercase header names should be used, for example: sip.h.x-custom-header.
+     *
+     * Generated from protobuf field <code>.livekit.SIPHeaderOptions include_headers = 12;</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setIncludeHeaders($var)
+    {
+        GPBUtil::checkEnum($var, \Livekit\SIPHeaderOptions::class);
+        $this->include_headers = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.livekit.SIPMediaEncryption media_encryption = 13;</code>
+     * @return int
+     */
+    public function getMediaEncryption()
+    {
+        return $this->media_encryption;
+    }
+
+    /**
+     * Generated from protobuf field <code>.livekit.SIPMediaEncryption media_encryption = 13;</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setMediaEncryption($var)
+    {
+        GPBUtil::checkEnum($var, \Livekit\SIPMediaEncryption::class);
+        $this->media_encryption = $var;
 
         return $this;
     }

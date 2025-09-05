@@ -4,12 +4,14 @@
 </div>
 <form class="js_ajax-forms" data-url="albums/action.php">
   <div class="modal-body">
+    <!-- title -->
     <div class="form-group">
       <label class="form-label">{__("Title")}</label>
       <input type="hidden" name="do" value="edit_album">
       <input type="hidden" name="id" value="{$album['album_id']}">
       <input name="title" type="text" value="{$album['title']}" class="form-control" required autofocus>
     </div>
+    <!-- title -->
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

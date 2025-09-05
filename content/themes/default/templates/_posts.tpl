@@ -153,7 +153,7 @@
       </div>
     {/if}
   {elseif $_filter == "product" && !$_query}
-    {if $user->_data['can_sell_products'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
+    {if $system['market_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
       <div class="float-end">
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/product.php?do=create">
           {__("Create Product")}
@@ -170,7 +170,7 @@
     {/if}
 
   {elseif $_filter == "offer"}
-    {if $user->_data['can_create_offers'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
+    {if $system['offers_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
       <div class="float-end">
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/offer.php?do=create">
           {__("Create Offer")}
@@ -179,7 +179,7 @@
     {/if}
 
   {elseif $_filter == "job"}
-    {if $user->_data['can_create_jobs'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
+    {if $system['jobs_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
       <div class="float-end">
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/job.php?do=create">
           {__("Create Job")}
@@ -267,7 +267,7 @@
     </ul>
 
     <!-- see-more -->
-    <div class="alert alert-post see-more mb20 js_see-more js_see-more-infinite" data-get="{if $_load_more}{$_load_more}{else}{$_get}{/if}" data-filter="{if $_filter}{$_filter}{else}all{/if}" data-country="{if $selected_country}{$selected_country['country_id']}{else}all{/if}" {if $_id}data-id="{$_id}" {/if} {if $_query}data-query="{$_query}" {/if}>
+    <div class="alert alert-post see-more js_see-more js_see-more-infinite" data-get="{if $_load_more}{$_load_more}{else}{$_get}{/if}" data-filter="{if $_filter}{$_filter}{else}all{/if}" data-country="{if $selected_country}{$selected_country['country_id']}{else}all{/if}" {if $_id}data-id="{$_id}" {/if} {if $_query}data-query="{$_query}" {/if}>
       <span>{__("More Stories")}</span>
       <div class="loader loader_small x-hidden"></div>
     </div>

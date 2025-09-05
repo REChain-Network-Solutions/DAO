@@ -53,7 +53,7 @@
     </a>
   {/if}
   <div class="dropdown-divider"></div>
-  <a class="dropdown-item" href="{$system['system_url']}/signout/?cache={$secret}">
+  <a class="dropdown-item" href="{$system['system_url']}/signout/?cache={$secret}" onclick="localStorage.clear();">
     {include file='__svg_icons.tpl' icon="logout" class="main-icon mr10" width="20px" height="20px"}
     {__("Sign Out")}
   </a>

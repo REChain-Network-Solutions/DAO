@@ -47,6 +47,14 @@
     </div>
   </script>
 
+  <script id="modal-info" type="text/template">
+    <div class="modal-body text-center" style="padding: 50px;">
+      {include file='__svg_icons.tpl' icon="info" class="main-icon mb20" width="60px" height="60px"}
+      <h4>{literal}{{title}}{/literal}</h4>
+      <p class="mt20">{literal}{{{message}}}{/literal}</p>
+    </div>
+  </script>
+
   <script id="modal-error" type="text/template">
     <div class="modal-body text-center" style="padding: 50px;">
       {include file='__svg_icons.tpl' icon="report" class="main-icon mb20" width="60px" height="60px"}
@@ -623,21 +631,56 @@
       <div class="chat-sidebar {if !$user->_data['user_chat_enabled']}disabled{/if}">
         <div class="chat-sidebar-content">
           <div class="js_scroller" data-slimScroll-height="100%">
-          {foreach $sidebar_friends as $_user}
-            <div class="chat-avatar-wrapper clickable js_chat-start" data-uid="{$_user['user_id']}" data-name="{if $system['show_usernames_enabled']}{$_user['user_name']}{else}{$_user['user_firstname']} {$_user['user_lastname']}{/if}" data-link="{$_user['user_name']}" data-picture="{$_user['user_picture']}">
-              <div class="chat-avatar">
-                <img src="{$_user['user_picture']}" alt="" />
-                <i class="online-status fa fa-circle {if $_user['user_is_online'] }online{else}offline{/if}"></i>
-              </div>
-              <div class="last-seen">
-                {if $system['chat_status_enabled'] && !$_user['user_is_online']}
-                  <span class="js_moment" data-time="{$_user['user_last_seen']}">{$_user["user_last_seen"]}</span>
-                {else}
-                  <div class="pb10"></div>
+            <!-- Online -->
+            <div class="js_chat-contacts-online">
+              {foreach $sidebar_friends as $_user}
+                {if $_user['user_is_online']}
+                  <div class="chat-avatar-wrapper clickable js_chat-start"
+                      data-uid="{$_user['user_id']}"
+                      data-name="{$_user['user_fullname']}"
+                      data-link="{$_user['user_name']}"
+                      data-picture="{$_user['user_picture']}">
+
+                    <div class="chat-avatar">
+                      <img src="{$_user['user_picture']}" alt="" />
+                      <i class="online-status fa fa-circle online"></i>
+                    </div>
+
+                    <div class="pb10"></div>
+
+                  </div>
                 {/if}
-              </div>
+              {/foreach}
             </div>
-          {/foreach}
+            <!-- Online -->
+            <!-- Offline -->
+            <div class="js_chat-contacts-offline">
+              {foreach $sidebar_friends as $_user}
+                {if !$_user['user_is_online']}
+                  <div class="chat-avatar-wrapper clickable js_chat-start"
+                      data-uid="{$_user['user_id']}"
+                      data-name="{$_user['user_fullname']}"
+                      data-link="{$_user['user_name']}"
+                      data-picture="{$_user['user_picture']}">
+
+                    <div class="chat-avatar">
+                      <img src="{$_user['user_picture']}" alt="" />
+                      <i class="online-status fa fa-circle offline"></i>
+                    </div>
+
+                    {if $system['chat_status_enabled']}
+                      <div class="last-seen">
+                        <span class="js_moment" data-time="{$_user['user_last_seen']}">{$_user["user_last_seen"]}</span>
+                      </div>
+                    {else}
+                      <div class="pb10"></div>
+                    {/if}
+
+                  </div>
+                {/if}
+              {/foreach}
+            </div>
+            <!-- Offline -->
           </div>
         </div>
         <div class="chat-sidebar-footer">
@@ -667,14 +710,14 @@
               <div class="dropdown-item pointer js_chat-toggle" data-status="on">
                 <div class="action">
                   {include file='__svg_icons.tpl' icon="hide" class="main-icon mr10" width="20px" height="20px"}
-                  {__("Turn Off Chat")}
+                  <span class="js_chat-toggle-text">{__("Turn Off Active Status")}</span>
                 </div>
               </div>
             {else}
               <div class="dropdown-item pointer js_chat-toggle" data-status="off">
                 <div class="action">
                   {include file='__svg_icons.tpl' icon="unhide" class="main-icon mr10" width="20px" height="20px"}
-                  {__("Turn On Chat")}
+                  <span class="js_chat-toggle-text">{__("Turn On Active Status")}</span>
                 </div>
               </div>
             {/if}
@@ -808,12 +851,12 @@
             <!-- video/audio calls (not multiple) -->
             {literal}{{^multiple}}{/literal}
             {if $system['audio_call_enabled'] && $user->_data['can_start_audio_call']}
-              <span class="chat-head-btn js_chat-call-start" data-type="audio" data-uid="{literal}{{user_id}}{/literal}" data-name="{literal}{{name_list}}{/literal}">
+              <span class="chat-head-btn js_chat-call-start" data-type="audio" data-uid="{literal}{{user_id}}{/literal}" data-name="{literal}{{name_list}}{/literal}" data-picture="{literal}{{picture}}{/literal}">
                 {include file='__svg_icons.tpl' icon="call_audio" class="main-icon" width="20px" height="20px"}
               </span>
             {/if}
             {if $system['video_call_enabled'] && $user->_data['can_start_video_call']}
-              <span class="chat-head-btn js_chat-call-start" data-type="video" data-uid="{literal}{{user_id}}{/literal}" data-name="{literal}{{name_list}}{/literal}">
+              <span class="chat-head-btn js_chat-call-start" data-type="video" data-uid="{literal}{{user_id}}{/literal}" data-name="{literal}{{name_list}}{/literal}" data-picture="{literal}{{picture}}{/literal}">
                 {include file='__svg_icons.tpl' icon="call_video" class="main-icon" width="20px" height="20px"}
               </span>
             {/if}
@@ -936,12 +979,17 @@
         <h6 class="modal-title  mx-auto">
           {literal}{{#is_video}}{/literal}{include file='__svg_icons.tpl' icon="call_video" class="main-icon mr10" width="24px" height="24px"}{literal}{{/is_video}}{/literal}
           {literal}{{#is_audio}}{/literal}{include file='__svg_icons.tpl' icon="call_audio" class="main-icon mr10" width="24px" height="24px"}{literal}{{/is_audio}}{/literal}
-          {__("Calling")}
+          {__("Outgoing call")}
         </h6>
       </div>
       <div class="modal-body text-center">
+      <div class="position-relative mb10" style="height: 106px;">
+          <div class="profile-avatar-wrapper static">
+            <img src="{literal}{{picture}}{/literal}" alt="{literal}{{name}}{/literal}" style="width: 98px; height: 98px;">
+          </div>
+        </div>
         <h3>{literal}{{name}}{/literal}</h3>
-        <p class="text-lg js_chat-calling-message">{__("Connecting")}<span class="loading-dots"></span></p>
+        <p class="js_chat-calling-message">{__("Connecting")}<span class="loading-dots"></span></p>
 
         <div class="video-call-stream-wrapper">
           <div class="video-call-stream"></div>
@@ -949,12 +997,14 @@
         </div>
 
         <div class="mt30">
-          <button type="button" class="btn btn-light rounded-pill x-hidden js_chat-call-close" data-bs-dismiss="modal">{__("Close")}</button>
-          <button type="button" class="btn btn-md btn-danger rounded-pill x-hidden js_chat-call-cancel" data-type="{literal}{{type}}{/literal}" data-bs-dismiss="modal">
-            <i class="fas fa-phone-slash fa-lg fa-fw"></i>
+          <button type="button" class="btn btn-light rounded-pill x-hidden js_chat-call-close" data-bs-dismiss="modal">
+            <i class="fas fa-xmark fa-lg fa-fw mr5"></i>{__("Close")}
           </button>
-          <button type="button" class="btn btn-md btn-danger rounded-pill x-hidden js_chat-call-end" data-type="{literal}{{type}}{/literal}" data-bs-dismiss="modal">
-            <i class="fas fa-phone-slash fa-lg fa-fw"></i>
+          <button type="button" class="btn btn-danger rounded-pill x-hidden js_chat-call-cancel" data-bs-dismiss="modal">
+            <i class="fas fa-xmark fa-lg fa-fw mr5"></i>{__("Cancel")}
+          </button>
+          <button type="button" class="btn btn-danger rounded-pill x-hidden js_chat-call-end" data-bs-dismiss="modal">
+            <i class="fas fa-xmark fa-lg fa-fw mr5"></i>{__("End")}
           </button>
         </div>
       </div>
@@ -966,17 +1016,18 @@
         <h6 class="modal-title mx-auto">
           {literal}{{#is_video}}{/literal}{include file='__svg_icons.tpl' icon="call_video" class="main-icon mr10" width="24px" height="24px"}{literal}{{/is_video}}{/literal}
           {literal}{{#is_audio}}{/literal}{include file='__svg_icons.tpl' icon="call_audio" class="main-icon mr10" width="24px" height="24px"}{literal}{{/is_audio}}{/literal}
+          {__("Incoming call")}
         </h6>
       </div>
       <div class="modal-body text-center">
         <div class="position-relative mb10" style="height: 106px;">
           <div class="profile-avatar-wrapper static">
-            <img src="{literal}{{image}}{/literal}" alt="{literal}{{name}}{/literal}" style="width: 98px; height: 98px;">
+            <img src="{literal}{{picture}}{/literal}" alt="{literal}{{name}}{/literal}" style="width: 98px; height: 98px;">
           </div>
         </div>
         <h3>{literal}{{name}}{/literal}</h3>
-        {literal}{{#is_video}}{/literal}<p class="text-lg js_chat-ringing-message">{__("Wants to have video call with you")}</p>{literal}{{/is_video}}{/literal}
-        {literal}{{#is_audio}}{/literal}<p class="text-lg js_chat-ringing-message">{__("Wants to have audio call with you")}</p>{literal}{{/is_audio}}{/literal}
+        {literal}{{#is_video}}{/literal}<p class="js_chat-calling-message">{__("Wants to have video call with you")}</p>{literal}{{/is_video}}{/literal}
+        {literal}{{#is_audio}}{/literal}<p class="js_chat-calling-message">{__("Wants to have audio call with you")}</p>{literal}{{/is_audio}}{/literal}
 
         <div class="video-call-stream-wrapper">
           <div class="video-call-stream"></div>
@@ -984,9 +1035,17 @@
         </div>
 
         <div class="mt30">
-          <button type="submit" class="btn btn-icon btn-rounded btn-success mr10 js_chat-call-answer" data-type="{literal}{{type}}{/literal}" data-id="{literal}{{id}}{/literal}"><i class="fas fa-phone-alt fa-lg fa-fw"></i></button>
-          <button type="button" class="btn btn-icon btn-rounded btn-danger js_chat-call-decline" data-type="{literal}{{type}}{/literal}" data-id="{literal}{{id}}{/literal}" data-bs-dismiss="modal"><i class="fas fa-phone-slash fa-lg fa-fw"></i></button>
-          <button type="button" class="btn btn-icon btn-rounded btn-danger x-hidden js_chat-call-end" data-type="{literal}{{type}}{/literal}" data-id="{literal}{{id}}{/literal}" data-bs-dismiss="modal"><i class="fas fa-phone-slash fa-lg fa-fw"></i></button>
+          <button type="button" class="btn btn-success rounded-pill mr10 js_chat-call-answer" data-id="{literal}{{id}}{/literal}">
+            {literal}{{#is_video}}{/literal}<i class="fas fa-video fa-lg fa-fw mr5"></i>{literal}{{/is_video}}{/literal}
+            {literal}{{#is_audio}}{/literal}<i class="fas fa-phone-alt fa-lg fa-fw mr5"></i>{literal}{{/is_audio}}{/literal}
+            {__("Accept")}
+          </button>
+          <button type="button" class="btn btn-danger rounded-pill js_chat-call-decline" data-id="{literal}{{id}}{/literal}" data-bs-dismiss="modal">
+            <i class="fas fa-xmark fa-lg fa-fw mr5"></i>{__("Decline")}
+          </button>
+          <button type="button" class="btn btn-danger rounded-pill x-hidden js_chat-call-end" data-id="{literal}{{id}}{/literal}" data-bs-dismiss="modal">
+            <i class="fas fa-xmark fa-lg fa-fw mr5"></i>{__("End")}
+          </button>
         </div>
       </div>
       <div class="modal-footer border-0"></div>
@@ -1997,16 +2056,16 @@
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
                   <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#cashfree" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}" }'>
-                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/cashfree.png" class="mr5">{__("Cashfree")}
+                    {include file='__svg_icons.tpl' icon="cashfree" class="mr5" width="20px" height="20px"}{__("Cashfree")}
                   </button>
                 </div>
               </div>
             {/if}
-            {if $system['securionpay_enabled']}
+            {if $system['shift4_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
-                  <button class="js_payment-securionpay btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
-                    {include file='__svg_icons.tpl' icon="securionpay" class="mr10" width="20px" height="20px"}{__("SecurionPay")}
+                  <button class="js_payment-shift4 btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
+                    {include file='__svg_icons.tpl' icon="shift4" class="mr10" width="20px" height="20px"}{__("Shift4")}
                   </button>
                 </div>
               </div>
@@ -2042,7 +2101,7 @@
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
                   <button class="js_payment-flutterwave btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
-                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/flutterwave.png" class="mr5">{__("Flutterwave")}
+                    {include file='__svg_icons.tpl' icon="flutterwave" class="mr5" width="20px" height="20px"}{__("Flutterwave")}
                   </button>
                 </div>
               </div>
@@ -2060,7 +2119,7 @@
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
                   <button class="js_payment-mercadopago btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
-                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/mercadopago.png" class="mr5">{__("MercadoPago")}
+                    {include file='__svg_icons.tpl' icon="mercadopago" class="mr5" width="20px" height="20px"}{__("MercadoPago")}
                   </button>
                 </div>
               </div>
@@ -2448,7 +2507,7 @@
       <script id="cashfree" type="text/template">
         <div class="modal-header">
           <h6 class="modal-title">
-            <img width="24px" height="24px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/cashfree.png" class="mr10">
+            {include file='__svg_icons.tpl' icon="cashfree" class="mr10" width="24px" height="24px"}
             {__("Cashfree")}
           </h6>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

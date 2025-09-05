@@ -7,6 +7,7 @@
 </div>
 <form class="js_ajax-forms" data-url="posts/edit.php">
   <div class="modal-body">
+    <!-- digital product -->
     <div class="form-table-row">
       <div>
         <div class="form-label h6 mb5">{__("Digital Product")}</div>
@@ -19,11 +20,15 @@
         </label>
       </div>
     </div>
+    <!-- digital product -->
+    <!-- download url -->
     <div id="digital_product" {if !$post['product']['is_digital']}class="x-hidden" {/if}>
       <div class="form-group">
         <label class="form-label">{__("Download URL")}</label>
         <input name="product_url" type="text" class="form-control" value="{$post['product']['product_download_url']}">
       </div>
+      <!-- download url -->
+      <!-- upload file -->
       <div class="form-group">
         <label class="form-label">{__("OR Upload your File")}</label>
         <div class="x-image">
@@ -40,12 +45,16 @@
           {__("Allowed file types")}: {$system['file_extensions']}
         </div>
       </div>
+      <!-- upload file -->
     </div>
     <div class="divider dashed"></div>
+    <!-- product name -->
     <div class="form-group">
       <label class="form-label">{__("Product Name")}</label>
       <input name="name" type="text" class="form-control" value="{$post['product']['name']}">
     </div>
+    <!-- product name -->
+    <!-- total item units -->
     <div class="row">
       <div class="form-group col-md-8">
         <label class="form-label">{__("Total Item Units")}</label>
@@ -56,6 +65,8 @@
         <input name="price" type="number" class="form-control" value="{$post['product']['price']}">
       </div>
     </div>
+    <!-- total item units -->
+    <!-- category -->
     <div class="row">
       <div class="form-group col-md-8">
         <label class="form-label">{__("Category")}</label>
@@ -73,14 +84,19 @@
         </select>
       </div>
     </div>
+    <!-- category -->
+    <!-- location -->
     <div class="form-group">
       <label class="form-label">{__("Location")}</label>
       <input name="location" type="text" class="form-control js_geocomplete" value="{$post['product']['location']}">
     </div>
+    <!-- location -->
+    <!-- description -->
     <div class="form-group">
       <label class="form-label">{__("Description")}</label>
       <textarea name="message" rows="5" dir="auto" class="form-control">{$post['text_plain']}</textarea>
     </div>
+    <!-- description -->
     <!-- custom fields -->
     {if $custom_fields['basic']}
       {include file='__custom_fields.tpl' _custom_fields=$custom_fields['basic'] _registration=false}

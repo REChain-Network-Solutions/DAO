@@ -4,7 +4,7 @@
  * ajax -> admin -> test
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - @sorydima , @sorydev , @durovshater , @DmitrySoro90935 , @tanechfund - Handles.
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -41,6 +41,34 @@ try {
       return_json(['success' => true, 'message' => __("Test SMS has been sent to") . ": " . $system['system_phone']]);
       break;
 
+    case 'chat_socket_status':
+      /* test */
+      $response = socket_io_action('status');
+      /* return */
+      return_json(['success' => true, 'message' => nl2br($response)]);
+      break;
+
+    case 'chat_socket_start':
+      /* test */
+      $response = socket_io_action('start');
+      /* return */
+      return_json(['success' => true, 'message' => nl2br($response)]);
+      break;
+
+    case 'chat_socket_stop':
+      /* test */
+      $response = socket_io_action('stop');
+      /* return */
+      return_json(['success' => true, 'message' => nl2br($response)]);
+      break;
+
+    case 'socket_certificate':
+      /* test */
+      socket_certificate_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Certificate permissions & read are valid!")]);
+      break;
+
     case 'google_vision':
       /* test */
       google_vision_test();
@@ -52,7 +80,7 @@ try {
       /* test */
       $response = ffmpeg_test();
       /* return */
-      return_json(['success' => true, 'message' => $response]);
+      return_json(['success' => true, 'message' => nl2br($response)]);
       break;
 
     case 's3':
@@ -107,6 +135,13 @@ try {
     case 'cloudflare_r2':
       /* test */
       cloudflare_r2_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
+    case 'pushr':
+      /* test */
+      pushr_test();
       /* return */
       return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
       break;

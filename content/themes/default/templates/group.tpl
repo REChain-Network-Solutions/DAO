@@ -1248,6 +1248,15 @@
                       </select>
                     </div>
                     <div class="form-group">
+                      <label class="form-label" for="language">{__("Language")}</label>
+                      <select class="form-select" name="language">
+                        <option value="none">{__("Select Language")}</option>
+                        {foreach $languages as $language}
+                          <option value="{$language['language_id']}" {if $group['group_language'] == $language['language_id']}selected{/if}>{$language['title']}</option>
+                        {/foreach}
+                      </select>
+                    </div>
+                    <div class="form-group">
                       <label class="form-label" for="description">{__("About")}</label>
                       <textarea class="form-control" name="description" id="description">{$group['group_description']}</textarea>
                     </div>

@@ -7,11 +7,12 @@
 </div>
 <form class="js_ajax-forms" data-url="modules/review.php?do=publish-reply&id={$review['review_id']}" method="POST">
   <div class="modal-body">
+    <!-- reply -->
     <div class="form-group">
       <label class="form-label">{__("Write Your Reply")}</label>
       <textarea name="reply" rows="5" dir="auto" class="form-control"></textarea>
     </div>
-
+    <!-- reply -->
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

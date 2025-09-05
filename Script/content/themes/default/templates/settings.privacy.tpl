@@ -10,8 +10,8 @@
           {include file='__svg_icons.tpl' icon="chat" class="main-icon" width="40px" height="40px"}
         </div>
         <div>
-          <div class="form-label h6">{__("Chat Enabled")}</div>
-          <div class="form-text d-none d-sm-block">{__("If chat disabled you will appear offline and will not see who is online")}</div>
+          <div class="form-label h6">{__("Chat Active Status")}</div>
+          <div class="form-text d-none d-sm-block">{__("If chat active status is disabled you will appear offline and will not see who is online")}</div>
         </div>
         <div class="text-end">
           <label class="switch" for="user_chat_enabled">

@@ -835,7 +835,7 @@
                   <label class="form-label">{__("X Profile URL")}</label>
                   <div class="input-group">
                     <span class="input-group-text bg-transparent">
-                      {include file='__svg_icons.tpl' icon="twitter" width="24px" height="24px"}
+                      {include file='__svg_icons.tpl' icon="x" width="24px" height="24px"}
                     </span>
                     <input type="text" class="form-control" name="twitter" value="{$data['user_social_twitter']}">
                   </div>

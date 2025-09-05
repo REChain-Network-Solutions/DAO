@@ -4,7 +4,7 @@
  * APIs -> modules -> monetization -> router
  *
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 // get controller 
 require('modules/monetization/controller.php');

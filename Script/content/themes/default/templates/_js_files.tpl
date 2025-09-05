@@ -26,7 +26,7 @@
     var twocheckout_merchant_code = "{$system['2checkout_merchant_code']}";
     var twocheckout_publishable_key = "{$system['2checkout_publishable_key']}";
     var razorpay_key = "{$system['razorpay_key_id']}";
-    var securionpay_key = "{$system['securionpay_api_key']}";
+    var shift4_key = "{$system['shift4_api_key']}";
     var cashfree_mode = {if $system['cashfree_mode'] == "sandbox"}"sandbox"{else}"production"{/if};
     var epayco_key = "{$system['epayco_public_key']}";
     var epayco_test = {if $system['epayco_mode'] == "test"}true{else}false{/if};
@@ -60,12 +60,18 @@
       var chunk_upload_size = "{$system['chunk_upload_size']}";
       /* chat */
       var chat_enabled = {if $system['chat_enabled'] && $user->_data['user_privacy_chat'] != "me"}true{else}false{/if};
+      var chat_socket_enabled = {if $system['chat_socket_enabled']}true{else}false{/if};
+      {if $system['chat_socket_enabled']}
+        var chat_socket_port = "{$system['chat_socket_port']}";
+        var chat_socket_path = window.location.protocol + "//" + window.location.hostname {if !$system['chat_socket_proxied']} + ":" + chat_socket_port{/if};
+      {/if}
       var chat_typing_enabled = {if $system['chat_typing_enabled']}true{else}false{/if};
       var chat_seen_enabled = {if $system['chat_seen_enabled']}true{else}false{/if};
       var chat_sound = {if $user->_data['chat_sound']}true{else}false{/if};
       /* audio/video calls */
       var audio_video_provider = "{$system['audio_video_provider']}";
       var livekit_ws_url = "{$system['livekit_ws_url']}";
+      var agora_call_app_id = "{$system['agora_call_app_id']}";
       /* live */
       var live_enabled = {if $system['live_enabled']}true{else}false{/if};
       {if $system['live_enabled']}
@@ -143,8 +149,8 @@
     __['Mark as Paid'] = "{__('Mark as Paid')}";
     __['Read more'] = "{__('Read more')}";
     __['Read less'] = "{__('Read less')}";
-    __['Turn On Chat'] = "{__('Turn On Chat')}";
-    __['Turn Off Chat'] = "{__('Turn Off Chat')}";
+    __['Turn On Active Status'] = "{__('Turn On Active Status')}";
+    __['Turn Off Active Status'] = "{__('Turn Off Active Status')}";
     __['Monthly Average'] = "{__('Monthly Average')}";
     __['PayIn Methods'] = "{__('PayIn Methods')}";
     __['PayIn Types'] = "{__('PayIn Types')}";
@@ -219,7 +225,7 @@
     __['No Answer'] = "{__('No Answer')}";
     __['You can not connect to this user'] = "{__('You can not connect to this user')}";
     __['You have an active call already'] = "{__('You have an active call already')}";
-    __['The recipient declined the call'] = "{__('The recipient declined the call')}";
+    __['Declined the call'] = "{__('Declined the call')}";
     __['Connection has been lost'] = "{__('Connection has been lost')}";
     __['You must fill in all of the fields'] = "{__('You must fill in all of the fields')}";
     __['Hide from Timeline'] = "{__('Hide from Timeline')}";
@@ -307,7 +313,7 @@
   <!-- Dependencies Libs [Bootstrap|jQuery|jQueryUI] -->
   <script src="{$system['system_url']}/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js"></script>
 
@@ -399,7 +405,7 @@
     {/if}
     <!-- TinyMCE -->
 
-    <!-- Stripe & 2Checkout & Razorpay & SecurionPay & Cashfree & Epayco -->
+    <!-- Stripe & 2Checkout & Razorpay & Shift4 & Cashfree & Epayco -->
     {if in_array($page, ["index", "packages", "ads", "wallet", "market", "profile", "page", "group", "post", "directory", "search", "movies"])}
       {if $system['creditcard_enabled'] || $system['alipay_enabled']}
         <script src="https://js.stripe.com/v3" defer></script>
@@ -410,8 +416,8 @@
       {if $system['razorpay_enabled']}
         <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
       {/if}
-      {if $system['securionpay_enabled']}
-        <script src="https://securionpay.com/checkout.js" defer></script>
+      {if $system['shift4_enabled']}
+        <script src="https://js.dev.shift4.com/checkout.js" defer></script>
       {/if}
       {if $system['cashfree_enabled']}
         <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
@@ -420,12 +426,12 @@
         <script src="https://checkout.epayco.co/checkout.js" defer></script>
       {/if}
     {/if}
-    <!-- Stripe & 2Checkout & Razorpay & SecurionPay & Cashfree & Epayco -->
+    <!-- Stripe & 2Checkout & Razorpay & Shift4 & Cashfree & Epayco -->
 
     <!-- (Twillio|LiveKit) [Audio/Video Calls] -->
     {if $system['audio_call_enabled'] || $system['video_call_enabled']}
       {if $system['audio_video_provider'] == "twilio"}
-        <script src="https://sdk.twilio.com/js/video/releases/2.31.0/twilio-video.min.js" defer></script>
+        <script src="https://sdk.twilio.com/js/video/releases/2.32.1/twilio-video.min.js" defer></script>
       {/if}
       {if $system['audio_video_provider'] == "livekit"}
         <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js" defer></script>
@@ -435,7 +441,7 @@
 
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
     {if $system['live_enabled'] || $system['audio_video_provider'] == 'agora'}
-      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.2.js"></script>
+      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.0.js"></script>
     {/if}
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
 
@@ -447,9 +453,9 @@
 
     <!-- Datatables -->
     {if in_array($page, ["admin", "ads", "wallet", "developers", "settings"])}
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.2.2/css/dataTables.bootstrap5.min.css" defer />
-      <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js" defer></script>
-      <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js" defer></script>
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css" defer />
+      <script src="https://cdn.datatables.net/2.3.3/js/dataTables.js" defer></script>
+      <script src="https://cdn.datatables.net/2.3.3/js/dataTables.bootstrap5.min.js" defer></script>
     {/if}
     <!-- Datatables -->
 
@@ -477,21 +483,24 @@
   <!-- Dependencies Plugins -->
 
   <!-- System [JS] -->
-  <script src="{$system['system_url']}/includes/assets/js/core/core.js" {if !$user->_logged_in}defer{/if}>
+  <script src="{$system['system_url']}/includes/assets/js/core/core.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/core.js')}" {if !$user->_logged_in}defer{/if}>
     
   </script>
   {if $user->_logged_in}
-    <script src="{$system['system_url']}/includes/assets/js/core/user.js"></script>
-    <script src="{$system['system_url']}/includes/assets/js/core/post.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/core/user.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/user.js')}"></script>
+    <script src="{$system['system_url']}/includes/assets/js/core/post.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/post.js')}"></script>
     {if $system['chat_enabled']}
-      <script src="{$system['system_url']}/includes/assets/js/core/chat.js"></script>
+      {if $system['chat_socket_enabled']}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+      {/if}
+      <script src="{$system['system_url']}/includes/assets/js/core/chat.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/chat.js')}"></script>
     {/if}
-    <script src="{$system['system_url']}/includes/assets/js/core/ad_code.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/core/ad_code.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/ad_code.js')}"></script>
     {if $system['live_enabled'] && $page == "live"}
-      <script src="{$system['system_url']}/includes/assets/js/core/live.js"></script>
+      <script src="{$system['system_url']}/includes/assets/js/core/live.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/live.js')}"></script>
     {/if}
   {else}
-    <script src="{$system['system_url']}/includes/assets/js/core/login.js" defer></script>
+    <script src="{$system['system_url']}/includes/assets/js/core/login.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/login.js')}" defer></script>
   {/if}
   <!-- System [JS] -->
 
@@ -507,7 +516,7 @@
     <!-- Dependencies Plugins [JS] -->
 
     <!-- System [JS] -->
-    <script src="{$system['system_url']}/includes/assets/js/core/admin.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/core/admin.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/admin.js')}"></script>
     <!-- System [JS] -->
 
     <!-- Admin Charts -->

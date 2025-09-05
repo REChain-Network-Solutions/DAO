@@ -4,7 +4,7 @@
  * admin
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // set override_shutdown
@@ -4116,6 +4116,12 @@ try {
           /* get undelivered shipped orders */
           $get_orders = $db->query(sprintf("SELECT COUNT(*) as count FROM orders WHERE `status` = 'shipped' AND update_time < NOW() - INTERVAL %s DAY", $system['market_delivery_days']));
           $insights['undelivered_orders'] = $get_orders->fetch_assoc()['count'];
+          /* get pending uploads */
+          $get_pending_uploads = $db->query("SELECT COUNT(*) as count FROM users_uploads_pending");
+          $insights['pending_uploads'] = $get_pending_uploads->fetch_assoc()['count'];
+          /* get pending uploads size */
+          $get_pending_uploads_size = $db->query("SELECT SUM(file_size) as size FROM users_uploads_pending");
+          $insights['pending_uploads_size'] = round($get_pending_uploads_size->fetch_assoc()['size'] / 1024 / 1024, 2);
 
           // assign variables
           $smarty->assign('insights', $insights);

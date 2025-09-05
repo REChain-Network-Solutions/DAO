@@ -311,7 +311,7 @@
           <label class="form-label">{__("X Profile URL")}</label>
           <div class="input-group">
             <span class="input-group-text bg-transparent">
-              {include file='__svg_icons.tpl' icon="twitter" width="22px" height="22px"}
+              {include file='__svg_icons.tpl' icon="x" width="22px" height="22px"}
             </span>
             <input type="text" class="form-control" name="twitter" value="{$user->_data['user_social_twitter']}">
           </div>

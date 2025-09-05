@@ -2,7 +2,7 @@
  * core js
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // initialize API URLs
@@ -23,7 +23,7 @@ api['payments/2checkout'] = ajax_path + "payments/2checkout.php";
 api['payments/razorpay'] = ajax_path + "payments/razorpay.php";
 api['payments/cashfree'] = ajax_path + "payments/cashfree.php";
 api['payments/coinbase'] = ajax_path + "payments/coinbase.php";
-api['payments/securionpay'] = ajax_path + "payments/securionpay.php";
+api['payments/shift4'] = ajax_path + "payments/shift4.php";
 api['payments/moneypoolscash'] = ajax_path + "payments/moneypoolscash.php";
 api['payments/myfatoorah'] = ajax_path + "payments/myfatoorah.php";
 api['payments/epayco'] = ajax_path + "payments/epayco.php";
@@ -37,11 +37,19 @@ api['payments/trial'] = ajax_path + "payments/trial.php";
 api['ads/click'] = ajax_path + "ads/click.php";
 
 
-// stop audio
+// add audio stop function
 Audio.prototype.stop = function () {
   this.pause();
   this.currentTime = 0;
 };
+
+
+// dlog (debug log)
+function dlog(...args) {
+  if (system_debugging_mode) {
+    console.log(...args);
+  }
+}
 
 
 // guid
@@ -69,7 +77,18 @@ function is_empty(value) {
 }
 
 
-// is empty
+// is page
+function is_page(page) {
+  return window.location.pathname.indexOf(page) != -1;
+}
+
+
+// is mobile
+function is_mobile() {
+  return $(window).width() < 970;
+}
+
+// is iPad
 function is_iPad() {
   return navigator.userAgent.match(/iPad/i) != null;;
 }
@@ -111,8 +130,8 @@ function initialize() {
   });
   // run load-more
   /* load more data by scroll */
-  $('.js_see-more-infinite').bind('inview', function (event, visible) {
-    if ((desktop_infinite_scroll && $(window).width() >= 970) || (mobile_infinite_scroll && $(window).width() < 970)) {
+  $('.js_see-more-infinite').on('inview', function (event, visible) {
+    if ((desktop_infinite_scroll && !is_mobile()) || (mobile_infinite_scroll && is_mobile())) {
       var element = $(this);
       if (element.hasClass('processing')) return;
       element.addClass('processing');
@@ -378,6 +397,10 @@ function modal() {
   }
 }
 
+// error modal
+function show_error_modal(message = __['There is something that went wrong!']) {
+  modal('#modal-message', { title: __['Error'], message: message });
+}
 
 // confirm
 function confirm(title, message, callback, password_check = false) {
@@ -447,6 +470,9 @@ function load_more(element) {
   if (_this.data('query') !== undefined) {
     data['query'] = _this.data('query');
   }
+  if (_this.data('tpl') !== undefined) {
+    data['tpl'] = _this.data('tpl');
+  }
   data['offset'] = _this.data('offset') || 1; /* we start from iteration 1 because 0 already loaded */
   /* show loader & hide text */
   _this.addClass('loading');
@@ -509,7 +535,7 @@ function load_more(element) {
       _this.removeClass('loading');
       text.show();
       loading.addClass('x-hidden');
-      modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+      show_error_modal();
     });
 }
 
@@ -577,13 +603,18 @@ function rebuild_facebook_iframes() {
 function button_status(element, handle) {
   if (handle == "loading") {
     /* loading */
-    element.data('text', element.html());
+    element.data('html', element.html());
     element.prop('disabled', true);
-    element.html('<span class="spinner-grow spinner-grow-sm mr10"></span>' + __['Loading']);
+    /* check if button has text or just icon */
+    if (element.text().trim()) {
+      element.html('<span class="spinner-grow spinner-grow-sm mr10"></span>' + __['Loading']);
+    } else {
+      element.html('<span class="spinner-grow spinner-grow-sm"></span>');
+    }
   } else {
     /* reset */
     element.prop('disabled', false);
-    element.html(element.data('text'));
+    element.html(element.data('html'));
   }
 }
 
@@ -685,7 +716,7 @@ function next_reel(element, auto = false) {
     }, 'json')
       .fail(function () {
         loading.addClass('x-hidden');
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   }
 }
@@ -822,7 +853,7 @@ $(function () {
         }
       })
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     }
   });
@@ -1122,9 +1153,9 @@ $(function () {
     load_more($(this));
   });
   /* load more data by scroll */
-  $('.js_see-more-infinite').bind('inview', function (event, visible) {
+  $('.js_see-more-infinite').on('inview', function (event, visible) {
     if (visible == true) {
-      if ((desktop_infinite_scroll && $(window).width() >= 970) || (mobile_infinite_scroll && $(window).width() < 970)) {
+      if ((desktop_infinite_scroll && !is_mobile()) || (mobile_infinite_scroll && is_mobile())) {
         var element = $(this);
         if (element.hasClass('processing')) return;
         element.addClass('processing');
@@ -1170,7 +1201,7 @@ $(function () {
   });
   /* submit search form */
   $('body').on('keydown', '#search-input', function (event) {
-    if (event.keyCode == 13) {
+    if (event.originalEvent.key == 'Enter') {
       event.preventDefault;
       var query = $(this).val();
       if (!is_empty(query)) {
@@ -1286,7 +1317,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Stripe */
@@ -1385,7 +1416,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Paystack */
@@ -1432,7 +1463,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* CoinPayments */
@@ -1481,7 +1512,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* 2Checkout */
@@ -1608,7 +1639,7 @@ $(function () {
               /* button reset */
               button_status(submit, "reset");
               /* handle error */
-              modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+              show_error_modal();
             });
         },
       };
@@ -1682,7 +1713,7 @@ $(function () {
           /* button reset */
           button_status(submit, "reset");
           /* handle error */
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     } else {
       button_status(submit, "reset");
@@ -1733,11 +1764,11 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
-  /* SecurionPay */
-  $('body').on('click', '.js_payment-securionpay', function () {
+  /* Shift4 */
+  $('body').on('click', '.js_payment-shift4', function () {
     var _this = $(this);
     var data = {};
     data['do'] = 'token';
@@ -1767,7 +1798,7 @@ $(function () {
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/securionpay'], data, function (response) {
+    $.post(api['payments/shift4'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -1776,15 +1807,18 @@ $(function () {
       if (response.callback) {
         eval(response.callback);
       }
-      SecurionpayCheckout.key = securionpay_key;
-      SecurionpayCheckout.open({
+      /* hide the modal */
+      $('#modal').modal('hide');
+      /* open the checkout */
+      Shift4Checkout.key = shift4_key;
+      Shift4Checkout.open({
         checkoutRequest: response.token,
         name: site_title,
       });
-      SecurionpayCheckout.success = function (result) {
+      Shift4Checkout.success = function (result) {
         data['do'] = 'verifiy';
-        data['securionpay'] = result;
-        $.post(api['payments/securionpay'], data, function (response) {
+        data['shift4'] = result;
+        $.post(api['payments/shift4'], data, function (response) {
           /* check the response */
           if (!response) return;
           /* check if there is a callback */
@@ -1794,10 +1828,10 @@ $(function () {
         }, "json")
           .fail(function () {
             /* handle error */
-            modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+            show_error_modal();
           });
       };
-      SecurionpayCheckout.error = function (errorMessage) {
+      Shift4Checkout.error = function (errorMessage) {
         /* handle error */
         modal('#modal-message', { title: __['Error'], message: errorMessage });
       };
@@ -1806,7 +1840,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* MoneyPoolsCash */
@@ -1853,7 +1887,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* MyFatoorah */
@@ -1905,7 +1939,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Epayco */
@@ -2012,7 +2046,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Verotel */
@@ -2059,7 +2093,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* MercadoPago */
@@ -2106,7 +2140,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Wallet */
@@ -2129,7 +2163,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   $('body').on('click', '.js_payment-wallet-monetization', function () {
@@ -2151,7 +2185,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   $('body').on('click', '.js_payment-wallet-paid-post', function () {
@@ -2173,7 +2207,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   $('body').on('click', '.js_payment-wallet-donate', function () {
@@ -2195,7 +2229,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   $('body').on('click', '.js_payment-wallet-marketplace', function () {
@@ -2217,7 +2251,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Cash On Delivery */
@@ -2240,7 +2274,7 @@ $(function () {
         /* button reset */
         button_status(_this, "reset");
         /* handle error */
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
   /* Free Trial */
@@ -2255,7 +2289,7 @@ $(function () {
         }
       }, 'json')
         .fail(function () {
-          modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+          show_error_modal();
         });
     });
     return false;
@@ -2271,7 +2305,7 @@ $(function () {
       }
     }, "json")
       .fail(function () {
-        modal('#modal-message', { title: __['Error'], message: __['There is something that went wrong!'] });
+        show_error_modal();
       });
   });
 
@@ -2303,7 +2337,7 @@ $(function () {
 
 
   // handle back swipe for mobile view
-  if (back_swipe && $(window).width() < 970) {
+  if (back_swipe && is_mobile()) {
     $('.main-wrapper').on('swiperight', function () {
       if (theme_dir_rtl == true) {
         return;

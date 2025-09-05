@@ -4,7 +4,7 @@
  * ajax -> chat -> live
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -60,7 +60,7 @@ try {
   if ($system['chat_enabled'] && $user->_data['user_privacy_chat'] != "me" && !($detect->isMobile() && !$detect->isTablet())) {
     // [1] [update] master chat sidebar (contacts list)
     $sidebar_friends = $user->get_contacts()['data'];
-    // assign variables
+    /* assign variables */
     $smarty->assign('sidebar_friends', $sidebar_friends);
     /* return */
     $return['master']['sidebar'] = $smarty->fetch("ajax.chat.master.sidebar.tpl");
@@ -190,25 +190,13 @@ try {
     }
   }
 
-  // [8] check for new (audio) calls
-  $return['has_audiocall'] = false;
-  if ($system['audio_call_enabled']) {
-    /* check new calls (audio) */
-    $audiocall = $user->check_new_calls("audio");
-    if ($audiocall) {
-      $return['has_audiocall'] = true;
-      $return['audiocall'] = $audiocall;
-    }
-  }
-
-  // [9] check for new (video) calls
-  $return['has_videocall'] = false;
-  if ($system['video_call_enabled'] && !$return['has_audiocall']) {
-    /* check new calls (video) */
-    $videocall = $user->check_new_calls("video");
-    if ($videocall) {
-      $return['has_videocall'] = true;
-      $return['videocall'] = $videocall;
+  // [8] [get] new calls (audio|video)
+  $return['has_call'] = false;
+  if ($system['audio_call_enabled'] || $system['video_call_enabled']) {
+    $call = $user->check_new_calls();
+    if ($call) {
+      $return['has_call'] = true;
+      $return['call'] = $call;
     }
   }
 

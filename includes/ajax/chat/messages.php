@@ -4,7 +4,7 @@
  * ajax -> chat -> get messages ✅
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -33,7 +33,7 @@ try {
 
   if ($conversation) {
     /* return [conversation_id: to set it as chat-box cid] */
-    $return['conversation_id'] = $mutual_conversation_id;
+    $return['conversation_id'] = $conversation['conversation_id'];
 
     /* return [color] */
     $return['color'] = $conversation['color'];
@@ -49,7 +49,7 @@ try {
     $return['messages'] = $smarty->fetch("ajax.chat.conversation.messages.tpl");
 
     /* add conversation to opened chat boxes session if not (and not a chatbox conversation) */
-    if (!$conversation['node_id'] && !in_array($conversation['conversation_id'], $_SESSION['chat_boxes_opened'])) {
+    if (!$conversation['node_id'] && !in_array($conversation['conversation_id'], (array) $_SESSION['chat_boxes_opened'])) {
       $_SESSION['chat_boxes_opened'][] = $conversation['conversation_id'];
     }
   }

@@ -4,7 +4,7 @@
  * ajax -> admin -> languages
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -41,6 +41,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE system_languages SET system_languages.default = %s, enabled = %s, code = %s, title = %s, flag = %s, dir = %s, language_order = %s WHERE language_id = %s", secure($_POST['default']), secure($_POST['enabled']), secure($_POST['code']), secure($_POST['title']), secure($_POST['flag']), secure($_POST['dir']), secure($_POST['language_order'], 'int'), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['flag']]);
       /* return */
       return_json(['success' => true, 'message' => __("Language info have been updated")]);
       break;
@@ -55,6 +57,8 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO system_languages (system_languages.default, enabled, code, title, flag, dir, language_order) VALUES (%s, %s, %s, %s, %s, %s, %s)", secure($_POST['default']), secure($_POST['enabled']), secure($_POST['code']), secure($_POST['title']), secure($_POST['flag']), secure($_POST['dir']), secure($_POST['language_order'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['flag']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/languages";']);
       break;

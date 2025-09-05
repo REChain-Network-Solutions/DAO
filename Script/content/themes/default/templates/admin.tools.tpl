@@ -656,6 +656,7 @@
               <option value="user_points">{__("Reset all users points")}</option>
               <option value="user_wallets">{__("Reset all users wallet balance & transactions")}</option>
               <option value="orphaned_data">{__("Delete orphaned data")}</option>
+              <option value="pending_uploads">{__("Clear pending uploads")} ({$insights['pending_uploads']} {__("files")}, {$insights['pending_uploads_size']} {__("MB")})</option>
               <option value="clear_compiled_templates">{__("Delete compiled templates files")}</option>
               <option value="resend_activation_emails">{__("Resend Activation Emails")} ({$insights['users_not_activated']} {__("user")})</option>
             </select>
@@ -800,6 +801,10 @@
             <div class="form-check">
               <input type="checkbox" class="form-check-input" name="cronjob_reset_pro_packages" id="cronjob_reset_pro_packages" {if $system['cronjob_reset_pro_packages']}checked{/if}>
               <label class="form-check-label" for="cronjob_reset_pro_packages">{__("Reset all expired subscribers and their boosted posts and pages")}</label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" name="cronjob_clear_pending_uploads" id="cronjob_clear_pending_uploads" {if $system['cronjob_clear_pending_uploads']}checked{/if}>
+              <label class="form-check-label" for="cronjob_clear_pending_uploads">{__("Clear pending uploads")}</label>
             </div>
             <div class="form-check">
               <input type="checkbox" class="form-check-input" name="cronjob_merits_reminder" id="cronjob_merits_reminder" {if $system['cronjob_merits_reminder']}checked{/if}>

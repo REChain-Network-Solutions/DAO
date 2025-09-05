@@ -6,10 +6,12 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Workerman\\' => array($vendorDir . '/workerman/workerman'),
     'Verotel\\' => array($vendorDir . '/verotel/flexpay-php-client/src/Verotel'),
     'Twirp\\' => array($vendorDir . '/twirp/twirp/lib/src'),
     'Twilio\\' => array($vendorDir . '/twilio/sdk/src/Twilio'),
     'TaylanUnutmaz\\AgoraTokenBuilder\\' => array($vendorDir . '/taylanunutmaz/agora-token-builder/src'),
+    'Symfony\\Polyfill\\Php83\\' => array($vendorDir . '/symfony/polyfill-php83'),
     'Symfony\\Polyfill\\Php80\\' => array($vendorDir . '/symfony/polyfill-php80'),
     'Symfony\\Polyfill\\Mbstring\\' => array($vendorDir . '/symfony/polyfill-mbstring'),
     'Symfony\\Polyfill\\Ctype\\' => array($vendorDir . '/symfony/polyfill-ctype'),
@@ -21,8 +23,8 @@ return array(
     'Stripe\\' => array($vendorDir . '/stripe/stripe-php/lib'),
     'Sonata\\GoogleAuthenticator\\' => array($vendorDir . '/sonata-project/google-authenticator/src'),
     'Smarty\\' => array($vendorDir . '/smarty/smarty/src'),
+    'Shift4\\' => array($vendorDir . '/shift4/shift4-php/lib/Shift4'),
     'Sentry\\' => array($vendorDir . '/sentry/sentry/src'),
-    'SecurionPay\\' => array($vendorDir . '/securionpay/securionpay-php/lib/SecurionPay'),
     'Rize\\' => array($vendorDir . '/rize/uri-template/src/Rize'),
     'ReCaptcha\\' => array($vendorDir . '/google/recaptcha/src/ReCaptcha'),
     'Ramsey\\Uuid\\' => array($vendorDir . '/ramsey/uuid/src'),
@@ -34,6 +36,7 @@ return array(
     'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
     'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
     'Psr\\Cache\\' => array($vendorDir . '/psr/cache/src'),
+    'PHPSocketIO\\' => array($vendorDir . '/workerman/phpsocket.io/src'),
     'PHPMailer\\PHPMailer\\' => array($vendorDir . '/phpmailer/phpmailer/src'),
     'Monolog\\' => array($vendorDir . '/monolog/monolog/src/Monolog'),
     'ML\\JsonLD\\' => array($vendorDir . '/ml/json-ld'),
@@ -85,6 +88,7 @@ return array(
     'Detection\\' => array($vendorDir . '/mobiledetect/mobiledetectlib/src'),
     'Composer\\CaBundle\\' => array($vendorDir . '/composer/ca-bundle/src'),
     'Clue\\StreamFilter\\' => array($vendorDir . '/clue/stream-filter/src'),
+    'Channel\\' => array($vendorDir . '/workerman/channel/src'),
     'Cashfree\\' => array($vendorDir . '/cashfree/cashfree-pg/lib'),
     'Brick\\Math\\' => array($vendorDir . '/brick/math/src'),
     'Aws\\' => array($vendorDir . '/aws/aws-sdk-php/src'),

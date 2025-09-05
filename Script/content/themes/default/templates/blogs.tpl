@@ -23,6 +23,51 @@
     </div>
   </div>
   <!-- page header -->
+
+  <!-- Schema.org structured data for blogs listing page -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "{__("Blogs")|escape:'html'}",
+      "description": "{__($system['system_description_blogs'])|escape:'html'}",
+      "url": "{$system['system_url']}/blogs",
+      "publisher": {
+        "@type": "Organization",
+        "name": "{$system['system_title']|escape:'html'}",
+        "url": "{$system['system_url']}"
+      },
+      "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": "{if $blogs}{$blogs|count}{else}0{/if}",
+        "itemListElement": [
+          {if $blogs}
+            {foreach $blogs as $blog name=blogList}
+              {
+                "@type": "ListItem",
+                "position": {$smarty.foreach.blogList.iteration},
+                "item": {
+                  "@type": "BlogPosting",
+                  "headline": "{$blog['blog']['title']|escape:'html'}",
+                  "description": "{$blog['blog']['text']|strip_tags|truncate:150|escape:'html'}",
+                  "image": "{if $blog['blog']['cover']}{$blog['blog']['parsed_cover']}{/if}",
+                  "author": {
+                    "@type": "Person",
+                    "name": "{$blog['post_author_name']|escape:'html'}",
+                    "url": "{$blog['post_author_url']}"
+                  },
+                  "datePublished": "{$blog['time']}",
+                  "url": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}",
+                  "articleSection": "{__($blog['blog']['category_name'])|escape:'html'}"
+                }
+                }{if !$smarty.foreach.blogList.last},{/if}
+              {/foreach}
+            {/if}
+          ]
+        }
+      }
+  </script>
+  <!-- Schema.org structured data for blogs listing page -->
 {/if}
 
 
@@ -180,6 +225,51 @@
               </div>
               <!-- category description -->
             {/if}
+
+            <!-- Schema.org structured data for blog category page -->
+            <script type="application/ld+json">
+              {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": "{__($category['category_name'])|escape:'html'}",
+                "description": "{if $category['category_description']}{__($category['category_description'])|escape:'html'}{else}{__($category['category_name'])|escape:'html'} {__("blogs")|escape:'html'}{/if}",
+                "url": "{$system['system_url']}/blogs/category/{$category['category_id']}/{$category['category_url']}",
+                "publisher": {
+                  "@type": "Organization",
+                  "name": "{$system['system_title']|escape:'html'}",
+                  "url": "{$system['system_url']}"
+                },
+                "mainEntity": {
+                  "@type": "ItemList",
+                  "numberOfItems": "{if $blogs}{$blogs|count}{else}0{/if}",
+                  "itemListElement": [
+                    {if $blogs}
+                      {foreach $blogs as $blog name=categoryBlogList}
+                        {
+                          "@type": "ListItem",
+                          "position": {$smarty.foreach.categoryBlogList.iteration},
+                          "item": {
+                            "@type": "BlogPosting",
+                            "headline": "{$blog['blog']['title']|escape:'html'}",
+                            "description": "{$blog['blog']['text']|strip_tags|truncate:150|escape:'html'}",
+                            "image": "{if $blog['blog']['cover']}{$blog['blog']['parsed_cover']}{/if}",
+                            "author": {
+                              "@type": "Person",
+                              "name": "{$blog['post_author_name']|escape:'html'}",
+                              "url": "{$blog['post_author_url']}"
+                            },
+                            "datePublished": "{$blog['time']}",
+                            "url": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}",
+                            "articleSection": "{__($blog['blog']['category_name'])|escape:'html'}"
+                          }
+                          }{if !$smarty.foreach.categoryBlogList.last},{/if}
+                        {/foreach}
+                      {/if}
+                    ]
+                  }
+                }
+            </script>
+            <!-- Schema.org structured data for blog category page -->
 
             {if $blogs_categories}
               <!-- blogs categories -->
@@ -342,6 +432,50 @@
                     {$blog['blog']['parsed_text']}
                   </div>
                   <!-- blog text -->
+
+                  <!-- Schema.org structured data for blog post -->
+                  <script type="application/ld+json">
+                    {
+                      "@context": "https://schema.org",
+                      "@type": "BlogPosting",
+                      "headline": "{$blog['blog']['title']|escape:'html'}",
+                      "description": "{$blog['blog']['text']|strip_tags|truncate:200|escape:'html'}",
+                      "image": "{if $blog['blog']['cover']}{$blog['blog']['parsed_cover']}{/if}",
+                      "author": {
+                        "@type": "Person",
+                        "name": "{$blog['post_author_name']|escape:'html'}",
+                        "url": "{$blog['post_author_url']}"
+                      },
+                      "publisher": {
+                        "@type": "Organization",
+                        "name": "{$system['system_title']|escape:'html'}",
+                        "url": "{$system['system_url']}"
+                      },
+                      "datePublished": "{$blog['time']}",
+                      "dateModified": "{$blog['time']}",
+                      "mainEntityOfPage": {
+                        "@type": "WebPage",
+                        "@id": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}"
+                      },
+                      "url": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}",
+                      "articleSection": "{__($blog['blog']['category_name'])|escape:'html'}",
+                      "keywords": "{if $blog['blog']['parsed_tags']}{foreach $blog['blog']['parsed_tags'] as $tag}{$tag|escape:'html'}{if !$tag@last}, {/if}{/foreach}{/if}",
+                      "wordCount": "{$blog['blog']['text']|strip_tags|strlen}",
+                      "commentCount": "{$blog['comments_count']}",
+                      "interactionStatistic": [{
+                          "@type": "InteractionCounter",
+                          "interactionType": "https://schema.org/CommentAction",
+                          "userInteractionCount": "{$blog['comments_count']}"
+                        },
+                        {
+                          "@type": "InteractionCounter",
+                          "interactionType": "https://schema.org/ViewAction",
+                          "userInteractionCount": "{$blog['views_count']}"
+                        }
+                      ]
+                    }
+                  </script>
+                  <!-- Schema.org structured data for blog post -->
 
                   <!-- blog tags -->
                   {if $blog['blog']['parsed_tags']}
@@ -549,6 +683,65 @@
               </a>
             </div>
           </div>
+
+          <!-- Schema.org structured data for blog edit page -->
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "WebPage",
+              "name": "{__("Edit Blog")|escape:'html'}: {$blog['blog']['title']|escape:'html'}",
+              "description": "{__("Edit blog post")|escape:'html'}: {$blog['blog']['title']|escape:'html'}",
+              "url": "{$system['system_url']}/blogs/edit/{$blog['post_id']}",
+              "publisher": {
+                "@type": "Organization",
+                "name": "{$system['system_title']|escape:'html'}",
+                "url": "{$system['system_url']}"
+              },
+              "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [{
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "{$system['system_title']|escape:'html'}",
+                    "item": "{$system['system_url']}"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "{__("Blogs")|escape:'html'}",
+                    "item": "{$system['system_url']}/blogs"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": "{$blog['blog']['title']|escape:'html'}",
+                    "item": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 4,
+                    "name": "{__("Edit")|escape:'html'}",
+                    "item": "{$system['system_url']}/blogs/edit/{$blog['post_id']}"
+                  }
+                ]
+              },
+              "mainEntity": {
+                "@type": "BlogPosting",
+                "headline": "{$blog['blog']['title']|escape:'html'}",
+                "description": "{$blog['blog']['text']|strip_tags|truncate:200|escape:'html'}",
+                "image": "{if $blog['blog']['cover']}{$blog['blog']['parsed_cover']}{/if}",
+                "author": {
+                  "@type": "Person",
+                  "name": "{$blog['post_author_name']|escape:'html'}",
+                  "url": "{$blog['post_author_url']}"
+                },
+                "datePublished": "{$blog['time']}",
+                "dateModified": "{$blog['time']}",
+                "url": "{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}"
+              }
+            }
+          </script>
+          <!-- Schema.org structured data for blog edit page -->
           <div class="js_ajax-forms-html " data-url="posts/blog.php?do=edit&id={$blog['post_id']}">
             <div class="card-body">
               <div class="row form-group">
@@ -723,6 +916,45 @@
             {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
             {__("Create New Blog")}
           </div>
+
+          <!-- Schema.org structured data for blog creation page -->
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "WebPage",
+              "name": "{__("Create New Blog")|escape:'html'}",
+              "description": "{__("Create and publish a new blog post")|escape:'html'}",
+              "url": "{$system['system_url']}/blogs/new",
+              "publisher": {
+                "@type": "Organization",
+                "name": "{$system['system_title']|escape:'html'}",
+                "url": "{$system['system_url']}"
+              },
+              "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [{
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "{$system['system_title']|escape:'html'}",
+                    "item": "{$system['system_url']}"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "{__("Blogs")|escape:'html'}",
+                    "item": "{$system['system_url']}/blogs"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": "{__("Create New Blog")|escape:'html'}",
+                    "item": "{$system['system_url']}/blogs/new"
+                  }
+                ]
+              }
+            }
+          </script>
+          <!-- Schema.org structured data for blog creation page -->
           <div class="js_ajax-forms-html" data-url="posts/blog.php?do=create">
             <div class="card-body">
               <div class="row form-group">

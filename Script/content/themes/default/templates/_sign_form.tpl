@@ -1,10 +1,10 @@
-{if $system['landing_page_template'] == "elengine"}
+{if $system['landing_page_template'] == "Delus"}
 
   <style>
     {if $system['language']['dir'] == "LTR"}
-      {minimize_css("../css/elengine.css")}
+      {minimize_css("../css/Delus.css")}
     {else}
-      {minimize_css("../css/elengine.rtl.css")}
+      {minimize_css("../css/Delus.rtl.css")}
     {/if}
   </style>
 

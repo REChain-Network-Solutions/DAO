@@ -4,7 +4,7 @@
  * ajax -> admin -> pro
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -32,11 +32,15 @@ try {
       $_POST['packages_enabled'] = (isset($_POST['packages_enabled']) || $_POST['registration_type'] == "paid") ? '1' : '0';
       $_POST['packages_wallet_payment_enabled'] = (isset($_POST['packages_wallet_payment_enabled'])) ? '1' : '0';
       $_POST['packages_ads_free_enabled'] = (isset($_POST['packages_ads_free_enabled'])) ? '1' : '0';
+      $_POST['pro_users_widget_enabled'] = (isset($_POST['pro_users_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_page_widget_enabled'] = (isset($_POST['pro_page_widget_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'packages_enabled' => secure($_POST['packages_enabled']),
         'packages_wallet_payment_enabled' => secure($_POST['packages_wallet_payment_enabled']),
-        'packages_ads_free_enabled' => secure($_POST['packages_ads_free_enabled'])
+        'packages_ads_free_enabled' => secure($_POST['packages_ads_free_enabled']),
+        'pro_users_widget_enabled' => secure($_POST['pro_users_widget_enabled']),
+        'pro_page_widget_enabled' => secure($_POST['pro_page_widget_enabled'])
       ]);
       /* return */
       return_json(['success' => true, 'message' => __("Settings have been updated")]);
@@ -134,6 +138,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE packages SET name = %s, price = %s, period_num = %s, period = %s, color = %s, icon = %s, package_permissions_group_id = %s, allowed_videos_categories = %s, allowed_blogs_categories = %s, allowed_products = %s, verification_badge_enabled = %s, boost_posts_enabled = %s, boost_posts = %s, boost_pages_enabled = %s, boost_pages = %s, custom_description = %s, package_order = %s, paypal_billing_plan = %s, stripe_billing_plan = %s WHERE package_id = %s", secure($_POST['name']), secure($_POST['price']), secure($_POST['period_num']), secure($_POST['period']), secure($_POST['color']), secure($_POST['icon']), secure($_POST['permissions_group']), secure($_POST['allowed_videos_categories'], 'int'), secure($_POST['allowed_blogs_categories'], 'int'), secure($_POST['allowed_products'], 'int'), secure($_POST['verification_badge_enabled']), secure($_POST['boost_posts_enabled']), secure($_POST['boost_posts'], 'int'), secure($_POST['boost_pages_enabled']), secure($_POST['boost_pages'], 'int'), secure($_POST['custom_description']), secure($_POST['package_order'], 'int'), secure($paypal_billing_plan), secure($stripe_billing_plan), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['icon']]);
       /* return */
       return_json(['success' => true, 'message' => __("Package info have been updated")]);
       break;
@@ -186,6 +192,8 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO packages (name, price, period_num, period, color, icon, package_permissions_group_id, allowed_videos_categories, allowed_blogs_categories, allowed_products, verification_badge_enabled, boost_posts_enabled, boost_posts, boost_pages_enabled, boost_pages, custom_description, package_order, paypal_billing_plan, stripe_billing_plan) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($_POST['name']), secure($_POST['price']), secure($_POST['period_num']), secure($_POST['period']), secure($_POST['color']), secure($_POST['icon']), secure($_POST['permissions_group'], 'int'), secure($_POST['allowed_videos_categories'], 'int'), secure($_POST['allowed_blogs_categories'], 'int'), secure($_POST['allowed_products'], 'int'), secure($_POST['verification_badge_enabled']), secure($_POST['boost_posts_enabled']), secure($_POST['boost_posts'], 'int'), secure($_POST['boost_pages_enabled']), secure($_POST['boost_pages'], 'int'), secure($_POST['custom_description']), secure($_POST['package_order'], 'int'), secure($paypal_billing_plan), secure($stripe_billing_plan)));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['icon']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/pro/packages";']);
       break;

@@ -77,11 +77,11 @@
         </label>
         <div class="d-flex py-3 px-2 align-items-start justify-content-between flex-wrap">
           <div class="d-inline-flex align-items-start">
-            <a href="https://bit.ly/DelusElengineTheme" target="_blank">
-              <img src="{$system['system_url']}/content/themes/{$system['theme']}/images/elengine.png" width="64" height="64">
+            <a href="https://bit.ly/DelusTheme" target="_blank">
+              <img src="{$system['system_url']}/content/themes/{$system['theme']}/images/Delus.png" width="64" height="64">
             </a>
             <div class="ml15">
-              <h5><a href="https://bit.ly/DelusElengineTheme" target="_blank">Elengine - The Ultimate Delus Theme</a></h5>
+              <h5><a href="https://bit.ly/DelusTheme" target="_blank">Delus - The Ultimate Delus Theme</a></h5>
               <ul>
                 <li>{__("Elegant and Modern Design")}</li>
                 <li>{__("Regular and Free Updates")}</li>
@@ -89,18 +89,18 @@
               </ul>
             </div>
           </div>
-          <a href="https://bit.ly/DelusElengineTheme" class="btn btn-md btn-success" target="_blank">
+          <a href="https://bit.ly/DelusTheme" class="btn btn-md btn-success" target="_blank">
             <i class="fa-solid fa-cart-shopping mr5"></i>{__("Buy Now")}
           </a>
         </div>
 
         <div class="d-flex py-3 px-2 align-items-start justify-content-between flex-wrap">
           <div class="d-inline-flex align-items-start">
-            <a href="https://bit.ly/DelusXngineTheme" target="_blank">
-              <img src="{$system['system_url']}/content/themes/{$system['theme']}/images/xngine.png" width="64" height="64">
+            <a href="https://bit.ly/DelusTheme" target="_blank">
+              <img src="{$system['system_url']}/content/themes/{$system['theme']}/images/xDelus.png" width="64" height="64">
             </a>
             <div class="ml15">
-              <h5><a href="https://bit.ly/DelusXngineTheme" target="_blank">Xngine – The Ultimate Delus Theme</a></h5>
+              <h5><a href="https://bit.ly/DelusTheme" target="_blank">xDelus – The Ultimate Delus Theme</a></h5>
               <ul>
                 <li>{__("Elegant and Modern Design")}</li>
                 <li>{__("Regular and Free Updates")}</li>
@@ -108,7 +108,7 @@
               </ul>
             </div>
           </div>
-          <a href="https://bit.ly/DelusXngineTheme" class="btn btn-md btn-success" target="_blank">
+          <a href="https://bit.ly/DelusTheme" class="btn btn-md btn-success" target="_blank">
             <i class="fa-solid fa-cart-shopping mr5"></i>{__("Buy Now")}
           </a>
         </div>

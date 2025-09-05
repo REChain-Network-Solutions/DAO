@@ -18,7 +18,7 @@ namespace Stripe;
  * @property int $created Time at which the object was created. Measured in seconds since the Unix epoch.
  * @property null|int $expires_at The file expires and isn't available at this time in epoch seconds.
  * @property null|string $filename The suitable name for saving the file to a filesystem.
- * @property null|\Stripe\Collection<\Stripe\FileLink> $links A list of <a href="https://stripe.com/docs/api#file_links">file links</a> that point at this file.
+ * @property null|Collection<FileLink> $links A list of <a href="https://stripe.com/docs/api#file_links">file links</a> that point at this file.
  * @property string $purpose The <a href="https://stripe.com/docs/file-upload#uploading-a-file">purpose</a> of the uploaded file.
  * @property int $size The size of the file object in bytes.
  * @property null|string $title A suitable title for the document.
@@ -45,6 +45,7 @@ class File extends ApiResource
     const PURPOSE_SELFIE = 'selfie';
     const PURPOSE_SIGMA_SCHEDULED_QUERY = 'sigma_scheduled_query';
     const PURPOSE_TAX_DOCUMENT_USER_UPLOAD = 'tax_document_user_upload';
+    const PURPOSE_TERMINAL_ANDROID_APK = 'terminal_android_apk';
     const PURPOSE_TERMINAL_READER_SPLASHSCREEN = 'terminal_reader_splashscreen';
 
     /**
@@ -52,18 +53,18 @@ class File extends ApiResource
      * returns the files by their creation dates, placing the most recently created
      * files at the top.
      *
-     * @param null|array $params
+     * @param null|array{created?: array|int, ending_before?: string, expand?: string[], limit?: int, purpose?: string, starting_after?: string} $params
      * @param null|array|string $opts
      *
-     * @throws \Stripe\Exception\ApiErrorException if the request fails
+     * @return Collection<File> of ApiResources
      *
-     * @return \Stripe\Collection<\Stripe\File> of ApiResources
+     * @throws Exception\ApiErrorException if the request fails
      */
     public static function all($params = null, $opts = null)
     {
         $url = static::classUrl();
 
-        return static::_requestPage($url, \Stripe\Collection::class, $params, $opts);
+        return static::_requestPage($url, Collection::class, $params, $opts);
     }
 
     /**
@@ -74,13 +75,13 @@ class File extends ApiResource
      * @param array|string $id the ID of the API resource to retrieve, or an options array containing an `id` key
      * @param null|array|string $opts
      *
-     * @throws \Stripe\Exception\ApiErrorException if the request fails
+     * @return File
      *
-     * @return \Stripe\File
+     * @throws Exception\ApiErrorException if the request fails
      */
     public static function retrieve($id, $opts = null)
     {
-        $opts = \Stripe\Util\RequestOptions::parse($opts);
+        $opts = Util\RequestOptions::parse($opts);
         $instance = new static($id, $opts);
         $instance->refresh();
 
@@ -101,19 +102,19 @@ class File extends ApiResource
      * @param null|array $params
      * @param null|array|string $opts
      *
-     * @throws \Stripe\Exception\ApiErrorException if the request fails
+     * @return File the created file
      *
-     * @return \Stripe\File the created file
+     * @throws Exception\ApiErrorException if the request fails
      */
     public static function create($params = null, $opts = null)
     {
-        $opts = \Stripe\Util\RequestOptions::parse($opts);
+        $opts = Util\RequestOptions::parse($opts);
         if (null === $opts->apiBase) {
             $opts->apiBase = Stripe::$apiUploadBase;
         }
         // Manually flatten params, otherwise curl's multipart encoder will
         // choke on nested arrays.
-        $flatParams = \array_column(\Stripe\Util\Util::flattenParams($params), 1, 0);
+        $flatParams = \array_column(Util\Util::flattenParams($params), 1, 0);
 
         return static::_create($flatParams, $opts);
     }

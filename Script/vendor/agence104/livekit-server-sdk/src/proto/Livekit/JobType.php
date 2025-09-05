@@ -19,10 +19,15 @@ class JobType
      * Generated from protobuf enum <code>JT_PUBLISHER = 1;</code>
      */
     const JT_PUBLISHER = 1;
+    /**
+     * Generated from protobuf enum <code>JT_PARTICIPANT = 2;</code>
+     */
+    const JT_PARTICIPANT = 2;
 
     private static $valueToName = [
         self::JT_ROOM => 'JT_ROOM',
         self::JT_PUBLISHER => 'JT_PUBLISHER',
+        self::JT_PARTICIPANT => 'JT_PARTICIPANT',
     ];
 
     public static function name($value)

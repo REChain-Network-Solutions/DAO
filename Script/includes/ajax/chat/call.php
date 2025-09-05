@@ -4,7 +4,7 @@
  * ajax -> chat -> call
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -22,7 +22,7 @@ if ($user->_data['user_demo']) {
 }
 
 // valid inputs
-if (!isset($_POST['type']) || !in_array($_POST['type'], ['video', 'audio'])) {
+if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
   _error(400);
 }
 
@@ -33,62 +33,42 @@ try {
 
   switch ($_POST['do']) {
     case 'create_call':
-      // valid inputs
-      if (!isset($_POST['user_id']) || !is_numeric($_POST['user_id'])) {
-        _error(400);
-      }
-
       // create call
-      $call_id = $user->create_call($_POST['type'], $_POST['user_id']);
+      $call = $user->create_call($_POST['type'], $_POST['id']);
 
       // return
-      $return['call_id'] = $call_id;
+      $return['call'] = $call;
       break;
 
     case 'check_calling_response':
-      // valid inputs
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-
       // check call response
-      $call = $user->check_calling_response($_POST['type'], $_POST['id']);
+      $call = $user->check_calling_response($_POST['id']);
+
+      // return
+      $return['call'] = $call;
+      break;
+
+    case 'cancel_call':
+    case 'decline_call':
+    case 'end_call':
+      // (cancel|decline|end) call
+      $call = $user->decline_call($_POST['id']);
 
       // return
       $return['call'] = $call;
       break;
 
     case 'answer_call':
-      // valid inputs
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-
       // answer call
-      $call = $user->answer_call($_POST['type'], $_POST['id']);
+      $call = $user->answer_call($_POST['id']);
 
       // return
       $return['call'] = $call;
       break;
 
-    case 'decline_call':
-      // valid inputs
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-
-      // decline call
-      $user->decline_call($_POST['type'], $_POST['id']);
-      break;
-
     case 'update_call':
-      // valid inputs
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-
       // update call
-      $user->update_call($_POST['type'], $_POST['id']);
+      $user->update_call($_POST['id']);
       break;
 
     default:

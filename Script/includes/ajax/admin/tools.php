@@ -4,7 +4,7 @@
  * ajax -> admin -> tools
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // set execution time
@@ -269,6 +269,21 @@ try {
           $user->deliver_undelivered_orders();
           break;
 
+        case 'packages':
+          /* garbage collector */
+          $user->check_users_package();
+          break;
+
+        case 'user_points':
+          /* reset users points */
+          $user->reset_all_users_points();
+          break;
+
+        case 'user_wallets':
+          /* reset users wallets */
+          $user->reset_all_users_wallets();
+          break;
+
         case 'orphaned_data':
           $deleted_rows_count = 0;
           /* delete posts with no user */
@@ -360,19 +375,9 @@ try {
           $deleted_rows_count += $db->affected_rows;
           break;
 
-        case 'packages':
-          /* garbage collector */
-          $user->check_users_package();
-          break;
-
-        case 'user_points':
-          /* reset users points */
-          $user->reset_all_users_points();
-          break;
-
-        case 'user_wallets':
-          /* reset users wallets */
-          $user->reset_all_users_wallets();
+        case 'pending_uploads':
+          /* delete pending uploads */
+          clear_pending_uploads();
           break;
 
         case 'clear_compiled_templates':
@@ -404,6 +409,9 @@ try {
       } elseif ($_POST['delete'] == "user_points") {
         $user->post_notification_async(__("All users points blance have been resetted"));
         return_json(['success' => true, 'message' => __("All users points balance have been resetted")]);
+      } elseif ($_POST['delete'] == "pending_uploads") {
+        $user->post_notification_async(__("All pending uploads have been cleared"));
+        return_json(['success' => true, 'message' => __("All pending uploads have been cleared")]);
       } elseif ($_POST['delete'] == "clear_compiled_templates") {
         $user->post_notification_async(__("All compiled templates have been cleared"));
         return_json(['success' => true, 'message' => __("All compiled templates have been cleared")]);

@@ -62,9 +62,9 @@ final class {{ .Service | phpServiceName .File }}Server implements RequestHandle
 
     public function __construct(
         {{ .Service | phpServiceName .File }} $svc,
-        ServerHooks $hook = null,
-        ResponseFactoryInterface $responseFactory = null,
-        StreamFactoryInterface $streamFactory = null,
+        ?ServerHooks $hook = null,
+        ?ResponseFactoryInterface $responseFactory = null,
+        ?StreamFactoryInterface $streamFactory = null,
         string $prefix = '/twirp'
     ) {
         if ($hook === null) {
@@ -331,11 +331,16 @@ final class {{ .Service | phpServiceName .File }}Server implements RequestHandle
             $e = TwirpError::errorFrom($e, 'internal error');
         }
 
-        $body = $this->streamFactory->createStream(json_encode([
+        $rawBody = [
             'code' => $e->getErrorCode(),
             'msg' => $e->getMessage(),
-            'meta' => $e->getMetaMap(),
-        ]));
+        ];
+
+        if (!empty($e->getMetaMap())) {
+            $rawBody['meta'] = $e->getMetaMap();
+        }
+
+        $body = $this->streamFactory->createStream(json_encode($rawBody, \JSON_FORCE_OBJECT));
 
         return $this->responseFactory
             ->createResponse($statusCode)

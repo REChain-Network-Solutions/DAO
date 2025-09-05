@@ -19,15 +19,15 @@
 
     <div style="margin: 25px auto;">
       <div class="input-group">
-        <input type="text" disabled class="form-control" value="{$system['system_url']}/signup?invitation_code={$code}">
-        <button type="button" class="btn btn-light js_clipboard" data-clipboard-text="{$system['system_url']}/signup?invitation_code={$code}" data-bs-toggle="tooltip" title='{__("Copy")}'>
+        <input type="text" disabled class="form-control" value="{$system['system_url']}/signup?invitation_code={$code}{if $system['affiliates_enabled']}&ref={$user->_data['user_name']}{/if}">
+        <button type="button" class="btn btn-light js_clipboard" data-clipboard-text="{$system['system_url']}/signup?invitation_code={$code}{if $system['affiliates_enabled']}&ref={$user->_data['user_name']}{/if}" data-bs-toggle="tooltip" title='{__("Copy")}'>
           <i class="fas fa-copy"></i>
         </button>
       </div>
     </div>
 
     <div class="post-social-share">
-      {include file='__social_share.tpl' _link="{$system['system_url']}/signup?invitation_code={$code}"}
+      {include file='__social_share.tpl' _link="{$system['system_url']}/signup?invitation_code={$code}{if $system['affiliates_enabled']}&ref={$user->_data['user_name']}{/if}"}
     </div>
 
     <div class="h5 text-center">

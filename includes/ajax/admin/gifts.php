@@ -4,7 +4,7 @@
  * ajax -> admin -> gifts
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -34,6 +34,8 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO gifts (image) VALUES (%s)", secure($_POST['image'])));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['image']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/gifts";']);
       break;
@@ -48,6 +50,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE gifts SET image = %s WHERE gift_id = %s", secure($_POST['image']), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['image']]);
       /* return */
       return_json(['success' => true, 'message' => __("gift info have been updated")]);
       break;

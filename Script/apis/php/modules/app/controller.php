@@ -4,7 +4,7 @@
  * APIs -> modules -> app -> controller
  *
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // appSettings
@@ -56,6 +56,14 @@ function getUserGroups($req, $res)
   global $user;
   $user_groups = $user->get_users_groups();
   apiResponse($res, ['data' => $user_groups]);
+}
+
+// getLanguages
+function getLanguages($req, $res)
+{
+  global $user;
+  $languages = $user->get_languages();
+  apiResponse($res, ['data' => $languages]);
 }
 
 // getCountries

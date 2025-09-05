@@ -114,4 +114,28 @@ interface RoomService
      * @throws \Twirp\Error
      */
     public function UpdateRoomMetadata(array $ctx, \Livekit\UpdateRoomMetadataRequest $req): \Livekit\Room;
+
+    /**
+     * Cloud-only
+     * a connected participant's track(s) to another room. Requires `roomAdmin` and `destinationRoom`. The forwarding will 
+     * stop when the participant leaves the room or `RemoveParticipant` has been called in the destination room. 
+     * A participant can be forwarded to multiple rooms. The destination room will be created if it does not exist.
+     *
+     * Generated from protobuf method <code>livekit.RoomService/ForwardParticipant</code>
+     *
+     * @throws \Twirp\Error
+     */
+    public function ForwardParticipant(array $ctx, \Livekit\ForwardParticipantRequest $req): \Livekit\ForwardParticipantResponse;
+
+    /**
+     * Cloud-only
+     * Move a connected participant to a different room. Requires `roomAdmin` and `destinationRoom`.
+     * The participant will be removed from the current room and added to the destination room.
+     * From the other observers' perspective, the participant would've disconnected from the previous room and joined the new one.
+     *
+     * Generated from protobuf method <code>livekit.RoomService/MoveParticipant</code>
+     *
+     * @throws \Twirp\Error
+     */
+    public function MoveParticipant(array $ctx, \Livekit\MoveParticipantRequest $req): \Livekit\MoveParticipantResponse;
 }

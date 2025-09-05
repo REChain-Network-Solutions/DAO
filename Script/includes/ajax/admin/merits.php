@@ -4,7 +4,7 @@
  * ajax -> admin -> merits
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -40,6 +40,8 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO merits_categories (category_name, category_description, category_parent_id, category_image, category_order) VALUES (%s, %s, %s, %s, %s)", secure($_POST['category_name']), secure($_POST['category_description']), secure($_POST['category_parent_id'], 'int'), secure($_POST['category_image']), secure($_POST['category_order'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['category_image']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/merits/categories";']);
       break;
@@ -60,6 +62,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE merits_categories SET category_name = %s, category_description = %s, category_parent_id = %s, category_image = %s, category_order = %s WHERE category_id = %s", secure($_POST['category_name']), secure($_POST['category_description']), secure($_POST['category_parent_id'], 'int'), secure($_POST['category_image']), secure($_POST['category_order'], 'int'), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['category_image']]);
       /* return */
       return_json(['success' => true, 'message' => __("Category info have been updated")]);
       break;

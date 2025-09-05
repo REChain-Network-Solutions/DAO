@@ -4,7 +4,7 @@
  * APIs -> modules -> app -> router
  *
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // get controller 
@@ -38,6 +38,11 @@ $app->get('/app/genders', function ($req, $res) {
 # [get] user_groups
 $app->get('/app/user_groups', function ($req, $res) {
   getUserGroups($req, $res);
+});
+
+# [get] languages
+$app->get('/app/languages', function ($req, $res) {
+  getLanguages($req, $res);
 });
 
 # [get] countries

@@ -34,8 +34,8 @@ final class Server implements RequestHandlerInterface
     private $handlers = [];
 
     public function __construct(
-        ResponseFactoryInterface $responseFactory = null,
-        StreamFactoryInterface $streamFactory = null
+        ?ResponseFactoryInterface $responseFactory = null,
+        ?StreamFactoryInterface $streamFactory = null
     ) {
         if ($responseFactory === null) {
             $responseFactory = Psr17FactoryDiscovery::findResponseFactory();
@@ -54,9 +54,6 @@ final class Server implements RequestHandlerInterface
         $this->handlers[$prefix] = $server;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         foreach ($this->handlers as $prefix => $handler) {

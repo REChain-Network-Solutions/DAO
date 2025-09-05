@@ -875,7 +875,7 @@
                     {/if}
                     {if $profile['user_social_twitter']}
                       <a target="_blank" href="{$profile['user_social_twitter']}" class="btn-icon-social">
-                        {include file='__svg_icons.tpl' icon="twitter" width="24px" height="24px"}
+                        {include file='__svg_icons.tpl' icon="x" width="24px" height="24px"}
                       </a>
                     {/if}
                     {if $profile['user_social_youtube']}
@@ -1503,7 +1503,7 @@
                       {/foreach}
                     </ul>
                     <!-- see-more -->
-                    <div class="alert alert-post see-more mt20 js_see-more" data-get="photos" data-id="{$profile['user_id']}" data-type='user'>
+                    <div class="alert alert-post see-more js_see-more" data-get="photos" data-id="{$profile['user_id']}" data-type='user'>
                       <span>{__("See More")}</span>
                       <div class="loader loader_small x-hidden"></div>
                     </div>

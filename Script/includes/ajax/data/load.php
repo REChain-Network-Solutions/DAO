@@ -4,7 +4,7 @@
  * ajax -> data -> load
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -20,6 +20,9 @@ if ($system["system_public"] && !in_array($_POST['get'], ["newsfeed", "reels", "
 
 // valid inputs
 if (!isset($_POST['offset']) || !is_numeric($_POST['offset'])) {
+  _error(400);
+}
+if (isset($_POST['tpl']) && !in_array($_POST['tpl'], ["box", "list"])) {
   _error(400);
 }
 
@@ -884,6 +887,7 @@ try {
     /* assign variables */
     $smarty->assign('offset', $_POST['offset']);
     $smarty->assign('get', $_POST['get']);
+    $smarty->assign('tpl', $_POST['tpl'] ?? "box");
     $smarty->assign('data', $data);
     /* return */
     $return['append'] = $append;

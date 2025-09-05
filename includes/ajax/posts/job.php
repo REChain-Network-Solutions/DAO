@@ -4,7 +4,7 @@
  * ajax -> posts -> job
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -28,7 +28,11 @@ if (!$system['jobs_enabled']) {
 
 // check jobs permission
 if (in_array($_GET['do'], ['create', 'publish', 'edit']) && !$user->_data['can_create_jobs']) {
-  modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  if (!$user->check_module_package_permission("jobs_permission")) {
+    return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
+  } else {
+    modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  }
 }
 
 try {

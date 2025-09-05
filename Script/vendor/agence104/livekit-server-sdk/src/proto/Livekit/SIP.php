@@ -14,7 +14,7 @@ namespace Livekit;
 interface SIP
 {
     /**
-     * rpc CreateSIPTrunk(CreateSIPTrunkRequest) returns (SIPTrunkInfo) { option deprecated = true; }; DELETED
+     *
      *
      * Generated from protobuf method <code>livekit.SIP/ListSIPTrunk</code>
      *
@@ -39,6 +39,24 @@ interface SIP
      * @throws \Twirp\Error
      */
     public function CreateSIPOutboundTrunk(array $ctx, \Livekit\CreateSIPOutboundTrunkRequest $req): \Livekit\SIPOutboundTrunkInfo;
+
+    /**
+     *
+     *
+     * Generated from protobuf method <code>livekit.SIP/UpdateSIPInboundTrunk</code>
+     *
+     * @throws \Twirp\Error
+     */
+    public function UpdateSIPInboundTrunk(array $ctx, \Livekit\UpdateSIPInboundTrunkRequest $req): \Livekit\SIPInboundTrunkInfo;
+
+    /**
+     *
+     *
+     * Generated from protobuf method <code>livekit.SIP/UpdateSIPOutboundTrunk</code>
+     *
+     * @throws \Twirp\Error
+     */
+    public function UpdateSIPOutboundTrunk(array $ctx, \Livekit\UpdateSIPOutboundTrunkRequest $req): \Livekit\SIPOutboundTrunkInfo;
 
     /**
      *
@@ -93,6 +111,15 @@ interface SIP
      * @throws \Twirp\Error
      */
     public function CreateSIPDispatchRule(array $ctx, \Livekit\CreateSIPDispatchRuleRequest $req): \Livekit\SIPDispatchRuleInfo;
+
+    /**
+     *
+     *
+     * Generated from protobuf method <code>livekit.SIP/UpdateSIPDispatchRule</code>
+     *
+     * @throws \Twirp\Error
+     */
+    public function UpdateSIPDispatchRule(array $ctx, \Livekit\UpdateSIPDispatchRuleRequest $req): \Livekit\SIPDispatchRuleInfo;
 
     /**
      *

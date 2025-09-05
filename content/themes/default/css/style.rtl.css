@@ -44,7 +44,7 @@
 /* ------------------------------- */
 
 :root {
-  --body-font-family: Poppins, Helvetica, "sans-serif";
+  --body-font-family: "Tajawal", Helvetica, "sans-serif";
   --body-bg-color: #f0f2f5;
   --body-bg-color-dark: #1E252B;
   --body-color: #111;
@@ -1497,17 +1497,20 @@ body.night-mode .card {
   padding: 10px;
 }
 
+.divider,
 .card-body .divider,
 .modal-body .divider {
   border-top: 1px solid #e6ecf5;
   margin: 25px 0;
 }
 
+.divider.dashed,
 .card-body .divider.dashed,
 .modal-body .divider.dashed {
   border-top-style: dashed;
 }
 
+body.night-mode .divider,
 body.night-mode .card-body .divider,
 body.night-mode .modal-body .divider {
   border-color: var(--card-dark-divider);
@@ -2899,8 +2902,15 @@ body.night-mode .content-tabs>ul>li>a {
 /* see-more */
 .see-more {
   text-align: center;
-  margin: 10px 0 0;
+  margin-top: 10px;
+  margin-bottom: 20px;
   padding: 10px;
+}
+
+@media (max-width: 768px) {
+  .see-more {
+    margin-bottom: 90px;
+  }
 }
 
 .see-more:hover {
@@ -4955,6 +4965,16 @@ body.night-mode .pg_wrapper a {
   border-radius: 16px;
 }
 
+.post-media.module {
+  background: transparent;
+  border: 1px solid #f3f3f3;
+}
+
+body.night-mode .post-media.module {
+  background: transparent;
+  border-color: var(--card-dark-divider);
+}
+
 .post-snippet .post-media {
   border-radius: 4px;
 }
@@ -5030,6 +5050,37 @@ body.night-mode .post-media-image .image {
   font-size: 13px;
   border-radius: 10px;
   text-transform: uppercase;
+}
+
+.post-media-image .date {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: bold;
+  border-radius: 10px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+body.night-mode .post-media-image .date {
+  background: var(--card-dark-input);
+  color: var(--body-color-dark);
+}
+
+.post-media-image .date .month {
+  background: red;
+  color: #fff;
+  padding: 5px 20px;
+  border-radius: 0 0 10px 10px;
+}
+
+.post-media-image .date .day {
+  padding: 5px 20px;
 }
 
 .post-media-image .icon {
@@ -6053,7 +6104,7 @@ body.night-mode .tags li {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.75);
-  z-index: 99999;
+  z-index: 9999;
   overflow-y: scroll;
 }
 
@@ -8066,7 +8117,6 @@ body.index-body {
   background-repeat: no-repeat;
   right: 0;
   left: 0;
-  background-image: url(/content/themes/default/images/landing/welcome.jpg);
   background-position: center;
   opacity: 0.1;
 }

@@ -42,7 +42,7 @@
   </ul>
   {if count($album['photos']) >= $system['max_results_even']}
     <!-- see-more -->
-    <div class="alert alert-post see-more mt20 js_see-more" data-get="photos" data-id="{$album['album_id']}" data-type='album'>
+    <div class="alert alert-post see-more js_see-more" data-get="photos" data-id="{$album['album_id']}" data-type='album'>
       <span>{__("See More")}</span>
       <div class="loader loader_small x-hidden"></div>
     </div>

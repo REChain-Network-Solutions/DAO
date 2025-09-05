@@ -14,6 +14,43 @@
     </div>
 
     <!-- Changelog -->
+    <h3>Version <span class="badge bg-warning rounded-pill">4.1</span></h3>
+    <blockquote>Release Date: 31st August 2025</blockquote>
+    <ul class="change-log-list mb20">
+      <li>[Updated] Documentation</li>
+      <li>[Updated] System Security</li>
+      <li>[Updated] System Optimization</li>
+      <li>[Updated] Delus PHP Dependencies</li>
+      <li>[Updated] Delus JS Dependencies</li>
+      <li>[Added] Socket.io Support</li>
+      <li>[Added] Handle Browser Cache Issues</li>
+      <li>[Added] Event Type (Online|In Person)</li>
+      <li>[Added] Exclude Past Events From Discover</li>
+      <li>[Added] Event Creation Post</li>
+      <li>[Added] Group Creation Post</li>
+      <li>[Added] Languages Filter to Pages</li>
+      <li>[Added] Languages Filter to Groups</li>
+      <li>[Added] Languages Filter to Events</li>
+      <li>[Added] Clear Pending Uploads To Garbage Collector</li>
+      <li>[Added] Clear Pending Uploads To Cronjob</li>
+      <li>[Added] Pushr Cloud Storage Support</li>
+      <li>[Added] Custom Landing Wallpaper</li>
+      <li>[Added] Enable/Disable Pro Users Widget</li>
+      <li>[Added] Enable/Disable Pro Pages Widget</li>
+      <li>[Added] Prioritizes Friends & Followings in Reactions</li>
+      <li>[Added] MSG91 New APIs Support</li>
+      <li>[Added] New Sound for Notifications, Chat Messages & Calls</li>
+      <li>[Added] Schema.org Support for Blogs</li>
+      <li>[Added] Max Name Length</li>
+      <li>[Added] Include Affiliate Link With Invitation Link</li>
+      <li>[Fixed] Minor Bugs</li>
+      <li>[Fixed] Email Notifications Issues</li>
+      <li>[Fixed] Custom Field Value With Mutiple lines</li>
+      <li>[Fixed] Fake User Generator Random Image Issue</li>
+      <li>[Fixed] Fake User Generator Gender Issue</li>
+      <li>[Fixed] Cover Image Limit Error Issue</li>
+    </ul>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.6</span></h3>
     <blockquote>Release Date: 17th June 2025</blockquote>
     <ul class="change-log-list mb20">

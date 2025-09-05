@@ -453,6 +453,12 @@
       {elseif $_post['post_type'] == "merit"}
         {__("sent merit")} {if $_post['merit']['category_name']}<span class="badge rounded-pill badge-lg bg-info">{__($_post['merit']['category_name'])}</span>{/if}
 
+      {elseif $_post['post_type'] == "group"}
+        {__("created group")}
+
+      {elseif $_post['post_type'] == "event"}
+        {__("created event")}
+
       {/if}
 
       {if $_get != 'posts_group' && $_post['in_group']}
@@ -929,7 +935,7 @@
               </div>
             {/if}
             <div class="icon">
-              {include file='__svg_icons.tpl' icon="offers" width="32px" height="32px"}
+              {include file='__svg_icons.tpl' icon="offers" class="main-icon" width="32px" height="32px"}
             </div>
           </div>
           <div class="post-media-meta">
@@ -981,7 +987,7 @@
               <strong>{print_money($_post['job']['salary_minimum'], $_post['job']['salary_minimum_currency']['symbol'], $_post['job']['salary_minimum_currency']['dir'])} - {print_money($_post['job']['salary_maximum'], $_post['job']['salary_maximum_currency']['symbol'], $_post['job']['salary_maximum_currency']['dir'])} / {$_post['job']['pay_salary_per_meta']}</strong>
             </div>
             <div class="icon">
-              {include file='__svg_icons.tpl' icon="jobs" width="32px" height="32px"}
+              {include file='__svg_icons.tpl' icon="jobs" class="main-icon" width="32px" height="32px"}
             </div>
           </a>
         </div>
@@ -1076,7 +1082,7 @@
               <strong>{print_money($_post['course']['fees'], $_post['course']['fees_currency']['symbol'], $_post['course']['fees_currency']['dir'])}</strong>
             </div>
             <div class="icon">
-              {include file='__svg_icons.tpl' icon="courses" width="32px" height="32px"}
+              {include file='__svg_icons.tpl' icon="courses" class="main-icon" width="32px" height="32px"}
             </div>
           </a>
         </div>
@@ -1284,7 +1290,7 @@
               <div class="image" style="background-image:url('{$system['system_uploads']}/{$_post['merit']['image']}');"></div>
             {/if}
             <div class="icon">
-              {include file='__svg_icons.tpl' icon="merits" width="32px" height="32px"}
+              {include file='__svg_icons.tpl' icon="merits" class="main-icon" width="32px" height="32px"}
             </div>
           </div>
         </div>
@@ -1298,6 +1304,106 @@
             </div>
           </div>
         {/if}
+      </div>
+    {/if}
+
+    {if $_post['post_type'] == "group" && $_post['group']}
+      <div class="mt10 plr15">
+        <div class="post-media module">
+          <a class="post-media-image" href="{$system['system_url']}/groups/{$_post['group']['group_name']}">
+            <div class="image" style="background-image:url('{$system['system_uploads']}/{$_post['group']['group_cover']}');"></div>
+            <div class="icon">
+              {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="32px" height="32px"}
+            </div>
+          </a>
+          <div class="post-media-meta">
+            <div class="title mt20">
+              <a href="{$system['system_url']}/groups/{$_post['group']['group_name']}">{$_post['group']['group_title']}</a>
+            </div>
+            {if $_post['group']['group_description']}
+              <div class="description mt10">
+                {$_post['group']['group_description']}
+              </div>
+            {/if}
+            <div class="divider mtb15"></div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-sm btn-light rounded-pill" data-toggle="modal" data-url="modules/who_members.php?group_id={$_post['group']['group_id']}">{$_post['group']['group_members_formatted']} {__("members")}</button>
+              {if $_post['group']['i_joined'] == "approved"}
+                <button type="button" class="btn btn-sm btn-success rounded-pill btn-delete js_leave-group" data-id="{$_post['group']['group_id']}" data-privacy="{$_post['group']['group_privacy']}">
+                  <i class="fa fa-check"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Joined")}</span>
+                </button>
+              {elseif $_post['group']['i_joined'] == "pending"}
+                <button type="button" class="btn btn-sm btn-warning rounded-pill js_leave-group" data-id="{$_post['group']['group_id']}" data-privacy="{$_post['group']['group_privacy']}">
+                  <i class="fa fa-clock"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Pending")}</span>
+                </button>
+              {else}
+                <button type="button" class="btn btn-sm btn-success rounded-pill js_join-group" data-id="{$_post['group']['group_id']}" data-privacy="{if $_post['group']['i_admin']}public{else}{$_post['group']['group_privacy']}{/if}">
+                  <i class="fa fa-user-plus"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Join")}</span>
+                </button>
+              {/if}
+            </div>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {if $_post['post_type'] == "event" && $_post['event']}
+      <div class="mt10 plr15">
+        <div class="post-media module">
+          <a class="post-media-image" href="{$system['system_url']}/events/{$_post['event']['event_id']}">
+            <div class="image" style="background-image:url('{$system['system_uploads']}/{$_post['event']['event_cover']}');"></div>
+            <div class="date">
+              <div class="day">
+                {$_post['event']['event_start_date']|date_format:"%e"}
+              </div>
+              <div class="month">
+                {$_post['event']['event_start_date']|date_format:"%b"}
+              </div>
+            </div>
+            {if $_post['event']['event_is_online']}
+              <div class="source">
+                <i class="fa fa-map-marker fa-fw mr5" style="color: #1f9cff;"></i>{__("Online Event")}
+              </div>
+            {else}
+              {if $_post['event']['event_location']}
+                <div class="source">
+                  <i class="fa fa-map-marker fa-fw mr5" style="color: #1f9cff;"></i>{$_post['event']['event_location']}
+                </div>
+              {/if}
+            {/if}
+            <div class="icon">
+              {include file='__svg_icons.tpl' icon="events" class="main-icon" width="32px" height="32px"}
+            </div>
+          </a>
+          <div class="post-media-meta">
+            <div class="title mb5 mt20">
+              <a href="{$system['system_url']}/events/{$_post['event']['event_id']}">{$_post['event']['event_title']}</a>
+            </div>
+            {if $_post['event']['event_description']}
+              <div class="description mt10">
+                {$_post['event']['event_description']}
+              </div>
+            {/if}
+            <div class="divider mtb15"></div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-sm btn-light rounded-pill" data-toggle="modal" data-url="modules/who_interested.php?event_id={$_post['event']['event_id']}">{$_post['event']['event_interested_formatted']} {__("interested")}</button>
+              {if $_post['event']['i_joined']['is_interested']}
+                <button type="button" class="btn btn-sm btn-light rounded-pill js_uninterest-event" data-id="{$_post['event']['event_id']}">
+                  <i class="fa fa-check"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Interested")}</span>
+                </button>
+              {else}
+                <button type="button" class="btn btn-sm btn-primary rounded-pill js_interest-event" data-id="{$_post['event']['event_id']}">
+                  <i class="fa fa-star"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Interested")}</span>
+                </button>
+              {/if}
+            </div>
+          </div>
+        </div>
       </div>
     {/if}
 

@@ -7,7 +7,7 @@
 </div>
 <form class="publisher-mini" data-id="{$node_id}" data-type="{$node_type}">
   <div class="modal-body">
-
+    <!-- rating -->
     <div class="form-group">
       <label class="form-label">{__("Rating")}</label>
       <div class="star-rating js_star-rating">
@@ -23,12 +23,14 @@
         <label for="star1"><i class="fa fa-star"></i></label>
       </div>
     </div>
-
+    <!-- rating -->
+    <!-- review -->
     <div class="form-group">
       <label class="form-label">{__("Write Your Review")}</label>
       <textarea name="review" rows="5" dir="auto" class="form-control"></textarea>
     </div>
-
+    <!-- review -->
+    <!-- photos -->
     <div class="form-group">
       <label class="form-label">{__("Photos")}</label>
       <div class="attachments clearfix" data-type="photos">
@@ -39,7 +41,7 @@
         </ul>
       </div>
     </div>
-
+    <!-- photos -->
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

@@ -20,7 +20,7 @@
   {/if}
   {if $system['twitter_login_enabled']}
     <a href="{$system['system_url']}/connect/twitter" class="d-block mb5 btn btn-social">
-      {include file='__svg_icons.tpl' icon="twitter" class="mr5" width="24px" height="24px"}
+      {include file='__svg_icons.tpl' icon="x" class="mr5" width="24px" height="24px"}
       {__("Sign in with X")}
     </a>
   {/if}

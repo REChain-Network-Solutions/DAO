@@ -4,7 +4,7 @@
  * ajax -> admin -> colored posts
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -52,6 +52,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE posts_colored_patterns SET type = %s, background_image = %s, background_color_1 = %s, background_color_2 = %s, text_color = %s WHERE pattern_id = %s", secure($_POST['type']), secure($_POST['background_image']), secure($_POST['background_color_1']), secure($_POST['background_color_2']), secure($_POST['text_color']), secure($_GET['id'], 'int')));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['background_image']]);
       /* return */
       return_json(['success' => true, 'message' => __("Pattern info have been updated")]);
       break;
@@ -78,6 +80,8 @@ try {
       }
       /* insert */
       $db->query(sprintf("INSERT INTO posts_colored_patterns (type, background_image, background_color_1, background_color_2, text_color) VALUES (%s, %s, %s, %s, %s)", secure($_POST['type']), secure($_POST['background_image']), secure($_POST['background_color_1']), secure($_POST['background_color_2']), secure($_POST['text_color'])));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['background_image']]);
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/colored_posts";']);
       break;

@@ -214,8 +214,6 @@
       </div>
     </div>
     <!-- CV attachment -->
-
-
     <!-- error -->
     <div class="alert alert-danger mt15 mb0 x-hidden"></div>
     <!-- error -->

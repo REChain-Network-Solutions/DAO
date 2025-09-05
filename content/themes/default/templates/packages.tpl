@@ -30,6 +30,11 @@
       <div class="col-12 sg-offcanvas-mainbar">
         <div class="card">
           <div class="card-body page-content">
+            {if $highlight}
+              <div class="alert alert-warning">
+                {__("To unlock this feature, you need to upgrade to a Pro package")}
+              </div>
+            {/if}
             <div class="row justify-content-md-center">
               {foreach $packages as $package}
                 <!-- package -->

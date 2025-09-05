@@ -4,7 +4,7 @@
  * ajax -> chat -> reaction ✅
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
  */
 
 // fetch bootstrap
@@ -28,8 +28,7 @@ try {
         throw new BadRequestException(__("Invalid request"));
       }
 
-      // close chatbox
-      /* unset from opened chat boxes & return */
+      // unset from opened chat boxes
       if (($key = array_search($_POST['conversation_id'], $_SESSION['chat_boxes_opened'])) !== false) {
         unset($_SESSION['chat_boxes_opened'][$key]);
         /* reindex the array */
@@ -40,46 +39,67 @@ try {
       break;
 
     case 'delete':
-      // delete converstaion
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // delete converstaion ✅
       $user->delete_conversation($_POST['conversation_id']);
-      /* unset from opened chat boxes & return */
+
+      // unset from opened chat boxes
       if (($key = array_search($_POST['conversation_id'], $_SESSION['chat_boxes_opened'])) !== false) {
         unset($_SESSION['chat_boxes_opened'][$key]);
         /* reindex the array */
         $_SESSION['chat_boxes_opened'] = array_values($_SESSION['chat_boxes_opened']);
       }
-
-      // return
-      $return['callback'] = 'window.location = "' . $system['system_url'] . '/messages"';
       break;
 
     case 'leave':
-      // leave converstaion
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // leave converstaion ✅
       $user->leave_conversation($_POST['conversation_id']);
-      /* unset from opened chat boxes & return */
+
+      // unset from opened chat boxes
       if (($key = array_search($_POST['conversation_id'], $_SESSION['chat_boxes_opened'])) !== false) {
         unset($_SESSION['chat_boxes_opened'][$key]);
         /* reindex the array */
         $_SESSION['chat_boxes_opened'] = array_values($_SESSION['chat_boxes_opened']);
       }
-
-      // return
-      $return['callback'] = 'window.location = "' . $system['system_url'] . '/messages"';
-      break;
-
-    case 'color':
-      // color converstaion
-      $user->set_conversation_color($_POST['conversation_id'], $_POST['color']);
       break;
 
     case 'typing':
-      // update typing status
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // update typing status ✅
       $user->update_conversation_typing_status($_POST['conversation_id'], $_POST['is_typing']);
       break;
 
     case 'seen':
-      // update seen status
+      // valid inputs
+      if (!isset($_POST['ids']) || !is_array($_POST['ids'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // update seen status ✅
       $user->update_conversation_seen_status((array)$_POST['ids']);
+      break;
+
+    case 'color':
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // color converstaion ✅
+      $user->set_conversation_color($_POST['conversation_id'], $_POST['color']);
       break;
 
     default:

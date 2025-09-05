@@ -1,0 +1,164 @@
+---
+- name: Deploy REChain DAO Platform
+  hosts: all
+  become: yes
+  vars:
+    app_name: rechain-dao
+    app_user: rechain
+    app_dir: /opt/{{ app_name }}
+    node_version: "18"
+    mysql_root_password: "{{ vault_mysql_root_password }}"
+    mysql_database: "rechain_dao"
+    mysql_user: "rechain_user"
+    mysql_password: "{{ vault_mysql_password }}"
+    redis_password: "{{ vault_redis_password }}"
+
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - nginx
+          - mysql-server
+          - redis-server
+          - python3-pip
+          - python3-mysqldb
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_dir }}"
+        create_home: yes
+
+    - name: Install Node.js
+      blockinfile:
+        path: /tmp/install_nodejs.sh
+        create: yes
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          curl -fsSL https://deb.nodesource.com/setup_{{ node_version }}.x | sudo -E bash -
+          apt-get install -y nodejs
+      when: ansible_os_family == "Debian"
+
+    - name: Run Node.js installation script
+      command: /tmp/install_nodejs.sh
+      when: ansible_os_family == "Debian"
+
+    - name: Configure MySQL
+      mysql_user:
+        name: "{{ mysql_user }}"
+        password: "{{ mysql_password }}"
+        priv: "{{ mysql_database }}.*:ALL"
+        state: present
+
+    - name: Create MySQL database
+      mysql_db:
+        name: "{{ mysql_database }}"
+        state: present
+
+    - name: Configure Redis
+      lineinfile:
+        path: /etc/redis/redis.conf
+        regexp: '^# requirepass'
+        line: 'requirepass {{ redis_password }}'
+        backup: yes
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - mysql
+        - redis
+        - nginx
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Copy application files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ app_dir }}/"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      loop:
+        - package.json
+        - package-lock.json
+        - src/
+        - dist/
+
+    - name: Install Node.js dependencies
+      npm:
+        path: "{{ app_dir }}"
+        state: present
+      become_user: "{{ app_user }}"
+
+    - name: Configure Nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/{{ app_name }}
+        backup: yes
+      notify: restart nginx
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/{{ app_name }}
+        dest: /etc/nginx/sites-enabled/{{ app_name }}
+        state: link
+      notify: restart nginx
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: restart nginx
+
+    - name: Create systemd service
+      template:
+        src: rechain-dao.service.j2
+        dest: /etc/systemd/system/{{ app_name }}.service
+        backup: yes
+      notify:
+        - reload systemd
+        - restart rechain-dao
+
+    - name: Start and enable application
+      systemd:
+        name: "{{ app_name }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+
+    - name: restart rechain-dao
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

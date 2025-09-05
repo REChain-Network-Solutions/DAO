@@ -1,0 +1,13 @@
+*.iml
+.idea
+.classpath
+.project
+.settings
+.buildpath
+.phpunit.result.cache
+
+/vendor
+composer.lock
+composer.phar
+
+*.env

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rechain-dao-app
+  namespace: rechain-dao
+  labels:
+    app: rechain-dao
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rechain-dao
+  template:
+    metadata:
+      labels:
+        app: rechain-dao
+    spec:
+      containers:
+      - name: app
+        image: ghcr.io/your-username/rechain-dao:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DB_HOST
+          value: "mysql-service"
+        - name: REDIS_HOST
+          value: "redis-service"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

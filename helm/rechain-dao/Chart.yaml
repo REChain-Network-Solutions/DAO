@@ -1,0 +1,17 @@
+apiVersion: v2
+name: rechain-dao
+description: A Helm chart for REChain DAO Platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - dao
+  - governance
+  - blockchain
+  - web3
+home: https://github.com/your-username/rechain-dao
+sources:
+  - https://github.com/your-username/rechain-dao
+maintainers:
+  - name: REChain DAO Team
+    email: team@rechain-dao.com

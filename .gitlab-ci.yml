@@ -1,0 +1,136 @@
+stages:
+  - test
+  - build
+  - security
+  - deploy
+
+variables:
+  NODE_VERSION: "18"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+cache:
+  paths:
+    - node_modules/
+    - .npm/
+
+unit-tests:
+  stage: test
+  image: node:18-alpine
+  script:
+    - npm ci
+    - npm run lint
+    - npm run type-check
+    - npm run test:unit
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+
+integration-tests:
+  stage: test
+  image: node:18-alpine
+  services:
+    - name: mysql:8.0
+      alias: mysql
+      variables:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: rechain_dao_test
+    - name: redis:7-alpine
+      alias: redis
+  script:
+    - npm ci
+    - npm run db:migrate
+    - npm run test:integration
+  variables:
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_NAME: rechain_dao_test
+    DB_USER: root
+    DB_PASSWORD: root
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+
+e2e-tests:
+  stage: test
+  image: cypress/included:12.0.0
+  script:
+    - npm ci
+    - npm run build
+    - npm start &
+    - sleep 30
+    - npm run test:e2e
+  artifacts:
+    when: always
+    paths:
+      - cypress/screenshots/
+      - cypress/videos/
+    expire_in: 1 week
+
+build:
+  stage: build
+  image: node:18-alpine
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+docker-build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - main
+    - develop
+
+security-scan:
+  stage: security
+  image: node:18-alpine
+  script:
+    - npm ci
+    - npm audit --audit-level moderate
+    - npm run security:scan
+  allow_failure: true
+
+deploy-staging:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context staging
+    - kubectl apply -f k8s/
+    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao
+  environment:
+    name: staging
+    url: https://staging.rechain-dao.com
+  only:
+    - develop
+
+deploy-production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context production
+    - kubectl apply -f k8s/
+    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao
+  environment:
+    name: production
+    url: https://rechain-dao.com
+  only:
+    - main
+  when: manual

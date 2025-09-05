@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # Test application
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+      - DB_HOST=mysql-test
+      - DB_PORT=3306
+      - DB_NAME=rechain_dao_test
+      - DB_USER=rechain_user
+      - DB_PASSWORD=rechain_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_password
+      - JWT_SECRET=test_jwt_secret
+      - CORS_ORIGIN=http://localhost:3001
+    depends_on:
+      - mysql-test
+      - redis-test
+    networks:
+      - test-network
+    command: npm run test:integration
+
+  # Test MySQL Database
+  mysql-test:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=rechain_dao_test
+      - MYSQL_USER=rechain_user
+      - MYSQL_PASSWORD=rechain_password
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+    networks:
+      - test-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Test Redis Cache
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    environment:
+      - REDIS_PASSWORD=redis_password
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - test-network
+    command: redis-server --requirepass redis_password
+
+  # Test Nginx
+  nginx-test:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.test.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app-test
+    networks:
+      - test-network
+
+  # Test Mailhog
+  mailhog-test:
+    image: mailhog/mailhog
+    ports:
+      - "1026:1025"  # SMTP
+      - "8026:8025"  # Web UI
+    networks:
+      - test-network
+
+  # Test MinIO
+  minio-test:
+    image: minio/minio
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    volumes:
+      - minio_test_data:/data
+    networks:
+      - test-network
+    command: server /data --console-address ":9001"
+
+  # Test Prometheus
+  prometheus-test:
+    image: prom/prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.test.yml:/etc/prometheus/prometheus.yml
+      - prometheus_test_data:/prometheus
+    networks:
+      - test-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=1h'
+      - '--web.enable-lifecycle'
+
+  # Test Grafana
+  grafana-test:
+    image: grafana/grafana
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_test_data:/var/lib/grafana
+    networks:
+      - test-network
+
+  # Test Elasticsearch
+  elasticsearch-test:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    ports:
+      - "9201:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes:
+      - elasticsearch_test_data:/usr/share/elasticsearch/data
+    networks:
+      - test-network
+
+  # Test Kibana
+  kibana-test:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    ports:
+      - "5602:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch-test:9200
+    depends_on:
+      - elasticsearch-test
+    networks:
+      - test-network
+
+  # Test Jaeger
+  jaeger-test:
+    image: jaegertracing/all-in-one
+    ports:
+      - "16687:16686"
+      - "14269:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - test-network
+
+  # Test Redis Commander
+  redis-commander-test:
+    image: rediscommander/redis-commander
+    ports:
+      - "8082:8081"
+    environment:
+      - REDIS_HOSTS=local:redis-test:6379:0:redis_password
+    depends_on:
+      - redis-test
+    networks:
+      - test-network
+
+  # Test Adminer
+  adminer-test:
+    image: adminer
+    ports:
+      - "8083:8080"
+    depends_on:
+      - mysql-test
+    networks:
+      - test-network
+
+volumes:
+  mysql_test_data:
+  redis_test_data:
+  minio_test_data:
+  prometheus_test_data:
+  grafana_test_data:
+  elasticsearch_test_data:
+
+networks:
+  test-network:
+    driver: bridge

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rechain-dao
+  labels:
+    name: rechain-dao
+    app: rechain-dao

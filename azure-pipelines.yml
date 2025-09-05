@@ -1,0 +1,349 @@
+# Azure DevOps Pipeline for REChain DAO Platform
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  nodeVersion: '18.x'
+  dockerRegistry: 'your-registry.azurecr.io'
+  imageRepository: 'rechain-dao'
+  containerRegistry: 'your-registry'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm ci
+      displayName: 'Install dependencies'
+
+    - script: |
+        npm run lint
+      displayName: 'Run linting'
+
+    - script: |
+        npm run type-check
+      displayName: 'Run type checking'
+
+    - script: |
+        npm run test:unit
+      displayName: 'Run unit tests'
+
+    - script: |
+        npm run build
+      displayName: 'Build application'
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFiles: '**/test-results.xml'
+        testRunTitle: 'Unit Tests'
+
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage/cobertura-coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/coverage'
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: |
+          dist/**
+          package*.json
+          Dockerfile
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+
+- stage: Test
+  displayName: Test stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: IntegrationTests
+    displayName: 'Integration Tests'
+    pool:
+      vmImage: $(vmImageName)
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: rechain_dao_test
+        ports:
+          - 3306:3306
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm ci
+      displayName: 'Install dependencies'
+
+    - script: |
+        npm run db:migrate
+      displayName: 'Run database migrations'
+      env:
+        DB_HOST: localhost
+        DB_PORT: 3306
+        DB_NAME: rechain_dao_test
+        DB_USER: root
+        DB_PASSWORD: root
+
+    - script: |
+        npm run test:integration
+      displayName: 'Run integration tests'
+      env:
+        DB_HOST: localhost
+        DB_PORT: 3306
+        DB_NAME: rechain_dao_test
+        DB_USER: root
+        DB_PASSWORD: root
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+
+  - job: E2ETests
+    displayName: 'E2E Tests'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm ci
+      displayName: 'Install dependencies'
+
+    - script: |
+        npm run build
+      displayName: 'Build application'
+
+    - script: |
+        npm start &
+        sleep 30
+        npm run test:e2e
+      displayName: 'Run E2E tests'
+      env:
+        NODE_ENV: test
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFiles: '**/test-results.xml'
+        testRunTitle: 'E2E Tests'
+
+- stage: Security
+  displayName: Security stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: SecurityScan
+    displayName: 'Security Scan'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm ci
+      displayName: 'Install dependencies'
+
+    - script: |
+        npm audit --audit-level moderate
+      displayName: 'Run security audit'
+
+    - script: |
+        npm run security:scan
+      displayName: 'Run security scan'
+
+    - task: SonarCloudPrepare@1
+      inputs:
+        SonarCloud: 'SonarCloud'
+        organization: 'your-organization'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'rechain-dao'
+        cliProjectName: 'REChain DAO Platform'
+        cliSources: 'src'
+        cliLanguage: 'js'
+        extraProperties: |
+          sonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+    - task: SonarCloudAnalyze@1
+
+    - task: SonarCloudPublish@1
+      inputs:
+        pollingTimeoutSec: '300'
+
+- stage: BuildDocker
+  displayName: Build Docker image
+  dependsOn: [Build, Test, Security]
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: BuildDocker
+    displayName: 'Build Docker Image'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: 'Build and push Docker image'
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(containerRegistry)
+        tags: |
+          $(tag)
+          latest
+
+- stage: DeployStaging
+  displayName: Deploy to Staging
+  dependsOn: BuildDocker
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  jobs:
+  - deployment: DeployStaging
+    displayName: 'Deploy to Staging'
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: 'Deploy to Kubernetes'
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'staging-k8s'
+              namespace: 'rechain-dao-staging'
+              manifests: |
+                k8s/namespace.yaml
+                k8s/deployment.yaml
+                k8s/service.yaml
+
+          - task: KubernetesManifest@0
+            displayName: 'Update image'
+            inputs:
+              action: 'patch'
+              kubernetesServiceConnection: 'staging-k8s'
+              namespace: 'rechain-dao-staging'
+              strategy: 'patch'
+              patch: |
+                - op: replace
+                  path: /spec/template/spec/containers/0/image
+                  value: $(dockerRegistry)/$(imageRepository):$(tag)
+
+          - script: |
+              kubectl rollout status deployment/rechain-dao-app -n rechain-dao-staging --timeout=300s
+            displayName: 'Wait for deployment'
+
+          - script: |
+              kubectl get pods -n rechain-dao-staging
+            displayName: 'Check pod status'
+
+- stage: DeployProduction
+  displayName: Deploy to Production
+  dependsOn: BuildDocker
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployProduction
+    displayName: 'Deploy to Production'
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: 'Deploy to Kubernetes'
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'production-k8s'
+              namespace: 'rechain-dao'
+              manifests: |
+                k8s/namespace.yaml
+                k8s/deployment.yaml
+                k8s/service.yaml
+
+          - task: KubernetesManifest@0
+            displayName: 'Update image'
+            inputs:
+              action: 'patch'
+              kubernetesServiceConnection: 'production-k8s'
+              namespace: 'rechain-dao'
+              strategy: 'patch'
+              patch: |
+                - op: replace
+                  path: /spec/template/spec/containers/0/image
+                  value: $(dockerRegistry)/$(imageRepository):$(tag)
+
+          - script: |
+              kubectl rollout status deployment/rechain-dao-app -n rechain-dao --timeout=600s
+            displayName: 'Wait for deployment'
+
+          - script: |
+              kubectl get pods -n rechain-dao
+            displayName: 'Check pod status'
+
+          - task: Slack@1
+            displayName: 'Notify Slack'
+            inputs:
+              channel: '#deployments'
+              message: 'Production deployment completed successfully!'
+            condition: succeeded()
+
+- stage: Cleanup
+  displayName: Cleanup
+  dependsOn: [DeployStaging, DeployProduction]
+  condition: always()
+  jobs:
+  - job: Cleanup
+    displayName: 'Cleanup'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - script: |
+        echo "Cleaning up old Docker images..."
+        # Add cleanup logic here
+      displayName: 'Cleanup old images'

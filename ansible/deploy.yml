@@ -1,0 +1,366 @@
+---
+# Ansible playbook for deploying REChain DAO Platform
+- name: Deploy REChain DAO Platform
+  hosts: all
+  become: yes
+  vars:
+    app_name: rechain-dao
+    app_user: rechain
+    app_group: rechain
+    app_home: /opt/rechain-dao
+    app_port: 3000
+    docker_registry: "{{ docker_registry | default('your-registry.com') }}"
+    image_tag: "{{ image_tag | default('latest') }}"
+    db_host: "{{ db_host | default('localhost') }}"
+    db_port: "{{ db_port | default('3306') }}"
+    db_name: "{{ db_name | default('rechain_dao') }}"
+    db_user: "{{ db_user | default('rechain_user') }}"
+    db_password: "{{ db_password | default('') }}"
+    redis_host: "{{ redis_host | default('localhost') }}"
+    redis_port: "{{ redis_port | default('6379') }}"
+    redis_password: "{{ redis_password | default('') }}"
+    jwt_secret: "{{ jwt_secret | default('') }}"
+    cors_origin: "{{ cors_origin | default('*') }}"
+    log_level: "{{ log_level | default('info') }}"
+
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update system packages
+      yum:
+        update: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install required packages
+      package:
+        name:
+          - curl
+          - wget
+          - git
+          - unzip
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      package:
+        name: docker-ce
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose
+      pip:
+        name: docker-compose
+        state: present
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_home }}"
+        create_home: yes
+
+    - name: Create application group
+      group:
+        name: "{{ app_group }}"
+        state: present
+
+    - name: Add user to docker group
+      user:
+        name: "{{ app_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+      loop:
+        - "{{ app_home }}"
+        - "{{ app_home }}/logs"
+        - "{{ app_home }}/data"
+        - "{{ app_home }}/config"
+        - "{{ app_home }}/backups"
+
+    - name: Create environment file
+      template:
+        src: env.j2
+        dest: "{{ app_home }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0600'
+
+    - name: Create Docker Compose file
+      template:
+        src: docker-compose.prod.yml.j2
+        dest: "{{ app_home }}/docker-compose.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Create Nginx configuration
+      template:
+        src: nginx.conf.j2
+        dest: "{{ app_home }}/nginx/nginx.conf"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Create Prometheus configuration
+      template:
+        src: prometheus.yml.j2
+        dest: "{{ app_home }}/monitoring/prometheus.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Create Grafana configuration
+      template:
+        src: grafana.ini.j2
+        dest: "{{ app_home }}/monitoring/grafana.ini"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Create systemd service file
+      template:
+        src: rechain-dao.service.j2
+        dest: /etc/systemd/system/rechain-dao.service
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Start and enable REChain DAO service
+      systemd:
+        name: rechain-dao
+        state: started
+        enabled: yes
+
+    - name: Wait for application to start
+      wait_for:
+        port: "{{ app_port }}"
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 60
+
+    - name: Check application health
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      retries: 5
+      delay: 10
+
+    - name: Create backup script
+      template:
+        src: backup.sh.j2
+        dest: "{{ app_home }}/scripts/backup.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Create monitoring script
+      template:
+        src: monitor.sh.j2
+        dest: "{{ app_home }}/scripts/monitor.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Create logrotate configuration
+      template:
+        src: logrotate.conf.j2
+        dest: /etc/logrotate.d/rechain-dao
+        mode: '0644'
+
+    - name: Setup cron jobs
+      cron:
+        name: "{{ item.name }}"
+        job: "{{ item.job }}"
+        user: "{{ app_user }}"
+        minute: "{{ item.minute }}"
+        hour: "{{ item.hour }}"
+        day: "{{ item.day }}"
+      loop:
+        - name: "Backup database"
+          job: "{{ app_home }}/scripts/backup.sh"
+          minute: "0"
+          hour: "2"
+          day: "*"
+        - name: "Monitor system"
+          job: "{{ app_home }}/scripts/monitor.sh"
+          minute: "*/5"
+          hour: "*"
+          day: "*"
+
+    - name: Install monitoring tools
+      package:
+        name:
+          - htop
+          - iotop
+          - nethogs
+          - nload
+        state: present
+
+    - name: Configure firewall
+      ufw:
+        rule: "{{ item.rule }}"
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - { rule: "allow", port: "22", proto: "tcp" }
+        - { rule: "allow", port: "80", proto: "tcp" }
+        - { rule: "allow", port: "443", proto: "tcp" }
+        - { rule: "allow", port: "3000", proto: "tcp" }
+        - { rule: "allow", port: "9090", proto: "tcp" }
+        - { rule: "allow", port: "3001", proto: "tcp" }
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+
+    - name: Create SSL certificate
+      command: >
+        certbot certonly --standalone
+        --non-interactive --agree-tos
+        --email admin@{{ domain_name }}
+        --domains {{ domain_name }}
+      when: ssl_enabled | default(false)
+
+    - name: Setup SSL renewal
+      cron:
+        name: "Renew SSL certificate"
+        job: "certbot renew --quiet"
+        user: root
+        minute: "0"
+        hour: "2"
+        day: "*"
+      when: ssl_enabled | default(false)
+
+    - name: Create monitoring dashboard
+      template:
+        src: monitoring-dashboard.json.j2
+        dest: "{{ app_home }}/monitoring/dashboard.json"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Setup log aggregation
+      template:
+        src: filebeat.yml.j2
+        dest: "{{ app_home }}/monitoring/filebeat.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Create health check script
+      template:
+        src: health-check.sh.j2
+        dest: "{{ app_home }}/scripts/health-check.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Setup automated testing
+      template:
+        src: test-suite.sh.j2
+        dest: "{{ app_home }}/scripts/test-suite.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Create maintenance script
+      template:
+        src: maintenance.sh.j2
+        dest: "{{ app_home }}/scripts/maintenance.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Setup log rotation
+      template:
+        src: logrotate-app.conf.j2
+        dest: /etc/logrotate.d/rechain-dao-app
+        mode: '0644'
+
+    - name: Create update script
+      template:
+        src: update.sh.j2
+        dest: "{{ app_home }}/scripts/update.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Setup security hardening
+      template:
+        src: security-hardening.sh.j2
+        dest: "{{ app_home }}/scripts/security-hardening.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Run security hardening
+      command: "{{ app_home }}/scripts/security-hardening.sh"
+      when: security_hardening | default(false)
+
+    - name: Create disaster recovery script
+      template:
+        src: disaster-recovery.sh.j2
+        dest: "{{ app_home }}/scripts/disaster-recovery.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Setup performance tuning
+      template:
+        src: performance-tuning.sh.j2
+        dest: "{{ app_home }}/scripts/performance-tuning.sh"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Run performance tuning
+      command: "{{ app_home }}/scripts/performance-tuning.sh"
+      when: performance_tuning | default(false)
+
+    - name: Create deployment summary
+      template:
+        src: deployment-summary.md.j2
+        dest: "{{ app_home }}/deployment-summary.md"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Display deployment summary
+      debug:
+        msg: "REChain DAO Platform deployed successfully! Check {{ app_home }}/deployment-summary.md for details."

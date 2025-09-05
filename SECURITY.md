@@ -2,20 +2,36 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 1.0.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+We take security vulnerabilities seriously. If you discover a security vulnerability, please report it to us privately.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+Instead, please send an email to security@rechain-dao.com with:
+
+- Description of the vulnerability
+- Steps to reproduce the issue
+- Potential impact
+- Suggested fix (if available)
+
+You should receive a response within 48 hours. We will keep you informed of the progress.
+
+## Security Measures
+
+- Regular security audits
+- Dependency vulnerability scanning
+- Code review process
+- Automated security testing
+- Secure coding practices
+
+## Bug Bounty Program
+
+We may offer rewards for valid security vulnerabilities depending on severity and impact.
+
+Thank you for helping keep REChain DAO secure!

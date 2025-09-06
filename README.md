@@ -1,7 +1,6 @@
 # REChain DAO Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/your-username/rechain-dao/workflows/CI/badge.svg)](https://github.com/your-username/rechain-dao/actions)
 [![Coverage](https://codecov.io/gh/your-username/rechain-dao/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/rechain-dao)
 [![Docker](https://img.shields.io/docker/v/rechain-dao/platform?label=docker)](https://hub.docker.com/r/rechain-dao/platform)
 

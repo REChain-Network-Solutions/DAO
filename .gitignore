@@ -155,3 +155,47 @@ docs/.vuepress/dist/
 # OS
 .DS_Store
 Thumbs.db
+# PHP-specific ignores
+/vendor/
+composer.lock
+composer.phar
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Logs and cache
+/storage/logs/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/bootstrap/cache/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Uploads and user content
+/public/uploads/
+/uploads/
+/tmp/
+/var/
+
+# IDE
+.idea/
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+*.swp
+*.swo
+
+# PHPUnit
+/phpunit.xml
+.phpunit.result.cache
+
+# Composer
+/composer.lock
+
+# Deployment
+/deploy/
+/build/

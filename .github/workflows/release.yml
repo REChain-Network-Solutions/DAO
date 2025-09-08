@@ -6,6 +6,7 @@ on:
       - 'v*'
 
 env:
+  PHP_VERSION: '8.1'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -20,20 +21,24 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v5
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        node-version: '18'
-        cache: 'npm'
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
 
-    - name: Run tests
-      run: npm test
+    - name: Run PHPUnit tests
+      run: composer run test
 
-    - name: Build application
-      run: npm run build
+    - name: Prepare production build
+      run: |
+        # Remove development files and optimize autoloader
+        composer dump-autoload --optimize --no-dev
+        # Remove unnecessary files for production
+        rm -rf tests/ vendor/bin/ .github/ docs/
 
     - name: Generate changelog
       run: |

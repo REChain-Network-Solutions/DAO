@@ -2,7 +2,7 @@
 
 ## Overview
 
-The REChain DAO API provides a comprehensive RESTful interface for interacting with the social networking platform. The API is built using a modular architecture with Express.js-inspired routing and supports both web and mobile applications.
+The REChain DAO API provides a comprehensive RESTful interface for interacting with the decentralized autonomous organization platform. The API is built using PHP with a modular architecture and supports both web and mobile applications.
 
 ## Base URL
 
@@ -578,27 +578,7 @@ X-RateLimit-Reset: 1640995200
 
 ## SDKs and Libraries
 
-### JavaScript/Node.js
-```bash
-npm install rechain-dao-sdk
-```
-
-```javascript
-const RechainDAO = require('rechain-dao-sdk');
-
-const client = new RechainDAO({
-  baseURL: 'https://your-domain.com/apis/php',
-  apiKey: 'your_api_key'
-});
-
-// Login
-const user = await client.auth.login({
-  email: 'user@example.com',
-  password: 'password123'
-});
-```
-
-### PHP
+### PHP SDK
 ```bash
 composer require rechain/dao-sdk
 ```
@@ -616,6 +596,26 @@ $user = $client->auth->login([
     'email' => 'user@example.com',
     'password' => 'password123'
 ]);
+```
+
+### JavaScript/TypeScript SDK
+```bash
+npm install @rechain/dao-sdk
+```
+
+```javascript
+import { RechainDAO } from '@rechain/dao-sdk';
+
+const client = new RechainDAO({
+  baseURL: 'https://your-domain.com/apis/php',
+  apiKey: 'your_api_key'
+});
+
+// Login
+const user = await client.auth.login({
+  email: 'user@example.com',
+  password: 'password123'
+});
 ```
 
 ## Webhooks

@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  NODE_VERSION: '18'
+  PHP_VERSION: '8.1'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -44,23 +44,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v5
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
+        coverage: xdebug
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
 
-    - name: Lint code
-      run: npm run lint
+    - name: Lint PHP code
+      run: composer run lint
 
-    - name: Type check
-      run: npm run type-check
+    - name: Static analysis
+      run: composer run analyze
 
-    - name: Unit tests
-      run: npm run test:unit
+    - name: Run PHPUnit tests
+      run: composer run test
       env:
         DB_HOST: localhost
         DB_PORT: 3306
@@ -70,8 +71,8 @@ jobs:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
 
-    - name: Integration tests
-      run: npm run test:integration
+    - name: Run PHPUnit integration tests
+      run: composer run test:integration
       env:
         DB_HOST: localhost
         DB_PORT: 3306
@@ -84,7 +85,7 @@ jobs:
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage/lcov.info
+        file: ./coverage.xml
 
   build:
     name: Build
@@ -96,23 +97,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v5
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction --no-dev
 
-    - name: Build application
-      run: npm run build
+    - name: Prepare production build
+      run: |
+        # Remove development files and optimize autoloader
+        composer dump-autoload --optimize --no-dev
+        # Remove unnecessary files for production
+        rm -rf tests/ vendor/bin/ .github/ docs/
 
     - name: Create artifacts
       run: |
         mkdir -p artifacts
-        cp -r dist artifacts/
-        cp package*.json artifacts/
+        cp -r src/ artifacts/
+        cp -r templates/ artifacts/
+        cp -r public/ artifacts/
+        cp composer.json artifacts/
+        cp composer.lock artifacts/
         tar -czf artifacts.tar.gz artifacts/
 
     - name: Upload artifacts
@@ -171,17 +179,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v5
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
 
     - name: Security audit
-      run: npm audit --audit-level moderate
+      run: composer audit --format=plain
 
     - name: Dependency review
       uses: actions/dependency-review-action@v4

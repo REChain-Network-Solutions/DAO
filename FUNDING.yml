@@ -1,0 +1,19 @@
+# Funding Configuration for ReChain DAO
+# This file enables GitHub Sponsors and other funding platforms for the project
+
+# GitHub Sponsors - Replace with your GitHub username or organization
+github: [sorydev]
+
+# Other funding platforms (uncomment and configure as needed)
+# patreon: your_patreon_username
+# open_collective: your_open_collective_slug
+# ko_fi: your_ko_fi_username
+# tidelift: platform/package-name
+# community_bridge: your_project_name
+# liberapay: your_liberapay_username
+# issuehunt: your_issuehunt_username
+# otechie: your_otechie_username
+# lfx_crowdfunding: your_project_name
+
+# Custom funding URLs
+# custom: ['https://your-custom-funding-url.com']

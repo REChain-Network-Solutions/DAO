@@ -1,6 +1,6 @@
-# Contributing to REChain DAO Platform
+# Contributing to DAO Platform
 
-Thank you for your interest in contributing to the REChain DAO Platform! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to the DAO Platform! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -21,10 +21,12 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 ### Prerequisites
 
-- Node.js 18+
+- PHP 8.1+
 - MySQL 8.0+
 - Redis 6.0+
+- Composer
 - Git
+- Node.js (for frontend assets)
 - Docker (optional)
 
 ### Setting Up Development Environment
@@ -35,35 +37,45 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/your-username/rechain-dao.git
-   cd rechain-dao
+   git clone https://github.com/your-username/dao-platform.git
+   cd dao-platform
    ```
 
 3. **Add upstream remote**
    ```bash
-   git remote add upstream https://github.com/original-username/rechain-dao.git
+   git remote add upstream https://github.com/original-username/dao-platform.git
    ```
 
-4. **Install dependencies**
+4. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+5. **Install frontend dependencies**
    ```bash
    npm install
    ```
 
-5. **Set up environment**
+6. **Set up environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your database and configuration settings
    ```
 
-6. **Set up database**
+7. **Set up database**
    ```bash
-   npm run db:migrate
-   npm run db:seed
+   # Run migrations and seed the database
+   php artisan migrate --seed
    ```
 
-7. **Start development server**
+8. **Build frontend assets**
    ```bash
-   npm run dev
+   npm run build
+   ```
+
+9. **Start development server**
+   ```bash
+   php artisan serve
    ```
 
 ## Development Process
@@ -127,9 +139,14 @@ docs(readme): update installation instructions
 
 4. **Test your changes**
    ```bash
-   npm test
-   npm run lint
-   npm run type-check
+   # Run PHP tests
+   composer test
+   
+   # Run linting
+   composer lint
+   
+   # Build frontend assets
+   npm run build
    ```
 
 5. **Commit your changes**
@@ -166,7 +183,6 @@ docs(readme): update installation instructions
    - All tests must pass
    - Code coverage must not decrease
    - Linting must pass
-   - Type checking must pass
 
 2. **Code review**
    - At least one approval required
@@ -180,45 +196,30 @@ docs(readme): update installation instructions
 
 ## Coding Standards
 
-### JavaScript/TypeScript
+### PHP Coding Standards
 
-- Use TypeScript for new code
-- Follow ESLint configuration
-- Use Prettier for formatting
+- Follow PSR-12 coding style
+- Use type declarations where possible
 - Write meaningful variable and function names
-- Add JSDoc comments for public APIs
+- Add docblocks for classes and methods
+- Use modern PHP features (PHP 8.1+)
 
-```typescript
+```php
 /**
  * Creates a new proposal in the DAO
- * @param proposalData - The proposal data
- * @param userId - The ID of the user creating the proposal
- * @returns Promise<Proposal> - The created proposal
+ *
+ * @param array $proposalData The proposal data
+ * @param int $userId The ID of the user creating the proposal
+ * @return Proposal The created proposal
+ * @throws ValidationException
  */
-async function createProposal(proposalData: ProposalData, userId: string): Promise<Proposal> {
-  // Implementation
+public function createProposal(array $proposalData, int $userId): Proposal
+{
+    // Implementation
 }
 ```
 
-### React Components
-
-- Use functional components with hooks
-- Use TypeScript interfaces for props
-- Follow component naming conventions
-- Keep components small and focused
-
-```typescript
-interface ProposalCardProps {
-  proposal: Proposal;
-  onVote: (proposalId: string, vote: VoteType) => void;
-}
-
-const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onVote }) => {
-  // Component implementation
-};
-```
-
-### Database
+### Database Standards
 
 - Use migrations for schema changes
 - Follow naming conventions
@@ -238,8 +239,8 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onVote }) => {
 ### Test Types
 
 1. **Unit Tests**
-   - Test individual functions and components
-   - Use Jest and React Testing Library
+   - Test individual functions and classes
+   - Use PHPUnit
    - Aim for high coverage
 
 2. **Integration Tests**
@@ -249,53 +250,49 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onVote }) => {
 
 3. **End-to-End Tests**
    - Test complete user workflows
-   - Use Cypress for browser testing
+   - Use browser testing tools
    - Test critical user paths
 
 ### Writing Tests
 
-```typescript
+```php
 // Unit test example
-describe('ProposalService', () => {
-  it('should create a proposal with valid data', async () => {
-    const proposalData = {
-      title: 'Test Proposal',
-      description: 'Test Description',
-      type: 'governance'
-    };
+public function testCreateProposalWithValidData(): void
+{
+    $proposalData = [
+        'title' => 'Test Proposal',
+        'description' => 'Test Description',
+        'type' => 'governance'
+    ];
     
-    const proposal = await proposalService.create(proposalData, 'user123');
+    $proposal = $this->proposalService->create($proposalData, 123);
     
-    expect(proposal).toBeDefined();
-    expect(proposal.title).toBe(proposalData.title);
-  });
-});
+    $this->assertNotNull($proposal);
+    $this->assertEquals('Test Proposal', $proposal->title);
+}
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
+composer test
 
 # Run tests with coverage
-npm run test:coverage
+composer test:coverage
 
 # Run specific test file
-npm test -- ProposalService.test.ts
+vendor/bin/phpunit tests/ProposalServiceTest.php
 
-# Run E2E tests
-npm run test:e2e
+# Run linting
+composer lint
 ```
 
 ## Documentation
 
 ### Code Documentation
 
-- Add JSDoc comments for functions and classes
+- Add docblocks for functions and classes
 - Document complex algorithms
 - Explain business logic
 - Keep comments up to date
@@ -323,7 +320,7 @@ When reporting bugs, include:
 1. **Clear description** of the issue
 2. **Steps to reproduce** the problem
 3. **Expected behavior** vs actual behavior
-4. **Environment details** (OS, browser, Node.js version)
+4. **Environment details** (OS, PHP version, database version)
 5. **Screenshots** if applicable
 6. **Error logs** if available
 
@@ -352,8 +349,7 @@ When requesting features, include:
 
 - **GitHub Discussions** - General questions and discussions
 - **GitHub Issues** - Bug reports and feature requests
-- **Discord** - Real-time chat and support
-- **Email** - support@rechain-dao.com
+- **Email** - support@dao-platform.com
 
 ## Recognition
 
@@ -366,7 +362,7 @@ Contributors will be recognized in:
 
 ## Thank You
 
-Thank you for contributing to the REChain DAO Platform! Your contributions help make decentralized governance more accessible and effective for communities worldwide.
+Thank you for contributing to the DAO Platform! Your contributions help make decentralized governance more accessible and effective for communities worldwide.
 
 ---
 

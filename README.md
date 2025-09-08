@@ -1,69 +1,81 @@
-# REChain DAO Platform
+# DAO Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Coverage](https://codecov.io/gh/your-username/rechain-dao/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/rechain-dao)
-[![Docker](https://img.shields.io/docker/v/rechain-dao/platform?label=docker)](https://hub.docker.com/r/rechain-dao/platform)
+[![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://php.net/)
+[![MySQL Version](https://img.shields.io/badge/MySQL-8.0%2B-blue.svg)](https://mysql.com/)
 
-A comprehensive Decentralized Autonomous Organization (DAO) platform built with modern web technologies, enabling community governance, token management, and decentralized decision-making.
+A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
 
 ## 🌟 Features
 
-- **Decentralized Governance**: Token-based voting system for community decisions
-- **Proposal Management**: Create, manage, and track governance proposals
-- **Token Economics**: ERC-20 token integration with staking and rewards
-- **Smart Contracts**: Ethereum-based smart contract integration
-- **User Management**: Comprehensive user profiles and role management
-- **Real-time Updates**: WebSocket-based real-time notifications
-- **Mobile Support**: Responsive design with mobile-first approach
-- **Security**: Enterprise-grade security with audit trails
-- **Analytics**: Comprehensive analytics and reporting dashboard
-- **API**: RESTful API with OpenAPI documentation
+- **Social Networking**: User profiles, posts, groups, and events
+- **Decentralized Governance**: Community voting and proposal system
+- **Real-time Communication**: WebSocket-based chat and notifications
+- **Mobile Responsive**: Optimized for all devices
+- **API Integration**: RESTful APIs for external integration
+- **Multi-language Support**: Internationalization capabilities
+- **Security**: Advanced security features and permissions
+- **Admin Dashboard**: Comprehensive management interface
+- **Monetization**: Payment integration and subscription models
+- **Analytics**: Built-in analytics and reporting
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
-- MySQL 8.0+
-- Redis 6.0+
-- Docker & Docker Compose (optional)
+- PHP 8.1 or higher
+- MySQL 8.0 or higher
+- Redis 6.0 or higher
+- Web server (Apache/Nginx)
+- Composer
+- Node.js (for frontend assets)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/rechain-dao.git
-   cd rechain-dao
+   git clone https://github.com/your-username/dao-platform.git
+   cd dao-platform
    ```
 
-2. **Install dependencies**
+2. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Install frontend dependencies**
    ```bash
    npm install
    ```
 
-3. **Environment setup**
+4. **Environment setup**
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your database and configuration settings
    ```
 
-4. **Database setup**
+5. **Database setup**
    ```bash
-   npm run db:migrate
-   npm run db:seed
+   # Run migrations and seed the database
+   php artisan migrate --seed
    ```
 
-5. **Start the application**
+6. **Build frontend assets**
    ```bash
-   npm run dev
+   npm run build
    ```
 
-The application will be available at `http://localhost:3000`
+7. **Start the application**
+   ```bash
+   php artisan serve
+   ```
+
+The application will be available at `http://localhost:8000`
 
 ### Docker Setup
 
 ```bash
-# Start all services
+# Start all services using Docker Compose
 docker-compose up -d
 
 # View logs
@@ -75,59 +87,45 @@ docker-compose down
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
+Comprehensive documentation is available:
 
-- [Installation Guide](docs/Installation-Guide.md)
-- [API Documentation](docs/API-Documentation.md)
-- [User Guide](docs/User-Guide.md)
-- [Developer Guide](docs/Developer-Guide.md)
-- [Security Guide](docs/Security-Guide.md)
-- [Deployment Guide](docs/Deployment-Guide.md)
-
-### Quick Links
-
-- [API Reference](docs/API-Documentation-OpenAPI.md)
-- [System Architecture](docs/System-Architecture.md)
-- [Database Schema](docs/Database-Schema.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Installation Guide](docs/installation.md)
+- [Configuration Guide](docs/configuration.md)
+- [API Documentation](docs/api.md)
+- [Developer Guide](docs/development.md)
+- [Deployment Guide](docs/deployment.md)
 
 ## 🏗️ Architecture
 
-The platform is built with a modern, scalable architecture:
+The platform is built with a modern PHP architecture:
 
-- **Frontend**: React 18 with TypeScript
-- **Backend**: Node.js with Express
-- **Database**: MySQL 8.0 with Redis caching
-- **Blockchain**: Ethereum integration with Web3.js
-- **Infrastructure**: Docker, Kubernetes, AWS
-- **Monitoring**: Prometheus, Grafana, ELK Stack
+- **Backend**: PHP with custom MVC framework
+- **Database**: MySQL with Redis caching
+- **Frontend**: Smarty templates with JavaScript
+- **Real-time**: WebSocket servers for live updates
+- **APIs**: RESTful API endpoints
+- **Infrastructure**: Docker, Ansible, Terraform support
 
 ## 🛠️ Development
 
-### Available Scripts
+### Available Commands
 
 ```bash
-# Development
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
+# Development server
+php artisan serve
 
-# Testing
-npm run test         # Run unit tests
-npm run test:e2e     # Run end-to-end tests
-npm run test:coverage # Run tests with coverage
+# Database operations
+php artisan migrate
+php artisan db:seed
 
-# Database
-npm run db:migrate   # Run database migrations
-npm run db:seed      # Seed database with sample data
-npm run db:reset     # Reset database
+# Cache management
+php artisan cache:clear
+php artisan view:clear
 
-# Code Quality
-npm run lint         # Run ESLint
-npm run lint:fix     # Fix ESLint issues
-npm run type-check   # Run TypeScript type checking
-npm run format       # Format code with Prettier
+# Frontend development
+npm run dev        # Development build
+npm run build      # Production build
+npm run watch      # Watch for changes
 ```
 
 ### Development Setup
@@ -138,10 +136,7 @@ npm run format       # Format code with Prettier
    git checkout -b feature/amazing-feature
    ```
 3. **Make your changes**
-4. **Run tests**
-   ```bash
-   npm test
-   ```
+4. **Test your changes**
 5. **Commit your changes**
    ```bash
    git commit -m 'Add amazing feature'
@@ -156,41 +151,45 @@ npm run format       # Format code with Prettier
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `3000` |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `3306` |
-| `DB_NAME` | Database name | `rechain_dao` |
-| `REDIS_HOST` | Redis host | `localhost` |
-| `JWT_SECRET` | JWT secret key | Required |
-| `ETHEREUM_RPC` | Ethereum RPC URL | Required |
+Key configuration variables in `.env`:
 
-See [Environment Configuration](docs/Environment-Configuration.md) for complete list.
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=dao_platform
+DB_USERNAME=root
+DB_PASSWORD=
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+APP_URL=http://localhost:8000
+APP_KEY=your-secret-key
+```
 
 ## 🚀 Deployment
 
 ### Production Deployment
 
-1. **Prepare environment**
+1. **Prepare the environment**
    ```bash
+   composer install --no-dev
    npm run build
-   npm run test
+   php artisan optimize
    ```
 
-2. **Deploy with Docker**
+2. **Set up web server**
+   Configure Apache/Nginx to serve the `public/` directory
+
+3. **Set permissions**
    ```bash
-   docker build -t rechain-dao .
-   docker run -p 3000:3000 rechain-dao
+   chmod -R 755 storage bootstrap/cache
    ```
 
-3. **Deploy with Kubernetes**
-   ```bash
-   kubectl apply -f k8s/
-   ```
+4. **Configure cron jobs**
+   Set up scheduled tasks for maintenance
 
-See [Deployment Guide](docs/Deployment-Guide.md) for detailed instructions.
+See [Deployment Guide](docs/deployment.md) for detailed instructions.
 
 ## 🤝 Contributing
 
@@ -198,12 +197,12 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### Ways to Contribute
 
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Submit code improvements
-- 🧪 Add tests
-- 🌍 Help with translations
+- 🐛 Report bugs and issues
+- 💡 Suggest new features and improvements
+- 📝 Improve documentation and translations
+- 🔧 Submit code improvements and fixes
+- 🧪 Add tests and test coverage
+- 🌍 Help with internationalization
 
 ## 📄 License
 
@@ -212,24 +211,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/your-username/rechain-dao/issues)
-- 💬 [Discussions](https://github.com/your-username/rechain-dao/discussions)
-- 📧 [Email Support](mailto:support@rechain-dao.com)
+- 🐛 [Issue Tracker](https://github.com/your-username/dao-platform/issues)
+- 💬 [Discussions](https://github.com/your-username/dao-platform/discussions)
+- 📧 Email support available for enterprise users
 
 ## 🙏 Acknowledgments
 
-- Ethereum Foundation for blockchain infrastructure
-- OpenZeppelin for smart contract libraries
-- React team for the amazing frontend framework
-- All contributors who help make this project better
+- PHP community for the robust ecosystem
+- MySQL team for reliable database solutions
+- All contributors and community members
+- Open source projects that inspired this platform
 
 ## 📊 Project Status
 
-![GitHub last commit](https://img.shields.io/github/last-commit/your-username/rechain-dao)
-![GitHub issues](https://img.shields.io/github/issues/your-username/rechain-dao)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/your-username/rechain-dao)
-![GitHub stars](https://img.shields.io/github/stars/your-username/rechain-dao?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/your-username/dao-platform)
+![GitHub issues](https://img.shields.io/github/issues/your-username/dao-platform)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/your-username/dao-platform)
 
 ---
 
-**Made with ❤️ by the REChain DAO Community**
+**Built with ❤️ for the DAO community**

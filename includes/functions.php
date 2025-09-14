@@ -4,7 +4,7 @@
  * functions
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!.com/licenses/Delus/verify.php';
+  $url = 'https://A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making..com/licenses/Delus/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -1126,7 +1126,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!.com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making..com/support'>" . "Delus Support" . ".</a></p>
                             </div>";
         break;
 
@@ -7315,8 +7315,13 @@ function referer_url()
   $referer_url = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
   /* get the request URI from the referer URL */
   $referer_url = parse_url($referer_url, PHP_URL_PATH);
-  if ($referer_url != "/") {
-    $_SESSION['callback_redirect'] = $referer_url;
+  /* validate and sanitize */
+  if (!empty($referer_url) && $referer_url != "/") {
+    /* disallowed paths */
+    $disallowed = ['/favicon.ico', '/robots.txt', '/socket.io'];
+    if (!in_array($referer_url, $disallowed) && strpos($referer_url, "/") === 0) {
+      $_SESSION['callback_redirect'] = $referer_url;
+    }
   }
 }
 

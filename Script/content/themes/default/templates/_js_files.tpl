@@ -491,7 +491,12 @@
     <script src="{$system['system_url']}/includes/assets/js/core/post.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/post.js')}"></script>
     {if $system['chat_enabled']}
       {if $system['chat_socket_enabled']}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+        {if $system['chat_socket_server'] == "php"}
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+        {/if}
+        {if $system['chat_socket_server'] == "nodejs"}
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
+        {/if}
       {/if}
       <script src="{$system['system_url']}/includes/assets/js/core/chat.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/chat.js')}"></script>
     {/if}

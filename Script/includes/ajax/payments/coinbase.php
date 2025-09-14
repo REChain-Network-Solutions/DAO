@@ -4,7 +4,7 @@
  * ajax -> payments -> coinbase
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
  */
 
 // fetch bootstrap
@@ -181,6 +181,12 @@ try {
 
       // get coinbase link
       $coinbase = coinbase("marketplace", $orders_collection['total'], $_POST['orders_collection_id']);
+
+      // update user
+      $db->query(sprintf("UPDATE users SET coinbase_hash = %s, coinbase_code = %s WHERE user_id = %s", secure($coinbase['coinbase_hash']), secure($coinbase['coinbase_code']), secure($user->_data['user_id'], 'int')));
+
+      // return link
+      $link = $coinbase['hosted_url'];
       break;
 
     default:

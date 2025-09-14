@@ -2,7 +2,7 @@
  * chat js
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
  */
 
 // initialize API URLs
@@ -1184,7 +1184,6 @@ $(function () {
 
   // chat-box
   $('body').on('click', '.js_chat-new', function (e) {
-    e.preventDefault();
     /* check if chat disabled */
     if (!chat_enabled) {
       return;
@@ -1193,6 +1192,7 @@ $(function () {
     if (is_mobile()) {
       return;
     }
+    e.preventDefault();
     /* open fresh chat-box */
     /* check if there is any fresh chat-box already exists */
     if ($('.chat-box.fresh').length > 0) {

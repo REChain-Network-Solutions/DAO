@@ -20,7 +20,9 @@
     <!-- post menu -->
     {if $user->_logged_in && !$_shared && $_get != "posts_information"}
       <div class="float-end dropdown">
-        <i class="fa fa-chevron-down dropdown-toggle" data-bs-toggle="dropdown" data-display="static"></i>
+        <span class="dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
+          <i class="fa fa-chevron-down"></i>
+        </span>
         <div class="dropdown-menu dropdown-menu-end action-dropdown-menu">
           {if $_post['manage_post'] && $_post['post_type'] == "product"}
             {if $_post['product']['available']}

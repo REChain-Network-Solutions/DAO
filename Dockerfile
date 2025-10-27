@@ -1,7 +1,7 @@
 # Multi-stage Docker build for REChain DAO Platform
 
 # Build stage
-FROM node:24-alpine AS builder
+FROM node:25-alpine AS builder
 
 # Install security updates
 RUN apk update && apk upgrade
@@ -26,7 +26,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:24-alpine AS production
+FROM node:25-alpine AS production
 
 # Install security updates
 RUN apk update && apk upgrade

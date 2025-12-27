@@ -58,7 +58,7 @@
                       <tr>
                         <td>{$order_item['post']['product']['name']}</td>
                         <td class="text-center">
-                          {print_money($order_item['post']['product']['price'])}
+                          {$order_item['post']['product']['price_formatted']}
                         </td>
                         <td class="text-center">{$order_item['quantity']}</td>
                         <td class="text-right">

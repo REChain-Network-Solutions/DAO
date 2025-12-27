@@ -4,7 +4,7 @@
  * trait -> photos
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait PhotosTrait
@@ -38,9 +38,51 @@ trait PhotosTrait
             return $photos;
           }
         }
-        $get_photos = $db->query(sprintf("SELECT posts_photos.photo_id, posts_photos.source, posts_photos.blur, posts.user_id, posts.user_type, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts_photos.album_id = %s AND posts.is_anonymous = '0' AND posts.is_paid = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1') ORDER BY posts_photos.photo_id DESC LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_photos = $db->query(
+          sprintf(
+            "SELECT 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts_photos.blur, 
+                posts.user_id, 
+                posts.user_type, 
+                posts.privacy, 
+                posts.for_adult
+              FROM posts_photos 
+              INNER JOIN posts 
+                ON posts_photos.post_id = posts.post_id 
+              WHERE posts_photos.album_id = %s 
+                AND posts.is_anonymous = '0'
+                AND posts.is_paid = '0'
+                AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+              ORDER BY posts_photos.photo_id DESC 
+              LIMIT %s, %s",
+            secure($id, 'int'),
+            secure($offset, 'int', false),
+            secure($system['max_results_even'], 'int', false)
+          )
+        );
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            /* check if photo is for adult */
+            if ($system['adult_mode'] && $photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             /* check the photo privacy */
             if ($photo['privacy'] == "public" || $photo['privacy'] == "custom") {
               if ($album) {
@@ -48,7 +90,6 @@ trait PhotosTrait
               }
               $photos[] = $photo;
             } else {
-              /* check the photo privacy */
               if ($this->check_privacy($photo['privacy'], $photo['user_id'])) {
                 if ($album) {
                   $photo['manage'] = $album['manage_album'];
@@ -83,9 +124,53 @@ trait PhotosTrait
         /* get all user photos (except photos from groups, events, anonymous posts & paid posts) */
         $offset *= $system['min_results_even'];
         $order_statement = ($get_pinned) ? "posts_photos.pinned DESC, posts_photos.photo_id DESC" : "posts_photos.photo_id DESC";
-        $get_photos = $db->query(sprintf("SELECT posts_photos.photo_id, posts_photos.source, posts_photos.blur, posts_photos.pinned, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'user' AND posts.in_group = '0' AND posts.in_event = '0' AND posts.is_anonymous = '0' AND posts.is_paid = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1') ORDER BY $order_statement LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['min_results_even'], 'int', false)));
+        $get_photos = $db->query(sprintf(
+          "SELECT 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts_photos.blur, 
+                posts_photos.pinned, 
+                posts.privacy,
+                posts.for_adult
+            FROM posts_photos 
+            INNER JOIN posts 
+                ON posts_photos.post_id = posts.post_id 
+            WHERE 
+                posts.user_id = %s 
+                AND posts.user_type = 'user' 
+                AND posts.in_group = '0' 
+                AND posts.in_event = '0' 
+                AND posts.is_anonymous = '0' 
+                AND posts.is_paid = '0' 
+                AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+            ORDER BY $order_statement 
+            LIMIT %s, %s",
+          secure($id, 'int'),
+          secure($offset, 'int', false),
+          secure($system['min_results_even'], 'int', false)
+        ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            /* check if photo is for adult */
+            if ($system['adult_mode'] && $photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
+            /* check the photo privacy */
             if ($this->check_privacy($photo['privacy'], $id)) {
               $photo['manage'] = $manage_photos;
               $photos[] = $photo;
@@ -109,9 +194,46 @@ trait PhotosTrait
         }
         /* get all page photos */
         $offset *= $system['min_results_even'];
-        $get_photos = $db->query(sprintf("SELECT posts_photos.photo_id, posts_photos.source, posts_photos.blur FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'page' AND posts.is_paid = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1') ORDER BY posts_photos.photo_id DESC LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['min_results_even'], 'int', false)));
+        $get_photos = $db->query(sprintf(
+          "SELECT
+              posts_photos.photo_id,
+              posts_photos.source,
+              posts_photos.blur,
+              posts.for_adult
+            FROM posts_photos
+              INNER JOIN posts ON posts_photos.post_id = posts.post_id
+            WHERE
+              posts.user_id = %s
+              AND posts.user_type = 'page'
+              AND posts.is_paid = '0'
+              AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+            ORDER BY posts_photos.photo_id DESC
+            LIMIT %s, %s",
+          secure($id, 'int'),
+          secure($offset, 'int', false),
+          secure($system['min_results_even'], 'int', false)
+        ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            /* check if photo is for adult */
+            if ($system['adult_mode'] && $photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             $photo['manage'] = $manage_photos;
             $photos[] = $photo;
           }
@@ -139,9 +261,50 @@ trait PhotosTrait
         }
         /* get all group photos */
         $offset *= $system['min_results_even'];
-        $get_photos = $db->query(sprintf("SELECT posts_photos.photo_id, posts_photos.source, posts_photos.blur FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.group_id = %s AND posts.in_group = '1' AND posts.is_paid = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1') ORDER BY posts_photos.photo_id DESC LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['min_results_even'], 'int', false)));
+        $get_photos = $db->query(sprintf(
+          "SELECT 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts_photos.blur, 
+                posts.for_adult 
+            FROM 
+                posts_photos 
+            INNER JOIN 
+                posts 
+                ON posts_photos.post_id = posts.post_id 
+            WHERE 
+                posts.group_id = %s 
+                AND posts.in_group = '1' 
+                AND posts.is_paid = '0' 
+                AND (posts.pre_approved = '1' OR posts.has_approved = '1') 
+            ORDER BY 
+                posts_photos.photo_id DESC 
+            LIMIT %s, %s",
+          secure($id, 'int'),
+          secure($offset, 'int', false),
+          secure($system['min_results_even'], 'int', false)
+        ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            /* check if photo is for adult */
+            if ($system['adult_mode'] && $photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             $photo['manage'] = $manage_photos;
             $photos[] = $photo;
           }
@@ -169,9 +332,51 @@ trait PhotosTrait
         }
         /* get all event photos */
         $offset *= $system['min_results_even'];
-        $get_photos = $db->query(sprintf("SELECT posts_photos.photo_id, posts_photos.source, posts_photos.blur FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.event_id = %s AND posts.in_event = '1' AND posts.is_paid = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1') ORDER BY posts_photos.photo_id DESC LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['min_results_even'], 'int', false)));
+        $get_photos = $db->query(sprintf(
+          "SELECT
+             posts_photos.photo_id,
+             posts_photos.source,
+             posts_photos.blur,
+             posts.for_adult
+           FROM
+             posts_photos
+           INNER JOIN posts ON posts_photos.post_id = posts.post_id
+           WHERE
+             posts.event_id = %s
+             AND posts.in_event = '1'
+             AND posts.is_paid = '0'
+             AND (
+               posts.pre_approved = '1'
+               OR posts.has_approved = '1'
+             )
+           ORDER BY
+             posts_photos.photo_id DESC
+           LIMIT %s, %s",
+          secure($id, 'int'),
+          secure($offset, 'int', false),
+          secure($system['min_results_even'], 'int', false)
+        ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            /* check if photo is for adult */
+            if ($system['adult_mode'] && $photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             $photo['manage'] = $manage_photos;
             $photos[] = $photo;
           }
@@ -345,8 +550,40 @@ trait PhotosTrait
           break;
 
         case 'album':
-          $get_album_photos = $db->query(sprintf("SELECT posts_photos.post_id, posts_photos.photo_id, posts_photos.source, posts.user_id, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts_photos.album_id = %s", secure($photo['album_id'], 'int')));
+          $get_album_photos = $db->query(sprintf(
+            "SELECT 
+                posts_photos.post_id, 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts.user_id, 
+                posts.privacy, 
+                posts.for_adult 
+             FROM 
+                posts_photos 
+             INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+             WHERE posts_photos.album_id = %s",
+            secure($photo['album_id'], 'int')
+          ));
           while ($album_photo = $get_album_photos->fetch_assoc()) {
+            /* check if next photo is for adult */
+            if ($system['adult_mode'] && $album_photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $album_photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             /* check the photo privacy */
             if ($album_photo['privacy'] == "public" || $album_photo['privacy'] == "custom") {
               $album_photos[$album_photo['photo_id']] = $album_photo;
@@ -376,15 +613,86 @@ trait PhotosTrait
 
         case 'photos':
           if ($post['in_group']) {
-            $get_target_photos = $db->query(sprintf("SELECT posts_photos.post_id, posts_photos.photo_id, posts_photos.source, posts.user_id, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.in_group = '1' AND posts.group_id = %s", secure($post['group_id'], 'int')));
+            $get_target_photos = $db->query(sprintf(
+              "SELECT 
+                posts_photos.post_id, 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts.user_id, 
+                posts.privacy, 
+                posts.for_adult 
+              FROM posts_photos 
+              INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+              WHERE posts.in_group = '1' 
+                AND posts.group_id = %s",
+              secure($post['group_id'], 'int')
+            ));
           } elseif ($post['in_event']) {
-            $get_target_photos = $db->query(sprintf("SELECT posts_photos.post_id, posts_photos.photo_id, posts_photos.source, posts.user_id, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.in_event = '1' AND posts.event_id = %s", secure($post['event_id'], 'int')));
+            $get_target_photos = $db->query(sprintf(
+              "SELECT 
+                posts_photos.post_id, 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts.user_id, 
+                posts.privacy, 
+                posts.for_adult 
+              FROM posts_photos 
+              INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+              WHERE posts.in_event = '1' 
+                AND posts.event_id = %s",
+              secure($post['event_id'], 'int')
+            ));
           } elseif ($post['user_type'] == "page") {
-            $get_target_photos = $db->query(sprintf("SELECT posts_photos.post_id, posts_photos.photo_id, posts_photos.source, posts.user_id, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_type = 'page' AND posts.user_id = %s", secure($post['user_id'], 'int')));
+            $get_target_photos = $db->query(sprintf(
+              "SELECT 
+                posts_photos.post_id, 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts.user_id, 
+                posts.privacy, 
+                posts.for_adult 
+              FROM posts_photos 
+              INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+              WHERE posts.user_type = 'page' 
+                AND posts.user_id = %s",
+              secure($post['user_id'], 'int')
+            ));
           } elseif ($post['user_type'] == "user") {
-            $get_target_photos = $db->query(sprintf("SELECT posts_photos.post_id, posts_photos.photo_id, posts_photos.source, posts.user_id, posts.privacy FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_type = 'user' AND posts.user_id = %s", secure($post['user_id'], 'int')));
+            $get_target_photos = $db->query(sprintf(
+              "SELECT 
+                posts_photos.post_id, 
+                posts_photos.photo_id, 
+                posts_photos.source, 
+                posts.user_id, 
+                posts.privacy, 
+                posts.for_adult 
+              FROM posts_photos 
+              INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+              WHERE posts.user_type = 'user' 
+                AND posts.user_id = %s",
+              secure($post['user_id'], 'int')
+            ));
           }
           while ($target_photo = $get_target_photos->fetch_assoc()) {
+            /* check if next photo is for adult */
+            if ($system['adult_mode'] && $target_photo['for_adult']) {
+              if (!$this->_logged_in) {
+                continue;
+              } else {
+                /* check if the viewer is not (admin || moderator) && not the author of the post */
+                if ($this->_data['user_group'] == 3 && $target_photo['user_id'] != $this->_data['user_id']) {
+                  /* user not adult */
+                  if (!$this->_data['user_adult']) {
+                    continue;
+                  } else {
+                    /* user adult but not verified */
+                    if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
             /* check the photo privacy */
             if ($target_photo['privacy'] == "public" || $target_photo['privacy'] == "custom") {
               $target_photos[$target_photo['photo_id']] = $target_photo;
@@ -632,7 +940,50 @@ trait PhotosTrait
   public function get_album($album_id, $full_details = true)
   {
     global $db, $system;
-    $get_album = $db->query(sprintf("SELECT posts_photos_albums.*, users.user_name, users.user_album_pictures, users.user_album_covers, users.user_album_timeline, pages.page_id, pages.page_name, pages.page_admin, pages.page_album_pictures, pages.page_album_covers, pages.page_album_timeline, `groups`.group_name, `groups`.group_admin, `groups`.group_album_pictures, `groups`.group_album_covers, `groups`.group_album_timeline, `events`.event_admin, `events`.event_album_covers, `events`.event_album_timeline FROM posts_photos_albums LEFT JOIN users ON posts_photos_albums.user_id = users.user_id AND posts_photos_albums.user_type = 'user' LEFT JOIN pages ON posts_photos_albums.user_id = pages.page_id AND posts_photos_albums.user_type = 'page' LEFT JOIN `groups` ON posts_photos_albums.in_group = '1' AND posts_photos_albums.group_id = `groups`.group_id LEFT JOIN `events` ON posts_photos_albums.in_event = '1' AND posts_photos_albums.event_id = `events`.event_id WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_photos_albums.album_id = %s", secure($album_id, 'int')));
+    $get_album = $db->query(sprintf(
+      "SELECT 
+            posts_photos_albums.*, 
+            users.user_name, 
+            users.user_album_pictures, 
+            users.user_album_covers, 
+            users.user_album_timeline, 
+            pages.page_id, 
+            pages.page_name, 
+            pages.page_admin, 
+            pages.page_album_pictures, 
+            pages.page_album_covers, 
+            pages.page_album_timeline, 
+            `groups`.group_name, 
+            `groups`.group_admin, 
+            `groups`.group_album_pictures, 
+            `groups`.group_album_covers, 
+            `groups`.group_album_timeline, 
+            `events`.event_admin, 
+            `events`.event_album_covers, 
+            `events`.event_album_timeline 
+        FROM 
+            posts_photos_albums 
+        LEFT JOIN 
+            users 
+            ON posts_photos_albums.user_id = users.user_id 
+            AND posts_photos_albums.user_type = 'user' 
+        LEFT JOIN 
+            pages 
+            ON posts_photos_albums.user_id = pages.page_id 
+            AND posts_photos_albums.user_type = 'page' 
+        LEFT JOIN 
+            `groups` 
+            ON posts_photos_albums.in_group = '1' 
+            AND posts_photos_albums.group_id = `groups`.group_id 
+        LEFT JOIN 
+            `events` 
+            ON posts_photos_albums.in_event = '1' 
+            AND posts_photos_albums.event_id = `events`.event_id 
+        WHERE 
+            NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) 
+            AND posts_photos_albums.album_id = %s",
+      secure($album_id, 'int')
+    ));
     if ($get_album->num_rows == 0) {
       return false;
     }
@@ -673,7 +1024,19 @@ trait PhotosTrait
     }
     /* get album cover photo */
     $where_statement = ($album['user_type'] == "user" && !$album['in_group'] && !$album['in_event']) ? "posts.privacy = 'public' AND" : '';
-    $get_cover = $db->query(sprintf("SELECT source, blur FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE " . $where_statement . " posts_photos.album_id = %s AND posts.is_paid = '0' ORDER BY photo_id DESC LIMIT 1", secure($album_id, 'int')));
+    $get_cover = $db->query(
+      sprintf(
+        "SELECT posts_photos.source, posts_photos.blur, posts.for_adult 
+         FROM posts_photos 
+         INNER JOIN posts ON posts_photos.post_id = posts.post_id 
+         WHERE %s posts_photos.album_id = %s 
+         AND posts.is_paid = '0' 
+         ORDER BY photo_id DESC 
+         LIMIT 1",
+        $where_statement,
+        secure($album_id, 'int')
+      )
+    );
     if ($get_cover->num_rows == 0) {
       $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
       $album['cover']['blur'] = 0;
@@ -681,6 +1044,28 @@ trait PhotosTrait
       $cover = $get_cover->fetch_assoc();
       $album['cover']['source'] = $system['system_uploads'] . '/' . $cover['source'];
       $album['cover']['blur'] = $cover['blur'];
+      /* check if cover photo is for adult */
+      if ($system['adult_mode'] && $cover['for_adult']) {
+        if (!$this->_logged_in) {
+          $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+          $album['cover']['blur'] = 0;
+        } else {
+          /* check if the viewer is not (admin || moderator) && not the author of the post */
+          if ($this->_data['user_group'] == 3 && $album['author_id'] != $this->_data['user_id']) {
+            /* user not adult */
+            if (!$this->_data['user_adult']) {
+              $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+              $album['cover']['blur'] = 0;
+            } else {
+              /* user adult but not verified */
+              if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
+                $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+                $album['cover']['blur'] = 0;
+              }
+            }
+          }
+        }
+      }
     }
     /* get album total photos count */
     $get_album_photos_count = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos WHERE album_id = %s", secure($album_id, 'int')));

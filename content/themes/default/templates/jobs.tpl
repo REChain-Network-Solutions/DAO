@@ -106,8 +106,8 @@
       {/if}
 
       {if $view == "" && $promoted_jobs}
-        <div class="blogs-widget-header">
-          <div class="blogs-widget-title">{__("Promoted Jobs")}</div>
+        <div class="posts-filter">
+          <span>{__("Promoted Jobs")}</span>
         </div>
         <div class="row mb20">
           {foreach $promoted_jobs as $post}
@@ -116,90 +116,80 @@
         </div>
       {/if}
 
-      <div class="blogs-widget-header clearfix">
-        <div class="blogs-widget-title">{__("Jobs")}</div>
-        <!-- sort -->
+      <div class="posts-filter">
+        <span>{__("Jobs")}</span>
         <div class="float-end">
-          <div class="dropdown">
-            <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
-              {if !$sort || $sort == "latest"}
-                <i class="fas fa-bars fa-fw"></i> {__("Latest")}
-              {elseif $sort == "salary-high"}
-                <i class="fas fa-sort-amount-down fa-fw"></i> {__("Salary High")}
-              {elseif $sort == "salary-low"}
-                <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Salary Low")}
-              {/if}
-            </button>
+          <!-- sort -->
+          <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+            {if !$sort || $sort == "latest"}
+              <i class="fas fa-bars fa-fw"></i> {__("Latest")}
+            {elseif $sort == "salary-high"}
+              <i class="fas fa-sort-amount-down fa-fw"></i> {__("Salary High")}
+            {elseif $sort == "salary-low"}
+              <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Salary Low")}
+            {/if}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
+            <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=salary-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Salary High")}</a>
+            <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=salary-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Salary Low")}</a>
+          </div>
+          <!-- sort -->
+          <!-- location filter -->
+          {if $user->_logged_in && $system['location_finder_enabled']}
+            <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+              <i class="fa fa-map-marker-alt mr5"></i>{__("Distance")}
+            </a>
             <div class="dropdown-menu dropdown-menu-end">
-              <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
-              <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=salary-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Salary High")}</a>
-              <a href="?{if $selected_country}country={$selected_country['country_name']}&{/if}{if $distance}distance={$distance}&{/if}sort=salary-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Salary Low")}</a>
-            </div>
-          </div>
-        </div>
-        <!-- sort -->
-        <!-- location filter -->
-        {if $user->_logged_in && $system['location_finder_enabled']}
-          <div class="float-end">
-            <div class="dropdown">
-              <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
-                <i class="fa fa-map-marker-alt mr5"></i>{__("Distance")}
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <form class="ptb15 plr15" method="get" action="?">
-                  <div class="form-group">
-                    <label class="form-label">{__("Distance")}</label>
-                    <div>
-                      {if $selected_country}
-                        <input type="hidden" name="country" value="{$selected_country['country_name']}">
-                      {/if}
-                      <div class="d-grid mb10">
-                        <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
-                      </div>
-                      <div class="input-group">
-                        <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
-                        <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
-                      </div>
-                      {if $sort}
-                        <input type="hidden" name="sort" value="{$sort}">
-                      {/if}
+              <form class="ptb15 plr15" method="get" action="?">
+                <div class="form-group">
+                  <label class="form-label">{__("Distance")}</label>
+                  <div>
+                    {if $selected_country}
+                      <input type="hidden" name="country" value="{$selected_country['country_name']}">
+                    {/if}
+                    <div class="d-grid mb10">
+                      <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
                     </div>
+                    <div class="input-group">
+                      <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
+                      <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
+                    </div>
+                    {if $sort}
+                      <input type="hidden" name="sort" value="{$sort}">
+                    {/if}
                   </div>
-                  <div class="d-grid">
-                    <button type="submit" class="btn btn-sm btn-primary">{__("Filter")}</button>
-                  </div>
-                </form>
-              </div>
+                </div>
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-sm btn-primary">{__("Filter")}</button>
+                </div>
+              </form>
             </div>
-          </div>
-        {/if}
-        <!-- location filter -->
-        <!-- country filter -->
-        <div class="float-end">
-          <div class="dropdown">
-            <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
-              <i class="fa fa-globe fa-fw"></i>
-              {if $selected_country}
-                <span>{$selected_country['country_name']}</span>
-              {else}
-                <span>{__("All Countries")}</span>
-              {/if}
-            </button>
-            <div class="dropdown-menu dropdown-menu-end countries-dropdown">
-              <div class="js_scroller">
-                <a class="dropdown-item" href="?{if $distance}distance={$distance}{if $sort}&{/if}{/if}{if $sort}sort={$sort}{/if}">
-                  {__("All Countries")}
+          {/if}
+          <!-- location filter -->
+          <!-- country filter -->
+          <a href="#" data-bs-toggle="dropdown" class="countries-filter">
+            <i class="fa fa-globe fa-fw"></i>
+            {if $selected_country}
+              <span>{$selected_country['country_name']}</span>
+            {else}
+              <span>{__("All Countries")}</span>
+            {/if}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end countries-dropdown">
+            <div class="js_scroller">
+              <a class="dropdown-item" href="?{if $distance}distance={$distance}{if $sort}&{/if}{/if}{if $sort}sort={$sort}{/if}">
+                {__("All Countries")}
+              </a>
+              {foreach $countries as $country}
+                <a class="dropdown-item" href="?country={$country['country_name_native']}{if $distance}&distance={$distance}{/if}{if $sort}&sort={$sort}{/if}">
+                  {$country['country_name']}
                 </a>
-                {foreach $countries as $country}
-                  <a class="dropdown-item" href="?country={$country['country_name_native']}{if $distance}&distance={$distance}{/if}{if $sort}&sort={$sort}{/if}">
-                    {$country['country_name']}
-                  </a>
-                {/foreach}
-              </div>
+              {/foreach}
             </div>
           </div>
+          <!-- country filter -->
         </div>
-        <!-- country filter -->
       </div>
 
       {if $rows}

@@ -2,7 +2,7 @@
  * admin js
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // initialize API URLs
@@ -421,16 +421,26 @@ $(function () {
   });
   /* affiliates levels */
   $('.js_affiliates-levels').on('change', function () {
-    /* show hide divs with affiliates-levels-2 & affiliates-levels-3 ... etc to 5 */
+    /* show hide divs with affiliates-levels-2 & affiliates-levels-3 ... etc to 10 */
     var level = $(this).val();
     $('#affiliates-levels-2').hide();
     $('#affiliates-levels-3').hide();
     $('#affiliates-levels-4').hide();
     $('#affiliates-levels-5').hide();
+    $('#affiliates-levels-6').hide();
+    $('#affiliates-levels-7').hide();
+    $('#affiliates-levels-8').hide();
+    $('#affiliates-levels-9').hide();
+    $('#affiliates-levels-10').hide();
     if (level >= 2) $('#affiliates-levels-2').fadeIn();
     if (level >= 3) $('#affiliates-levels-3').fadeIn();
     if (level >= 4) $('#affiliates-levels-4').fadeIn();
     if (level >= 5) $('#affiliates-levels-5').fadeIn();
+    if (level >= 6) $('#affiliates-levels-6').fadeIn();
+    if (level >= 7) $('#affiliates-levels-7').fadeIn();
+    if (level >= 8) $('#affiliates-levels-8').fadeIn();
+    if (level >= 9) $('#affiliates-levels-9').fadeIn();
+    if (level >= 10) $('#affiliates-levels-10').fadeIn();
   });
 
 

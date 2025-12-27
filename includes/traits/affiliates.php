@@ -4,7 +4,7 @@
  * trait -> affiliates
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait AffiliatesTrait
@@ -124,7 +124,7 @@ trait AffiliatesTrait
     /* insert to users affiliates graph if not exists */
     $db->query(sprintf("INSERT INTO users_affiliates (referrer_id, referee_id) VALUES (%s, %s) ON DUPLICATE KEY UPDATE referrer_id = referrer_id", secure($referrer_id, 'int'), secure($referee_id, 'int')));
     /* get parent referrer */
-    if ($iteration < $system['affiliates_levels'] && $system['affiliates_levels'] <= 5) {
+    if ($iteration < $system['affiliates_levels'] && $system['affiliates_levels'] <= 10) {
       $get_referrer = $db->query(sprintf("SELECT user_referrer_id FROM users WHERE user_referrer_id != '' AND user_referrer_id IS NOT NULL AND user_id = %s", secure($referrer_id, 'int')));
       if ($get_referrer->num_rows > 0) {
         $referrer = $get_referrer->fetch_assoc();

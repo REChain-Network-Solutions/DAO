@@ -81,8 +81,8 @@
                         <td>
                           {$campaign['campaign_start_date']|date_format:"%e/%m/%Y"} - {$campaign['campaign_end_date']|date_format:"%e/%m/%Y"}
                         </td>
-                        <td>{print_money($campaign['campaign_budget']|number_format:2)}</td>
-                        <td>{print_money($campaign['campaign_spend']|number_format:2)}</td>
+                        <td>{print_money($campaign['campaign_budget'])}</td>
+                        <td>{print_money($campaign['campaign_spend'])}</td>
                         <td>
                           <span class="badge bg-secondary">
                             {if $campaign['campaign_bidding'] == "click"}
@@ -164,7 +164,7 @@
             <div class="card-body">
               {if $user->_data['user_wallet_balance'] == 0}
                 <div class="bs-callout bs-callout-danger mt0">
-                  {__("Your current wallet credit is")}: <strong>{print_money($user->_data['user_wallet_balance']|number_format:2)}</strong> {__("You need to")} <a href="{$system['system_url']}/wallet">{__("Replenish your wallet credit")}</a>
+                  {__("Your current wallet credit is")}: <strong>{print_money($user->_data['user_wallet_balance'])}</strong> {__("You need to")} <a href="{$system['system_url']}/wallet">{__("Replenish your wallet credit")}</a>
                 </div>
               {/if}
 
@@ -215,8 +215,8 @@
                   <div class="form-group">
                     <label class="form-label" for="campaign_bidding">{__("Campaign Bidding")}</label>
                     <select class="form-select" name="campaign_bidding">
-                      <option value="click">{__("Pay Per Click")} ({print_money($system['ads_cost_click'])})</option>
-                      <option value="view">{__("Pay Per View")} ({print_money($system['ads_cost_view'])})</option>
+                      <option value="click">{__("Pay Per Click")} ({print_money($system['ads_cost_click'], null, null, false)})</option>
+                      <option value="view">{__("Pay Per View")} ({print_money($system['ads_cost_view'], null, null, false)})</option>
                     </select>
                   </div>
                   <!-- campaign details -->
@@ -362,19 +362,36 @@
                   <div class="form-group" id="js_campaign-image">
                     <label class="form-label" for="ads_image">{__("Ads Image")}</label>
                     <div class="x-image">
-                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'>
-
-                      </button>
+                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                       <div class="x-image-loader">
                         <div class="progress x-progress">
                           <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                      <input type="hidden" class="js_x-image-input" name="ads_image">
+                      <input type="hidden" class="js_x-uploader-input" name="ads_image">
                     </div>
                     <div class="form-text">
-                      {__("The image of your ads, supported formats (JPG, PNG, GIF)")}
+                      {__("The image of your ads, supported formats (JPG, PNG, GIF, WebP, BMP)")}
+                    </div>
+                  </div>
+                  <div class="form-group" id="js_campaign-video">
+                    <label class="form-label" for="ads_video">{__("Or")} {__("Ads Video")}</label>
+                    <div class="x-image">
+                      <div class="x-image-success">
+                        {__("Uploaded Successfully")}
+                      </div>
+                      <button type="button" class="btn-close x-hidden js_x-video-remover" title='{__("Remove")}'></button>
+                      <div class="x-image-loader">
+                        <div class="progress x-progress">
+                          <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                      </div>
+                      <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
+                      <input type="hidden" class="js_x-uploader-input" name="ads_video">
+                    </div>
+                    <div class="form-text">
+                      {__("Maximum file size is")} {$system['max_video_size']/1024}{__("MB")} {__("and allowed extensions are")} ({strtoupper($system['video_extensions'])})
                     </div>
                   </div>
                 </div>
@@ -410,7 +427,7 @@
             <div class="card-body">
               {if $user->_data['user_wallet_balance'] == 0}
                 <div class="bs-callout bs-callout-danger mt0">
-                  {__("Your current wallet credit is")}: <strong>{print_money($user->_data['user_wallet_balance']|number_format:2)}</strong> {__("You need to")} <a href="{$system['system_url']}/wallet">{__("Replenish your wallet credit")}</a>
+                  {__("Your current wallet credit is")}: <strong>{print_money($user->_data['user_wallet_balance'])}</strong> {__("You need to")} <a href="{$system['system_url']}/wallet">{__("Replenish your wallet credit")}</a>
                 </div>
               {/if}
 
@@ -461,8 +478,8 @@
                   <div class="form-group">
                     <label class="form-label" for="campaign_bidding">{__("Campaign Bidding")}</label>
                     <select class="form-select" name="campaign_bidding">
-                      <option {if $campaign['campaign_bidding'] == "click"}selected{/if} value="click">{__("Pay Per Click")} ({print_money($system['ads_cost_click'])})</option>
-                      <option {if $campaign['campaign_bidding'] == "view"}selected{/if} value="view">{__("Pay Per View")} ({print_money($system['ads_cost_view'])})</option>
+                      <option {if $campaign['campaign_bidding'] == "click"}selected{/if} value="click">{__("Pay Per Click")} ({print_money($system['ads_cost_click'], null, null, false)})</option>
+                      <option {if $campaign['campaign_bidding'] == "view"}selected{/if} value="view">{__("Pay Per View")} ({print_money($system['ads_cost_view'], null, null, false)})</option>
                     </select>
                   </div>
                   <!-- campaign details -->
@@ -605,7 +622,7 @@
                       <option {if $campaign['ads_placement'] == "sidebar"}selected{/if} value="sidebar">{__("Sidebar")}</option>
                     </select>
                   </div>
-                  <div class="form-grou  {if $campaign['ads_type'] == 'post'}x-hidden{/if}" id="js_campaign-image">
+                  <div class="form-group {if $campaign['ads_type'] == 'post'}x-hidden{/if}" id="js_campaign-image">
                     <label class="form-label" for="ads_image">{__("Ads Image")}</label>
                     {if $campaign['ads_image'] == ''}
                       <div class="x-image">
@@ -616,28 +633,92 @@
                           </div>
                         </div>
                         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                        <input type="hidden" class="js_x-image-input" name="ads_image">
+                        <input type="hidden" class="js_x-uploader-input" name="ads_image">
                       </div>
                     {else}
                       <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$campaign['ads_image']}')">
-                        <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'>
-
-                        </button>
+                        <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                         <div class="x-image-loader">
                           <div class="progress x-progress">
                             <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                           </div>
                         </div>
                         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                        <input type="hidden" class="js_x-image-input" name="ads_image" value="{$campaign['ads_image']}">
+                        <input type="hidden" class="js_x-uploader-input" name="ads_image" value="{$campaign['ads_image']}">
                       </div>
                     {/if}
                     <div class="form-text">
-                      {__("The image of your ads, supported formats (JPG, PNG, GIF)")}
+                      {__("The image of your ads, supported formats (JPG, PNG, GIF, WebP, BMP)")}
                     </div>
                   </div>
+                  <div class="form-group {if $campaign['ads_type'] == 'post'}x-hidden{/if}" id="js_campaign-video">
+                    <label class="form-label" for="ads_video">{__("Or")} {__("Ads Video")}</label>
+                    {if $campaign['ads_video'] == ''}
+                      <div class="x-image">
+                        <div class="x-image-success">
+                          {__("Uploaded Successfully")}
+                        </div>
+                        <button type="button" class="btn-close x-hidden js_x-video-remover" title='{__("Remove")}'></button>
+                        <div class="x-image-loader">
+                          <div class="progress x-progress">
+                            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                          </div>
+                        </div>
+                        <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
+                        <input type="hidden" class="js_x-uploader-input" name="ads_video">
+                      </div>
+                    {else}
+                      <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$campaign['ads_video']}')">
+                        <div class="x-image-success" style="display: block;">
+                          {__("Uploaded Successfully")}
+                        </div>
+                        <button type="button" class="btn-close js_x-video-remover" title='{__("Remove")}'></button>
+                        <div class="x-image-loader">
+                          <div class="progress x-progress">
+                            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                          </div>
+                        </div>
+                        <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
+                        <input type="hidden" class="js_x-uploader-input" name="ads_video" value="{$campaign['ads_video']}">
+                      </div>
+                    {/if}
+                    <div class="form-text">
+                      {__("Maximum file size is")} {$system['max_video_size']/1024}{__("MB")} {__("and allowed extensions are")} ({strtoupper($system['video_extensions'])})
+                    </div>
+                  </div>
+                  <!-- ads details -->
+
+                  <!-- ads preview -->
+                  <div class="section-title mb20">
+                    <i class="fa fa-eye mr5"></i>{__("Preview")}
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      {if $campaign['ads_type'] == "post"}
+                        {include file='__feeds_post.tpl' post=$campaign['ads_post'] standalone=true}
+                      {else}
+                        <a href="{$campaign['ads_url']}" target="_blank">
+                          {if $campaign['ads_image']}
+                            <img class="img-fluid" src="{$system['system_uploads']}/{$campaign['ads_image']}">
+                          {else}
+                            <video class="img-fluid mx-auto d-block" src="{$system['system_uploads']}/{$campaign['ads_video']}" autoplay muted loop></video>
+                          {/if}
+                        </a>
+                        {if $campaign['ads_title'] || $campaign['ads_description']}
+                          <div class="ptb5 plr10">
+                            <p class="ads-title">
+                              <a href="{$campaign['ads_url']}" target="_blank">{$campaign['ads_title']}</a>
+                            </p>
+                            <p class="ads-descrition">
+                              {$campaign['ads_description']|truncate:200}
+                            </p>
+                          </div>
+                        {/if}
+                      {/if}
+                    </div>
+                  </div>
+                  <!-- ads preview -->
                 </div>
-                <!-- ads details -->
               </div>
 
               <!-- success -->

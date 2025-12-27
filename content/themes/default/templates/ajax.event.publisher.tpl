@@ -91,6 +91,8 @@
     <div class="form-group">
       <label class="form-label" for="location">{__("Location")}</label>
       <input type="text" class="form-control js_geocomplete" name="location" id="location">
+      <input type="hidden" name="latitude" data-geo="lat">
+      <input type="hidden" name="longitude" data-geo="lng">
     </div>
     <!-- location -->
     <!-- country -->

@@ -4,7 +4,7 @@
  * trait -> livestream
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait LiveStreamTrait
@@ -322,7 +322,7 @@ trait LiveStreamTrait
                             "height":720,
                             "fps":30,
                             "bitrate":3420,
-                            "maxResolutionUid":"1"
+                            "mixedVideoLayout":"3"
                             }
                         },
                     "storageConfig":{

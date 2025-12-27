@@ -84,6 +84,8 @@
 {__("Are you sure you want to login as this user?")}
 {__("Are you sure you want to switch back to your account?")}
 {__("Unsave")}
+{__("Your video is too short, it must be at least")}
+{__("Your video is too long, it must be at most")}
 <!-- /_js_files.tpl -->
 
 <!-- _js_files.tpl (DataTables) -->

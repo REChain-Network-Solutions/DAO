@@ -2,6 +2,8 @@
 
 namespace Agence104\LiveKit\Tests;
 
+use Agence104\LiveKit\RoomAgentDispatch;
+use Agence104\LiveKit\RoomConfiguration;
 use Agence104\LiveKit\RoomCreateOptions;
 use Agence104\LiveKit\RoomServiceClient;
 use Livekit\DataPacket\Kind;
@@ -143,7 +145,10 @@ class RoomServiceClientTest extends TestCase {
       ->setEgress($egress)
       ->setMinPlayoutDelay(10)
       ->setMaxPlayoutDelay(20)
-      ->setSyncStreams(TRUE);
+      ->setSyncStreams(TRUE)
+      ->setRoomPreset('preset-name')
+      ->setDepartureTimeout(30)
+      ->setReplayEnabled(TRUE);
 
     $this->assertEquals('my-room', $opts->getName());
     $this->assertEquals(10, $opts->getEmptyTimeout());
@@ -154,6 +159,9 @@ class RoomServiceClientTest extends TestCase {
     $this->assertEquals(10, $opts->getMinPlayoutDelay());
     $this->assertEquals(20, $opts->getMaxPlayoutDelay());
     $this->assertTrue($opts->getSyncStreams());
+    $this->assertEquals('preset-name', $opts->getRoomPreset());
+    $this->assertEquals(30, $opts->getDepartureTimeout());
+    $this->assertTrue($opts->getReplayEnabled());
 
     $this->assertEquals([
       'empty_timeout' => 10,
@@ -165,7 +173,112 @@ class RoomServiceClientTest extends TestCase {
       'min_playout_delay' => 10,
       'max_playout_delay' => 20,
       'sync_streams' => TRUE,
+      'room_preset' => 'preset-name',
+      'departure_timeout' => 30,
+      'replay_enabled' => TRUE,
     ], $opts->getData());
+
+    // Test with agent dispatch configuration
+    $agent1 = (new RoomAgentDispatch())
+      ->setAgentName('transcription-agent')
+      ->setMetadata('transcription metadata');
+    
+    $agent2 = (new RoomAgentDispatch())
+      ->setAgentName('moderation-agent');
+
+    $roomConfig = (new RoomConfiguration())
+      ->setName('agent-room')
+      ->setEmptyTimeout(300)
+      ->setMaxParticipants(20)
+      ->setAgents([$agent1, $agent2]);
+
+    $this->assertEquals('agent-room', $roomConfig->getName());
+    $this->assertCount(2, $roomConfig->getAgents());
+    
+    $configData = $roomConfig->getData();
+    $this->assertArrayHasKey('agents', $configData);
+    $this->assertCount(2, $configData['agents']);
+    $this->assertEquals('transcription-agent', $configData['agents'][0]['agent_name']);
+    $this->assertEquals('transcription metadata', $configData['agents'][0]['metadata']);
+    $this->assertEquals('moderation-agent', $configData['agents'][1]['agent_name']);
+
+    // Test roomPreset
+    $opts = (new RoomCreateOptions())
+      ->setName('preset-room')
+      ->setRoomPreset('my-preset');
+    $this->assertEquals('my-preset', $opts->getRoomPreset());
+    $data = $opts->getData();
+    $this->assertArrayHasKey('room_preset', $data);
+    $this->assertEquals('my-preset', $data['room_preset']);
+
+    // Test departureTimeout
+    $opts = (new RoomCreateOptions())
+      ->setName('departure-room')
+      ->setDepartureTimeout(60);
+    $this->assertEquals(60, $opts->getDepartureTimeout());
+    $data = $opts->getData();
+    $this->assertArrayHasKey('departure_timeout', $data);
+    $this->assertEquals(60, $data['departure_timeout']);
+
+    // Test replayEnabled
+    $opts = (new RoomCreateOptions())
+      ->setName('replay-room')
+      ->setReplayEnabled(TRUE);
+    $this->assertTrue($opts->getReplayEnabled());
+    $data = $opts->getData();
+    $this->assertArrayHasKey('replay_enabled', $data);
+    $this->assertTrue($data['replay_enabled']);
+
+    $opts->setReplayEnabled(FALSE);
+    $this->assertFalse($opts->getReplayEnabled());
+    $data = $opts->getData();
+    $this->assertFalse($data['replay_enabled']);
+
+    // Test agents array
+    $agent1 = (new RoomAgentDispatch())
+      ->setAgentName('agent-1')
+      ->setMetadata('metadata-1');
+    $agent2 = (new RoomAgentDispatch())
+      ->setAgentName('agent-2');
+
+    $opts = (new RoomCreateOptions())
+      ->setName('agents-room')
+      ->setAgents([$agent1, $agent2]);
+    
+    $this->assertCount(2, $opts->getAgents());
+    $this->assertEquals('agent-1', $opts->getAgents()[0]->getAgentName());
+    $this->assertEquals('metadata-1', $opts->getAgents()[0]->getMetadata());
+    $this->assertEquals('agent-2', $opts->getAgents()[1]->getAgentName());
+
+    $data = $opts->getData();
+    $this->assertArrayHasKey('agents', $data);
+    $this->assertCount(2, $data['agents']);
+    $this->assertIsArray($data['agents'][0]);
+    $this->assertEquals('agent-1', $data['agents'][0]['agent_name']);
+    $this->assertEquals('metadata-1', $data['agents'][0]['metadata']);
+    $this->assertEquals('agent-2', $data['agents'][1]['agent_name']);
+
+    // Test with snake_case keys in constructor
+    $opts = (new RoomCreateOptions([
+      'name' => 'snake-room',
+      'room_preset' => 'preset-snake',
+      'departure_timeout' => 45,
+      'replay_enabled' => TRUE,
+    ]));
+    $this->assertEquals('preset-snake', $opts->getRoomPreset());
+    $this->assertEquals(45, $opts->getDepartureTimeout());
+    $this->assertTrue($opts->getReplayEnabled());
+
+    // Test with camelCase keys in constructor
+    $opts = (new RoomCreateOptions([
+      'name' => 'camel-room',
+      'roomPreset' => 'preset-camel',
+      'departureTimeout' => 90,
+      'replayEnabled' => FALSE,
+    ]));
+    $this->assertEquals('preset-camel', $opts->getRoomPreset());
+    $this->assertEquals(90, $opts->getDepartureTimeout());
+    $this->assertFalse($opts->getReplayEnabled());
   }
 
   /**

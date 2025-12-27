@@ -4,7 +4,7 @@
  * ajax -> admin -> gifts
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -32,8 +32,17 @@ try {
       if (is_empty($_POST['image'])) {
         throw new Exception(__("You must upload gift image"));
       }
+      if ($system['gifts_points_enabled']) {
+        if (is_empty($_POST['points']) || !is_numeric($_POST['points']) || $_POST['points'] <= 0) {
+          throw new Exception(__("You must enter valid amount of points"));
+        }
+      }
       /* insert */
-      $db->query(sprintf("INSERT INTO gifts (image) VALUES (%s)", secure($_POST['image'])));
+      if ($system['gifts_points_enabled']) {
+        $db->query(sprintf("INSERT INTO gifts (image, points) VALUES (%s, %s)", secure($_POST['image']), secure($_POST['points'], 'int')));
+      } else {
+        $db->query(sprintf("INSERT INTO gifts (image) VALUES (%s)", secure($_POST['image'])));
+      }
       /* remove pending uploads */
       remove_pending_uploads([$_POST['image']]);
       /* return */
@@ -48,8 +57,17 @@ try {
       if (is_empty($_POST['image'])) {
         throw new Exception(__("You must upload gift image"));
       }
+      if ($system['gifts_points_enabled']) {
+        if (is_empty($_POST['points']) || !is_numeric($_POST['points']) || $_POST['points'] <= 0) {
+          throw new Exception(__("You must enter valid amount of points"));
+        }
+      }
       /* update */
-      $db->query(sprintf("UPDATE gifts SET image = %s WHERE gift_id = %s", secure($_POST['image']), secure($_GET['id'], 'int')));
+      if ($system['gifts_points_enabled']) {
+        $db->query(sprintf("UPDATE gifts SET image = %s, points = %s WHERE gift_id = %s", secure($_POST['image']), secure($_POST['points'], 'int'), secure($_GET['id'], 'int')));
+      } else {
+        $db->query(sprintf("UPDATE gifts SET image = %s WHERE gift_id = %s", secure($_POST['image']), secure($_GET['id'], 'int')));
+      }
       /* remove pending uploads */
       remove_pending_uploads([$_POST['image']]);
       /* return */

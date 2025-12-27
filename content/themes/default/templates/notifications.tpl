@@ -26,7 +26,7 @@
             <div class="card-body">
               <ul>
                 {foreach $user->_data['notifications'] as $notification}
-                  {include file='__feeds_notification.tpl'}
+                  {include file='__feeds_notification.tpl' _tpl="with-action"}
                 {/foreach}
               </ul>
 

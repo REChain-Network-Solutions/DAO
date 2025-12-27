@@ -4,7 +4,7 @@
  * settings
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // remove timeout limit
@@ -313,6 +313,9 @@ try {
         // get blogs categories
         $smarty->assign('blogs_categories', $user->get_categories("blogs_categories"));
       }
+
+      // get packages payments
+      $smarty->assign('packages_payments', $user->get_packages_payments(["get_all" => true]));
       break;
 
     case 'monetization':
@@ -432,6 +435,16 @@ try {
             $system['affiliates_percentage_4'] = $user->_data['user_permissions_group']['affiliates_percentage_4'];
             $system['affiliates_per_user_5'] = $user->_data['user_permissions_group']['affiliates_per_user_5'];
             $system['affiliates_percentage_5'] = $user->_data['user_permissions_group']['affiliates_percentage_5'];
+            $system['affiliates_per_user_6'] = $user->_data['user_permissions_group']['affiliates_per_user_6'];
+            $system['affiliates_percentage_6'] = $user->_data['user_permissions_group']['affiliates_percentage_6'];
+            $system['affiliates_per_user_7'] = $user->_data['user_permissions_group']['affiliates_per_user_7'];
+            $system['affiliates_percentage_7'] = $user->_data['user_permissions_group']['affiliates_percentage_7'];
+            $system['affiliates_per_user_8'] = $user->_data['user_permissions_group']['affiliates_per_user_8'];
+            $system['affiliates_percentage_8'] = $user->_data['user_permissions_group']['affiliates_percentage_8'];
+            $system['affiliates_per_user_9'] = $user->_data['user_permissions_group']['affiliates_per_user_9'];
+            $system['affiliates_percentage_9'] = $user->_data['user_permissions_group']['affiliates_percentage_9'];
+            $system['affiliates_per_user_10'] = $user->_data['user_permissions_group']['affiliates_per_user_10'];
+            $system['affiliates_percentage_10'] = $user->_data['user_permissions_group']['affiliates_percentage_10'];
           }
           if ($user->_data['custom_affiliates_system']) {
             $system['affiliates_per_user'] = $user->_data['affiliates_per_user'];
@@ -444,6 +457,16 @@ try {
             $system['affiliates_percentage_4'] = $user->_data['affiliates_percentage_4'];
             $system['affiliates_per_user_5'] = $user->_data['affiliates_per_user_5'];
             $system['affiliates_percentage_5'] = $user->_data['affiliates_percentage_5'];
+            $system['affiliates_per_user_6'] = $user->_data['affiliates_per_user_6'];
+            $system['affiliates_percentage_6'] = $user->_data['affiliates_percentage_6'];
+            $system['affiliates_per_user_7'] = $user->_data['affiliates_per_user_7'];
+            $system['affiliates_percentage_7'] = $user->_data['affiliates_percentage_7'];
+            $system['affiliates_per_user_8'] = $user->_data['affiliates_per_user_8'];
+            $system['affiliates_percentage_8'] = $user->_data['affiliates_percentage_8'];
+            $system['affiliates_per_user_9'] = $user->_data['affiliates_per_user_9'];
+            $system['affiliates_percentage_9'] = $user->_data['affiliates_percentage_9'];
+            $system['affiliates_per_user_10'] = $user->_data['affiliates_per_user_10'];
+            $system['affiliates_percentage_10'] = $user->_data['affiliates_percentage_10'];
           }
           /* re-assign the system variables */
           $smarty->assign('system', $system);

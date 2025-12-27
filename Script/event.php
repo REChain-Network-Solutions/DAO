@@ -4,7 +4,7 @@
  * event
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -45,6 +45,10 @@ try {
   } else {
     $event['host_name'] = ($system['show_usernames_enabled']) ?  $event['user_name'] : $event['user_firstname'] . ' ' . $event['user_lastname'];
     $event['host_url'] = $system['system_url'] . '/' . $event['user_name'];
+  }
+  /* get event distance */
+  if ($system['location_finder_enabled'] && $user->_logged_in) {
+    $event['distance'] = calculate_distance($user->_data['user_latitude'], $user->_data['user_longitude'], $event['event_latitude'], $event['event_longitude']);
   }
   /* get chatbox converstaion */
   if ($system['chat_enabled'] && $event['chatbox_enabled'] && ($event['i_joined']['is_going'] || $event['i_joined']['is_interested'])) {

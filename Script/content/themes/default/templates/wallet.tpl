@@ -61,73 +61,73 @@
             {if $wallet_transfer_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_transfer_amount|number_format:2)}</span> {__("transfer transaction successfuly sent")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_transfer_amount)}</span> {__("transfer transaction successfuly sent")}
               </div>
             {/if}
             {if $wallet_replenish_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_replenish_amount|number_format:2)}</span>
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_replenish_amount)}</span>
               </div>
             {/if}
             {if $wallet_withdraw_affiliates_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_affiliates_amount|number_format:2)}</span> {__("from your affiliates credit")}
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_affiliates_amount)}</span> {__("from your affiliates credit")}
               </div>
             {/if}
             {if $wallet_withdraw_points_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_points_amount|number_format:2)}</span> {__("from your points credit")}
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_points_amount)}</span> {__("from your points credit")}
               </div>
             {/if}
             {if $wallet_withdraw_market_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_market_amount|number_format:2)}</span> {__("from your market credit")}
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_market_amount)}</span> {__("from your market credit")}
               </div>
             {/if}
             {if $wallet_withdraw_funding_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_funding_amount|number_format:2)}</span> {__("from your funding credit")}
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_funding_amount)}</span> {__("from your funding credit")}
               </div>
             {/if}
             {if $wallet_withdraw_monetization_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_monetization_amount|number_format:2)}</span> {__("from your monetization credit")}
+                {__("Congratulation! Your wallet credit replenished successfully with")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_withdraw_monetization_amount)}</span> {__("from your monetization credit")}
               </div>
             {/if}
             {if $wallet_package_payment_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_package_payment_amount|number_format:2)}</span> {__("payment transaction successfuly done")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_package_payment_amount)}</span> {__("payment transaction successfuly done")}
               </div>
             {/if}
             {if $wallet_monetization_payment_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_monetization_payment_amount|number_format:2)}</span> {__("payment transaction successfuly done")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_monetization_payment_amount)}</span> {__("payment transaction successfuly done")}
               </div>
             {/if}
             {if $wallet_paid_post_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_paid_post_amount|number_format:2)}</span> {__("payment transaction successfuly done")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_paid_post_amount)}</span> {__("payment transaction successfuly done")}
               </div>
             {/if}
             {if $wallet_donate_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_donate_amount|number_format:2)}</span> {__("payment transaction successfuly done")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_donate_amount)}</span> {__("payment transaction successfuly done")}
               </div>
             {/if}
             {if $wallet_marketplace_amount}
               <div class="alert alert-success mb20">
                 <i class="fas fa-check-circle mr5"></i>
-                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_marketplace_amount|number_format:2)}</span> {__("payment transaction successfuly done")}
+                {__("Your")} <span class="badge rounded-pill badge-lg bg-secondary">{print_money($wallet_marketplace_amount)}</span> {__("payment transaction successfuly done")}
               </div>
             {/if}
 
@@ -141,7 +141,7 @@
                   <div class="stat-cell small">
                     <i class="fa fa-money-bill-alt bg-icon"></i>
                     <div class="h3 mtb10">
-                      {print_money($user->_data['user_wallet_balance']|number_format:2)}
+                      {print_money($user->_data['user_wallet_balance'])}
                     </div>
                   </div>
                 </div>
@@ -165,7 +165,7 @@
                 <div class="d-grid gap-2">
                   <button class="btn btn-outline-primary" data-toggle="modal" data-url="#wallet-replenish">
                     {include file='__svg_icons.tpl' icon="payments" class="main-icon mr10" width="24px" height="24px"}
-                    {__("Replenish Credit")}
+                    {__("Add Funds")}
                   </button>
                   {if $system['affiliates_enabled'] && $system['affiliates_money_transfer_enabled']}
                     <button class="btn btn-outline-primary" data-toggle="modal" data-url="#wallet-withdraw-affiliates">
@@ -223,11 +223,13 @@
                             <td>{$transaction['transaction_id']}</td>
                             <td>
                               {if $transaction['type'] == "out"}
-                                <span class="badge rounded-pill badge-lg bg-danger mr5"><i class="far fa-arrow-alt-circle-down"></i></span>
-                                <strong class="text-danger">{if $transaction['amount']}{print_money($transaction['amount']|number_format:2)}{/if}</strong>
+                                <span class="badge rounded-pill badge-lg bg-danger mr5">
+                                  <i class="far fa-arrow-alt-circle-down mr5"></i>{if $transaction['amount']}{print_money($transaction['amount'])}{/if}
+                                </span>
                               {else}
-                                <span class="badge rounded-pill badge-lg bg-success mr5"><i class="far fa-arrow-alt-circle-up"></i></span>
-                                <strong class="text-success">{if $transaction['amount']}{print_money($transaction['amount']|number_format:2)}{/if}</strong>
+                                <span class="badge rounded-pill badge-lg bg-success mr5">
+                                  <i class="far fa-arrow-alt-circle-up mr5"></i>{if $transaction['amount']}{print_money($transaction['amount'])}{/if}
+                                </span>
                               {/if}
                             </td>
                             <td>
@@ -249,7 +251,7 @@
                                   {/if}
                                 </a>
                               {elseif $transaction['node_type'] == "recharge"}
-                                {__("Replenish Credit")}
+                                {__("Add Funds")}
                               {elseif $transaction['node_type'] == "withdraw_wallet"}
                                 {__("Wallet Withdrawal")}
                               {elseif $transaction['node_type'] == "withdraw_affiliates"}
@@ -280,6 +282,18 @@
                                 {__("Paid Chat Message")}
                               {elseif $transaction['node_type'] == "paid_call"}
                                 {__("Paid Call")}
+                              {elseif $transaction['node_type'] == "blogs_module_payment"}
+                                {__("Paid Blogs")}
+                              {elseif $transaction['node_type'] == "products_module_payment"}
+                                {__("Paid Products")}
+                              {elseif $transaction['node_type'] == "funding_module_payment"}
+                                {__("Paid Funding")}
+                              {elseif $transaction['node_type'] == "offers_module_payment"}
+                                {__("Paid Offers")}
+                              {elseif $transaction['node_type'] == "jobs_module_payment"}
+                                {__("Paid Jobs")}
+                              {elseif $transaction['node_type'] == "courses_module_payment"}
+                                {__("Paid Courses")}
                               {/if}
                             </td>
                             <td><span class="js_moment" data-time="{$transaction['date']}">{$transaction['date']}</span></td>
@@ -318,7 +332,7 @@
                 <div class="col-md-9">
                   <h6>
                     <span class="badge badge-lg bg-info">
-                      {print_money($user->_data['user_wallet_balance']|number_format:2)}
+                      {print_money($user->_data['user_wallet_balance'])}
                     </span>
                   </h6>
                 </div>
@@ -351,12 +365,6 @@
                     <div class="form-check form-check-inline">
                       <input type="radio" name="method" id="method_skrill" value="skrill" class="form-check-input">
                       <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
-                    </div>
-                  {/if}
-                  {if in_array("moneypoolscash", $system['wallet_payment_method_array'])}
-                    <div class="form-check form-check-inline">
-                      <input type="radio" name="method" id="method_moneypoolscash" value="moneypoolscash" class="form-check-input">
-                      <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
                     </div>
                   {/if}
                   {if in_array("bank", $system['wallet_payment_method_array'])}
@@ -418,7 +426,7 @@
                     {foreach $payments as $payment}
                       <tr>
                         <td>{$payment@iteration}</td>
-                        <td>{print_money($payment['amount']|number_format:2)}</td>
+                        <td>{print_money($payment['amount'])}</td>
                         <td>
                           {if $payment['method'] == "custom"}
                             {$system['wallet_payment_method_custom']}

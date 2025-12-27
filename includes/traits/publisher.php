@@ -4,7 +4,7 @@
  * trait -> publisher
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait PublisherTrait
@@ -35,7 +35,7 @@ trait PublisherTrait
     }
 
     /* check max posts/hour limit */
-    $this->_check_posts_limit($args['handle'], $args['id']);
+    $this->check_posts_limit($args['handle'], $args['id']);
 
     /* check post max length */
     if ($system['max_post_length'] > 0 && $this->_data['user_group'] >= 3) {
@@ -311,6 +311,39 @@ trait PublisherTrait
       }
     }
 
+    /* check if paid modules enabled */
+    switch ($post['post_type']) {
+      case 'product':
+        if ($system['paid_products_enabled']) {
+          $this->wallet_paid_module_payment('products');
+        }
+        break;
+
+      case 'funding':
+        if ($system['paid_funding_enabled']) {
+          $this->wallet_paid_module_payment('funding');
+        }
+        break;
+
+      case 'offer':
+        if ($system['paid_offers_enabled']) {
+          $this->wallet_paid_module_payment('offers');
+        }
+        break;
+
+      case 'job':
+        if ($system['paid_jobs_enabled']) {
+          $this->wallet_paid_module_payment('jobs');
+        }
+        break;
+
+      case 'course':
+        if ($system['paid_courses_enabled']) {
+          $this->wallet_paid_module_payment('courses');
+        }
+        break;
+    }
+
     /* insert the post */
     $db->query(sprintf("INSERT INTO posts (user_id, user_type, in_wall, wall_id, in_group, group_id, group_approved, in_event, event_id, event_approved, post_type, colored_pattern, time, location, privacy, text, feeling_action, feeling_value, for_adult, is_schedule, is_anonymous, tips_enabled, for_subscriptions, subscriptions_image, is_paid, is_paid_locked, post_price, paid_text, paid_image, processing, pre_approved, has_approved, post_latitude, post_longitude) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($post['user_id'], 'int'), secure($post['user_type']), secure($post['in_wall'], 'int'), secure($post['wall_id'], 'int'), secure($post['in_group']), secure($post['group_id'], 'int'), secure($post['group_approved']), secure($post['in_event']), secure($post['event_id'], 'int'), secure($post['event_approved']), secure($post['post_type']), secure($post['colored_pattern'], 'int'), secure($post['time']), secure($post['location']), secure($post['privacy']), secure($post['text']), secure($post['feeling_action']), secure($post['feeling_value']), secure($post['for_adult']), secure($post['is_schedule']), secure($post['is_anonymous']), secure($post['tips_enabled']), secure($post['for_subscriptions']), secure($post['subscriptions_image']), secure($post['is_paid']), secure($post['is_paid_locked']), secure($post['post_price'], 'float'), secure($post['paid_text']), secure($post['paid_image']), secure($post['processing']), secure($post['pre_approved']), secure($post['has_approved']), secure($this->_data['user_latitude']), secure($this->_data['user_longitude'])));
     $post['post_id'] = $db->insert_id;
@@ -582,7 +615,7 @@ trait PublisherTrait
 
     /* parse text */
     $post['text_plain'] = htmlentities($post['text'], ENT_QUOTES, 'utf-8');
-    $post['text'] = $this->_parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post['post_id']]);
+    $post['text'] = $this->parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post['post_id']]);
 
     /* get post colored pattern */
     $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
@@ -722,7 +755,7 @@ trait PublisherTrait
    * @param array $args
    * @return string
    */
-  private function _parse($args = [])
+  public function parse($args = [])
   {
     /* validate arguments */
     $text = $args['text'];
@@ -765,11 +798,13 @@ trait PublisherTrait
 
 
   /**
-   * _check_posts_limit
+   * check_posts_limit
    * 
+   * @param string $handle
+   * @param integer $handle_id
    * @return void
    */
-  private function _check_posts_limit($handle = 'user', $handle_id = null)
+  public function check_posts_limit($handle = 'user', $handle_id = null)
   {
     global $system, $db;
     /* check max posts/hour limit */
@@ -778,7 +813,7 @@ trait PublisherTrait
       $where_query = ($handle == "page") ? sprintf("user_id = %s AND user_type = 'page'", secure($handle_id, 'int')) : sprintf("user_id = %s AND user_type = 'user'", secure($this->_data['user_id'], 'int'));
       $check_limit = $db->query("SELECT COUNT(*) as count FROM posts WHERE posts.time >= DATE_SUB(NOW(),INTERVAL 1 HOUR) AND " . $where_query);
       if ($check_limit->fetch_assoc()['count'] >= $system['max_posts_hour']) {
-        modal("MESSAGE", __("Maximum Limit Reached"), __("You have reached the maximum limit of posts/hour, please try again later"));
+        throw new Exception(__("You have reached the maximum limit of posts/hour, please try again later"));
       }
     }
   }

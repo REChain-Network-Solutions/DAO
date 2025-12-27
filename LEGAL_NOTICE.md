@@ -4,10 +4,10 @@ This repository contains **custom code written by Dmitry Sorokin** as part of an
 
 ## Licensing Information
 
-Some features in this project may interact with or depend on third-party products (e.g., **Sngine Messaging App**) distributed via [Envato/CodeCanyon](https://codecanyon.net/).
+Some features in this project may interact with or depend on third-party products (e.g., **Delus Messaging App**) distributed via [Envato/CodeCanyon](https://codecanyon.net/).
 
 🔹 **No third-party proprietary code is included** in this repository.  
-🔹 **No original code from Sngine or Zamblek is redistributed here.**  
+🔹 **No original code from Delus or Sorokin Dmitry Olegovich is redistributed here.**  
 🔹 Users must purchase a valid license directly from CodeCanyon to use or deploy the full product.
 
 > All rights and trademarks remain the property of their respective owners. This repository only contains independently created and non-infringing source code.

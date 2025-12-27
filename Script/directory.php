@@ -4,7 +4,7 @@
  * directory
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -45,7 +45,12 @@ try {
 
       // get users
       $rows = [];
-      $get_rows = $db->query("SELECT * FROM users WHERE users.user_banned = '0' " . $limit_query);
+      /* exclude pending users if approval system is enabled */
+      $approval_statement = "";
+      if ($system['users_approval_enabled']) {
+        $approval_statement = " AND users.user_approved = '1' ";
+      }
+      $get_rows = $db->query("SELECT * FROM users WHERE users.user_banned = '0' " . $approval_statement . $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
         /* get the connection between the viewer & the target */

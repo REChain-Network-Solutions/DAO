@@ -141,6 +141,29 @@
           {/if}
           <!-- going & interested -->
 
+          <!-- boost -->
+          {if $system['packages_enabled'] && $event['i_admin']}
+            {if $event['event_boosted']}
+              <button type="button" class="btn btn-md rounded-pill btn-danger js_unboost-event" data-id="{$event['event_id']}">
+                <i class="fa fa-bolt"></i>
+                <span class="d-none d-xxl-inline-block ml5">{__("Unboost")}</span>
+              </button>
+            {else}
+              {if $user->_data['can_boost_events']}
+                <button type="button" class="btn btn-md rounded-pill btn-danger js_boost-event" data-id="{$event['event_id']}">
+                  <i class="fa fa-bolt"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Boost")}</span>
+                </button>
+              {else}
+                <a href="{$system['system_url']}/packages" class="btn btn-md rounded-pill btn-danger">
+                  <i class="fa fa-bolt"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Boost Event")}</span>
+                </a>
+              {/if}
+            {/if}
+          {/if}
+          <!-- boost -->
+
           <!-- review -->
           {if $system['events_reviews_enabled']}
             {if !$event['i_admin']}
@@ -349,11 +372,7 @@
                         {__($event['reviews_count'])} {__("Reviews")}
                         {if $event['event_rate']}
                           <span class="review-stars small ml5">
-                            <i class="fa fa-star {if $event['event_rate'] >= 1}checked{/if}"></i>
-                            <i class="fa fa-star {if $event['event_rate'] >= 2}checked{/if}"></i>
-                            <i class="fa fa-star {if $event['event_rate'] >= 3}checked{/if}"></i>
-                            <i class="fa fa-star {if $event['event_rate'] >= 4}checked{/if}"></i>
-                            <i class="fa fa-star {if $event['event_rate'] >= 5}checked{/if}"></i>
+                            {include file='__stars_rate.tpl' rate=$event['event_rate']}
                           </span>
                           <span class="badge bg-light text-primary">{$event['event_rate']|number_format:1}</span>
                         {/if}
@@ -383,6 +402,14 @@
                           {$event['event_location']}
                         </div>
                       </li>
+                      {if $event['distance']}
+                        <li>
+                          <div class="about-list-item">
+                            {include file='__svg_icons.tpl' icon="walk" class="main-icon" width="24px" height="24px"}
+                            {$event['distance']}
+                          </div>
+                        </li>
+                      {/if}
                       {if $system['geolocation_enabled']}
                         <div style="margin-left: -20px; margin-right: -20px;">
                           <iframe width="100%" frameborder="0" style="border:0;" src="https://www.google.com/maps/embed/v1/place?key={$system['geolocation_key']}&amp;q={$event['event_location']}&amp;language=en"></iframe>
@@ -879,11 +906,7 @@
                   {__("Reviews")}
                   {if $event['event_rate']}
                     <span class="review-stars small ml5">
-                      <i class="fa fa-star {if $event['event_rate'] >= 1}checked{/if}"></i>
-                      <i class="fa fa-star {if $event['event_rate'] >= 2}checked{/if}"></i>
-                      <i class="fa fa-star {if $event['event_rate'] >= 3}checked{/if}"></i>
-                      <i class="fa fa-star {if $event['event_rate'] >= 4}checked{/if}"></i>
-                      <i class="fa fa-star {if $event['event_rate'] >= 5}checked{/if}"></i>
+                      {include file='__stars_rate.tpl' rate=$event['event_rate']}
                     </span>
                     <span class="badge bg-light text-primary">{$event['event_rate']|number_format:1}</span>
                   {/if}
@@ -1125,6 +1148,8 @@
                     <div class="form-group">
                       <label class="form-label" for="location">{__("Location")}</label>
                       <input type="text" class="form-control" name="location" id="location" value="{$event['event_location']}" {if $event['event_is_online'] == 1}disabled{/if}>
+                      <input type="hidden" name="latitude" data-geo="lat" value="{$event['event_latitude']}">
+                      <input type="hidden" name="longitude" data-geo="lng" value="{$event['event_longitude']}">
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="country">{__("Country")}</label>

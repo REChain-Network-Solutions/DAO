@@ -4,7 +4,7 @@
  * APIs -> modules -> monetization -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // _initMonetizationPlans
@@ -22,6 +22,7 @@ function _initMonetizationPlans()
   }
 }
 
+
 // getMonetizationPlans
 function getMonetizationPlans($req, $res)
 {
@@ -29,6 +30,7 @@ function getMonetizationPlans($req, $res)
   $monetization_plans = $user->get_monetization_plans();
   apiResponse($res, ['data' => $monetization_plans]);
 }
+
 
 // getMonetizationPlan
 function getMonetizationPlan($req, $res)
@@ -39,6 +41,7 @@ function getMonetizationPlan($req, $res)
   apiResponse($res, ['data' => $monetization_plan]);
 }
 
+
 // insertMonetizationPlan
 function insertMonetizationPlan($req, $res)
 {
@@ -48,6 +51,7 @@ function insertMonetizationPlan($req, $res)
   apiResponse($res, ['data' => $monetization_plan]);
 }
 
+
 // updateMonetizationPlan
 function updateMonetizationPlan($req, $res)
 {
@@ -56,6 +60,7 @@ function updateMonetizationPlan($req, $res)
   $updated_monetization_plan = $user->update_monetization_plan($req->params['id'], $req->body['title'], $req->body['price'], $req->body['period_num'], $req->body['period'], $req->body['custom_description'], $req->body['plan_order']);
   apiResponse($res, ['data' => $updated_monetization_plan]);
 }
+
 
 // deleteMonetizationPlan
 function deleteMonetizationPlan($req, $res)

@@ -38,7 +38,6 @@
     var fluid_videos_enabled = {if $system['fluid_videos_enabled']}true{else}false{/if};
     var auto_play_videos = {if $system['auto_play_videos']}true{else}false{/if};
     var disable_yt_player = {if $system['disable_yt_player']}true{else}false{/if};
-    var back_swipe = {if $system['system_back_swipe']}true{else}false{/if};
     {if $user->_logged_in}
       /* user */
       var user_id = "{$user->_data['user_id']}";
@@ -53,6 +52,10 @@
         accpeted_image_extensions += ", .heic, .heif";
       }
       var accpeted_video_extensions = "{$system['accpeted_video_extensions']}";
+      var video_minimum_duration = "{$system['video_minimum_duration']}";
+      var video_maximum_duration = "{$system['video_maximum_duration']}";
+      var reels_minimum_duration = "{$system['reels_minimum_duration']}";
+      var reels_maximum_duration = "{$system['reels_maximum_duration']}";
       var accpeted_audio_extensions = "{$system['accpeted_audio_extensions']}";
       var accpeted_file_extensions = "{$system['accpeted_file_extensions']}";
       var tinymce_photos_enabled = {if $system['tinymce_photos_enabled']}true{else}false{/if};
@@ -64,6 +67,10 @@
       {if $system['chat_socket_enabled']}
         var chat_socket_port = "{$system['chat_socket_port']}";
         var chat_socket_path = window.location.protocol + "//" + window.location.hostname {if !$system['chat_socket_proxied']} + ":" + chat_socket_port{/if};
+      {/if}
+      {if $system['redirect_to_mobile_apps']}
+        var messaging_app_android_link = "{$system['messaging_app_android_link']}";
+        var messaging_app_ios_link = "{$system['messaging_app_ios_link']}";
       {/if}
       var chat_typing_enabled = {if $system['chat_typing_enabled']}true{else}false{/if};
       var chat_seen_enabled = {if $system['chat_seen_enabled']}true{else}false{/if};
@@ -105,208 +112,210 @@
   <script>
     /* i18n for JS */
     var __ = [];
-    __['Ask something'] = "{__('Ask something')}";
-    __['Add Friend'] = "{__('Add Friend')}";
-    __['Friends'] = "{__('Friends')}"; 
-    __['Sent'] = "{__('Sent')}";
-    __['Following'] = "{__('Following')}";
-    __['Follow'] = "{__('Follow')}";
-    __['Pending'] = "{__('Pending')}";
-    __['Remove'] = "{__('Remove')}";
-    __['Error'] = "{__('Error')}";
-    __['Loading'] = "{__('Loading')}";
-    __['Like'] = "{__('Like')}";
-    __['Unlike'] = "{__('Unlike')}";
-    __['React'] = "{__('React')}";
-    __['Joined'] = "{__('Joined')}";
-    __['Join'] = "{__('Join')}";
-    __['Remove Admin'] = "{__('Remove Admin')}";
-    __['Make Admin'] = "{__('Make Admin')}";
-    __['Going'] = "{__('Going')}";
-    __['Interested'] = "{__('Interested')}";
-    __['Delete'] = "{__('Delete')}";
-    __['Delete Cover'] = "{__('Delete Cover')}";
-    __['Delete Picture'] = "{__('Delete Picture')}";
-    __['Delete Post'] = "{__('Delete Post')}";
-    __['Delete Comment'] = "{__('Delete Comment')}";
-    __['Delete Conversation'] = "{__('Delete Conversation')}";
-    __['Block User'] = "{__('Block User')}";
-    __['Unblock User'] = "{__('Unblock User')}";
-    __['Mark as Available'] = "{__('Mark as Available')}";
-    __['Mark as Sold'] = "{__('Mark as Sold')}";
-    __['Save Post'] = "{__('Save Post')}";
-    __['Unsave Post'] = "{__('Unsave Post')}";
-    __['Boost Post'] = "{__('Boost Post')}";
-    __['Unboost Post'] = "{__('Unboost Post')}";
-    __['Pin Post'] = "{__('Pin Post')}";
-    __['Unpin Post'] = "{__('Unpin Post')}";
-    __['For Everyone'] = "{__('For Everyone')}";
-    __['For Subscribers Only'] = "{__('For Subscribers Only')}";
-    __['Verify'] = "{__('Verify')}";
-    __['Decline'] = "{__('Decline')}";
-    __['Boost'] = "{__('Boost')}";
-    __['Unboost'] = "{__('Unboost')}";
-    __['Mark as Paid'] = "{__('Mark as Paid')}";
-    __['Read more'] = "{__('Read more')}";
-    __['Read less'] = "{__('Read less')}";
-    __['Turn On Active Status'] = "{__('Turn On Active Status')}";
-    __['Turn Off Active Status'] = "{__('Turn Off Active Status')}";
-    __['Monthly Average'] = "{__('Monthly Average')}";
-    __['PayIn Methods'] = "{__('PayIn Methods')}";
-    __['PayIn Types'] = "{__('PayIn Types')}";
-    __['Commissions Types'] = "{__('Commissions Types')}";
-    __['Packages'] = "{__('Packages')}";
-    __['Jan'] = "{__('Jan')}";
-    __['Feb'] = "{__('Feb')}";
-    __['Mar'] = "{__('Mar')}";
-    __['Apr'] = "{__('Apr')}";
-    __['May'] = "{__('May')}";
-    __['Jun'] = "{__('Jun')}";
-    __['Jul'] = "{__('Jul')}";
-    __['Aug'] = "{__('Aug')}";
-    __['Sep'] = "{__('Sep')}";
-    __['Oct'] = "{__('Oct')}";
-    __['Nov'] = "{__('Nov')}";
-    __['Dec'] = "{__('Dec')}";
-    __['Users'] = "{__('Users')}";
-    __['Pages'] = "{__('Pages')}";
-    __['Groups'] = "{__('Groups')}";
-    __['Events'] = "{__('Events')}";
-    __['Posts'] = "{__('Posts')}";
-    __['Translated'] = "{__('Translated')}";
-    __['Are you sure you want to delete this?'] = "{__('Are you sure you want to delete this?')}";
-    __['Are you sure you want to remove your cover photo?'] = "{__('Are you sure you want to remove your cover photo?')}";
-    __['Are you sure you want to remove your profile picture?'] = "{__('Are you sure you want to remove your profile picture?')}";
-    __['Are you sure you want to delete this post?'] = "{__('Are you sure you want to delete this post?')}";
-    __['Are you sure you want to delete this comment?'] = "{__('Are you sure you want to delete this comment?')}";
-    __['Are you sure you want to delete this conversation?'] = "{__('Are you sure you want to delete this conversation?')}";
-    __['Are you sure you want to block this user?'] = "{__('Are you sure you want to block this user?')}";
-    __['Are you sure you want to unblock this user?'] = "{__('Are you sure you want to unblock this user?')}";
-    __['Are you sure you want to delete your account?'] = "{__('Are you sure you want to delete your account?')}";
-    __['Are you sure you want to verify this request?'] = "{__('Are you sure you want to verify this request?')}";
-    __['Are you sure you want to decline this request?'] = "{__('Are you sure you want to decline this request?')}";
-    __['Are you sure you want to approve this request?'] = "{__('Are you sure you want to approve this request?')}";
-    __['Are you sure you want to do this?'] = "{__('Are you sure you want to do this?')}";
-    __['Factory Reset'] = "{__('Factory Reset')}";
-    __['Reset API Key'] = "{__('Reset API Key')}";
-    __['Reset JWT Key'] = "{__('Reset JWT Key')}";
-    __['Are you sure you want to reset your website?'] = "{__('Are you sure you want to reset your website?')}";
-    __['Are you sure you want to reset your API key?'] = "{__('Are you sure you want to reset your API key?')}";
-    __['Are you sure you want to reset your JWT key?'] = "{__('Are you sure you want to reset your JWT key?')}";
-    __['There is something that went wrong!'] = "{__('There is something that went wrong!')}";
-    __['There is no more data to show'] = "{__('There is no more data to show')}";
-    __['This website uses cookies to ensure you get the best experience on our website'] = "{__('This website uses cookies to ensure you get the best experience on our website')}";
-    __['Got It!'] = "{__('Got It!')}";
-    __['Learn More'] = "{__('Learn More')}";
-    __['No result found'] = "{__('No result found')}";
-    __['Turn on Commenting'] = "{__('Turn on Commenting')}";
-    __['Turn off Commenting'] = "{__('Turn off Commenting')}";
-    __['Day Mode'] = "{__('Day Mode')}";
-    __['Night Mode'] = "{__('Night Mode')}";
-    __['Message'] = "{__('Message')}";
-    __['You haved poked'] = "{__('You haved poked')}";
-    __['Touch to unmute'] = "{__('Touch to unmute')}";
-    __['Press space to see next'] = "{__('Press space to see next')}";
-    __['Visit link'] = "{__('Visit link')}";
-    __['ago'] = "{__('ago')}";
-    __['hour'] = "{__('hour')}";
-    __['hours'] = "{__('hours')}";
-    __['minute'] = "{__('minute')}";
-    __['minutes'] = "{__('minutes')}";
-    __['from now'] = "{__('from now')}";
-    __['seconds'] = "{__('seconds')}";
-    __['yesterday'] = "{__('yesterday')}";
-    __['tomorrow'] = "{__('tomorrow')}";
-    __['days'] = "{__('days')}";
-    __['Seen by'] = "{__('Seen by')}";
-    __['Ringing'] = "{__('Ringing')}";
-    __['is Offline'] = "{__('is Offline')}";
-    __['is Busy'] = "{__('is Busy')}";
-    __['No Answer'] = "{__('No Answer')}";
-    __['You can not connect to this user'] = "{__('You can not connect to this user')}";
-    __['You have an active call already'] = "{__('You have an active call already')}";
-    __['Declined the call'] = "{__('Declined the call')}";
-    __['Connection has been lost'] = "{__('Connection has been lost')}";
-    __['You must fill in all of the fields'] = "{__('You must fill in all of the fields')}";
-    __['Hide from Timeline'] = "{__('Hide from Timeline')}";
-    __['Allow on Timeline'] = "{__('Allow on Timeline')}";
-    __['Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results'] = "{__('Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results')}";
-    __['Total'] = "{__('Total')}";
-    __['Stop Campaign'] = "{__('Stop Campaign')}";
-    __['Resume Campaign'] = "{__('Resume Campaign')}";
-    __['Sorry, WebRTC is not available in your browser'] = "{__('Sorry, WebRTC is not available in your browser')}";
-    __['Not able to connect, Try again later!'] = "{__('Not able to connect, Try again later!')}";
-    __['You are ready to Go Live now'] = "{__('You are ready to Go Live now')}";
-    __['Getting permissions failed'] = "{__('Getting permissions failed')}";
-    __['Going Live'] = "{__('Going Live')}";
-    __['You are live now'] = "{__('You are live now')}";
-    __['You are offline now'] = "{__('You are offline now')}";
-    __['Online'] = "{__('Online')}";
-    __['Offline'] = "{__('Offline')}";
-    __['Video Muted'] = "{__('Video Muted')}";
-    __['Audio Muted'] = "{__('Audio Muted')}";
-    __['Live Ended'] = "{__('Live Ended')}";
-    __['Try Package'] = "{__('Try Package')}";
-    __['Are you sure you want to subscribe to this free package?'] = "{__('Are you sure you want to subscribe to this free package?')}";
-    __['Sneak Peak'] = "{__('Sneak Peak')}";
-    __['Are you sure you want to subscribe to this free plan?'] = "{__('Are you sure you want to subscribe to this free plan?')}";
-    __['Processing'] = "{__('Processing')}";
-    __['Your video is being processed, We will let you know when it is ready!'] = "{__('Your video is being processed, We will let you know when it is ready!')}";
-    __['Under Review'] = "{__('Under Review')}";
-    __['Your post is under review now, We will let you know when it is ready!'] = "{__('Your post is under review now, We will let you know when it is ready!')}";
-    __['Payment Confirmation'] = "{__('Payment Confirmation')}";
-    __['This message will cost you'] = "{__('This message will cost you')}";
-    __['This call will cost you'] = "{__('This call will cost you')}";
-    __['Login As'] = "{__('Login As')}";
-    __['Are you sure you want to login as this user?'] = "{__('Are you sure you want to login as this user?')}";
-    __['Are you sure you want to switch back to your account?'] = "{__('Are you sure you want to switch back to your account?')}";
+    __['Ask something'] = `{__('Ask something')}`;
+    __['Add Friend'] = `{__('Add Friend')}`;
+    __['Friends'] = `{__('Friends')}`; 
+    __['Sent'] = `{__('Sent')}`;
+    __['Following'] = `{__('Following')}`;
+    __['Follow'] = `{__('Follow')}`;
+    __['Pending'] = `{__('Pending')}`;
+    __['Remove'] = `{__('Remove')}`;
+    __['Error'] = `{__('Error')}`;
+    __['Loading'] = `{__('Loading')}`;
+    __['Like'] = `{__('Like')}`;
+    __['Unlike'] = `{__('Unlike')}`;
+    __['React'] = `{__('React')}`;
+    __['Joined'] = `{__('Joined')}`;
+    __['Join'] = `{__('Join')}`;
+    __['Remove Admin'] = `{__('Remove Admin')}`;
+    __['Make Admin'] = `{__('Make Admin')}`;
+    __['Going'] = `{__('Going')}`;
+    __['Interested'] = `{__('Interested')}`;
+    __['Delete'] = `{__('Delete')}`;
+    __['Delete Cover'] = `{__('Delete Cover')}`;
+    __['Delete Picture'] = `{__('Delete Picture')}`;
+    __['Delete Post'] = `{__('Delete Post')}`;
+    __['Delete Comment'] = `{__('Delete Comment')}`;
+    __['Delete Conversation'] = `{__('Delete Conversation')}`;
+    __['Block User'] = `{__('Block User')}`;
+    __['Unblock User'] = `{__('Unblock User')}`;
+    __['Mark as Available'] = `{__('Mark as Available')}`;
+    __['Mark as Sold'] = `{__('Mark as Sold')}`;
+    __['Save Post'] = `{__('Save Post')}`;
+    __['Unsave Post'] = `{__('Unsave Post')}`;
+    __['Boost Post'] = `{__('Boost Post')}`;
+    __['Unboost Post'] = `{__('Unboost Post')}`;
+    __['Pin Post'] = `{__('Pin Post')}`;
+    __['Unpin Post'] = `{__('Unpin Post')}`;
+    __['For Everyone'] = `{__('For Everyone')}`;
+    __['For Subscribers Only'] = `{__('For Subscribers Only')}`;
+    __['Verify'] = `{__('Verify')}`;
+    __['Decline'] = `{__('Decline')}`;
+    __['Boost'] = `{__('Boost')}`;
+    __['Unboost'] = `{__('Unboost')}`;
+    __['Mark as Paid'] = `{__('Mark as Paid')}`;
+    __['Read more'] = `{__('Read more')}`;
+    __['Read less'] = `{__('Read less')}`;
+    __['Turn On Active Status'] = `{__('Turn On Active Status')}`;
+    __['Turn Off Active Status'] = `{__('Turn Off Active Status')}`;
+    __['Monthly Average'] = `{__('Monthly Average')}`;
+    __['PayIn Methods'] = `{__('PayIn Methods')}`;
+    __['PayIn Types'] = `{__('PayIn Types')}`;
+    __['Commissions Types'] = `{__('Commissions Types')}`;
+    __['Packages'] = `{__('Packages')}`;
+    __['Jan'] = `{__('Jan')}`;
+    __['Feb'] = `{__('Feb')}`;
+    __['Mar'] = `{__('Mar')}`;
+    __['Apr'] = `{__('Apr')}`;
+    __['May'] = `{__('May')}`;
+    __['Jun'] = `{__('Jun')}`;
+    __['Jul'] = `{__('Jul')}`;
+    __['Aug'] = `{__('Aug')}`;
+    __['Sep'] = `{__('Sep')}`;
+    __['Oct'] = `{__('Oct')}`;
+    __['Nov'] = `{__('Nov')}`;
+    __['Dec'] = `{__('Dec')}`;
+    __['Users'] = `{__('Users')}`;
+    __['Pages'] = `{__('Pages')}`;
+    __['Groups'] = `{__('Groups')}`;
+    __['Events'] = `{__('Events')}`;
+    __['Posts'] = `{__('Posts')}`;
+    __['Translated'] = `{__('Translated')}`;
+    __['Are you sure you want to delete this?'] = `{__('Are you sure you want to delete this?')}`;
+    __['Are you sure you want to remove your cover photo?'] = `{__('Are you sure you want to remove your cover photo?')}`;
+    __['Are you sure you want to remove your profile picture?'] = `{__('Are you sure you want to remove your profile picture?')}`;
+    __['Are you sure you want to delete this post?'] = `{__('Are you sure you want to delete this post?')}`;
+    __['Are you sure you want to delete this comment?'] = `{__('Are you sure you want to delete this comment?')}`;
+    __['Are you sure you want to delete this conversation?'] = `{__('Are you sure you want to delete this conversation?')}`;
+    __['Are you sure you want to block this user?'] = `{__('Are you sure you want to block this user?')}`;
+    __['Are you sure you want to unblock this user?'] = `{__('Are you sure you want to unblock this user?')}`;
+    __['Are you sure you want to delete your account?'] = `{__('Are you sure you want to delete your account?')}`;
+    __['Are you sure you want to verify this request?'] = `{__('Are you sure you want to verify this request?')}`;
+    __['Are you sure you want to decline this request?'] = `{__('Are you sure you want to decline this request?')}`;
+    __['Are you sure you want to approve this request?'] = `{__('Are you sure you want to approve this request?')}`;
+    __['Are you sure you want to do this?'] = `{__('Are you sure you want to do this?')}`;
+    __['Factory Reset'] = `{__('Factory Reset')}`;
+    __['Reset API Key'] = `{__('Reset API Key')}`;
+    __['Reset JWT Key'] = `{__('Reset JWT Key')}`;
+    __['Are you sure you want to reset your website?'] = `{__('Are you sure you want to reset your website?')}`;
+    __['Are you sure you want to reset your API key?'] = `{__('Are you sure you want to reset your API key?')}`;
+    __['Are you sure you want to reset your JWT key?'] = `{__('Are you sure you want to reset your JWT key?')}`;
+    __['There is something that went wrong!'] = `{__('There is something that went wrong!')}`;
+    __['There is no more data to show'] = `{__('There is no more data to show')}`;
+    __['This website uses cookies to ensure you get the best experience on our website'] = `{__('This website uses cookies to ensure you get the best experience on our website')}`;
+    __['Got It!'] = `{__('Got It!')}`;
+    __['Learn More'] = `{__('Learn More')}`;
+    __['No result found'] = `{__('No result found')}`;
+    __['Turn on Commenting'] = `{__('Turn on Commenting')}`;
+    __['Turn off Commenting'] = `{__('Turn off Commenting')}`;
+    __['Day Mode'] = `{__('Day Mode')}`;
+    __['Night Mode'] = `{__('Night Mode')}`;
+    __['Message'] = `{__('Message')}`;
+    __['You haved poked'] = `{__('You haved poked')}`;
+    __['Touch to unmute'] = `{__('Touch to unmute')}`;
+    __['Press space to see next'] = `{__('Press space to see next')}`;
+    __['Visit link'] = `{__('Visit link')}`;
+    __['ago'] = `{__('ago')}`;
+    __['hour'] = `{__('hour')}`;
+    __['hours'] = `{__('hours')}`;
+    __['minute'] = `{__('minute')}`;
+    __['minutes'] = `{__('minutes')}`;
+    __['from now'] = `{__('from now')}`;
+    __['seconds'] = `{__('seconds')}`;
+    __['yesterday'] = `{__('yesterday')}`;
+    __['tomorrow'] = `{__('tomorrow')}`;
+    __['days'] = `{__('days')}`;
+    __['Seen by'] = `{__('Seen by')}`;
+    __['Ringing'] = `{__('Ringing')}`;
+    __['is Offline'] = `{__('is Offline')}`;
+    __['is Busy'] = `{__('is Busy')}`;
+    __['No Answer'] = `{__('No Answer')}`;
+    __['You can not connect to this user'] = `{__('You can not connect to this user')}`;
+    __['You have an active call already'] = `{__('You have an active call already')}`;
+    __['Declined the call'] = `{__('Declined the call')}`;
+    __['Connection has been lost'] = `{__('Connection has been lost')}`;
+    __['You must fill in all of the fields'] = `{__('You must fill in all of the fields')}`;
+    __['Hide from Timeline'] = `{__('Hide from Timeline')}`;
+    __['Allow on Timeline'] = `{__('Allow on Timeline')}`;
+    __['Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results'] = `{__('Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results')}`;
+    __['Total'] = `{__('Total')}`;
+    __['Stop Campaign'] = `{__('Stop Campaign')}`;
+    __['Resume Campaign'] = `{__('Resume Campaign')}`;
+    __['Sorry, WebRTC is not available in your browser'] = `{__('Sorry, WebRTC is not available in your browser')}`;
+    __['Not able to connect, Try again later!'] = `{__('Not able to connect, Try again later!')}`;
+    __['You are ready to Go Live now'] = `{__('You are ready to Go Live now')}`;
+    __['Getting permissions failed'] = `{__('Getting permissions failed')}`;
+    __['Going Live'] = `{__('Going Live')}`;
+    __['You are live now'] = `{__('You are live now')}`;
+    __['You are offline now'] = `{__('You are offline now')}`;
+    __['Online'] = `{__('Online')}`;
+    __['Offline'] = `{__('Offline')}`;
+    __['Video Muted'] = `{__('Video Muted')}`;
+    __['Audio Muted'] = `{__('Audio Muted')}`;
+    __['Live Ended'] = `{__('Live Ended')}`;
+    __['Try Package'] = `{__('Try Package')}`;
+    __['Are you sure you want to subscribe to this free package?'] = `{__('Are you sure you want to subscribe to this free package?')}`;
+    __['Sneak Peak'] = `{__('Sneak Peak')}`;
+    __['Are you sure you want to subscribe to this free plan?'] = `{__('Are you sure you want to subscribe to this free plan?')}`;
+    __['Processing'] = `{__('Processing')}`;
+    __['Your video is being processed, We will let you know when it is ready!'] = `{__('Your video is being processed, We will let you know when it is ready!')}`;
+    __['Under Review'] = `{__('Under Review')}`;
+    __['Your post is under review now, We will let you know when it is ready!'] = `{__('Your post is under review now, We will let you know when it is ready!')}`;
+    __['Payment Confirmation'] = `{__('Payment Confirmation')}`;
+    __['This message will cost you'] = `{__('This message will cost you')}`;
+    __['This call will cost you'] = `{__('This call will cost you')}`;
+    __['Login As'] = `{__('Login As')}`;
+    __['Are you sure you want to login as this user?'] = `{__('Are you sure you want to login as this user?')}`;
+    __['Are you sure you want to switch back to your account?'] = `{__('Are you sure you want to switch back to your account?')}`;
+    __['Your video is too short, it must be at least'] = `{__('Your video is too short, it must be at least')}`;
+    __['Your video is too long, it must be at most'] = `{__('Your video is too long, it must be at most')}`;
     /* i18n for DataTables */
-    __['Processing...'] = "{__('Processing...')}";
-    __['Search:'] = "{__('Search:')}";
-    __['Show _MENU_ entries'] = "{__('Show _MENU_ entries')}";
-    __['Showing _START_ to _END_ of _TOTAL_ entries'] = "{__('Showing _START_ to _END_ of _TOTAL_ entries')}";
-    __['Showing 0 to 0 of 0 entries'] = "{__('Showing 0 to 0 of 0 entries')}";
-    __['(filtered from _MAX_ total entries)'] = "{__('(filtered from _MAX_ total entries)')}";
-    __['Loading...'] = "{__('Loading...')}";
-    __['No matching records found'] = "{__('No matching records found')}";
-    __['No data available in table'] = "{__('No data available in table')}";
-    __['First'] = "{__('First')}";
-    __['Previous'] = "{__('Previous')}";
-    __['Next'] = "{__('Next')}";
-    __['Last'] = "{__('Last')}";
-    __[': activate to sort column ascending'] = "{__(': activate to sort column ascending')}";
-    __[': activate to sort column descending'] = "{__(': activate to sort column descending')}";
+    __['Processing...'] = `{__('Processing...')}`;
+    __['Search:'] = `{__('Search:')}`;
+    __['Show _MENU_ entries'] = `{__('Show _MENU_ entries')}`;
+    __['Showing _START_ to _END_ of _TOTAL_ entries'] = `{__('Showing _START_ to _END_ of _TOTAL_ entries')}`;
+    __['Showing 0 to 0 of 0 entries'] = `{__('Showing 0 to 0 of 0 entries')}`;
+    __['(filtered from _MAX_ total entries)'] = `{__('(filtered from _MAX_ total entries)')}`;
+    __['Loading...'] = `{__('Loading...')}`;
+    __['No matching records found'] = `{__('No matching records found')}`;
+    __['No data available in table'] = `{__('No data available in table')}`;
+    __['First'] = `{__('First')}`;
+    __['Previous'] = `{__('Previous')}`;
+    __['Next'] = `{__('Next')}`;
+    __['Last'] = `{__('Last')}`;
+    __[': activate to sort column ascending'] = `{__(': activate to sort column ascending')}`;
+    __[': activate to sort column descending'] = `{__(': activate to sort column descending')}`;
     /* i18n for OneSignal */
-    __['Subscribe to notifications'] = "{__('Subscribe to notifications')}";
-    __['You are subscribed to notifications'] = "{__('You are subscribed to notifications')}";
-    __['You have blocked notifications'] = "{__('You have blocked notifications')}";
-    __['Click to subscribe to notifications'] = "{__('Click to subscribe to notifications')}";
-    __['Thanks for subscribing!'] = "{__('Thanks for subscribing!')}";
-    __['You are subscribed to notifications'] = "{__('You are subscribed to notifications')}";
-    __['You will not receive notifications again'] = "{__('You will not receive notifications again')}";
-    __['Manage Site Notifications'] = "{__('Manage Site Notifications')}";
-    __['SUBSCRIBE'] = "{__('SUBSCRIBE')}";
-    __['UNSUBSCRIBE'] = "{__('UNSUBSCRIBE')}";
-    __['Unblock Notifications'] = "{__('Unblock Notifications')}";
-    __['Follow these instructions to allow notifications:'] = "{__('Follow these instructions to allow notifications:')}";
+    __['Subscribe to notifications'] = `{__('Subscribe to notifications')}`;
+    __['You are subscribed to notifications'] = `{__('You are subscribed to notifications')}`;
+    __['You have blocked notifications'] = `{__('You have blocked notifications')}`;
+    __['Click to subscribe to notifications'] = `{__('Click to subscribe to notifications')}`;
+    __['Thanks for subscribing!'] = `{__('Thanks for subscribing!')}`;
+    __['You are subscribed to notifications'] = `{__('You are subscribed to notifications')}`;
+    __['You will not receive notifications again'] = `{__('You will not receive notifications again')}`;
+    __['Manage Site Notifications'] = `{__('Manage Site Notifications')}`;
+    __['SUBSCRIBE'] = `{__('SUBSCRIBE')}`;
+    __['UNSUBSCRIBE'] = `{__('UNSUBSCRIBE')}`;
+    __['Unblock Notifications'] = `{__('Unblock Notifications')}`;
+    __['Follow these instructions to allow notifications:'] = `{__('Follow these instructions to allow notifications:')}`;
     /* i18n for Video Player */
-    __['Play'] = "{__('Play')}";
-    __['Pause'] = "{__('Pause')}";
-    __['Mute'] = "{__('Mute')}";
-    __['Unmute'] = "{__('Unmute')}";
-    __['Current Time'] = "{__('Current Time')}";
-    __['Duration'] = "{__('Duration')}";
-    __['Remaining Time'] = "{__('Remaining Time')}";
-    __['Fullscreen'] = "{__('Fullscreen')}";
-    __['Picture-in-Picture'] = "{__('Picture-in-Picture')}";
+    __['Play'] = `{__('Play')}`;
+    __['Pause'] = `{__('Pause')}`;
+    __['Mute'] = `{__('Mute')}`;
+    __['Unmute'] = `{__('Unmute')}`;
+    __['Current Time'] = `{__('Current Time')}`;
+    __['Duration'] = `{__('Duration')}`;
+    __['Remaining Time'] = `{__('Remaining Time')}`;
+    __['Fullscreen'] = `{__('Fullscreen')}`;
+    __['Picture-in-Picture'] = `{__('Picture-in-Picture')}`;
     /* i18n for Highcharts.js */
-    __['View Fullscreen'] = "{__('View Fullscreen')}";
-    __['Print Chart'] = "{__('Print Chart')}";
-    __['Download PNG'] = "{__('Download PNG')}";
-    __['Download JPEG'] = "{__('Download JPEG')}";
-    __['Download PDF'] = "{__('Download PDF')}";
-    __['Download SVG vector image'] = "{__('Download SVG vector image')}";
-    __['Chart context menu'] = "{__('Chart context menu')}";
+    __['View Fullscreen'] = `{__('View Fullscreen')}`;
+    __['Print Chart'] = `{__('Print Chart')}`;
+    __['Download PNG'] = `{__('Download PNG')}`;
+    __['Download JPEG'] = `{__('Download JPEG')}`;
+    __['Download PDF'] = `{__('Download PDF')}`;
+    __['Download SVG vector image'] = `{__('Download SVG vector image')}`;
+    __['Chart context menu'] = `{__('Chart context menu')}`;
   </script>
   <!-- Initialize -->
 
@@ -339,7 +348,7 @@
   <script src="{$system['system_url']}/node_modules/moment/min/moment-with-locales.min.js" {if !$user->_logged_in}defer{/if}>
     
   </script>
-  <script src="https://cdn.plyr.io/3.7.8/plyr.js" {if !$user->_logged_in}defer{/if}>
+  <script src="https://cdn.plyr.io/3.8.3/plyr.js" {if !$user->_logged_in}defer{/if}>
     
   </script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" {if !$user->_logged_in}defer{/if}>
@@ -400,7 +409,7 @@
     <!-- Voice Notes -->
 
     <!-- TinyMCE -->
-    {if in_array($page, ["admin", "blogs", "forums"])}
+    {if in_array($page, ["admin", "blogs", "forums", "support"])}
       <script src="{$system['system_url']}/node_modules/tinymce/tinymce.min.js" defer></script>
     {/if}
     <!-- TinyMCE -->
@@ -431,7 +440,7 @@
     <!-- (Twillio|LiveKit) [Audio/Video Calls] -->
     {if $system['audio_call_enabled'] || $system['video_call_enabled']}
       {if $system['audio_video_provider'] == "twilio"}
-        <script src="https://sdk.twilio.com/js/video/releases/2.32.1/twilio-video.min.js" defer></script>
+        <script src="https://sdk.twilio.com/js/video/releases/2.33.0/twilio-video.min.js" defer></script>
       {/if}
       {if $system['audio_video_provider'] == "livekit"}
         <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js" defer></script>
@@ -453,9 +462,9 @@
 
     <!-- Datatables -->
     {if in_array($page, ["admin", "ads", "wallet", "developers", "settings"])}
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css" defer />
-      <script src="https://cdn.datatables.net/2.3.3/js/dataTables.js" defer></script>
-      <script src="https://cdn.datatables.net/2.3.3/js/dataTables.bootstrap5.min.js" defer></script>
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.5/css/dataTables.bootstrap5.min.css" defer />
+      <script src="https://cdn.datatables.net/2.3.5/js/dataTables.js" defer></script>
+      <script src="https://cdn.datatables.net/2.3.5/js/dataTables.bootstrap5.min.js" defer></script>
     {/if}
     <!-- Datatables -->
 
@@ -468,7 +477,7 @@
 
     <!-- HTML2PDF -->
     {if $page == "market"}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js" defer></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.12.1/html2pdf.bundle.min.js" defer></script>
     {/if}
     <!-- HTML2PDF -->
 
@@ -977,11 +986,11 @@
       var OneSignal = window.OneSignal || [];
 
       function saveAndroidOneSignalUserId(android_onesignal_user_id) {
-        $.post(api['users/notifications'], { handle: 'update_android', id: android_onesignal_user_id });
+        $.post(api['users/push_notifications'], { handle: 'update_android', id: android_onesignal_user_id });
       }
 
       function saveIOSOneSignalUserId(io_onesignal_user_id) {
-        $.post(api['users/notifications'], { handle: 'update_ios', id: io_onesignal_user_id });
+        $.post(api['users/push_notifications'], { handle: 'update_ios', id: io_onesignal_user_id });
       }
 
       OneSignal.push(function() {
@@ -1039,14 +1048,14 @@
         OneSignal.getUserId(function(userId) {
           onesignal_push_id = userId;
           if (userId != onesignal_user_id) {
-            $.post(api['users/notifications'], { handle: 'update', id: onesignal_push_id });
+            $.post(api['users/push_notifications'], { handle: 'update', id: onesignal_push_id });
           }
         });
         OneSignal.on('subscriptionChange', function(isSubscribed) {
           if (isSubscribed == false) {
-            $.post(api['users/notifications'], { handle: 'delete' });
+            $.post(api['users/push_notifications'], { handle: 'delete' });
           } else {
-            $.post(api['users/notifications'], { handle: 'update', id: onesignal_push_id });
+            $.post(api['users/push_notifications'], { handle: 'update', id: onesignal_push_id });
           }
         });
       });

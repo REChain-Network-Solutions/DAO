@@ -59,19 +59,19 @@
                 {if $user->_data['can_write_blogs']}
                   <a class="add-quick-item" href="{$system['system_url']}/blogs/new">
                     {include file='__svg_icons.tpl' icon="blogs" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Blog")}</div>
+                    <div class="mt5">{__("Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
                   </a>
                 {/if}
                 {if $system['market_enabled']}
                   <div class="add-quick-item" data-toggle="modal" data-url="posts/product.php?do=create">
                     {include file='__svg_icons.tpl' icon="products" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Product")}</div>
+                    <div class="mt5">{__("Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
                   </div>
                 {/if}
                 {if $user->_data['can_raise_funding']}
                   <div class="add-quick-item" data-toggle="modal" data-url="posts/funding.php?do=create">
                     {include file='__svg_icons.tpl' icon="funding" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Funding")}</div>
+                    <div class="mt5">{__("Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
                   </div>
                 {/if}
                 {if $user->_data['can_create_ads']}

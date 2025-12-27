@@ -4,7 +4,7 @@
  * trait -> calls
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait CallsTrait
@@ -23,8 +23,7 @@ trait CallsTrait
   public function get_calls_history($offset = 0)
   {
     global $db, $system;
-    /* get conversations */
-    $conversations = [];
+    $calls = [];
     $offset = $args['offset'] ?? 0;
     $offset *= $system['max_results'];
     $get_calls = $db->query(sprintf(
@@ -120,7 +119,7 @@ trait CallsTrait
         $call_price = $to_user_info['user_monetization_call_price'];
         /* check if the viewer has enough balance */
         if ($this->_data['user_wallet_balance'] < $call_price) {
-          throw new Exception(__("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+          throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
         }
       }
     }

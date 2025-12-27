@@ -227,6 +227,12 @@
   {/foreach}
 
 
+{elseif $get == 'boosted_groups'}
+  {foreach $data as $_group}
+    {include file='__feeds_group.tpl' _tpl='list'}
+  {/foreach}
+
+
 {elseif $get == 'events' || $get == 'suggested_events' || $get == 'category_events' || $get == 'going_events' || $get == 'interested_events' || $get == 'invited_events'}
   {foreach $data as $_event}
     {include file='__feeds_event.tpl' _tpl='box'}
@@ -239,6 +245,12 @@
   {/foreach}
 
 
+{elseif $get == 'boosted_events'}
+  {foreach $data as $_event}
+    {include file='__feeds_event.tpl' _tpl='list'}
+  {/foreach}
+
+
 {elseif $get == 'games' || $get == 'genre_games' || $get == 'played_games'}
   {foreach $data as $_game}
     {include file='__feeds_game.tpl' _tpl='box'}
@@ -247,7 +259,7 @@
 
 {elseif $get == 'notifications'}
   {foreach $data as $notification}
-    {include file='__feeds_notification.tpl'}
+    {include file='__feeds_notification.tpl' _tpl="with-action"}
   {/foreach}
 
 

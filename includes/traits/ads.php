@@ -4,7 +4,7 @@
  * trait -> ads
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait AdsTrait
@@ -74,18 +74,17 @@ trait AdsTrait
     $get_campaigns = $db->query(sprintf("SELECT ads_campaigns.*, pages.page_name, `groups`.group_name, users.user_wallet_balance FROM ads_campaigns INNER JOIN users ON ads_campaigns.campaign_user_id = users.user_id LEFT JOIN pages ON ads_campaigns.ads_type = 'page' AND ads_campaigns.ads_page = pages.page_id LEFT JOIN `groups` ON ads_campaigns.ads_type = 'group' AND ads_campaigns.ads_group = `groups`.group_id WHERE ads_campaigns.campaign_is_approved = '1' AND ads_campaigns.campaign_is_active = '1' AND ads_campaigns.ads_placement = %s ORDER BY RAND()", secure($place)));
     if ($get_campaigns->num_rows > 0) {
       while ($campaign = $get_campaigns->fetch_assoc()) {
-        // check if viewer get 1 valid campaign
+        /* check if viewer get 1 valid campaign */
         if (count($campaigns) >= 1) {
           break;
         }
-
-        // update campaign
+        /* validate campaign */
         /* [1] -> campaign expired */
         if (strtotime($campaign['campaign_end_date']) <= strtotime($date)) {
           $db->query(sprintf("UPDATE ads_campaigns SET campaign_is_active = '0' WHERE campaign_id = %s", secure($campaign['campaign_id'], 'int')));
           continue;
         }
-        $remaining = $campaign['campaign_budget'] - $campaign['campaign_spend']; // campaign remaining (budget - spend)
+        $remaining = $campaign['campaign_budget'] - $campaign['campaign_spend'];
         /* [2] -> campaign remaining = 0 (spend == budget) */
         if ($remaining == 0) {
           $db->query(sprintf("UPDATE ads_campaigns SET campaign_is_active = '0' WHERE campaign_id = %s", secure($campaign['campaign_id'], 'int')));
@@ -106,8 +105,7 @@ trait AdsTrait
           $db->query(sprintf("UPDATE ads_campaigns SET campaign_is_active = '0' WHERE campaign_id = %s", secure($campaign['campaign_id'], 'int')));
           continue;
         }
-
-        // check if "viewer" is campaign target audience (if logged in)
+        /* check if "viewer" is campaign target audience (if logged in) */
         /* if viewer is campaign author */
         if ($this->_logged_in) {
           if (!$system['ads_author_view_enabled'] && $this->_data['user_id'] == $campaign['campaign_user_id']) {
@@ -127,8 +125,7 @@ trait AdsTrait
             continue;
           }
         }
-
-        // prepare ads URL
+        /* prepare ads URL */
         switch ($campaign['ads_type']) {
           case 'post':
             /* get the post id from post ulr */
@@ -153,16 +150,14 @@ trait AdsTrait
             $campaign['ads_url'] = $system['system_url'] . '/events/' . $campaign['ads_event'];
             break;
         }
-
-        // update campaign if bidding = view
+        /* update campaign if bidding = view */
         if ($campaign['campaign_bidding'] == "view") {
           /* update campaign spend & views */
           $db->query(sprintf("UPDATE ads_campaigns SET campaign_views = campaign_views + 1, campaign_spend = campaign_spend + %s WHERE campaign_id = %s", secure($system['ads_cost_view']), secure($campaign['campaign_id'], 'int')));
           /* decrease campaign author wallet balance */
           $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($system['ads_cost_view']), secure($campaign['campaign_user_id'], 'int')));
         }
-
-        // get campaigns
+        /* get campaigns */
         $campaigns[] = $campaign;
       }
     }
@@ -197,7 +192,7 @@ trait AdsTrait
    */
   public function get_campaign($campaign_id)
   {
-    global $db;
+    global $db, $system;
     $get_campaign = $db->query(sprintf("SELECT * FROM ads_campaigns WHERE campaign_id = %s", secure($campaign_id, 'int')));
     if ($get_campaign->num_rows == 0) {
       return false;
@@ -207,6 +202,31 @@ trait AdsTrait
     $campaign['audience_countries'] = ($campaign['audience_countries']) ? explode(',', $campaign['audience_countries']) : [];
     /* get campaign potential reach */
     $campaign['campaign_potential_reach'] = $this->campaign_potential_reach($campaign['audience_countries'], $campaign['audience_gender'], $campaign['audience_relationship']);
+    /* prepare ads URL */
+    switch ($campaign['ads_type']) {
+      case 'post':
+        /* get the post id from post ulr */
+        $ads_post_url = explode('/', $campaign['ads_post_url']);
+        $ads_post_id = end($ads_post_url);
+        $post = $this->get_post($ads_post_id);
+        if (!$post) {
+          return false;
+        }
+        $campaign['ads_post'] = $post;
+        break;
+
+      case 'page':
+        $campaign['ads_url'] = $system['system_url'] . '/pages/' . $campaign['page_name'];
+        break;
+
+      case 'group':
+        $campaign['ads_url'] = $system['system_url'] . '/groups/' . $campaign['group_name'];
+        break;
+
+      case 'event':
+        $campaign['ads_url'] = $system['system_url'] . '/events/' . $campaign['ads_event'];
+        break;
+    }
     return $campaign;
   }
 
@@ -253,7 +273,7 @@ trait AdsTrait
       throw new Exception(__("The minimum budget must be") . " " . print_money(max($system['ads_cost_click'], $system['ads_cost_view'])) . " ");
     }
     if ($this->_data['user_wallet_balance'] < $args['campaign_budget']) {
-      throw new Exception(__("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* validate campaign bidding */
     if (!in_array($args['campaign_bidding'], ['click', 'view'])) {
@@ -302,6 +322,7 @@ trait AdsTrait
         $args['ads_event'] = 'null';
         $args['ads_placement'] = 'newsfeed';
         $args['ads_image'] = '';
+        $args['ads_video'] = '';
         break;
 
       case 'page':
@@ -343,8 +364,8 @@ trait AdsTrait
       throw new Exception(__("You have to select a valid ads placement"));
     }
     /* validate ads image */
-    if ($args['ads_type'] != 'post' && is_empty($args['ads_image'])) {
-      throw new Exception(__("You have to upload an image for your ads"));
+    if ($args['ads_type'] != 'post' && is_empty($args['ads_image']) && is_empty($args['ads_video'])) {
+      throw new Exception(__("You have to upload an image or video for your ads"));
     }
     /* approval system */
     $campaign_is_approved = ($system['ads_approval_enabled']) ? '0' : '1';
@@ -370,8 +391,9 @@ trait AdsTrait
             ads_event, 
             ads_placement, 
             ads_image, 
+            ads_video,
             campaign_created_date, 
-            campaign_is_approved) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            campaign_is_approved) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
       secure($this->_data['user_id'], 'int'),
       secure($args['campaign_title']),
       secure($args['campaign_start_date'], 'datetime'),
@@ -391,6 +413,7 @@ trait AdsTrait
       secure($args['ads_event']),
       secure($args['ads_placement']),
       secure($args['ads_image']),
+      secure($args['ads_video']),
       secure($date),
       secure($campaign_is_approved)
     ));
@@ -399,7 +422,7 @@ trait AdsTrait
       $this->notify_system_admins("ads_campaign_added");
     }
     /* remove pending uploads */
-    remove_pending_uploads([$args['ads_image']]);
+    remove_pending_uploads([$args['ads_image'], $args['ads_video']]);
   }
 
 
@@ -503,6 +526,19 @@ trait AdsTrait
         $args['ads_event'] = 'null';
         break;
 
+      case 'post':
+        if (is_empty($args['ads_post_url']) || !valid_url($args['ads_post_url'])) {
+          throw new Exception(__("You have to enter a valid post URL for your ads"));
+        }
+        $args['ads_url'] = 'null';
+        $args['ads_page'] = 'null';
+        $args['ads_group'] = 'null';
+        $args['ads_event'] = 'null';
+        $args['ads_placement'] = 'newsfeed';
+        $args['ads_image'] = '';
+        $args['ads_video'] = '';
+        break;
+
       case 'page':
         if ($args['ads_page'] == "none") {
           throw new Exception(__("You have to select one for your pages for your ads"));
@@ -539,7 +575,7 @@ trait AdsTrait
       throw new Exception(__("You have to select a valid ads placement"));
     }
     /* validate ads image */
-    if (is_empty($args['ads_image'])) {
+    if ($args['ads_type'] != 'post' && is_empty($args['ads_image']) && is_empty($args['ads_video'])) {
       throw new Exception(__("You have to upload an image for your ads"));
     }
     /* approval system */
@@ -564,6 +600,7 @@ trait AdsTrait
             ads_event = %s, 
             ads_placement = %s, 
             ads_image = %s, 
+            ads_video = %s,
             campaign_is_active = '1', 
             campaign_is_approved = %s WHERE campaign_id = %s",
       secure($args['campaign_title']),
@@ -583,6 +620,7 @@ trait AdsTrait
       secure($args['ads_event']),
       secure($args['ads_placement']),
       secure($args['ads_image']),
+      secure($args['ads_video']),
       secure($campaign_is_approved),
       secure($campaign_id, 'int')
     ));
@@ -591,7 +629,7 @@ trait AdsTrait
       $this->notify_system_admins("ads_campaign_edited");
     }
     /* remove pending uploads */
-    remove_pending_uploads([$args['ads_image']]);
+    remove_pending_uploads([$args['ads_image'], $args['ads_video']]);
   }
 
 
@@ -628,6 +666,10 @@ trait AdsTrait
       _error(403);
     }
     $db->query(sprintf("DELETE FROM ads_campaigns WHERE campaign_id = %s", secure($campaign_id, 'int')));
+    /* delete ads image if exists */
+    delete_uploads_file($campaign['ads_image']);
+    /* delete ads video if exists */
+    delete_uploads_file($campaign['ads_video']);
   }
 
 

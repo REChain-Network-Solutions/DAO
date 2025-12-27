@@ -4,7 +4,7 @@
  * install wizard
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set execution time
@@ -136,6 +136,7 @@ if (isset($_POST['submit'])) {
       `ads_event` int UNSIGNED DEFAULT NULL,
       `ads_placement` enum('newsfeed','sidebar') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `ads_image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `ads_video` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `campaign_created_date` datetime NOT NULL,
       `campaign_is_active` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `campaign_is_approved` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -322,8 +323,7 @@ if (isset($_POST['submit'])) {
       `last_message_id` int UNSIGNED NOT NULL,
       `color` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `node_id` int UNSIGNED DEFAULT NULL,
-      `node_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-      `is_group` enum('1','0') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
+      `node_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -358,8 +358,31 @@ if (isset($_POST['submit'])) {
       `user_id` int UNSIGNED NOT NULL,
       `message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `video` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `voice_note` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `product_post_id` int UNSIGNED DEFAULT NULL,
+      `reaction_like_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_love_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_haha_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_yay_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_wow_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_sad_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reaction_angry_count` int UNSIGNED NOT NULL DEFAULT '0',
       `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `conversations_messages_reactions`
+    --
+
+    CREATE TABLE `conversations_messages_reactions` (
+      `id` int UNSIGNED NOT NULL,
+      `message_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `reaction` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'like',
+      `reaction_time` datetime DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -2350,6 +2373,8 @@ if (isset($_POST['submit'])) {
       `event_category` int UNSIGNED NOT NULL,
       `event_title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `event_location` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `event_latitude` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `event_longitude` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `event_country` int UNSIGNED NOT NULL,
       `event_language` int UNSIGNED NOT NULL,
       `event_description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2364,6 +2389,8 @@ if (isset($_POST['submit'])) {
       `event_album_covers` int DEFAULT NULL,
       `event_album_timeline` int DEFAULT NULL,
       `event_pinned_post` int DEFAULT NULL,
+      `event_boosted` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `event_boosted_by` int UNSIGNED DEFAULT NULL,
       `event_invited` int UNSIGNED NOT NULL DEFAULT '0',
       `event_interested` int UNSIGNED NOT NULL DEFAULT '0',
       `event_going` int UNSIGNED NOT NULL DEFAULT '0',
@@ -2600,7 +2627,8 @@ if (isset($_POST['submit'])) {
 
     CREATE TABLE `gifts` (
       `gift_id` int UNSIGNED NOT NULL,
-      `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+      `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `points` int UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -2630,6 +2658,8 @@ if (isset($_POST['submit'])) {
       `group_album_covers` int DEFAULT NULL,
       `group_album_timeline` int DEFAULT NULL,
       `group_pinned_post` int DEFAULT NULL,
+      `group_boosted` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `group_boosted_by` int UNSIGNED DEFAULT NULL,
       `group_members` int UNSIGNED NOT NULL DEFAULT '0',
       `group_monetization_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `group_monetization_min_price` float NOT NULL DEFAULT '0',
@@ -2841,6 +2871,7 @@ if (isset($_POST['submit'])) {
       `node_id` int UNSIGNED NOT NULL,
       `node_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `points` float NOT NULL,
+      `is_added` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `time` datetime NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
@@ -3154,17 +3185,23 @@ if (isset($_POST['submit'])) {
       `period` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `color` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `icon` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `custom_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `package_order` int UNSIGNED NOT NULL DEFAULT '1',
+      `package_hidden` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `verification_badge_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `package_permissions_group_id` int UNSIGNED NOT NULL DEFAULT '0',
       `allowed_blogs_categories` int NOT NULL DEFAULT '0',
       `allowed_videos_categories` int NOT NULL DEFAULT '0',
       `allowed_products` int NOT NULL DEFAULT '0',
-      `verification_badge_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `free_points` int UNSIGNED NOT NULL,
       `boost_posts_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `boost_posts` int UNSIGNED NOT NULL,
       `boost_pages_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `boost_pages` int UNSIGNED NOT NULL,
-      `custom_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
-      `package_order` int UNSIGNED NOT NULL DEFAULT '1',
+      `boost_groups_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `boost_groups` int UNSIGNED NOT NULL,
+      `boost_events_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `boost_events` int UNSIGNED NOT NULL,
       `paypal_billing_plan` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `stripe_billing_plan` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
@@ -3365,6 +3402,16 @@ if (isset($_POST['submit'])) {
       `affiliates_percentage_4` float UNSIGNED NOT NULL DEFAULT '0',
       `affiliates_per_user_5` float UNSIGNED NOT NULL DEFAULT '0',
       `affiliates_percentage_5` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_6` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_6` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_7` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_7` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_8` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_8` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_9` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_9` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_10` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_10` float UNSIGNED NOT NULL DEFAULT '0',
       `custom_points_system` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `points_per_currency` int UNSIGNED NOT NULL DEFAULT '100'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
@@ -3373,9 +3420,9 @@ if (isset($_POST['submit'])) {
     -- Dumping data for table `permissions_groups`
     --
 
-    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `stories_permission`, `posts_permission`, `schedule_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `anonymous_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `custom_points_system`, `points_per_currency`) VALUES
-    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100),
-    (2, 'Verified Permissions', '0', '0', '0', '1', '1', '1', '1', '0', '0', '1', '0', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100);
+    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `stories_permission`, `posts_permission`, `schedule_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `anonymous_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `affiliates_per_user_6`, `affiliates_percentage_6`, `affiliates_per_user_7`, `affiliates_percentage_7`, `affiliates_per_user_8`, `affiliates_percentage_8`, `affiliates_per_user_9`, `affiliates_percentage_9`, `affiliates_per_user_10`, `affiliates_percentage_10`, `custom_points_system`, `points_per_currency`) VALUES
+    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100),
+    (2, 'Verified Permissions', '0', '0', '0', '1', '1', '1', '1', '0', '0', '1', '0', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100);
 
     -- --------------------------------------------------------
 
@@ -4280,6 +4327,38 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `support_tickets`
+    --
+
+    CREATE TABLE `support_tickets` (
+      `ticket_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `agent_id` int UNSIGNED DEFAULT NULL,
+      `subject` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `status` enum('opened','in_progress','pending','solved','closed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'opened',
+      `replies` int UNSIGNED NOT NULL DEFAULT '0',
+      `created_at` datetime NOT NULL,
+      `updated_at` datetime DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `support_tickets_replies`
+    --
+
+    CREATE TABLE `support_tickets_replies` (
+      `reply_id` int UNSIGNED NOT NULL,
+      `ticket_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `created_at` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `system_countries`
     --
 
@@ -4809,13 +4888,13 @@ if (isset($_POST['submit'])) {
     (146, 'ftp_password', ''),
     (147, 'ftp_path', ''),
     (148, 'ftp_endpoint', ''),
-    (149, 'session_hash', ''),
+    (149, 'session_hash', '5oTE5Zkcf-4YQgm-35mBb-2MlbE-2wKA6-22b50ae9fb7c'),
     (150, 'unusual_login_enabled', '0'),
-    (151, 'brute_force_detection_enabled', '&#039;1&#039;'),
-    (152, 'brute_force_bad_login_limit', '&#039;5&#039;'),
-    (153, 'brute_force_lockout_time', '&#039;10&#039;'),
-    (154, 'two_factor_enabled', '&#039;1&#039;'),
-    (155, 'two_factor_type', '&#039;google&#039;'),
+    (151, 'brute_force_detection_enabled', '1'),
+    (152, 'brute_force_bad_login_limit', '5'),
+    (153, 'brute_force_lockout_time', '10'),
+    (154, 'two_factor_enabled', '1'),
+    (155, 'two_factor_type', 'google'),
     (156, 'censored_words_enabled', '1'),
     (157, 'censored_words', 'pussy, fuck, shit, asshole, dick, tits, boobs'),
     (158, 'reCAPTCHA_enabled', '0'),
@@ -4884,8 +4963,8 @@ if (isset($_POST['submit'])) {
     (221, 'affiliate_payment_method_custom', ''),
     (222, 'affiliates_min_withdrawal', '50'),
     (223, 'affiliate_payment_type', 'fixed'),
-    (224, 'affiliates_per_user', '0.15'),
-    (225, 'affiliates_percentage', '15'),
+    (224, 'affiliates_per_user', '0.25'),
+    (225, 'affiliates_percentage', '25'),
     (226, 'points_enabled', '0'),
     (227, 'points_money_withdraw_enabled', '1'),
     (228, 'points_payment_method', 'paypal,skrill'),
@@ -5005,9 +5084,9 @@ if (isset($_POST['submit'])) {
     (357, 'points_per_follow', '5'),
     (358, 'points_per_referred', '5'),
     (359, 'newsfeed_results', '12'),
-    (365, 'ads_approval_enabled', '1'),
+    (365, 'ads_approval_enabled', '0'),
     (407, 'uploads_cdn_url', ''),
-    (592, 'affiliates_levels', '3'),
+    (592, 'affiliates_levels', '5'),
     (692, 'voice_notes_durtaion', '120'),
     (693, 'voice_notes_encoding', 'wav'),
     (702, 'pages_results', '12'),
@@ -5161,7 +5240,7 @@ if (isset($_POST['submit'])) {
     (3169, 'events_reviews_replacement_enabled', '1'),
     (3310, 'posts_reviews_enabled', '1'),
     (3311, 'posts_reviews_replacement_enabled', '1'),
-    (3312, 'landing_page_template', 'Delus'),
+    (3312, 'landing_page_template', 'elengine'),
     (3313, 'authorize_net_enabled', '0'),
     (3314, 'authorize_net_api_login_id', ''),
     (3315, 'authorize_net_transaction_key', ''),
@@ -5196,8 +5275,8 @@ if (isset($_POST['submit'])) {
     (3716, 'yandex_cloud_region', ''),
     (3717, 'yandex_cloud_key', ''),
     (3718, 'yandex_cloud_secret', ''),
-    (3719, 'points_per_post_comment', '6'),
-    (3720, 'points_per_post_reaction', '6'),
+    (3719, 'points_per_post_comment', '5'),
+    (3720, 'points_per_post_reaction', '5'),
     (3754, 'profile_posts_updates_disabled', '0'),
     (3844, 'monetization_max_paid_post_price', '0'),
     (3845, 'monetization_max_plan_price', '0'),
@@ -5277,7 +5356,7 @@ if (isset($_POST['submit'])) {
     (5210, 'market_cod_payment_enabled', '0'),
     (5211, 'chunk_upload_size', '100'),
     (5719, 'smooth_infinite_scroll', '0'),
-    (5771, 'newsfeed_merge_enabled', '1'),
+    (5771, 'newsfeed_merge_enabled', '0'),
     (5772, 'merge_recent_results', '12'),
     (5773, 'merge_popular_results', '3'),
     (5774, 'merge_discover_results', '3'),
@@ -5315,14 +5394,14 @@ if (isset($_POST['submit'])) {
     (7101, 'whitelist_providers', ''),
     (7394, 'allow_heif_images', '0'),
     (7501, 'affiliate_payment_to', 'buyer'),
-    (7502, 'affiliates_per_user_2', '0.10'),
-    (7503, 'affiliates_percentage_2', '10'),
-    (7504, 'affiliates_per_user_3', '0.05'),
-    (7505, 'affiliates_percentage_3', '5'),
-    (7506, 'affiliates_per_user_4', ''),
-    (7507, 'affiliates_percentage_4', ''),
-    (7508, 'affiliates_per_user_5', ''),
-    (7509, 'affiliates_percentage_5', ''),
+    (7502, 'affiliates_per_user_2', '0.20'),
+    (7503, 'affiliates_percentage_2', '20'),
+    (7504, 'affiliates_per_user_3', '0.15'),
+    (7505, 'affiliates_percentage_3', '15'),
+    (7506, 'affiliates_per_user_4', '0.10'),
+    (7507, 'affiliates_percentage_4', '10'),
+    (7508, 'affiliates_per_user_5', '0.05'),
+    (7509, 'affiliates_percentage_5', '5'),
     (7522, 'turnstile_enabled', '0'),
     (7523, 'turnstile_site_key', ''),
     (7524, 'turnstile_secret_key', ''),
@@ -5331,7 +5410,7 @@ if (isset($_POST['submit'])) {
     (7640, 'cronjob_undelivered_orders', '1'),
     (8259, 'system_api_key', ''),
     (8260, 'system_api_secret', ''),
-    (8272, 'system_jwt_key', ''),
+    (8272, 'system_jwt_key', '2b9023ed83bc6dfcd03c5e00b28355ae'),
     (8389, 'onesignal_messenger_notification_enabled', '0'),
     (8390, 'onesignal_messenger_app_id', ''),
     (8391, 'onesignal_messenger_api_key', ''),
@@ -5343,7 +5422,7 @@ if (isset($_POST['submit'])) {
     (8491, 'cloudflare_r2_key', ''),
     (8492, 'cloudflare_r2_secret', ''),
     (8493, 'cloudflare_r2_endpoint', ''),
-    (8501, 'cloudflare_r2_custom_domain', 'https://cloud.Delus.com'),
+    (8501, 'cloudflare_r2_custom_domain', ''),
     (8691, 'chat_socket_enabled', '0'),
     (8692, 'chat_socket_port', '3000'),
     (8693, 'chat_socket_ssl_crt', ''),
@@ -5366,7 +5445,47 @@ if (isset($_POST['submit'])) {
     (10315, 'pro_users_widget_enabled', '1'),
     (10316, 'pro_page_widget_enabled', '1'),
     (10534, 'name_max_length', '12'),
-    (10735, 'chat_socket_proxied', '1');
+    (10735, 'chat_socket_proxied', '1'),
+    (11521, 'pro_groups_widget_enabled', '0'),
+    (11522, 'pro_events_widget_enabled', '0'),
+    (11668, 'plisio_enabled', '0'),
+    (11669, 'plisio_secret_key', ''),
+    (11670, 'chat_videos_enabled', '1'),
+    (11687, 'market_digital_products_enabled', '1'),
+    (11760, 'ageverif_enabled', '0'),
+    (11761, 'ageverif_api_key', ''),
+    (11822, 'reels_minimum_duration', '0'),
+    (11823, 'reels_maximum_duration', '0'),
+    (11919, 'video_minimum_duration', '0'),
+    (11920, 'video_maximum_duration', '0'),
+    (12025, 'paid_blogs_enabled', '0'),
+    (12026, 'paid_blogs_cost', '0'),
+    (12027, 'paid_products_enabled', '0'),
+    (12028, 'paid_products_cost', '0'),
+    (12029, 'paid_funding_enabled', '0'),
+    (12030, 'paid_funding_cost', '0'),
+    (12031, 'paid_offers_enabled', '0'),
+    (12032, 'paid_offers_cost', '0'),
+    (12033, 'paid_jobs_enabled', '0'),
+    (12034, 'paid_jobs_cost', '0'),
+    (12035, 'paid_courses_enabled', '0'),
+    (12036, 'paid_courses_cost', '0'),
+    (12293, 'redirect_to_mobile_apps', '0'),
+    (12294, 'messaging_app_android_link', ''),
+    (12295, 'messaging_app_ios_link', ''),
+    (12320, 'gifts_points_enabled', '0'),
+    (12369, 'blogs_widget_enabled', '1'),
+    (12371, 'support_center_enabled', '1'),
+    (14111, 'affiliates_per_user_6', ''),
+    (14112, 'affiliates_percentage_6', ''),
+    (14113, 'affiliates_per_user_7', ''),
+    (14114, 'affiliates_percentage_7', ''),
+    (14115, 'affiliates_per_user_8', ''),
+    (14116, 'affiliates_percentage_8', ''),
+    (14117, 'affiliates_per_user_9', ''),
+    (14118, 'affiliates_percentage_9', ''),
+    (14119, 'affiliates_per_user_10', ''),
+    (14120, 'affiliates_percentage_10', '');
 
     -- --------------------------------------------------------
 
@@ -5452,6 +5571,8 @@ if (isset($_POST['submit'])) {
       `user_subscription_date` datetime DEFAULT NULL,
       `user_boosted_posts` int UNSIGNED NOT NULL DEFAULT '0',
       `user_boosted_pages` int UNSIGNED NOT NULL DEFAULT '0',
+      `user_boosted_groups` int UNSIGNED NOT NULL DEFAULT '0',
+      `user_boosted_events` int UNSIGNED NOT NULL DEFAULT '0',
       `user_started` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `user_verified` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `user_banned` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -5567,6 +5688,16 @@ if (isset($_POST['submit'])) {
       `affiliates_percentage_4` float UNSIGNED NOT NULL DEFAULT '0',
       `affiliates_per_user_5` float UNSIGNED NOT NULL DEFAULT '0',
       `affiliates_percentage_5` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_6` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_6` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_7` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_7` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_8` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_8` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_9` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_9` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_per_user_10` float UNSIGNED NOT NULL DEFAULT '0',
+      `affiliates_percentage_10` float UNSIGNED NOT NULL DEFAULT '0',
       `points_earned` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `user_points` float NOT NULL DEFAULT '0',
       `user_wallet_balance` float NOT NULL DEFAULT '0',
@@ -5585,6 +5716,8 @@ if (isset($_POST['submit'])) {
       `user_free_tried` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `coinbase_hash` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `coinbase_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `plisio_hash` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `plisio_txn_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `is_fake` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
@@ -5693,6 +5826,18 @@ if (isset($_POST['submit'])) {
       `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `sent_date` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `users_packages_points`
+    --
+
+    CREATE TABLE `users_packages_points` (
+      `id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `package_id` int UNSIGNED NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -5973,6 +6118,13 @@ if (isset($_POST['submit'])) {
       ADD PRIMARY KEY (`message_id`),
       ADD KEY `conversation_id` (`conversation_id`),
       ADD KEY `user_id` (`user_id`);
+
+    --
+    -- Indexes for table `conversations_messages_reactions`
+    --
+    ALTER TABLE `conversations_messages_reactions`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `post_id_user_id` (`message_id`,`user_id`);
 
     --
     -- Indexes for table `conversations_users`
@@ -6760,6 +6912,22 @@ if (isset($_POST['submit'])) {
       ADD UNIQUE KEY `user_id_node_id_node_type` (`user_id`,`node_id`,`node_type`) USING BTREE;
 
     --
+    -- Indexes for table `support_tickets`
+    --
+    ALTER TABLE `support_tickets`
+      ADD PRIMARY KEY (`ticket_id`),
+      ADD KEY `user_id` (`user_id`),
+      ADD KEY `agent_id` (`agent_id`) USING BTREE;
+
+    --
+    -- Indexes for table `support_tickets_replies`
+    --
+    ALTER TABLE `support_tickets_replies`
+      ADD PRIMARY KEY (`reply_id`),
+      ADD KEY `user_id` (`user_id`),
+      ADD KEY `ticket_id` (`ticket_id`) USING BTREE;
+
+    --
     -- Indexes for table `system_countries`
     --
     ALTER TABLE `system_countries`
@@ -6890,6 +7058,13 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `users_merits`
       ADD PRIMARY KEY (`id`);
+
+    --
+    -- Indexes for table `users_packages_points`
+    --
+    ALTER TABLE `users_packages_points`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `user_id_poked_id` (`user_id`,`package_id`) USING BTREE;
 
     --
     -- Indexes for table `users_pokes`
@@ -7055,6 +7230,12 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `conversations_messages`
       MODIFY `message_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `conversations_messages_reactions`
+    --
+    ALTER TABLE `conversations_messages_reactions`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `conversations_users`
@@ -7669,6 +7850,18 @@ if (isset($_POST['submit'])) {
       MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `support_tickets`
+    --
+    ALTER TABLE `support_tickets`
+      MODIFY `ticket_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `support_tickets_replies`
+    --
+    ALTER TABLE `support_tickets_replies`
+      MODIFY `reply_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `system_countries`
     --
     ALTER TABLE `system_countries`
@@ -7696,7 +7889,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `system_options`
     --
     ALTER TABLE `system_options`
-      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11171;
+      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15718;
 
     --
     -- AUTO_INCREMENT for table `system_reactions`
@@ -7762,6 +7955,12 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `users_merits`
     --
     ALTER TABLE `users_merits`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `users_packages_points`
+    --
+    ALTER TABLE `users_packages_points`
       MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
@@ -7837,12 +8036,6 @@ if (isset($_POST['submit'])) {
       MODIFY `widget_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
     COMMIT;
 
-    /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-    /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-    /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-    
-
-    
     ";
   $db->multi_query($structure) or _error("Error", $db->error);
 
@@ -7852,16 +8045,15 @@ if (isset($_POST['submit'])) {
   } while (mysqli_more_results($db) && mysqli_next_result($db));
 
 
-  // update permissions_groups set all groups to have this offers_permission_read = 1
-  $db->query("UPDATE permissions_groups SET offers_permission_read = '1'") or _error("Error", $db->error);
-
+  // generate system JWT key
+  $system_jwt_key = generate_jwt_key();
 
   // update system options
   update_system_options([
     'system_email' => secure($_POST['admin_email']),
-    'session_hash' => secure($session_hash)
+    'session_hash' => secure($session_hash),
+    'system_jwt_key' => secure($system_jwt_key)
   ], false);
-
 
   // add the admin account
   $db->query(sprintf("INSERT INTO users (user_group, user_email, user_name, user_firstname, user_password, user_gender, user_email_verified, user_activated, user_approved, user_verified, user_started, user_registered) VALUES ('1', %s, %s, %s, %s, '1', '1', '1', '1', '1', '1', %s)", secure($_POST['admin_email']), secure($_POST['admin_username']), secure($_POST['admin_username']), secure(_password_hash($_POST['admin_password'])), secure(gmdate('Y-m-d H:i:s')))) or _error("Error", $db->error);

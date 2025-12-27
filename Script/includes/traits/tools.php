@@ -4,7 +4,7 @@
  * trait -> tools
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait ToolsTrait
@@ -19,20 +19,20 @@ trait ToolsTrait
    * 
    * @param integer $users_num
    * @param string $default_password
-   * @param boolean $random_Avatar
-   * @param string $language
+   * @param boolean $random_avatar
+   * @param string $names_language
    * 
    * @return integer
    */
-  public function fake_users_generator($users_num, $default_password, $random_Avatar, $language)
+  public function fake_users_generator($users_num, $default_password, $random_avatar, $names_language)
   {
     global $db, $system, $date;
     /* default password */
     $default_password = ($default_password) ? $default_password : "123456789";
     /* random Avatar */
-    $random_Avatar = ($random_Avatar) ? true : false;
+    $random_avatar = ($random_avatar) ? true : false;
     /* init Faker */
-    $faker = Faker\Factory::create($language);
+    $faker = Faker\Factory::create($names_language);
     /* random genders */
     $genders = ['male', 'female'];
     /* fake generator */
@@ -43,7 +43,7 @@ trait ToolsTrait
       $fake_gender = array_rand($genders);
       $fake_firstname = $faker->firstName($genders[$fake_gender]);
       $fake_lastname = $faker->lastName;
-      if ($random_Avatar) {
+      if ($random_avatar) {
         try {
           $fake_avatar = save_picture_from_url($this->get_random_profile_picture());
         } catch (Exception $e) {
@@ -64,8 +64,9 @@ trait ToolsTrait
           user_registered, 
           user_activated, 
           user_picture, 
+          user_approved,
           is_fake
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, '1', %s, '1')",
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, '1', %s, '1', '1')",
         secure($fake_username),
         secure($fake_email),
         secure(_password_hash($default_password)),
@@ -86,26 +87,27 @@ trait ToolsTrait
    * fake_pages_generator
    * 
    * @param integer $pages_num
-   * @param boolean $random_Avatar
-   * @param string $language
+   * @param boolean $random_avatar
+   * @param string $names_language
    * @param integer $category
    * @param integer $country
+   * @param integer $language
    * 
    * @return integer
    */
-  public function fake_pages_generator($pages_num, $random_Avatar, $language, $category, $country)
+  public function fake_pages_generator($pages_num, $random_avatar, $names_language, $category, $country, $language)
   {
     global $db, $system, $date;
     /* random Avatar */
-    $random_Avatar = ($random_Avatar) ? true : false;
+    $random_avatar = ($random_avatar) ? true : false;
     /* init Faker */
-    $faker = Faker\Factory::create($language);
+    $faker = Faker\Factory::create($names_language);
     /* fake generator */
     $generated = 0;
     while ($generated < $pages_num) {
       $fake_username = strtolower(str_replace(".", "_", $faker->userName)) . "_" . get_hash_key(4);
       $fake_title = $faker->firstName("male");
-      if ($random_Avatar) {
+      if ($random_avatar) {
         try {
           $fake_avatar = save_picture_from_url($this->get_random_profile_picture());
         } catch (Exception $e) {
@@ -115,7 +117,29 @@ trait ToolsTrait
         $fake_avatar = 'null';
       }
       /* insert new page */
-      $query = $db->query(sprintf("INSERT INTO pages (page_admin, page_category, page_name, page_title, page_description, page_picture, page_country, page_date, is_fake) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, '1')", secure($this->_data['user_id'], 'int'), secure($category, 'int'), secure($fake_username), secure($fake_title), secure($fake_title), secure($fake_avatar), secure($country), secure($date)));
+      $query = $db->query(sprintf(
+        "INSERT INTO pages (
+          page_admin, 
+          page_category, 
+          page_name, 
+          page_title, 
+          page_description, 
+          page_picture, 
+          page_country, 
+          page_language, 
+          page_date, 
+          is_fake
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, '1')",
+        secure($this->_data['user_id'], 'int'),
+        secure($category, 'int'),
+        secure($fake_username),
+        secure($fake_title),
+        secure($fake_title),
+        secure($fake_avatar),
+        secure($country),
+        secure($language),
+        secure($date)
+      ));
       if (!$query) continue;
       $generated++;
       /* get page_id */
@@ -133,26 +157,27 @@ trait ToolsTrait
    * fake_groups_generator
    * 
    * @param integer $groups_num
-   * @param boolean $random_Avatar
-   * @param string $language
+   * @param boolean $random_avatar
+   * @param string $names_language
    * @param integer $category
    * @param integer $country
+   * @param integer $language
    * 
    * @return integer
    */
-  public function fake_groups_generator($groups_num, $random_Avatar, $language, $category, $country)
+  public function fake_groups_generator($groups_num, $random_avatar, $names_language, $category, $country, $language)
   {
     global $db, $system, $date;
     /* random Avatar */
-    $random_Avatar = ($random_Avatar) ? true : false;
+    $random_avatar = ($random_avatar) ? true : false;
     /* init Faker */
-    $faker = Faker\Factory::create($language);
+    $faker = Faker\Factory::create($names_language);
     /* fake generator */
     $generated = 0;
     while ($generated < $groups_num) {
       $fake_username = strtolower(str_replace(".", "_", $faker->userName)) . "_" . get_hash_key(4);
       $fake_title = $faker->firstName("male");
-      if ($random_Avatar) {
+      if ($random_avatar) {
         try {
           $fake_avatar = save_picture_from_url($this->get_random_profile_picture());
         } catch (Exception $e) {
@@ -162,7 +187,30 @@ trait ToolsTrait
         $fake_avatar = 'null';
       }
       /* insert new group */
-      $query = $db->query(sprintf("INSERT INTO `groups` (group_privacy, group_admin, group_name, group_category, group_title, group_description, group_picture, group_country, group_date, is_fake) VALUES ('public', %s, %s, %s, %s, %s, %s, %s, %s, '1')", secure($this->_data['user_id'], 'int'), secure($fake_username), secure($category), secure($fake_title), secure($fake_title), secure($fake_avatar), secure($country), secure($date)));
+      $query = $db->query(sprintf(
+        "INSERT INTO `groups` (
+          group_privacy, 
+          group_admin, 
+          group_name, 
+          group_category, 
+          group_title, 
+          group_description, 
+          group_picture, 
+          group_country, 
+          group_language, 
+          group_date, 
+          is_fake
+        ) VALUES ('public', %s, %s, %s, %s, %s, %s, %s, %s, %s, '1')",
+        secure($this->_data['user_id'], 'int'),
+        secure($fake_username),
+        secure($category),
+        secure($fake_title),
+        secure($fake_title),
+        secure($fake_avatar),
+        secure($country),
+        secure($language),
+        secure($date)
+      ));
       if (!$query) continue;
       $generated++;
       /* get group_id */

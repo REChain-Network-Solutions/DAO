@@ -82,6 +82,18 @@
                         {/if}
                         {__("Verified badge")}
                       </li>
+
+                      <!-- Free Points -->
+                      <li class="list-group-item">
+                        {if $package['free_points'] > 0}
+                          {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{$package['free_points']} {__("Free points")}
+                        {else}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Free points")}
+                        {/if}
+                      </li>
+                      <!-- Free Points -->
+
+                      <!-- Boosts -->
                       <li class="list-group-item">
                         {if !$package['boost_posts_enabled']}
                           {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Posts promotion")}
@@ -96,6 +108,21 @@
                           {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_pages']} {__("Pages")}
                         {/if}
                       </li>
+                      <li class="list-group-item">
+                        {if !$package['boost_groups_enabled']}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Groups promotion")}
+                        {else}
+                          {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_groups']} {__("Groups")}
+                        {/if}
+                      </li>
+                      <li class="list-group-item">
+                        {if !$package['boost_events_enabled']}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Events promotion")}
+                        {else}
+                          {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_events']} {__("Events")}
+                        {/if}
+                      </li>
+                      <!-- Boosts -->
 
                       <!-- Permissions -->
                       <li class="list-group-item">

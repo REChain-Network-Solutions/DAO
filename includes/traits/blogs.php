@@ -4,7 +4,7 @@
  * trait -> blogs
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait BlogsTrait
@@ -87,7 +87,7 @@ trait BlogsTrait
       throw new Exception(__("To use this feature your account must be verified"));
     }
     /* check max posts/hour limit */
-    $this->_check_posts_limit(($publish_to == 'page') ? 'page' : 'user', ($publish_to == 'page') ? $page_id : null);
+    $this->check_posts_limit(($publish_to == 'page') ? 'page' : 'user', ($publish_to == 'page') ? $page_id : null);
     /* check tips permission */
     if (!$this->_data['can_receive_tip'] && $tips_enabled) {
       throw new Exception(__("You don't have the permission to do this"));
@@ -193,6 +193,10 @@ trait BlogsTrait
     if ($this->check_posts_needs_approval($author_id, $author_type)) {
       $pre_approved = 0;
       $has_approved = 0;
+    }
+    /* check if paid modules enabled */
+    if ($system['paid_blogs_enabled']) {
+      $this->wallet_paid_module_payment('blogs');
     }
     /* publish to */
     switch ($publish_to) {

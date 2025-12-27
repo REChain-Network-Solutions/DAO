@@ -35,8 +35,8 @@
               <th>{__("ID")}</th>
               <th>{__("Node")}</th>
               <th>{__("Type")}</th>
-              <th>{__("Reporter By")}</th>
-              <th>{__("Reporter For")}</th>
+              <th>{__("By")}</th>
+              <th>{__("Reason")}</th>
               <th>{__("Time")}</th>
               <th>{__("Actions")}</th>
             </tr>
@@ -82,6 +82,10 @@
                     <a class="btn btn-sm btn-light" href="{$row['url']}" target="_blank">
                       <i class="fa fa-eye mr5"></i>{__("View Reply")}
                     </a>
+                  {elseif $row['node_type'] == "ads_campaign"}
+                    <a class="btn btn-sm btn-light" href="{$row['url']}" target="_blank">
+                      <i class="fa fa-eye mr5"></i>{__("View Campaign")}
+                    </a>
                   {/if}
                 </td>
                 <td>
@@ -121,6 +125,10 @@
                     </a>
                   {elseif $row['node_type'] == "forum_reply"}
                     <a data-bs-toggle="tooltip" title='{__("Edit")}' target="_blank" href="{$system['system_url']}/forums/edit-reply/{$row['node_id']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
+                      <i class="fa fa-pencil-alt"></i>
+                    </a>
+                  {elseif $row['node_type'] == "ads_campaign"}
+                    <a data-bs-toggle="tooltip" title='{__("Edit")}' target="_blank" href="{$system['system_url']}/ads/edit/{$row['node_id']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
                       <i class="fa fa-pencil-alt"></i>
                     </a>
                   {/if}

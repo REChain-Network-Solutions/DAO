@@ -4,7 +4,7 @@
  * trait -> reviews
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait ReviewsTrait
@@ -34,11 +34,11 @@ trait ReviewsTrait
         break;
 
       case 'group':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN groups ON reviews.node_type = 'group' AND reviews.node_id = groups.group_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN `groups` ON reviews.node_type = 'group' AND reviews.node_id = `groups`.group_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
         break;
 
       case 'event':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN events ON reviews.node_type = 'event' AND reviews.node_id = events.event_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN events ON reviews.node_type = 'event' AND reviews.node_id = `events`.event_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
         break;
 
       case 'post':

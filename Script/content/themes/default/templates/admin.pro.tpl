@@ -118,6 +118,42 @@
           </div>
         </div>
 
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Pro Groups Widget")}</div>
+            <div class="form-text d-none d-sm-block">
+              {__("Enable pro groups widget to be displayed on the home page")}
+            </div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="pro_groups_widget_enabled">
+              <input type="checkbox" name="pro_groups_widget_enabled" id="pro_groups_widget_enabled" {if $system['pro_groups_widget_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="events" class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Pro Events Widget")}</div>
+            <div class="form-text d-none d-sm-block">
+              {__("Enable pro events widget to be displayed on the home page")}
+            </div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="pro_events_widget_enabled">
+              <input type="checkbox" name="pro_events_widget_enabled" id="pro_events_widget_enabled" {if $system['pro_events_widget_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
         <!-- success -->
         <div class="alert alert-success mt15 mb0 x-hidden"></div>
         <!-- success -->
@@ -287,7 +323,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="icon" value="">
+                <input type="hidden" class="js_x-uploader-input" name="icon" value="">
               </div>
             {else}
               <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$data['icon']}')">
@@ -298,11 +334,64 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="icon" value="{$data['icon']}">
+                <input type="hidden" class="js_x-uploader-input" name="icon" value="{$data['icon']}">
               </div>
             {/if}
             <div class="form-text">
               {__("The perfect size for icon should be (wdith: 60px & height: 60px)")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Custom Description")}
+          </label>
+          <div class="col-md-9">
+            <textarea class="form-control" name="custom_description" rows="5">{$data['custom_description']}</textarea>
+            <div class="form-text">
+              {__("Add more text to show it to your users")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Order")}
+          </label>
+          <div class="col-md-9">
+            <input class="form-control" name="package_order" value="{$data['package_order']}">
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Hidden Package")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="package_hidden">
+              <input type="checkbox" name="package_hidden" id="package_hidden" {if $data['package_hidden']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable it to hide the package from the public")}
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Verification Badge Enabled")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="verification_badge_enabled">
+              <input type="checkbox" name="verification_badge_enabled" id="verification_badge_enabled" {if $data['verification_badge_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable verification badge with this package")}
             </div>
           </div>
         </div>
@@ -371,18 +460,18 @@
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Verification Badge Enabled")}
+            {__("Free Points")}
           </label>
           <div class="col-md-9">
-            <label class="switch" for="verification_badge_enabled">
-              <input type="checkbox" name="verification_badge_enabled" id="verification_badge_enabled" {if $data['verification_badge_enabled']}checked{/if}>
-              <span class="slider round"></span>
-            </label>
+            <input class="form-control" name="free_points" value="{$data['free_points']}">
             <div class="form-text">
-              {__("Enable verification badge with this package")}
+              {__("How many points users will get once they purchase this package for first time")}<br>
+              {__("Make sure you have enabled")} <a href="{$system['system_url']}/{$control_panel['url']}/points">{__("Points System")}</a>
             </div>
           </div>
         </div>
+
+        <div class="divider"></div>
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
@@ -411,6 +500,8 @@
           </div>
         </div>
 
+        <div class="divider dashed"></div>
+
         <div class="row form-group">
           <label class="col-md-3 form-label">
             {__("Boost Pages Enabled")}
@@ -438,24 +529,61 @@
           </div>
         </div>
 
+        <div class="divider dashed"></div>
+
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Custom Description")}
+            {__("Boost Groups Enabled")}
           </label>
           <div class="col-md-9">
-            <textarea class="form-control" name="custom_description" rows="5">{$data['custom_description']}</textarea>
+            <label class="switch" for="boost_groups_enabled">
+              <input type="checkbox" name="boost_groups_enabled" id="boost_groups_enabled" {if $data['boost_groups_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
             <div class="form-text">
-              {__("Add more text to show it to your users")}
+              {__("Enable boost groups feature")}
             </div>
           </div>
         </div>
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Order")}
+            {__("Groups Boosts")}
           </label>
           <div class="col-md-9">
-            <input class="form-control" name="package_order" value="{$data['package_order']}">
+            <input class="form-control" name="boost_groups" value="{$data['boost_groups']}">
+            <div class="form-text">
+              {__("Max groups boosts allowed")}
+            </div>
+          </div>
+        </div>
+
+        <div class="divider dashed"></div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Boost Events Enabled")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="boost_events_enabled">
+              <input type="checkbox" name="boost_events_enabled" id="boost_events_enabled" {if $data['boost_events_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable boost events feature")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Events Boosts")}
+          </label>
+          <div class="col-md-9">
+            <input class="form-control" name="boost_events" value="{$data['boost_events']}">
+            <div class="form-text">
+              {__("Max events boosts allowed")}
+            </div>
           </div>
         </div>
 
@@ -538,7 +666,7 @@
           </label>
           <div class="col-md-9">
             <div class="input-group js_colorpicker">
-              <input type="color" class="form-control form-control-color" name="color" />
+              <input type="text" class="form-control form-control-color" name="color" />
               <input type="color" class="form-control form-control-color" />
             </div>
             <div class="form-text">
@@ -560,10 +688,63 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="icon" value="">
+              <input type="hidden" class="js_x-uploader-input" name="icon" value="">
             </div>
             <div class="form-text">
               {__("The perfect size for icon should be (wdith: 60px & height: 60px)")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Custom Description")}
+          </label>
+          <div class="col-md-9">
+            <textarea class="form-control" name="custom_description" rows="5"></textarea>
+            <div class="form-text">
+              {__("Add more text to show it to your users")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Order")}
+          </label>
+          <div class="col-md-9">
+            <input class="form-control" name="package_order">
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Hidden Package")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="package_hidden">
+              <input type="checkbox" name="package_hidden" id="package_hidden">
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable it to hide the package from the public")}
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Verification Badge Enabled")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="verification_badge_enabled">
+              <input type="checkbox" name="verification_badge_enabled" id="verification_badge_enabled">
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable verification badge with this package")}
             </div>
           </div>
         </div>
@@ -632,18 +813,18 @@
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Verification Badge Enabled")}
+            {__("Free Points")}
           </label>
           <div class="col-md-9">
-            <label class="switch" for="verification_badge_enabled">
-              <input type="checkbox" name="verification_badge_enabled" id="verification_badge_enabled">
-              <span class="slider round"></span>
-            </label>
+            <input class="form-control" name="free_points">
             <div class="form-text">
-              {__("Enable verification badge with this package")}
+              {__("How many points users will get once they purchase this package for first time")}<br>
+              {__("Make sure you have enabled")} <a href="{$system['system_url']}/{$control_panel['url']}/points">{__("Points System")}</a>
             </div>
           </div>
         </div>
+
+        <div class="divider"></div>
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
@@ -672,6 +853,8 @@
           </div>
         </div>
 
+        <div class="divider dashed"></div>
+
         <div class="row form-group">
           <label class="col-md-3 form-label">
             {__("Boost Pages Enabled")}
@@ -699,24 +882,62 @@
           </div>
         </div>
 
+        <div class="divider dashed"></div>
+
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Custom Description")}
+            {__("Boost Groups Enabled")}
           </label>
           <div class="col-md-9">
-            <textarea class="form-control" name="custom_description" rows="5"></textarea>
+            <label class="switch" for="boost_groups_enabled">
+              <input type="checkbox" name="boost_groups_enabled" id="boost_groups_enabled">
+              <span class="slider round"></span>
+            </label>
             <div class="form-text">
-              {__("Add more text to show it to your users")}
+              {__("Enable boost groups feature")}
             </div>
           </div>
         </div>
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Order")}
+            {__("Groups Boosts")}
           </label>
           <div class="col-md-9">
-            <input class="form-control" name="package_order">
+            <input class="form-control" name="boost_groups">
+            <div class="form-text">
+              {__("Max groups boosts allowed")}
+            </div>
+          </div>
+
+        </div>
+
+        <div class="divider dashed"></div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Boost Events Enabled")}
+          </label>
+          <div class="col-md-9">
+            <label class="switch" for="boost_events_enabled">
+              <input type="checkbox" name="boost_events_enabled" id="boost_events_enabled">
+              <span class="slider round"></span>
+            </label>
+            <div class="form-text">
+              {__("Enable boost events feature")}
+            </div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Events Boosts")}
+          </label>
+          <div class="col-md-9">
+            <input class="form-control" name="boost_events">
+            <div class="form-text">
+              {__("Max events boosts allowed")}
+            </div>
           </div>
         </div>
 

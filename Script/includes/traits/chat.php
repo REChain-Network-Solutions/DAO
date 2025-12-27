@@ -4,7 +4,7 @@
  * trait -> chat
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait ChatTrait
@@ -172,7 +172,6 @@ trait ChatTrait
     global $db, $system;
     /* get conversations */
     $conversations = [];
-    $offset = $args['offset'] ?? 0;
     $offset *= $system['max_results'];
     $get_conversations = $db->query(sprintf(
       "SELECT conversations.conversation_id 
@@ -213,14 +212,8 @@ trait ChatTrait
     $get_conversation = $db->query(sprintf(
       "SELECT 
         conversations.*, 
-        conversations_messages.message,
-        conversations_messages.image,
-        conversations_messages.voice_note, 
-        conversations_messages.time,
         conversations_users.seen 
       FROM conversations 
-      LEFT JOIN conversations_messages 
-        ON conversations.last_message_id = conversations_messages.message_id 
       INNER JOIN conversations_users 
         ON conversations.conversation_id = conversations_users.conversation_id 
       WHERE conversations_users.user_id = %s 
@@ -356,14 +349,8 @@ trait ChatTrait
     $conversation['is_chatbox'] = $conversation['node_id'] ? true : false;
     /* get total number of messages */
     $conversation['total_messages'] = $this->get_conversation_total_messages($conversation_id);
-    /* decode message text */
-    $conversation['message_orginal'] = $this->decode_emojis($conversation['message']);
-    $conversation['message_orginal'] = censored_words($conversation['message_orginal']);
-    $conversation['message_orginal_decoded'] = html_entity_decode($conversation['message_orginal'], ENT_QUOTES);
-    $conversation['message'] = $this->_parse(["text" => $conversation['message'], "decode_mention" => false, "decode_hashtags" => false]);
-    $conversation['message_decoded'] = html_entity_decode($conversation['message'], ENT_QUOTES);
     /* get last message */
-    $conversation['last_message'] = $this->get_conversation_messages_by_id($conversation['last_message_id']);
+    $conversation['last_message'] = $this->get_conversation_message_by_id($conversation['last_message_id']);
     /* return */
     return $conversation;
   }
@@ -459,20 +446,36 @@ trait ChatTrait
     /* prepare */
     $message = $args['message'] ?? '';
     $photo = $args['photo'] ?? '';
+    $video = $args['video'] ?? '';
     $voice_note = $args['voice_note'] ?? '';
+    $product_post_id = $args['product_post_id'] ?? null;
     $conversation_id = $args['conversation_id'] ?? null;
     $recipients = $args['recipients'] ?? null;
     /* filter photo */
     if ($photo && $from_web) {
       $photo = json_decode($photo);
     }
+    /* filter video */
+    if ($video && $from_web) {
+      $video = json_decode($video);
+    }
     /* filter voice note */
     if ($voice_note && $from_web) {
       $voice_note = json_decode($voice_note);
     }
     /* if message not set */
-    if (!$message && !$photo && !$voice_note) {
-      throw new BadRequestException(__("Message or Image or Voice Note is required"));
+    if (is_empty($message) && !$photo && !$video && !$voice_note && !$product_post_id) {
+      throw new BadRequestException(__("Message or Image or Video or Voice Note is required"));
+    }
+    /* check if product post shared */
+    if ($product_post_id) {
+      $post = $this->get_post($product_post_id);
+      if (!$post) {
+        throw new BadRequestException(__("Product is not exists"));
+      }
+      if ($post['post_type'] != 'product') {
+        throw new BadRequestException(__("Product post is not valid"));
+      }
     }
     /* if both (conversation_id & recipients) not set */
     if (!$conversation_id && !$recipients) {
@@ -518,7 +521,8 @@ trait ChatTrait
         }
         /* check recipients chat privacy */
         $this->check_recipients_chat_privacy($recipients);
-        if ($chat_price > 0) {
+        /* check paid conversation (exclude: chatbox & product post) */
+        if (!$product_post_id && $chat_price > 0) {
           $this->wallet_chat_payment($chat_price, $paid_recipients);
         }
         /* insert conversation */
@@ -538,8 +542,8 @@ trait ChatTrait
         $conversation = $this->get_conversation($conversation_id);
         /* check recipients chat privacy */
         $this->check_recipients_chat_privacy($conversation['recipients']);
-        /* check paid conversation */
-        if (!$conversation['node_id'] && $conversation['chat_price'] > 0) {
+        /* check paid conversation (exclude: chatbox & product post) */
+        if (!$conversation['node_id'] && !$product_post_id && $conversation['chat_price'] > 0) {
           $this->wallet_chat_payment($conversation['chat_price'], $conversation['paid_recipients']);
         }
       }
@@ -592,8 +596,31 @@ trait ChatTrait
         $db->query(sprintf("UPDATE conversations_users SET seen = '0', deleted = '0' WHERE conversation_id = %s AND user_id != %s", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
       }
     }
+    /* check if user is trying to share product post again */
+    if ($product_post_id && $conversation['last_message']['product_post_id']) {
+      return;
+    }
     /* insert message */
-    $db->query(sprintf("INSERT INTO conversations_messages (conversation_id, user_id, message, image, voice_note, time) VALUES (%s, %s, %s, %s, %s, %s)", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int'), secure($message), secure($photo), secure($voice_note), secure($date)));
+    $db->query(sprintf(
+      "INSERT INTO conversations_messages (
+        conversation_id, 
+        user_id, 
+        message, 
+        image, 
+        video, 
+        voice_note, 
+        product_post_id,
+        time
+      ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+      secure($conversation_id, 'int'),
+      secure($this->_data['user_id'], 'int'),
+      secure($message),
+      secure($photo),
+      secure($video),
+      secure($voice_note),
+      ($product_post_id) ? secure($product_post_id, 'int') : 'null',
+      secure($date)
+    ));
     $message_id = $db->insert_id;
     /* update the conversation with last message id */
     $db->query(sprintf("UPDATE conversations SET last_message_id = %s WHERE conversation_id = %s", secure($message_id, 'int'), secure($conversation_id, 'int')));
@@ -606,13 +633,19 @@ trait ChatTrait
       if (!$recipient['deleted']) {
         $db->query(sprintf("UPDATE users SET user_live_messages_lastid = %s, user_live_messages_counter = user_live_messages_counter + 1 WHERE user_id = %s", secure($message_id, 'int'), secure($recipient['user_id'], 'int')));
       }
-      /* prepare notification message if voice note or image */
+      /* prepare notification message if image, video or voice note */
       if (!$message) {
+        if ($photo) {
+          $message = __("Sent a photo");
+        }
+        if ($video) {
+          $message = __("Sent a video");
+        }
         if ($voice_note) {
           $message = __("Sent a voice message");
         }
-        if ($photo) {
-          $message = __("Sent a photo");
+        if ($product_post_id) {
+          $message = __("Shared a product");
         }
       }
       /* send notification */
@@ -621,7 +654,7 @@ trait ChatTrait
     /* update typing status of the viewer for this conversation */
     $db->query(sprintf("UPDATE conversations_users SET typing = '0' WHERE conversation_id = %s AND user_id = %s", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
     /* remove pending uploads */
-    remove_pending_uploads([$photo, $voice_note]);
+    remove_pending_uploads([$photo, $video, $voice_note]);
     /* return with conversation */
     return $conversation;
   }
@@ -647,16 +680,49 @@ trait ChatTrait
     $messages = [];
     if ($last_message_id !== null) {
       /* get all messages after the last_message_id */
-      $get_messages = $db->query(sprintf("SELECT conversations_messages.message_id, conversations_messages.message, conversations_messages.image, conversations_messages.voice_note, conversations_messages.time, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM conversations_messages INNER JOIN users ON conversations_messages.user_id = users.user_id WHERE conversations_messages.conversation_id = %s AND conversations_messages.message_id > %s", secure($conversation_id, 'int'), secure($last_message_id, 'int')));
+      $get_messages = $db->query(sprintf(
+        "SELECT 
+          conversations_messages.*,
+          users.user_name,
+          users.user_firstname,
+          users.user_lastname,
+          users.user_gender,
+          users.user_picture,
+          users.user_subscribed,
+          users.user_verified
+        FROM conversations_messages
+        INNER JOIN users ON conversations_messages.user_id = users.user_id
+        WHERE conversations_messages.conversation_id = %s
+        AND conversations_messages.message_id > %s",
+        secure($conversation_id, 'int'),
+        secure($last_message_id, 'int')
+      ));
     } else {
-      $get_messages = $db->query(sprintf("SELECT * FROM ( SELECT conversations_messages.message_id, conversations_messages.message, conversations_messages.image, conversations_messages.voice_note, conversations_messages.time, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM conversations_messages INNER JOIN users ON conversations_messages.user_id = users.user_id WHERE conversations_messages.conversation_id = %s ORDER BY conversations_messages.message_id DESC LIMIT %s,%s ) messages ORDER BY messages.message_id ASC", secure($conversation_id, 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+      $get_messages = $db->query(sprintf(
+        "SELECT * FROM (
+          SELECT 
+            conversations_messages.*,
+            users.user_name,
+            users.user_firstname,
+            users.user_lastname,
+            users.user_gender,
+            users.user_picture,
+            users.user_subscribed,
+            users.user_verified
+          FROM conversations_messages
+          INNER JOIN users ON conversations_messages.user_id = users.user_id
+          WHERE conversations_messages.conversation_id = %s
+          ORDER BY conversations_messages.message_id DESC
+          LIMIT %s,%s
+        ) messages 
+        ORDER BY messages.message_id ASC",
+        secure($conversation_id, 'int'),
+        secure($offset, 'int', false),
+        secure($system['max_results'], 'int', false)
+      ));
     }
     while ($message = $get_messages->fetch_assoc()) {
-      $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
-      $message['user_fullname'] = ($system['show_usernames_enabled']) ? $message['user_name'] : $message['user_firstname'] . " " . $message['user_lastname'];
-      $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
-      $message['message_decoded'] = html_entity_decode($message['message'], ENT_QUOTES);
-      /* return */
+      $message = $this->parse_message($message);
       $messages[] = $message;
     }
     $has_more = (count($messages) == $system['max_results']) ? true : false;
@@ -665,19 +731,74 @@ trait ChatTrait
 
 
   /**
-   * get_conversation_messages_by_id
+   * delete_conversation_message
+   * 
+   * @param integer $message_id
+   * @return void
+   */
+  public function delete_conversation_message($message_id)
+  {
+    global $db;
+    /* check if message exists and viewer is the sender */
+    $check_message = $db->query(sprintf("SELECT * FROM conversations_messages WHERE message_id = %s AND user_id = %s", secure($message_id, 'int'), secure($this->_data['user_id'], 'int')));
+    if ($check_message->num_rows == 0) {
+      throw new AuthorizationException(__("You are not authorized to do this"));
+    }
+    $message = $check_message->fetch_assoc();
+    /* delete message */
+    $db->query(sprintf("DELETE FROM conversations_messages WHERE message_id = %s", secure($message_id, 'int')));
+    /* update the conversation with last message id */
+    $db->query(sprintf(
+      "UPDATE conversations c 
+       SET c.last_message_id = COALESCE(
+         (SELECT m.message_id 
+          FROM conversations_messages m 
+          WHERE m.conversation_id = c.conversation_id 
+          ORDER BY m.message_id DESC 
+          LIMIT 1), 
+         0) 
+       WHERE c.conversation_id = %s 
+       AND c.last_message_id = %s",
+      secure($message['conversation_id'], 'int'),
+      secure($message_id, 'int')
+    ));
+    /* check if last_message_id became 0 -> delete conversation */
+    $check_last_message = $db->query(sprintf("SELECT last_message_id FROM conversations WHERE conversation_id = %s", secure($message['conversation_id'], 'int')));
+    $last_message_id = $check_last_message->fetch_assoc()['last_message_id'] ?? 0;
+    if ($last_message_id == 0) {
+      $this->delete_conversation($message['conversation_id']);
+    }
+  }
+
+
+  /**
+   * get_conversation_message_by_id
    * 
    * @param integer $message_id
    * @return array
    */
-  public function get_conversation_messages_by_id($message_id)
+  public function get_conversation_message_by_id($message_id)
   {
     global $db;
-    $get_messages = $db->query(sprintf("SELECT conversations_messages.message_id, conversations_messages.message, conversations_messages.image, conversations_messages.voice_note, conversations_messages.time, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM conversations_messages INNER JOIN users ON conversations_messages.user_id = users.user_id WHERE conversations_messages.message_id = %s", secure($message_id, 'int')));
-    $message = $get_messages->fetch_assoc();
-    $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
-    $message['message'] = $this->_parse(["text" => $message['message'], "decode_mentions" => false, "decode_hashtags" => false]);
-    $message['message_decoded'] = html_entity_decode($message['message'], ENT_QUOTES);
+    $get_message = $db->query(sprintf(
+      "SELECT 
+        conversations_messages.*,
+        users.user_id,
+        users.user_name,
+        users.user_firstname,
+        users.user_lastname,
+        users.user_gender,
+        users.user_picture,
+        users.user_subscribed,
+        users.user_verified 
+      FROM conversations_messages 
+      INNER JOIN users 
+        ON conversations_messages.user_id = users.user_id 
+      WHERE conversations_messages.message_id = %s",
+      secure($message_id, 'int')
+    ));
+    $message = $get_message->fetch_assoc();
+    $message = $this->parse_message($message);
     return $message;
   }
 
@@ -706,7 +827,17 @@ trait ChatTrait
   {
     global $db, $system;
     /* check if user authorized */
-    $check_conversation = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_users INNER JOIN conversations ON conversations_users.conversation_id = conversations.conversation_id WHERE conversations.node_id IS NULL AND conversations.conversation_id = %s AND conversations_users.user_id = %s", secure($conversation_id, 'int'), secure($this->_data['user_id'], 'int')));
+    $check_conversation = $db->query(sprintf(
+      "SELECT COUNT(*) as count
+       FROM conversations_users
+       INNER JOIN conversations
+         ON conversations_users.conversation_id = conversations.conversation_id
+       WHERE conversations.node_id IS NULL
+         AND conversations.conversation_id = %s
+         AND conversations_users.user_id = %s",
+      secure($conversation_id, 'int'),
+      secure($this->_data['user_id'], 'int')
+    ));
     if ($check_conversation->fetch_assoc()['count'] == 0) {
       throw new AuthorizationException(__("You are not authorized to do this"));
     }
@@ -931,6 +1062,162 @@ trait ChatTrait
         $recipient['fullname'] = ($system['show_usernames_enabled']) ? $recipient['user_name'] : $recipient['user_firstname'] . " " . $recipient['user_lastname'];
         throw new PrivacyException(__("You can't chat with this") . " " . $recipient['fullname'] . " " . __("because your chat privacy is set to friends only"));
       }
+    }
+  }
+
+
+  /**
+   * parse_message
+   * 
+   * @param array $message
+   * @return array
+   */
+  public function parse_message($message)
+  {
+    global $system, $db;
+    /* prepare user data */
+    $message['user_picture'] = get_picture($message['user_picture'], $message['user_gender']);
+    $message['user_fullname'] = ($system['show_usernames_enabled']) ? $message['user_name'] : $message['user_firstname'] . " " . $message['user_lastname'];
+    /* get reactions array */
+    $message['reactions']['like'] = $message['reaction_like_count'];
+    $message['reactions']['love'] = $message['reaction_love_count'];
+    $message['reactions']['haha'] = $message['reaction_haha_count'];
+    $message['reactions']['yay'] = $message['reaction_yay_count'];
+    $message['reactions']['wow'] = $message['reaction_wow_count'];
+    $message['reactions']['sad'] = $message['reaction_sad_count'];
+    $message['reactions']['angry'] = $message['reaction_angry_count'];
+    arsort($message['reactions']);
+    /* get total reactions */
+    $message['reactions_total_count'] = $message['reaction_like_count'] + $message['reaction_love_count'] + $message['reaction_haha_count'] + $message['reaction_yay_count'] + $message['reaction_wow_count'] + $message['reaction_sad_count'] + $message['reaction_angry_count'];
+    /* format total reactions count */
+    $message['reactions_total_count_formatted'] = abbreviate_count($message['reactions_total_count']);
+    /* check if viewer [reacted] this message */
+    $message['i_react'] = false;
+    /* reaction */
+    if ($message['reactions_total_count'] > 0) {
+      $get_reaction = $db->query(sprintf("SELECT reaction FROM conversations_messages_reactions WHERE user_id = %s AND message_id = %s", secure($this->_data['user_id'], 'int'), secure($message['message_id'], 'int')));
+      if ($get_reaction->num_rows > 0) {
+        $message['i_react'] = true;
+        $message['i_reaction'] = $get_reaction->fetch_assoc()['reaction'];
+      }
+    }
+    /* decode message text */
+    $message['message_orginal'] = $this->decode_emojis($message['message']);
+    $message['message_orginal'] = censored_words($message['message_orginal']);
+    $message['message_orginal_decoded'] = html_entity_decode($message['message_orginal'], ENT_QUOTES);
+    $message['message'] = $this->parse(["text" => $message['message'], "decode_emojis" => false, "decode_hashtags" => false]);
+    $message['message_decoded'] = html_entity_decode($message['message'], ENT_QUOTES);
+    /* get product post */
+    if ($message['product_post_id']) {
+      $post = $this->get_post($message['product_post_id']);
+      if ($post) {
+        $message['post'] = $post;
+      }
+    }
+    return $message;
+  }
+
+
+  /**
+   * react_message
+   * 
+   * @param integer $message_id
+   * @param string $reaction
+   * @return void
+   */
+  public function react_message($message_id, $reaction)
+  {
+    global $db, $date;
+    /* check reation */
+    if (!in_array($reaction, ['like', 'love', 'haha', 'yay', 'wow', 'sad', 'angry'])) {
+      throw new BadRequestException(__("Invalid input"));
+    }
+    /* (check|get) message */
+    $get_message = $db->query(sprintf(
+      "SELECT 
+        conversations_messages.*,
+        users.user_id,
+        users.user_name,
+        users.user_firstname,
+        users.user_lastname,
+        users.user_gender,
+        users.user_picture,
+        users.user_subscribed,
+        users.user_verified 
+      FROM conversations_messages 
+      INNER JOIN users 
+        ON conversations_messages.user_id = users.user_id 
+      INNER JOIN conversations_users 
+        ON conversations_messages.conversation_id = conversations_users.conversation_id
+      WHERE conversations_messages.message_id = %s",
+      secure($message_id, 'int')
+    ));
+    if ($get_message->num_rows == 0) {
+      throw new BadRequestException(__("Message not found"));
+    }
+    $message = $get_message->fetch_assoc();
+    $message = $this->parse_message($message);
+    /* react the message */
+    if ($message['i_react']) {
+      /* remove any previous reaction */
+      $db->query(sprintf("DELETE FROM conversations_messages_reactions WHERE user_id = %s AND message_id = %s", secure($this->_data['user_id'], 'int'), secure($message_id, 'int')));
+      /* update message reaction counter */
+      $reaction_field = "reaction_" . $message['i_reaction'] . "_count";
+      $db->query(sprintf("UPDATE conversations_messages SET $reaction_field = IF($reaction_field=0,0,$reaction_field-1) WHERE message_id = %s", secure($message_id, 'int')));
+    }
+    $db->query(sprintf("INSERT INTO conversations_messages_reactions (user_id, message_id, reaction, reaction_time) VALUES (%s, %s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($message_id, 'int'), secure($reaction), secure($date)));
+    $reaction_id = $db->insert_id;
+    /* update message reaction counter */
+    $reaction_field = "reaction_" . $reaction . "_count";
+    $db->query(sprintf("UPDATE conversations_messages SET $reaction_field = $reaction_field + 1 WHERE message_id = %s", secure($message_id, 'int')));
+  }
+
+
+  /**
+   * unreact_message
+   * 
+   * @param integer $message_id
+   * @param string $reaction
+   * @return void
+   */
+  public function unreact_message($message_id, $reaction)
+  {
+    global $db;
+    /* check reation */
+    if (!in_array($reaction, ['like', 'love', 'haha', 'yay', 'wow', 'sad', 'angry'])) {
+      throw new BadRequestException(__("Invalid input"));
+    }
+    /* (check|get) message */
+    $get_message = $db->query(sprintf(
+      "SELECT 
+        conversations_messages.*,
+        users.user_id,
+        users.user_name,
+        users.user_firstname,
+        users.user_lastname,
+        users.user_gender,
+        users.user_picture,
+        users.user_subscribed,
+        users.user_verified 
+      FROM conversations_messages 
+      INNER JOIN users 
+        ON conversations_messages.user_id = users.user_id 
+      INNER JOIN conversations_users 
+        ON conversations_messages.conversation_id = conversations_users.conversation_id
+      WHERE conversations_messages.message_id = %s",
+      secure($message_id, 'int')
+    ));
+    if ($get_message->num_rows == 0) {
+      throw new BadRequestException(__("Message not found"));
+    }
+    $message = $get_message->fetch_assoc();
+    $message = $this->parse_message($message);
+    /* unreact the message */
+    if ($message['i_react']) {
+      $db->query(sprintf("DELETE FROM conversations_messages_reactions WHERE user_id = %s AND message_id = %s", secure($this->_data['user_id'], 'int'), secure($message_id, 'int')));
+      /* update message reaction counter */
+      $reaction_field = "reaction_" . $message['i_reaction'] . "_count";
+      $db->query(sprintf("UPDATE conversations_messages SET $reaction_field = IF($reaction_field=0,0,$reaction_field-1) WHERE message_id = %s", secure($message_id, 'int')));
     }
   }
 }

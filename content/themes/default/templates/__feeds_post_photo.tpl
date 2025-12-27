@@ -138,14 +138,14 @@
                 {include file='__reaction_emojis.tpl' _reaction=$photo['i_reaction']}
               </div>
             </div>
-            <span class="reaction-btn-name" style="color: {$reactions[$photo['i_reaction']]['color']};">{__($reactions[$photo['i_reaction']]['title'])}</span>
+            <span class="reaction-btn-name" style="color: {$system['reactions'][$photo['i_reaction']]['color']};">{__($system['reactions'][$photo['i_reaction']]['title'])}</span>
           {/if}
         </div>
         <!-- reaction-btn -->
 
         <!-- reactions-container -->
         <div class="reactions-container">
-          {foreach $reactions_enabled as $reaction}
+          {foreach $system['reactions_enabled'] as $reaction}
             <div class="reactions_item reaction reaction-{$reaction@iteration} js_react-{if $photo['is_single']}post{else}photo{/if}" data-reaction="{$reaction['reaction']}" data-reaction-color="{$reaction['color']}" data-title="{__($reaction['title'])}">
               {include file='__reaction_emojis.tpl' _reaction=$reaction['reaction']}
             </div>

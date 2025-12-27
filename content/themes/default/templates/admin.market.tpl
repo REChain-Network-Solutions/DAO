@@ -78,6 +78,24 @@
 
         <div class="form-table-row">
           <div class="avatar">
+            {include file='__svg_icons.tpl' icon="download" class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Digital Products")}</div>
+            <div class="form-text d-none d-sm-block">
+              {__("Turn the digital products sales On and Off")}
+            </div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="market_digital_products_enabled">
+              <input type="checkbox" name="market_digital_products_enabled" id="market_digital_products_enabled" {if $system['market_digital_products_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-table-row">
+          <div class="avatar">
             {include file='__svg_icons.tpl' icon="wallet" class="main-icon" width="40px" height="40px"}
           </div>
           <div>
@@ -157,10 +175,6 @@
             <div class="form-check form-check-inline">
               <input type="checkbox" class="form-check-input" name="method_skrill" id="method_skrill" {if in_array("skrill", $system['market_payment_method_array'])}checked{/if}>
               <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input type="checkbox" class="form-check-input" name="method_moneypoolscash" id="method_moneypoolscash" {if in_array("moneypoolscash", $system['market_payment_method_array'])}checked{/if}>
-              <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
             </div>
             <div class="form-check form-check-inline">
               <input type="checkbox" class="form-check-input" name="method_bank" id="method_bank" {if in_array("bank", $system['market_payment_method_array'])}checked{/if}>
@@ -607,7 +621,7 @@
                     {if $system['show_usernames_enabled']}{$row['user_name']}{else}{$row['user_firstname']} {$row['user_lastname']}{/if}
                   </a>
                 </td>
-                <td>{print_money($row['amount']|number_format:2)}</td>
+                <td>{print_money($row['amount'])}</td>
                 <td>
                   <span class="badge rounded-pill badge-lg bg-{$row['method_color']}">
                     {$row['method']|ucfirst}

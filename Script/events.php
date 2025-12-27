@@ -4,7 +4,7 @@
  * events
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -58,6 +58,11 @@ try {
 
       // get events categories
       $smarty->assign('categories', $user->get_categories("events_categories"));
+
+      // get promoted events
+      if ($system['packages_enabled']) {
+        $smarty->assign('promoted_events', $user->get_events(['promoted' => true, 'results' => 4]));
+      }
 
       // get new events
       $events = $user->get_events(['suggested' => true, 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);

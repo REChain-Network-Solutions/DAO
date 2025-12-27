@@ -121,17 +121,17 @@
               <div class="x-image-success">
                 {__("Uploaded Successfully")}
               </div>
-              <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
+              <button type="button" class="btn-close x-hidden js_x-video-remover" title='{__("Remove")}'></button>
               <div class="x-image-loader">
                 <div class="progress x-progress">
                   <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
               </div>
               <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
-              <input type="hidden" class="js_x-image-input" name="source_upload" value="">
+              <input type="hidden" class="js_x-uploader-input" name="source_upload" value="">
             </div>
             <div class="form-text">
-              {__("Maximum file size is")} {$system['max_video_size']}{__("KB")} {__("and allowed extensions are")} {$system['video_extensions']}<br>
+              {__("Maximum file size is")} {$system['max_video_size']/1024}{__("MB")} {__("and allowed extensions are")} ({$system['video_extensions']})<br>
               {__("You can change the")} <a target="_blank" href="{$system['system_url']}/{$control_panel['url']}/settings/uploads">{__("Uploads Settings")}</a>
             </div>
           </div>
@@ -229,7 +229,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="poster" value="">
+              <input type="hidden" class="js_x-uploader-input" name="poster" value="">
             </div>
           </div>
         </div>
@@ -312,32 +312,32 @@
                 <div class="x-image-success" style="display: block;">
                   {__("Uploaded Successfully")}
                 </div>
-                <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
+                <button type="button" class="btn-close js_x-video-remover" title='{__("Remove")}'></button>
                 <div class="x-image-loader">
                   <div class="progress x-progress">
                     <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
                 </div>
                 <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
-                <input type="hidden" class="js_x-image-input" name="source_upload" value="{$data['source']}">
+                <input type="hidden" class="js_x-uploader-input" name="source_upload" value="{$data['source']}">
               </div>
             {else}
               <div class="x-image">
                 <div class="x-image-success">
                   {__("Uploaded Successfully")}
                 </div>
-                <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
+                <button type="button" class="btn-close x-hidden js_x-video-remover" title='{__("Remove")}'></button>
                 <div class="x-image-loader">
                   <div class="progress x-progress">
                     <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
                 </div>
                 <i class="fa fa-video fa-lg js_x-uploader" data-type="video" data-handle="x-video"></i>
-                <input type="hidden" class="js_x-image-input" name="source_upload" value="">
+                <input type="hidden" class="js_x-uploader-input" name="source_upload" value="">
               </div>
             {/if}
             <div class="form-text">
-              {__("Maximum file size is")} {$system['max_video_size']}{__("KB")} {__("and allowed extensions are")} {$system['video_extensions']}<br>
+              {__("Maximum file size is")} {$system['max_video_size']/1024}{__("MB")} {__("and allowed extensions are")} ({$system['video_extensions']})<br>
               {__("You can change the")} <a target="_blank" href="{$system['system_url']}/{$control_panel['url']}/settings/uploads">{__("Uploads Settings")}</a>
             </div>
           </div>
@@ -432,14 +432,14 @@
                 <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                 <div class="loader loader_small x-hidden"></div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="poster">
+                <input type="hidden" class="js_x-uploader-input" name="poster">
               </div>
             {else}
               <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$data['poster']}')">
                 <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                 <div class="loader loader_small x-hidden"></div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="poster" value="{$data['poster']}">
+                <input type="hidden" class="js_x-uploader-input" name="poster" value="{$data['poster']}">
               </div>
             {/if}
           </div>

@@ -151,19 +151,19 @@
                                 {if $user->_data['can_write_blogs']}
                                   <a class="dropdown-item" href="{$system['system_url']}/blogs/new">
                                     {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Blog")}
+                                    {__("Create Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                                   </a>
                                 {/if}
                                 {if $system['market_enabled']}
                                   <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/product.php?do=create">
                                     {include file='__svg_icons.tpl' icon="products" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Product")}
+                                    {__("Create Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                                   </div>
                                 {/if}
                                 {if $user->_data['can_raise_funding']}
                                   <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/funding.php?do=create">
                                     {include file='__svg_icons.tpl' icon="funding" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Funding")}
+                                    {__("Create Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                                   </div>
                                 {/if}
                                 {if $user->_data['can_create_ads']}

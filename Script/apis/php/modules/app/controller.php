@@ -4,7 +4,7 @@
  * APIs -> modules -> app -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // appSettings
@@ -18,6 +18,7 @@ function appSettings($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // contactUs
 function contactUs($req, $res)
 {
@@ -25,6 +26,7 @@ function contactUs($req, $res)
   $user->contact_us($req->body['name'], $req->body['email'], $req->body['subject'], $req->body['message']);
   apiResponse($res, ['message' => __("Your message has been sent! Thanks a lot and will be back to you soon")]);
 }
+
 
 // getStaticPages
 function getStaticPages($req, $res)
@@ -34,6 +36,7 @@ function getStaticPages($req, $res)
   apiResponse($res, ['data' => $static_pages]);
 }
 
+
 // getStaticPage
 function getStaticPage($req, $res)
 {
@@ -41,6 +44,7 @@ function getStaticPage($req, $res)
   $static_page = $user->get_static_page($req->params['page_url']);
   apiResponse($res, ['data' => $static_page]);
 }
+
 
 // getGenders
 function getGenders($req, $res)
@@ -50,6 +54,7 @@ function getGenders($req, $res)
   apiResponse($res, ['data' => $genders]);
 }
 
+
 // getUserGroups
 function getUserGroups($req, $res)
 {
@@ -57,6 +62,7 @@ function getUserGroups($req, $res)
   $user_groups = $user->get_users_groups();
   apiResponse($res, ['data' => $user_groups]);
 }
+
 
 // getLanguages
 function getLanguages($req, $res)
@@ -66,6 +72,7 @@ function getLanguages($req, $res)
   apiResponse($res, ['data' => $languages]);
 }
 
+
 // getCountries
 function getCountries($req, $res)
 {
@@ -74,10 +81,20 @@ function getCountries($req, $res)
   apiResponse($res, ['data' => $countries]);
 }
 
+
 // getCustomFields
 function getCustomFields($req, $res)
 {
   global $user;
   $custom_fields = $user->get_custom_fields();
   apiResponse($res, ['data' => $custom_fields]);
+}
+
+
+// getCategories
+function getCategories($req, $res)
+{
+  global $user;
+  $categories = $user->get_categories($req->query['get']);
+  apiResponse($res, ['data' => $categories]);
 }

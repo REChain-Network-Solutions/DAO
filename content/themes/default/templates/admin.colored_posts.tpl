@@ -124,7 +124,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input js_pattern-background-image" name="background_image" value="">
+                <input type="hidden" class="js_x-uploader-input js_pattern-background-image" name="background_image" value="">
               </div>
             </div>
           </div>
@@ -228,7 +228,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input js_pattern-background-image" name="background_image" value="{$data['background_image']}">
+                <input type="hidden" class="js_x-uploader-input js_pattern-background-image" name="background_image" value="{$data['background_image']}">
               </div>
             </div>
           </div>

@@ -124,47 +124,47 @@
             <ol>
               <li class="mb20">
                 {__("To get an access token, make an HTTP GET request to the following endpoint like this")}:
-<pre class="mtb10">
-&lt;?php
+                <pre class="mtb10">
+        &lt;?php
 
-$app_id = "YOUR_APP_ID"; // your app id
-$app_secret = "YOUR_APP_SECRET"; // your app secret
-$auth_key = $_GET['auth_key']; // the returned auth key from previous step
+        $app_id = "YOUR_APP_ID"; // your app id
+        $app_secret = "YOUR_APP_SECRET"; // your app secret
+        $auth_key = $_GET['auth_key']; // the returned auth key from previous step
 
-// Prepare the POST data
-$postData = [
-  'app_id' => $app_id,
-  'app_secret' => $app_secret,
-  'auth_key' => $auth_key
-];
+        // Prepare the POST data
+        $postData = [
+          'app_id' => $app_id,
+          'app_secret' => $app_secret,
+          'auth_key' => $auth_key
+        ];
 
-// Initialize cURL
-$ch = curl_init('{$system['system_url']}/api/authorize');
+        // Initialize cURL
+        $ch = curl_init('{$system['system_url']}/api/authorize');
 
-// Set cURL options for POST
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+        // Set cURL options for POST
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
 
-// Execute request
-$response = curl_exec($ch);
+        // Execute request
+        $response = curl_exec($ch);
 
-// Check for cURL errors
-if (curl_errno($ch)) {
-  die('cURL error: ' . curl_error($ch));
-}
+        // Check for cURL errors
+        if (curl_errno($ch)) {
+          die('cURL error: ' . curl_error($ch));
+        }
 
-curl_close($ch);
+        curl_close($ch);
 
-// Decode the JSON response
-$json = json_decode($response, true);
+        // Decode the JSON response
+        $json = json_decode($response, true);
 
-// Use the access token if available
-if (!empty($json['access_token'])) {
-  $access_token = $json['access_token']; // your access token
-}
-?&gt;
-</pre>
+        // Use the access token if available
+        if (!empty($json['access_token'])) {
+          $access_token = $json['access_token']; // your access token
+        }
+        ?&gt;
+        </pre>
                 {__("This")} <span class="badge bg-danger">access_token</span> {__("valid only for only one 1 hour, so once it got invalid you will need to genarte new one by redirect the user to the log in with link again")}.
               </li>
             </ol>
@@ -196,35 +196,35 @@ if (!empty($json['access_token'])) {
             <p>
               {__("You can retrive user info like this")}
             </p>
-<pre>
-if(!empty($json['access_token'])) {
-    $access_token = $json['access_token']; // your access token
-    $get = file_get_contents("{$system['system_url']}/api/get_user_info?access_token=$access_token");
-}
-</pre>
+            <pre>
+        if(!empty($json['access_token'])) {
+            $access_token = $json['access_token']; // your access token
+            $get = file_get_contents("{$system['system_url']}/api/get_user_info?access_token=$access_token");
+        }
+        </pre>
             <p>
               {__("The result will be")}:
             </p>
-<pre>
-{
-  "user_info": {
-  "user_id": "",
-  "user_name": "",
-  "user_email": "",
-  "user_firstname": "",
-  "user_lastname": "",
-  "user_gender": "",
-  "user_birthdate": "",
-  "user_picture": "",
-  "user_cover": "",
-  "user_registered": "",
-  "user_verified": "",
-  "user_relationship": "",
-  "user_biography": "",
-  "user_website": ""
-  }
-}
-</pre>
+            <pre>
+        {
+          "user_info": {
+          "user_id": "",
+          "user_name": "",
+          "user_email": "",
+          "user_firstname": "",
+          "user_lastname": "",
+          "user_gender": "",
+          "user_birthdate": "",
+          "user_picture": "",
+          "user_cover": "",
+          "user_registered": "",
+          "user_verified": "",
+          "user_relationship": "",
+          "user_biography": "",
+          "user_website": ""
+          }
+        }
+        </pre>
           </div>
         </div>
         <!-- docs -->
@@ -347,16 +347,14 @@ if(!empty($json['access_token'])) {
                   <div class="form-group">
                     <label class="form-label" for="app_icon">{__("App Icon (1024 x 1024)")}</label>
                     <div class="x-image">
-                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'>
-
-                      </button>
+                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                       <div class="x-image-loader">
                         <div class="progress x-progress">
                           <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                      <input type="hidden" class="js_x-image-input" name="app_icon">
+                      <input type="hidden" class="js_x-uploader-input" name="app_icon">
                     </div>
                     <div class="form-text">
                       {__("App Icon (1024 x 1024), supported formats (JPG, PNG)")}
@@ -454,20 +452,18 @@ if(!empty($json['access_token'])) {
                           </div>
                         </div>
                         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                        <input type="hidden" class="js_x-image-input" name="app_icon">
+                        <input type="hidden" class="js_x-uploader-input" name="app_icon">
                       </div>
                     {else}
                       <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$app['app_icon']}')">
-                        <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'>
-
-                        </button>
+                        <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                         <div class="x-image-loader">
                           <div class="progress x-progress">
                             <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                           </div>
                         </div>
                         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                        <input type="hidden" class="js_x-image-input" name="app_icon" value="{$app['app_icon']}">
+                        <input type="hidden" class="js_x-uploader-input" name="app_icon" value="{$app['app_icon']}">
                       </div>
                     {/if}
                     <div class="form-text">
@@ -505,12 +501,12 @@ if(!empty($json['access_token'])) {
               {__("Add the following code in your site, inside the head tag")}:
             </h6>
             <pre>
-                                                                        &lt;script&gt;
-                                                                          function SocialShare(url) {
-                                                                              window.open('{$system['system_url']}/share?url=' + url, '', 'height=600,width=800');
-                                                                          }
-                                                                        &lt;/script&gt;
-                                                                        </pre>
+                                                                                &lt;script&gt;
+                                                                                  function SocialShare(url) {
+                                                                                      window.open('{$system['system_url']}/share?url=' + url, '', 'height=600,width=800');
+                                                                                  }
+                                                                                &lt;/script&gt;
+                                                                                </pre>
             <h6>
               {__("Then place the share button after changing the URL you want to share to your page HTML")}:
             </h6>

@@ -58,7 +58,6 @@
           <p class="form-control-plaintext">
             {$user->_data['user_boosted_posts']}/{$user->_data['boost_posts']} (<a href="{$system['system_url']}/boosted/posts">{__("Manage")}</a>)
           </p>
-
           <div class="progress mb5">
             <div class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="{if $user->_data['boost_posts'] == 0}0{else}{($user->_data['user_boosted_posts']/$user->_data['boost_posts'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $user->_data['boost_posts'] == 0}0{else}{($user->_data['user_boosted_posts']/$user->_data['boost_posts'])*100}{/if}%"></div>
           </div>
@@ -72,9 +71,34 @@
           <p class="form-control-plaintext">
             {$user->_data['user_boosted_pages']}/{$user->_data['boost_pages']} (<a href="{$system['system_url']}/boosted/pages">{__("Manage")}</a>)
           </p>
-
           <div class="progress mb5">
             <div class="progress-bar progress-bar-warning progress-bar-striped" role="progressbar" aria-valuenow="{if $user->_data['boost_pages'] == 0}0{else}{($user->_data['user_boosted_pages']/$user->_data['boost_pages'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $user->_data['boost_pages'] == 0}0{else}{($user->_data['user_boosted_pages']/$user->_data['boost_pages'])*100}{/if}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row form-group">
+        <label class="col-md-3 form-label">
+          {__("Boosted Groups")}
+        </label>
+        <div class="col-md-9">
+          <p class="form-control-plaintext">
+            {$user->_data['user_boosted_groups']}/{$user->_data['boost_groups']} (<a href="{$system['system_url']}/boosted/groups">{__("Manage")}</a>)
+          </p>
+          <div class="progress mb5">
+            <div class="progress-bar progress-bar-warning progress-bar-striped" role="progressbar" aria-valuenow="{if $user->_data['boost_groups'] == 0}0{else}{($user->_data['user_boosted_groups']/$user->_data['boost_groups'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $user->_data['boost_groups'] == 0}0{else}{($user->_data['user_boosted_groups']/$user->_data['boost_groups'])*100}{/if}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row form-group">
+        <label class="col-md-3 form-label">
+          {__("Boosted Events")}
+        </label>
+        <div class="col-md-9">
+          <p class="form-control-plaintext">
+            {$user->_data['user_boosted_events']}/{$user->_data['boost_events']} (<a href="{$system['system_url']}/boosted/events">{__("Manage")}</a>)
+          </p>
+          <div class="progress mb5">
+            <div class="progress-bar progress-bar-warning progress-bar-striped" role="progressbar" aria-valuenow="{if $user->_data['boost_events'] == 0}0{else}{($user->_data['user_boosted_events']/$user->_data['boost_events'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $user->_data['boost_events'] == 0}0{else}{($user->_data['user_boosted_events']/$user->_data['boost_events'])*100}{/if}%"></div>
           </div>
         </div>
       </div>
@@ -152,4 +176,38 @@
       <a href="{$system['system_url']}/packages" class="btn btn-success">{__("Upgrade to Pro")}</a>
     </div>
   {/if}
+
+  <div class="divider"></div>
+
+  <div class="heading-small mb20">
+    {__("History")}
+  </div>
+  <div class="pl-md-4">
+    {if $packages_payments}
+      <div class="table-responsive mt20">
+        <table class="table table-striped table-bordered table-hover js_dataTable">
+          <thead>
+            <tr>
+              <th>{__("ID")}</th>
+              <th>{__("Package")}</th>
+              <th>{__("Amount")}</th>
+              <th>{__("Date")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {foreach $packages_payments as $package_payment}
+              <tr>
+                <td>{$package_payment@iteration}</td>
+                <td>{$package_payment['package_name']}</td>
+                <td>{print_money($package_payment['package_price'])}</td>
+                <td>{__($package_payment['payment_date'])}</td>
+              </tr>
+            {/foreach}
+          </tbody>
+        </table>
+      </div>
+    {else}
+      {include file='_no_transactions.tpl'}
+    {/if}
+  </div>
 </div>

@@ -4,7 +4,7 @@
  * ajax -> admin -> monetization
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -52,9 +52,6 @@ try {
       }
       if (isset($_POST['method_skrill'])) {
         $monetization_payment_methods[] = "skrill";
-      }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $monetization_payment_methods[] = "moneypoolscash";
       }
       if (isset($_POST['method_bank'])) {
         $monetization_payment_methods[] = "bank";

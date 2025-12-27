@@ -337,6 +337,18 @@
             </div>
 
             <div class="form-group">
+              <label class="form-label">
+                {__("Language")}
+              </label>
+              <select class="form-select" name="language">
+                <option value="none">{__("Select Language")}</option>
+                {foreach $languages as $language}
+                  <option value="{$language['language_id']}" {if $data['page_language'] == $language['language_id']}selected{/if}>{$language['title']}</option>
+                {/foreach}
+              </select>
+            </div>
+
+            <div class="form-group">
               <label class="form-label" for="description">{__("About")}</label>
               <textarea class="form-control" name="description" id="description">{$data['page_description']}</textarea>
             </div>

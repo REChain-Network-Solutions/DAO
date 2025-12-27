@@ -33,8 +33,9 @@
 
           <div>
             {if $system['activation_type'] == "email"}
-              <button type="button" class="btn btn-success rounded-pill mr10" data-toggle="modal" data-url="core/activation_email_resend.php">
-                {__("Resend Verification Email")}
+              <button type="button" class="btn btn-success rounded-pill mr10" data-toggle="modal" data-url="#activation-email">{__("Enter Code")}</button>
+              <button type="button" class="btn btn-primary rounded-pill mr10" data-toggle="modal" data-url="core/activation_email_resend.php">
+                {__("Resend Email")}
               </button>
               <button type="button" class="btn btn-primary rounded-pill" data-toggle="modal" data-url="#activation-email-reset">
                 {__("Change Email")}

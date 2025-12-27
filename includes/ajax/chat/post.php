@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> chat -> post ✅
+ * ajax -> chat -> post
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -34,10 +34,6 @@ try {
 
   // return & exit
   return_json($conversation);
-} catch (BadRequestException $e) {
-  _error(400);
-} catch (AuthorizationException $e) {
-  _error(403);
 } catch (Exception $e) {
   modal("ERROR", __("Error"), $e->getMessage());
 }

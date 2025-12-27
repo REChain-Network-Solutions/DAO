@@ -4,7 +4,7 @@
  * APIs -> modules -> data -> router
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // get controller 
@@ -27,7 +27,14 @@ $app->post('/data/delete', function ($req, $res) {
   deleteUploadedFile($req, $res);
 });
 
+
 # [post] reset
 $app->post('/data/reset', function ($req, $res) {
   resetRealtimeCounters($req, $res);
+});
+
+
+# [post] report
+$app->post('/data/report', function ($req, $res) {
+  reportContent($req, $res);
 });

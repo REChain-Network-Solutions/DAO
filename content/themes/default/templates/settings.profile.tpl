@@ -401,7 +401,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="user_profile_background" value="">
+              <input type="hidden" class="js_x-uploader-input" name="user_profile_background" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$user->_data['user_profile_background']}')">
@@ -412,7 +412,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="user_profile_background" value="{$user->_data['user_profile_background']}">
+              <input type="hidden" class="js_x-uploader-input" name="user_profile_background" value="{$user->_data['user_profile_background']}">
             </div>
           {/if}
         </div>

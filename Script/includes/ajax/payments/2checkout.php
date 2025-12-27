@@ -4,7 +4,7 @@
  * ajax -> payments -> 2checkout
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -43,7 +43,7 @@ try {
       $payment = twocheckout_check($package['price']);
       if ($payment) {
         /* update user package */
-        $user->update_user_package($package['id'], $package['name'], $package['price'], $package['verification_badge_enabled']);
+        $user->update_user_package($package);
         /* log payment */
         $user->log_payment($user->_data['user_id'], $package['price'], '2checkout', 'packages');
       } else {

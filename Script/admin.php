@@ -4,7 +4,7 @@
  * admin
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set override_shutdown
@@ -793,10 +793,16 @@ try {
           $data['user_groups'] = $user->get_users_groups();
           /* get user picture */
           $data['user_picture'] = get_picture($data['user_picture'], $data['user_gender']);
-          /* get user's friends */
+          /* get user's connections */
           $data['friends'] = $user->get_friends_count($data['user_id']);
           $data['followings'] = $user->get_followings_count($data['user_id']);
           $data['followers'] = $user->get_followers_count($data['user_id']);
+          /* get posts count */
+          $data['posts_count'] = $user->get_posts_count($data['user_id'], 'user');
+          /* check if user online */
+          $data['is_online'] = $user->user_online($data['user_id']);
+          /* get user referrer */
+          $data['user_referrer'] = $user->get_user($data['user_referrer_id']);
           /* parse birthdate */
           $data['user_birthdate_parsed'] = ($data['user_birthdate']) ? date_parse($data['user_birthdate']) : null;
           /* get user sessions */
@@ -831,7 +837,7 @@ try {
               $data['subscription_timeleft'] = ceil(($data['subscription_end'] - time()) / (60 * 60 * 24));
             }
             /* get packages */
-            $packages = $user->get_packages();
+            $packages = $user->get_packages(true);
             $smarty->assign('packages', $packages);
           }
           /* prepare monetization */
@@ -2853,6 +2859,46 @@ try {
           $smarty->assign('pager', $pager->getPager());
           break;
 
+        case 'paid_modules':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Paid Modules"));
+
+          // calculate earnings
+          $total_earnings = 0;
+          $get_total_earnings = $db->query("SELECT SUM(amount) as total_earnings FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment')");
+          if ($get_total_earnings->num_rows > 0) {
+            $total_earnings = $get_total_earnings->fetch_assoc()['total_earnings'];
+          }
+          $month_earnings = 0;
+          $get_month_earnings = $db->query("SELECT SUM(amount) as month_earnings FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment') AND MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE())");
+          if ($get_month_earnings->num_rows > 0) {
+            $month_earnings = $get_month_earnings->fetch_assoc()['month_earnings'];
+          }
+
+          // get data
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment')");
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/earnings/paid_modules?page=%s';
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = $db->query("SELECT wallet_transactions.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM wallet_transactions INNER JOIN users ON wallet_transactions.user_id = users.user_id WHERE wallet_transactions.node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment') ORDER BY wallet_transactions.transaction_id DESC " . $limit_query);
+          if ($get_rows->num_rows > 0) {
+            while ($row = $get_rows->fetch_assoc()) {
+              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
+              $rows[] = $row;
+            }
+          }
+
+          // assign variables
+          $smarty->assign('total_earnings', $total_earnings);
+          $smarty->assign('month_earnings', $month_earnings);
+          $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
+          break;
+
         default:
           _error(404);
           break;
@@ -3215,6 +3261,16 @@ try {
           _error(404);
           break;
       }
+      break;
+
+    case 'paid_modules':
+      // check admin|moderator permission
+      if ($user->_is_moderator) {
+        _error(__('System Message'), __("You don't have the right permission to access this"));
+      }
+
+      // page header
+      page_header($control_panel['title'] . " &rsaquo; " . __("Paid Modules"));
       break;
 
     case 'market':
@@ -3858,6 +3914,10 @@ try {
                 $row['url'] = $system['system_url'] . '/forums/thread/' . $reply['thread']['thread_id'] . '/' . $reply['thread']['title_url'] . '/#reply-' . $reply['reply_id'];
                 $node['color'] = 'secondary';
                 $node['name'] = __("Forum Reply");
+              } elseif ($row['node_type'] == 'ads_campaign') {
+                $row['url'] = $system['system_url'] . '/ads/edit/' . $row['node_id'];
+                $node['color'] = 'warning';
+                $node['name'] = __("Ads Campaign");
               }
               $row['node'] = $node;
               $rows[] = $row;
@@ -4385,7 +4445,7 @@ try {
           page_header($control_panel['title'] . " &rsaquo; " . __("Reactions"));
 
           // get data
-          $rows = $user->get_reactions();
+          $rows = $system['reactions'];
 
           // assign variables
           $smarty->assign('rows', $rows);

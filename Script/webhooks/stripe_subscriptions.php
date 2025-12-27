@@ -4,7 +4,7 @@
  * webhooks -> stripe subscriptions webhook
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -49,7 +49,7 @@ try {
             throw new Exception('Package has been deleted');
           }
           // update user package
-          $user->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled'], $recurring_payment['user_id']);
+          $user->update_user_package($package, $recurring_payment['user_id']);
           // log payment
           $user->log_payment($recurring_payment['user_id'], $package['price'], 'stripe', 'packages');
           break;

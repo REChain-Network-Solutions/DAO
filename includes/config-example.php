@@ -4,7 +4,7 @@
  * config
  * 
  * @package Delus
- * @author Dmitry Sorokin - @sorydima & @sorydev Handles. 
+ * @author Sorokin Dmitry Olegovich
  */
 
 // ** MySQL settings ** //

@@ -1055,6 +1055,26 @@
   {elseif $icon == "pushr"}
 
     {include file='../images/svg/pushr.svg'}
+
+  {elseif $icon == "plisio"}
+
+    {include file='../images/svg/plisio.svg'}
+
+  {elseif $icon == "walk"}
+
+    {include file='../images/svg/walk.svg'}
+
+  {elseif $icon == "mobile"}
+
+    {include file='../images/svg/mobile.svg'}
+
+  {elseif $icon == "widget"}
+
+    {include file='../images/svg/widget.svg'}
+
+  {elseif $icon == "support"}
+
+    {include file='../images/svg/support.svg'}
   {/if}
 
 </div>

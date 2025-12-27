@@ -4,8 +4,11 @@
  * socket
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
+
+// define skip unusual login
+define('SKIP_UNUSUAL_LOGIN_CHECK', true);
 
 // fetch bootstrap
 require('loader.php');
@@ -238,10 +241,10 @@ $io->on('connection', function ($socket) use ($io) {
   // [listen] send message
   $socket->on('event_client_send_message', function ($data, $callback) use ($io, $socket, $user) {
     global $smarty;
-    /* send message */
-    print("✉️ User {username: {$socket->username}, user_id: {$socket->userId}} Sent Message To Conversation: " . $conversation['conversation_id'] . "\n");
     try {
       $conversation = $user->post_conversation_message($data, true);
+      /* send message */
+      print("✉️ User {username: {$socket->username}, user_id: {$socket->userId}} Sent Message To Conversation: " . $conversation['conversation_id'] . "\n");
     } catch (Exception $e) {
       $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
       print("❌ Error: " . $e->getMessage() . "\n");
@@ -279,7 +282,7 @@ $io->on('connection', function ($socket) use ($io) {
   });
 
   // [listen] typing
-  $socket->on('event_client_typing', function ($data) use ($io, $socket, $system, $user) {
+  $socket->on('event_client_typing', function ($data) use ($io, $socket, $user) {
     handle_typing_change($io, 'conversation_' . $data['conversation_id'], $socket, $user, $data['is_typing']);
   });
 

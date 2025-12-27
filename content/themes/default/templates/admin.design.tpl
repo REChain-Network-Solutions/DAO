@@ -56,24 +56,6 @@
         </div>
       </div>
 
-      <div class="form-table-row">
-        <div class="avatar">
-          {include file='__svg_icons.tpl' icon="swipe" class="main-icon" width="40px" height="40px"}
-        </div>
-        <div>
-          <div class="form-label h6">{__("Swipe To Back")}</div>
-          <div class="form-text d-none d-sm-block">
-            {__("Allow users to swipe left/right (on mobile devices) to go back")}
-          </div>
-        </div>
-        <div class="text-end">
-          <label class="switch" for="system_back_swipe">
-            <input type="checkbox" name="system_back_swipe" id="system_back_swipe" {if $system['system_back_swipe']}checked{/if}>
-            <span class="slider round"></span>
-          </label>
-        </div>
-      </div>
-
       <div class="divider"></div>
 
       <div class="row form-group">
@@ -90,7 +72,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_logo" value="">
+              <input type="hidden" class="js_x-uploader-input" name="system_logo" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_logo']}')">
@@ -101,7 +83,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_logo" value="{$system['system_logo']}">
+              <input type="hidden" class="js_x-uploader-input" name="system_logo" value="{$system['system_logo']}">
             </div>
           {/if}
         </div>
@@ -121,7 +103,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_logo_dark" value="">
+              <input type="hidden" class="js_x-uploader-input" name="system_logo_dark" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_logo_dark']}')">
@@ -132,7 +114,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_logo_dark" value="{$system['system_logo_dark']}">
+              <input type="hidden" class="js_x-uploader-input" name="system_logo_dark" value="{$system['system_logo_dark']}">
             </div>
           {/if}
         </div>
@@ -172,7 +154,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_wallpaper" value="">
+              <input type="hidden" class="js_x-uploader-input" name="system_wallpaper" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_wallpaper']}')">
@@ -183,7 +165,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_wallpaper" value="{$system['system_wallpaper']}">
+              <input type="hidden" class="js_x-uploader-input" name="system_wallpaper" value="{$system['system_wallpaper']}">
             </div>
           {/if}
         </div>
@@ -199,12 +181,12 @@
             <label class="form-check-label" for="default_landing">{__("Default")}</label>
           </div>
           <div class="form-check form-check-inline">
-            <input type="radio" name="landing_page_template" id="Delus_landing" value="Delus" class="form-check-input" {if $system['landing_page_template'] == "Delus"}checked{/if}>
-            <label class="form-check-label" for="Delus_landing">{__("Delus")}</label>
-            <small>(<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/Delus_landing.png">{__("preview")}</a>)</small>
+            <input type="radio" name="landing_page_template" id="elengine_landing" value="elengine" class="form-check-input" {if $system['landing_page_template'] == "elengine"}checked{/if}>
+            <label class="form-check-label" for="elengine_landing">{__("Elengine")}</label>
+            <small>(<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/elengine_landing.png">{__("preview")}</a>)</small>
           </div>
           <div class="form-text">
-            {__("Note: You can get the whole Delus theme from")} <a target="_blank" href="https://bit.ly/DelusTheme">{__("Here")}</a>
+            {__("Note: You can get the whole Elengine theme from")} <a target="_blank" href="https://bit.ly/DelusElengineTheme">{__("Here")}</a>
           </div>
         </div>
       </div>
@@ -243,7 +225,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_favicon" value="">
+              <input type="hidden" class="js_x-uploader-input" name="system_favicon" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_favicon']}')">
@@ -254,7 +236,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_favicon" value="{$system['system_favicon']}">
+              <input type="hidden" class="js_x-uploader-input" name="system_favicon" value="{$system['system_favicon']}">
             </div>
           {/if}
         </div>
@@ -294,7 +276,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_ogimage" value="">
+              <input type="hidden" class="js_x-uploader-input" name="system_ogimage" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['system_ogimage']}')">
@@ -305,7 +287,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="system_ogimage" value="{$system['system_ogimage']}">
+              <input type="hidden" class="js_x-uploader-input" name="system_ogimage" value="{$system['system_ogimage']}">
             </div>
           {/if}
           <div class="form-text">

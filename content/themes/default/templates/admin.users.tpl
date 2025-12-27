@@ -330,6 +330,17 @@
               <span class="float-end badge badge-lg rounded-pill bg-secondary">{$data['user_last_seen']|date_format:"%e %B %Y"}</span>
               {__("Last Login")}
             </li>
+            <li class="list-group-item">
+              {__("Referrer")}
+              {if $data['user_referrer']}
+                <a class="float-end" href="{$system['system_url']}/{$data['user_referrer']['user_name']}" target="_blank">
+                  <img class="tbl-image" src="{$data['user_referrer']['user_picture']}">
+                  {$data['user_referrer']['user_fullname']}
+                </a>
+              {else}
+                <span class="float-end badge badge-lg rounded-pill bg-secondary">{__("None")}</span>
+              {/if}
+            </li>
           </ul>
         </div>
         <div class="col-12 col-md-5 mb20">
@@ -347,6 +358,10 @@
             <li class="list-group-item">
               <span class="float-end badge badge-lg rounded-pill bg-secondary">{$data['followers']}</span>
               {__("Followers")}
+            </li>
+            <li class="list-group-item">
+              <span class="float-end badge badge-lg rounded-pill bg-secondary">{$data['posts_count']}</span>
+              {__("Posts Count")}
             </li>
           </ul>
         </div>
@@ -1483,6 +1498,36 @@
                   </div>
                 </div>
 
+                <div class="row form-group">
+                  <label class="col-md-3 form-label">
+                    {__("Boosted Groups")}
+                  </label>
+                  <div class="col-md-9">
+                    <p class="form-control-plaintext">
+                      {$data['user_boosted_groups']}/{$data['boost_groups']}
+                    </p>
+
+                    <div class="progress mb5">
+                      <div class="progress-bar progress-bar-warning progress-bar-striped" role="progressbar" aria-valuenow="{if $data['boost_groups'] == 0}0{else}{($data['user_boosted_groups']/$data['boost_groups'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $data['boost_groups'] == 0}0{else}{($data['user_boosted_groups']/$data['boost_groups'])*100}{/if}%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row form-group">
+                  <label class="col-md-3 form-label">
+                    {__("Boosted Events")}
+                  </label>
+                  <div class="col-md-9">
+                    <p class="form-control-plaintext">
+                      {$data['user_boosted_events']}/{$data['boost_events']}
+                    </p>
+
+                    <div class="progress mb5">
+                      <div class="progress-bar progress-bar-warning progress-bar-striped" role="progressbar" aria-valuenow="{if $data['boost_events'] == 0}0{else}{($data['user_boosted_events']/$data['boost_events'])*100}{/if}" aria-valuemin="0" aria-valuemax="100" style="width: {if $data['boost_events'] == 0}0{else}{($data['user_boosted_events']/$data['boost_events'])*100}{/if}%"></div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="row">
                   <div class="col-md-9 offset-md-3">
                     <button type="button" class="btn btn-danger js_admin-deleter" data-handle="user_package" data-id="{$data['user_id']}">
@@ -1627,7 +1672,7 @@
                   <div class="col-md-9">
                     <h6>
                       <span class="badge badge-lg bg-light text-primary">
-                        {print_money($data['user_market_balance']|number_format:2)}
+                        {print_money($data['user_market_balance'])}
                       </span>
                     </h6>
                   </div>
@@ -1651,7 +1696,7 @@
                   <div class="col-md-9">
                     <h6>
                       <span class="badge badge-lg bg-light text-primary">
-                        {print_money($data['user_funding_balance']|number_format:2)}
+                        {print_money($data['user_funding_balance'])}
                       </span>
                     </h6>
                   </div>
@@ -1721,7 +1766,7 @@
                     <div class="col-md-9">
                       <h6>
                         <span class="badge badge-lg bg-light text-primary">
-                          {print_money($data['user_monetization_balance']|number_format:2)}
+                          {print_money($data['user_monetization_balance'])}
                         </span>
                       </h6>
                     </div>

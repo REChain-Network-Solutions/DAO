@@ -2,7 +2,7 @@
  * core js
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // initialize API URLs
@@ -30,6 +30,7 @@ api['payments/epayco'] = ajax_path + "payments/epayco.php";
 api['payments/flutterwave'] = ajax_path + "payments/flutterwave.php";
 api['payments/verotel'] = ajax_path + "payments/verotel.php";
 api['payments/mercadopago'] = ajax_path + "payments/mercadopago.php";
+api['payments/plisio'] = ajax_path + "payments/plisio.php";
 api['payments/wallet'] = ajax_path + "payments/wallet.php";
 api['payments/cash_on_delivery'] = ajax_path + "payments/cash_on_delivery.php";
 api['payments/trial'] = ajax_path + "payments/trial.php";
@@ -197,13 +198,17 @@ function initialize() {
           hls.loadSource(source);
           hls.attachMedia(_this[0]);
           hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            _this[0].play();
+            if (auto_play_videos) {
+              _this[0].play();
+            }
           });
         } else if (_this[0].canPlayType('application/vnd.apple.mpegurl')) {
           /* Native HLS support for Safari */
           _this[0].src = source;
           _this[0].addEventListener('loadedmetadata', function () {
-            _this[0].play();
+            if (auto_play_videos) {
+              _this[0].play();
+            }
           });
         }
       }
@@ -1232,7 +1237,7 @@ $(function () {
   });
   /* submit search form */
   $('body').on('submit', '.js_search-form', function (e) {
-    e.preventDefault;
+    e.preventDefault();
     var query = (this.query && this.query.value) ? this.query.value : '';
     var location = (this.location && this.location.value) ? '?location=' + this.location.value : '';
     var handle = $(this).data('handle');
@@ -2143,6 +2148,53 @@ $(function () {
         show_error_modal();
       });
   });
+  /* Plisio */
+  $('body').on('click', '.js_payment-plisio', function () {
+    var _this = $(this);
+    var data = {};
+    data['handle'] = _this.data('handle');
+    if (data['handle'] == "packages") {
+      data['package_id'] = _this.data('id');
+    }
+    if (data['handle'] == "wallet") {
+      data['price'] = _this.data('price');
+    }
+    if (data['handle'] == "donate") {
+      data['post_id'] = _this.data('id');
+      data['price'] = _this.data('price');
+    }
+    if (data['handle'] == "subscribe") {
+      data['plan_id'] = _this.data('id');
+    }
+    if (data['handle'] == "paid_post") {
+      data['post_id'] = _this.data('id');
+    }
+    if (data['handle'] == "movies") {
+      data['movie_id'] = _this.data('id');
+    }
+    if (data['handle'] == "marketplace") {
+      data['orders_collection_id'] = _this.data('id');
+    }
+    /* button loading */
+    button_status(_this, "loading");
+    /* post the request */
+    $.post(api['payments/plisio'], data, function (response) {
+      /* button reset */
+      button_status(_this, "reset");
+      /* check the response */
+      if (!response) return;
+      /* check if there is a callback */
+      if (response.callback) {
+        eval(response.callback);
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(_this, "reset");
+        /* handle error */
+        show_error_modal();
+      });
+  });
   /* Wallet */
   $('body').on('click', '.js_payment-wallet-package', function () {
     var _this = $(this);
@@ -2279,7 +2331,7 @@ $(function () {
   });
   /* Free Trial */
   $('body').on('click', '.js_try-package', function (e) {
-    e.preventDefault;
+    e.preventDefault();
     var id = $(this).data('id');
     confirm(__['Try Package'], __['Are you sure you want to subscribe to this free package?'], function () {
       $.post(api['payments/trial'], { 'type': 'package', 'package_id': id }, function (response) {
@@ -2335,22 +2387,6 @@ $(function () {
     }
   });
 
-
-  // handle back swipe for mobile view
-  if (back_swipe && is_mobile()) {
-    $('.main-wrapper').on('swiperight', function () {
-      if (theme_dir_rtl == true) {
-        return;
-      }
-      window.history.back();
-    });
-    $('.main-wrapper').on('swipeleft', function () {
-      if (theme_dir_rtl == false) {
-        return;
-      }
-      window.history.back();
-    });
-  }
 
   // toggle password
   $('body').on('click', '.js_toggle-password', function () {

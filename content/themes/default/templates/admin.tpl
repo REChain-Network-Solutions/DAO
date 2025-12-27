@@ -560,12 +560,17 @@
                       </li>
                       <li {if $view == "earnings" && $sub_view == "packages"}class="active" {/if}>
                         <a href="{$system['system_url']}/{$control_panel['url']}/earnings/packages">
-                          {__("Packages Earnings")}
+                          {__("Pro Packages")}
                         </a>
                       </li>
                       <li {if $view == "earnings" && $sub_view == "movies"}class="active" {/if}>
                         <a href="{$system['system_url']}/{$control_panel['url']}/earnings/movies">
-                          {__("Movies Earnings")}
+                          {__("Movies")}
+                        </a>
+                      </li>
+                      <li {if $view == "earnings" && $sub_view == "paid_modules"}class="active" {/if}>
+                        <a href="{$system['system_url']}/{$control_panel['url']}/earnings/paid_modules">
+                          {__("Paid Modules")}
                         </a>
                       </li>
                     </ul>
@@ -706,6 +711,16 @@
                 </li>
               {/if}
               <!-- Points -->
+
+              <!-- Paid Modules -->
+              {if $user->_is_admin}
+                <li {if $view == "paid_modules"}class="active" {/if}>
+                  <a href="{$system['system_url']}/{$control_panel['url']}/paid_modules">
+                    <i class="fa-solid fa-money-check-dollar fa-lg fa-fw mr10" style="color: #4CAF50"></i>{__("Paid Modules")}
+                  </a>
+                </li>
+              {/if}
+              <!-- Paid Modules -->
 
               <!-- Market -->
               {if $user->_is_admin || ($user->_is_moderator && $system['mods_marketplace_permission'])}
@@ -891,6 +906,25 @@
         </div>
       {/if}
       <!-- Developers -->
+
+      <!-- Support -->
+      {if $system['support_center_enabled']}
+        <div class="card mb15">
+          <div class="card-header block-title">
+            {__("Support Center")}
+          </div>
+          <div class="card-body with-nav">
+            <ul class="side-nav">
+              <li {if $view == "support"}class="active" {/if}>
+                <a href="{$system['system_url']}/support">
+                  <i class="fa-solid fa-headset fa-lg fa-fw mr10" style="color: #4CAF50"></i>{__("Support Center")}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      {/if}
+      <!-- Support -->
 
       <!-- Tools -->
       {if $user->_is_admin || ($user->_is_moderator && $system['mods_reports_permission']) || ($user->_is_moderator && $system['mods_blacklist_permission']) || ($user->_is_moderator && $system['mods_verifications_permission'])}
@@ -1211,8 +1245,6 @@
         </div>
       {/if}
       <!-- Apps -->
-
-
 
       <!-- System -->
       {if $user->_is_admin}

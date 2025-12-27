@@ -4,7 +4,7 @@
  * webhooks -> paypal
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -41,7 +41,7 @@ try {
         $payment = ($is_subscription) ? paypal_subscription_check($_GET['subscription_id']) : paypal_payment_check($_GET['paymentId'], $_GET['PayerID']);
         if ($payment) {
           /* update user package */
-          $user->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled']);
+          $user->update_user_package($package);
           /* check if the payment is recurring (note: webhook will log the payment) */
           if ($package['paypal_billing_plan']) {
             /* insert the recurring payments */

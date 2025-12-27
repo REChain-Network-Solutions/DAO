@@ -1,5 +1,5 @@
 <!-- reaction -->
 <div class="emoji">
-  <img src="{$system['system_uploads']}/{$reactions[$_reaction]['image']}" alt="{$reactions[$_reaction]['title']}" />
+  <img src="{$system['reactions'][$_reaction]['image_url']}" alt="{$system['reactions'][$_reaction]['title']}" />
 </div>
 <!-- reaction -->

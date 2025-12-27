@@ -1,69 +1,44 @@
-version: '3.8'
-
+# services
 services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DB_HOST=mysql
-      - REDIS_HOST=redis
-    depends_on:
-      - mysql
-      - redis
-    volumes:
-      - ./uploads:/app/uploads
-      - ./logs:/app/logs
-    restart: unless-stopped
-    networks:
-      - rechain-dao-network
+ # PHP & Apache Service
+ php_apache:
+  image: Delus # name your image
+  container_name: php_apache
+  build:
+   context: .
+   dockerfile: Dockerfile
+  depends_on:
+   - mysql_db
+  volumes:
+   - .:/var/www/html
+  ports:
+   - 80:80
 
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
-      MYSQL_DATABASE: ${DB_NAME:-rechain_dao}
-      MYSQL_USER: ${DB_USER:-rechain_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./sql/init:/docker-entrypoint-initdb.d
-    restart: unless-stopped
-    networks:
-      - rechain-dao-network
+ # MySQL Service
+ mysql_db:
+  container_name: mysql_db
+  image: mysql
+  restart: always
+  environment:
+   MYSQL_ROOT_PASSWORD: 123456
+  ports:
+   - 3306:3306
+  volumes:
+   - mysql-data:/var/lib/mysql # Volume not Bind Mounting
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    networks:
-      - rechain-dao-network
+ # PHPmyAdmin Service
+ phpmyadmin:
+  container_name: phpmyadmin
+  image: phpmyadmin
+  restart: always
+  ports:
+   - 8080:80
+  environment:
+   PMA_HOST: mysql_db
+  depends_on:
+   - mysql_db
 
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - app
-    restart: unless-stopped
-    networks:
-      - rechain-dao-network
-
+# volumes
 volumes:
-  mysql_data:
-  redis_data:
-
-networks:
-  rechain-dao-network:
-    driver: bridge
+ mysql-data:
+  external: true

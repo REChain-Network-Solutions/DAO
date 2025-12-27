@@ -4,7 +4,7 @@
  * ajax -> admin -> bank
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -49,7 +49,7 @@ try {
             _error(400);
           }
           /* update user package */
-          $user->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled'], $transfer_request['user_id']);
+          $user->update_user_package($package, $transfer_request['user_id']);
           /* log payment */
           $user->log_payment($transfer_request['user_id'], $package['price'], 'bank', 'packages');
           break;

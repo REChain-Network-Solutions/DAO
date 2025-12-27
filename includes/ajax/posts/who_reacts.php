@@ -4,7 +4,7 @@
  * ajax -> posts -> who reacts
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -17,8 +17,8 @@ is_ajax();
 user_access(true);
 
 // valid inputs
-/* if post_id & photo_id & comment_id not set */
-if (!isset($_GET['post_id']) && !isset($_GET['photo_id']) && !isset($_GET['comment_id'])) {
+/* if post_id & photo_id & comment_id & message_id not set */
+if (!isset($_GET['post_id']) && !isset($_GET['photo_id']) && !isset($_GET['comment_id']) && !isset($_GET['message_id'])) {
   _error(400);
 }
 /* if post_id set but not numeric */
@@ -31,6 +31,10 @@ if (isset($_GET['photo_id']) && !is_numeric($_GET['photo_id'])) {
 }
 /* if comment_id set but not numeric */
 if (isset($_GET['comment_id']) && !is_numeric($_GET['comment_id'])) {
+  _error(400);
+}
+/* if message_id set but not numeric */
+if (isset($_GET['message_id']) && !is_numeric($_GET['message_id'])) {
   _error(400);
 }
 
@@ -48,22 +52,28 @@ try {
   // get users who
   if (isset($_GET['post_id'])) {
     /* reacted to this post */
-    $users = $user->who_reacts(['post_id' => $_GET['post_id'], 'reaction_type' => $reaction_type]);
+    $users = $user->who_reacts(['post_id' => $_GET['post_id'], 'reaction_type' => $reaction_type])['data'];
     $handle = "post";
     $get = 'post_id';
     $id = $_GET['post_id'];
   } elseif (isset($_GET['photo_id'])) {
     /* reacted to this photo */
-    $users = $user->who_reacts(['photo_id' => $_GET['photo_id'], 'reaction_type' => $reaction_type]);
+    $users = $user->who_reacts(['photo_id' => $_GET['photo_id'], 'reaction_type' => $reaction_type])['data'];
     $handle = "photo";
     $get = 'photo_id';
     $id = $_GET['photo_id'];
   } elseif (isset($_GET['comment_id'])) {
     /* reacted to this comment */
-    $users = $user->who_reacts(['comment_id' => $_GET['comment_id'], 'reaction_type' => $reaction_type]);
+    $users = $user->who_reacts(['comment_id' => $_GET['comment_id'], 'reaction_type' => $reaction_type])['data'];
     $handle = "comment";
     $get = 'comment_id';
     $id = $_GET['comment_id'];
+  } elseif (isset($_GET['message_id'])) {
+    /* reacted to this message */
+    $users = $user->who_reacts(['message_id' => $_GET['message_id'], 'reaction_type' => $reaction_type])['data'];
+    $handle = "message";
+    $get = 'message_id';
+    $id = $_GET['message_id'];
   } else {
     _error(400);
   }

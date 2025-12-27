@@ -420,7 +420,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="category_image" value="">
+              <input type="hidden" class="js_x-uploader-input" name="category_image" value="">
             </div>
           </div>
         </div>
@@ -506,7 +506,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="category_image" value="">
+                <input type="hidden" class="js_x-uploader-input" name="category_image" value="">
               </div>
             {else}
               <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$data['category_image']}')">
@@ -517,7 +517,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="category_image" value="{$data['category_image']}">
+                <input type="hidden" class="js_x-uploader-input" name="category_image" value="{$data['category_image']}">
               </div>
             {/if}
           </div>

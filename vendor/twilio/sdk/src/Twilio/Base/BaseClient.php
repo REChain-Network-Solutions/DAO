@@ -39,13 +39,13 @@ class BaseClient
     /**
      * Initializes the Twilio Client
      *
-     * @param string $username Username to authenticate with
-     * @param string $password Password to authenticate with
-     * @param string $accountSid Account SID to authenticate with, defaults to
+     * @param ?string $username Username to authenticate with
+     * @param ?string $password Password to authenticate with
+     * @param ?string $accountSid Account SID to authenticate with, defaults to
      *                           $username
-     * @param string $region Region to send requests to, defaults to 'us1' if Edge
+     * @param ?string $region Region to send requests to, defaults to 'us1' if Edge
      *                       provided
-     * @param HttpClient $httpClient HttpClient, defaults to CurlClient
+     * @param ?HttpClient $httpClient HttpClient, defaults to CurlClient
      * @param mixed[] $environment Environment to look for auth details, defaults
      *                             to $_ENV
      * @param string[] $userAgentExtensions Additions to the user agent string
@@ -67,7 +67,6 @@ class BaseClient
         $this->edge = $this->getArg(null, self::ENV_EDGE);
         $this->logLevel = $this->getArg(null, self::ENV_LOG);
         $this->userAgentExtensions = $userAgentExtensions ?: [];
-
         $this->invalidateOAuth();
         $this->setAccountSid($accountSid ?: $this->username);
 
@@ -111,7 +110,7 @@ class BaseClient
     /**
      * Determines argument value accounting for environment variables.
      *
-     * @param string $arg The constructor argument
+     * @param ?string $arg The constructor argument
      * @param string $envVar The environment variable name
      * @return ?string Argument value
      */
@@ -137,10 +136,10 @@ class BaseClient
      * @param string[] $params Query string parameters
      * @param string[] $data POST body data
      * @param string[] $headers HTTP Headers
-     * @param string $username User for Authentication
-     * @param string $password Password for Authentication
-     * @param int $timeout Timeout in seconds
-     * @param AuthStrategy $authStrategy AuthStrategy for Authentication
+     * @param ?string $username User for Authentication
+     * @param ?string $password Password for Authentication
+     * @param ?int $timeout Timeout in seconds
+     * @param ?AuthStrategy $authStrategy AuthStrategy for Authentication
      * @return \Twilio\Http\Response Response from the Twilio API
      * @throws TwilioException
      */
@@ -160,6 +159,30 @@ class BaseClient
         $authStrategy = $authStrategy ?: null;
         if ($this->credentialProvider) {
             $authStrategy = $this->credentialProvider->toAuthStrategy();
+        }
+
+        if( ($this->edge === null && $this->region !== null) || ($this->edge !== null && $this->region === null) )
+        {
+            trigger_error(' For regional processing, DNS is of format product.city.region.twilio.com; otherwise use product.twilio.com.', E_USER_DEPRECATED);
+        }
+        if ($this->edge === null && $this->region !== null) {
+            $regionMap = [
+                'au1' => 'sydney',
+                'br1' => 'sao-paulo',
+                'de1' => 'frankfurt',
+                'ie1' => 'dublin',
+                'jp1' => 'tokyo',
+                'jp2' => 'osaka',
+                'sg1' => 'singapore',
+                'us1' => 'ashburn',
+                'us2' => 'umatilla'
+            ];
+            if (array_key_exists($this->region, $regionMap)) {
+                trigger_error(' Setting default `Edge` for the provided `region`.', E_USER_DEPRECATED);
+                $this->edge = $regionMap[$this->region];
+            }
+            if( $this->edge === null )
+                $this->edge = '';
         }
 
         if (!$authStrategy) {
@@ -388,7 +411,7 @@ class BaseClient
     /**
      * Set Edge
      *
-     * @param string $uri Edge to use, unsets the Edge when called with no arguments
+     * @param ?string $edge Edge to use, unsets the Edge when called with no arguments
      */
     public function setEdge(?string $edge = null): void
     {
@@ -428,7 +451,7 @@ class BaseClient
     /**
      * Set log level to debug
      *
-     * @param string $logLevel log level to use
+     * @param ?string $logLevel log level to use
      */
     public function setLogLevel(?string $logLevel = null): void
     {

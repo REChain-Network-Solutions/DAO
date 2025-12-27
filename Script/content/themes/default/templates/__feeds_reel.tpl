@@ -74,7 +74,7 @@
 
                 <!-- reactions-container -->
                 <div class="reactions-container">
-                  {foreach $reactions_enabled as $reaction}
+                  {foreach $system['reactions_enabled'] as $reaction}
                     <div class="reactions_item reaction reaction-{$reaction@iteration} js_react-post" data-reaction="{$reaction['reaction']}" data-reaction-color="{$reaction['color']}" data-title="{__($reaction['title'])}">
                       {include file='__reaction_emojis.tpl' _reaction=$reaction['reaction']}
                     </div>

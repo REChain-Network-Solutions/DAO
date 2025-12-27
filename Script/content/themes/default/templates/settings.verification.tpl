@@ -50,7 +50,7 @@
                     </div>
                   </div>
                   <i class="fa fa-camera fa-2x js_x-uploader" data-handle="x-image"></i>
-                  <input type="hidden" class="js_x-image-input" name="photo" value="">
+                  <input type="hidden" class="js_x-uploader-input" name="photo" value="">
                 </div>
 
               </div>
@@ -68,7 +68,7 @@
                     </div>
                   </div>
                   <i class="fa fa-camera fa-2x js_x-uploader" data-handle="x-image"></i>
-                  <input type="hidden" class="js_x-image-input" name="passport" value="">
+                  <input type="hidden" class="js_x-uploader-input" name="passport" value="">
                 </div>
               </div>
             </div>

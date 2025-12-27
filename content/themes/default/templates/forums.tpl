@@ -183,7 +183,7 @@
             </div>
           {/if}
           <h1>{__($forum['forum_name'])}</h1>
-          <p>{__($forum['forum_description'])}</p>
+          <p>{__($forum['forum_description']|nl2br)}</p>
         </div>
         <!-- forum title & description -->
 

@@ -117,6 +117,17 @@
     <!-- content panel -->
     <div class="{if $view == "" || $view == "category"}col-md-8 col-lg-9 sg-offcanvas-mainbar{else}col-12 sg-offcanvas-mainbar{/if}">
 
+      {if $view == "" && $promoted_events}
+        <div class="posts-filter">
+          <span>{__("Promoted Events")}</span>
+        </div>
+        <ul class="row mb20">
+          {foreach $promoted_events as $_event}
+            {include file='__feeds_event.tpl' _tpl='box'}
+          {/foreach}
+        </ul>
+      {/if}
+
       <div class="posts-filter">
         <span>{$view_title}</span>
         <div class="float-end">

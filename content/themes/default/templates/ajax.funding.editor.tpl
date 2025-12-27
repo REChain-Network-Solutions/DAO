@@ -38,7 +38,7 @@
           </div>
         </div>
         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-        <input type="hidden" class="js_x-image-input" name="cover_image" value="{$post['funding']['cover_image']}">
+        <input type="hidden" class="js_x-uploader-input" name="cover_image" value="{$post['funding']['cover_image']}">
       </div>
     </div>
     <!-- cover image -->

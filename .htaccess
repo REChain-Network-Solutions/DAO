@@ -97,6 +97,13 @@ RewriteRule ^static/([^/]+)/?$ modules/static.php?url=$1 [L,QSA]
 # Contacts
 RewriteRule ^contacts/?$ modules/contact.php [L,QSA]
 
+# Support
+RewriteRule ^support/?$ support.php [L,QSA]
+RewriteRule ^support/tickets/?$ support.php?view=tickets [L,QSA]
+RewriteRule ^support/tickets/new/?$ support.php?view=new [L,QSA]
+RewriteRule ^support/tickets/find/?$ support.php?view=find [L,QSA]
+RewriteRule ^support/tickets/([^/]+)/?$ support.php?view=ticket&ticket_id=$1 [L,QSA]
+
 # Directory
 RewriteRule ^directory/?$ directory.php [L,QSA]
 RewriteRule ^directory/([^/]+)/?$ directory.php?view=$1 [L,QSA]
@@ -166,6 +173,8 @@ RewriteRule ^wallet/payments/?$ wallet.php?view=payments [L,QSA]
 # Boosted
 RewriteRule ^boosted/posts/?$ index.php?view=boosted_posts [L,QSA]
 RewriteRule ^boosted/pages/?$ index.php?view=boosted_pages [L,QSA]
+RewriteRule ^boosted/groups/?$ index.php?view=boosted_groups [L,QSA]
+RewriteRule ^boosted/events/?$ index.php?view=boosted_events [L,QSA]
 
 # People
 RewriteRule ^people/?$ people.php [L,QSA]

@@ -4,7 +4,7 @@
  * trait -> posts
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait PostsTrait
@@ -139,7 +139,7 @@ trait PostsTrait
               /* Yes they are friends */
               $where_query .= "WHERE (";
               /* get all target posts [except: group posts & event posts & hidden posts & anonymous posts] */
-              $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.in_group = '0' AND posts.in_event = '0' AND posts.privacy != 'me' AND posts.is_hidden = '0' AND posts.is_anonymous = '0')";
+              $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy != 'me'AND posts.is_hidden = '0' AND posts.is_anonymous = '0' AND posts.in_group = '0' AND posts.in_event = '0' )";
               /* get target wall posts (from others to the target) [except: hidden posts] */
               $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1' AND posts.is_hidden = '0')";
               $where_query .= ")";
@@ -156,10 +156,12 @@ trait PostsTrait
           }
         } else {
           /* get only public posts [except: hidden posts] */
+          $where_query .= "WHERE (";
           /* note: we didn't except group posts & event posts as they are not public already */
-          $where_query .= "WHERE (posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.is_anonymous = '0')";
+          $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.is_anonymous = '0')";
           /* get target public wall posts (from others to the target) [except: hidden posts] */
           $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0')";
+          $where_query .= ")";
         }
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query";
@@ -186,7 +188,7 @@ trait PostsTrait
           _error(400);
         }
         $id = $args['id'];
-        $where_query .= "WHERE (posts.group_id = $id AND posts.in_group = '1' AND posts.group_approved = '1')";
+        $where_query .= "WHERE (posts.group_id = $id AND posts.in_group = '1' AND posts.group_approved = '1') OR (posts.group_id = $id AND posts.post_type = 'group')";
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query)";
         }
@@ -214,7 +216,7 @@ trait PostsTrait
           _error(400);
         }
         $id = $args['id'];
-        $where_query .= "WHERE (posts.event_id = $id AND posts.in_event = '1' AND posts.event_approved = '1')";
+        $where_query .= "WHERE (posts.event_id = $id AND posts.in_event = '1' AND posts.event_approved = '1') OR (posts.event_id = $id AND posts.post_type = 'event')";
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query)";
         }
@@ -290,7 +292,9 @@ trait PostsTrait
         break;
     }
     /* exclude viewer hidden posts from results */
-    $where_query .= sprintf(" AND (posts.post_id NOT IN (SELECT post_id FROM posts_hidden WHERE user_id = %s))", secure($this->_data['user_id'], 'int'));
+    if ($this->_logged_in) {
+      $where_query .= sprintf(" AND (posts.post_id NOT IN (SELECT post_id FROM posts_hidden WHERE user_id = %s))", secure($this->_data['user_id'], 'int'));
+    }
     /* filter posts */
     if ($filter != "all") {
       $where_query .= " AND (posts.post_type = '$filter')";
@@ -341,6 +345,7 @@ trait PostsTrait
     }
     return $posts;
   }
+
 
   /**
    * get_posts_count
@@ -416,7 +421,7 @@ trait PostsTrait
     if ($post['can_get_details']) {
       /* parse text */
       $post['text_plain'] = $post['text'];
-      $post['text'] = $this->_parse(["text" => $post['text_plain']]);
+      $post['text'] = $this->parse(["text" => $post['text_plain']]);
 
       /* og-meta tags */
       $post['og_title'] .= ($post['text_plain'] != "") ? " - " . $post['text_plain'] : "";
@@ -561,6 +566,8 @@ trait PostsTrait
           /* og-meta tags */
           $post['og_image'] = $system['system_uploads'] . '/' . $post['photos'][0]['source'];
         }
+        /* product price */
+        $post['product']['price_formatted'] = print_money($post['product']['price']);
         /* og-meta tags */
         $post['og_title'] = $post['product']['name'];
       }
@@ -949,6 +956,7 @@ trait PostsTrait
     $post_id = !isset($args['post_id']) ? null : $args['post_id'];
     $photo_id = !isset($args['photo_id']) ? null : $args['photo_id'];
     $comment_id = !isset($args['comment_id']) ? null : $args['comment_id'];
+    $message_id = !isset($args['message_id']) ? null : $args['message_id'];
     $reaction_type = !isset($args['reaction_type']) ? 'all' : $args['reaction_type'];
     /* check reation type */
     if (!in_array($reaction_type, ['all', 'like', 'love', 'haha', 'yay', 'wow', 'sad', 'angry'])) {
@@ -992,7 +1000,7 @@ trait PostsTrait
         secure($offset, 'int', false),
         secure($system['max_results'], 'int', false)
       ));
-    } else {
+    } elseif ($comment_id != null) {
       /* where statement */
       $where_statement = ($reaction_type == "all") ? "" : sprintf("AND posts_comments_reactions.reaction = %s", secure($reaction_type));
       /* get users who like the comment */
@@ -1009,18 +1017,42 @@ trait PostsTrait
         secure($offset, 'int', false),
         secure($system['max_results'], 'int', false)
       ));
+    } elseif ($message_id != null) {
+      /* where statement */
+      $where_statement = ($reaction_type == "all") ? "" : sprintf("AND conversations_messages_reactions.reaction = %s", secure($reaction_type));
+      /* get users who like the message */
+      $get_users = $db->query(sprintf(
+        'SELECT conversations_messages_reactions.reaction, users.user_id, users.user_name, users.user_firstname,
+                users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed,
+                users.user_verified
+         FROM conversations_messages_reactions
+         INNER JOIN users ON (conversations_messages_reactions.user_id = users.user_id)
+         WHERE conversations_messages_reactions.message_id = %s ' . $where_statement . '
+         ' . $this->get_sql_order_by_friends_followings() . '
+         LIMIT %s, %s',
+        secure($message_id, 'int'),
+        secure($offset, 'int', false),
+        secure($system['max_results'], 'int', false)
+      ));
+    } else {
+      _error(400);
     }
     if ($get_users->num_rows > 0) {
       while ($_user = $get_users->fetch_assoc()) {
+        /* user */
         $_user['user_picture'] = get_picture($_user['user_picture'], $_user['user_gender']);
+        $_user['user_fullname'] = html_entity_decode((($system['show_usernames_enabled']) ? $_user['user_name'] : $_user['user_firstname'] . " " . $_user['user_lastname']), ENT_QUOTES);
         /* get the connection between the viewer & the target */
         $_user['connection'] = $this->connection($_user['user_id']);
         /* get mutual friends count */
         $_user['mutual_friends_count'] = $this->get_mutual_friends_count($_user['user_id']);
+        /* reaction */
+        $_user['reaction_image_url'] = $system['reactions'][$_user['reaction']]['image_url'];
         $users[] = $_user;
       }
     }
-    return $users;
+    $has_more = (count($users) == $system['max_results']) ? true : false;
+    return ['data' => $users, 'has_more' => $has_more];
   }
 
 
@@ -1800,6 +1832,8 @@ trait PostsTrait
           /* update user cover if it's current cover */
           if ($post['user_cover_id']  ==  $post['photos'][0]['photo_id']) {
             $db->query(sprintf("UPDATE users SET user_cover = null, user_cover_id = null WHERE user_id = %s", secure($post['author_id'], 'int')));
+            /* delete cover image from uploads folder */
+            delete_uploads_file($post['user_cover']);
             /* return */
             $refresh = true;
           }
@@ -1820,6 +1854,8 @@ trait PostsTrait
           /* update page cover if it's current cover */
           if ($post['page_cover_id']  ==  $post['photos'][0]['photo_id']) {
             $db->query(sprintf("UPDATE pages SET page_cover = null, page_cover_id = null WHERE page_id = %s", secure($post['user_id'], 'int')));
+            /* delete cover image from uploads folder */
+            delete_uploads_file($post['page_cover']);
             /* return */
             $refresh = true;
           }
@@ -1840,6 +1876,8 @@ trait PostsTrait
           /* update group cover if it's current cover */
           if ($post['group_cover_id']  ==  $post['photos'][0]['photo_id']) {
             $db->query(sprintf("UPDATE `groups` SET group_cover = null, group_cover_id = null WHERE group_id = %s", secure($post['group_id'], 'int')));
+            /* delete cover image from uploads folder */
+            delete_uploads_file($post['group_cover']);
             /* return */
             $refresh = true;
           }
@@ -1860,6 +1898,8 @@ trait PostsTrait
           /* update event cover if it's current cover */
           if ($post['event_cover_id']  ==  $post['photos'][0]['photo_id']) {
             $db->query(sprintf("UPDATE `events` SET event_cover = null, event_cover_id = null WHERE event_id = %s", secure($post['event_id'], 'int')));
+            /* delete cover image from uploads folder */
+            delete_uploads_file($post['event_cover']);
             /* return */
             $refresh = true;
           }
@@ -2041,7 +2081,7 @@ trait PostsTrait
     $this->post_mentions($message, $post_id);
     /* parse text */
     $post['text_plain'] = htmlentities($message, ENT_QUOTES, 'utf-8');
-    $post['text'] = $this->_parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post_id]);
+    $post['text'] = $this->parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post_id]);
     /* get post colored pattern */
     $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
     /* return */

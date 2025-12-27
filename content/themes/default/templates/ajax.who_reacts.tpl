@@ -7,7 +7,7 @@
           {__("All")}
         </a>
       </li>
-      {foreach $reactions_enabled as $reaction}
+      {foreach $system['reactions_enabled'] as $reaction}
         <li class="nav-item">
           <a class="nav-link {if $reaction_type == $reaction['reaction']}active{/if}" href="#" data-toggle="modal" data-url="posts/who_reacts.php?{$get}={$id}&reaction_type={$reaction['reaction']}">
             <div style="height: 19px;">

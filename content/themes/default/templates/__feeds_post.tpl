@@ -166,14 +166,14 @@
                       {include file='__reaction_emojis.tpl' _reaction=$post['i_reaction']}
                     </div>
                   </div>
-                  <span class="reaction-btn-name" style="color: {$reactions[$post['i_reaction']]['color']};">{__($reactions[$post['i_reaction']]['title'])}</span>
+                  <span class="reaction-btn-name" style="color: {$system['reactions'][$post['i_reaction']]['color']};">{__($system['reactions'][$post['i_reaction']]['title'])}</span>
                 {/if}
               </div>
               <!-- reaction-btn -->
 
               <!-- reactions-container -->
               <div class="reactions-container">
-                {foreach $reactions_enabled as $reaction}
+                {foreach $system['reactions_enabled'] as $reaction}
                   <div class="reactions_item reaction reaction-{$reaction@iteration} js_react-post" data-reaction="{$reaction['reaction']}" data-reaction-color="{$reaction['color']}" data-title="{__($reaction['title'])}">
                     {include file='__reaction_emojis.tpl' _reaction=$reaction['reaction']}
                   </div>

@@ -4,7 +4,7 @@
  * pages
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -46,6 +46,11 @@ try {
 
       // get pages categories
       $smarty->assign('categories', $user->get_categories("pages_categories"));
+
+      // get promoted pages
+      if ($system['packages_enabled']) {
+        $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true, 'results' => 4]));
+      }
 
       // get new pages
       $pages = $user->get_pages(['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);

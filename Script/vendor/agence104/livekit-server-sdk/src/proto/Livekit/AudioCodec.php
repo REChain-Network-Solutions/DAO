@@ -23,11 +23,16 @@ class AudioCodec
      * Generated from protobuf enum <code>AAC = 2;</code>
      */
     const AAC = 2;
+    /**
+     * Generated from protobuf enum <code>AC_MP3 = 3;</code>
+     */
+    const AC_MP3 = 3;
 
     private static $valueToName = [
         self::DEFAULT_AC => 'DEFAULT_AC',
         self::OPUS => 'OPUS',
         self::AAC => 'AAC',
+        self::AC_MP3 => 'AC_MP3',
     ];
 
     public static function name($value)

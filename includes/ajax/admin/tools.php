@@ -4,7 +4,7 @@
  * ajax -> admin -> tools
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set execution time
@@ -44,7 +44,7 @@ try {
           /* return async */
           return_json_async(['success' => true, 'message' => __("Your request has been sent successfully and will be processed in the background")]);
           /* fake users generator */
-          $generated = $user->fake_users_generator($_POST['users_num'], $_POST['default_password'], $_POST['random_Avatar'], $_POST['language']);
+          $generated = $user->fake_users_generator($_POST['users_num'], $_POST['default_password'], $_POST['random_avatar'], $_POST['names_language']);
           /* post async notification */
           $user->post_notification_async($generated . " " . __("fake users generated successfully"));
           /* return */
@@ -75,11 +75,19 @@ try {
               throw new Exception(__("You must select valid country for your page"));
             }
           }
+          /* validate language */
+          if (is_empty($_POST['language'])) {
+            throw new Exception(__("You must select valid language for your page"));
+          } else {
+            if (!$user->check_language($_POST['language'])) {
+              throw new Exception(__("You must select valid language for your page"));
+            }
+          }
           // [BACKGROUND PROCESS]
           /* return async */
           return_json_async(['success' => true, 'message' => __("Your request has been sent successfully and will be processed in the background")]);
           /* fake pages generator */
-          $generated = $user->fake_pages_generator($_POST['pages_num'], $_POST['random_Avatar'], $_POST['language'], $_POST['category'], $_POST['country']);
+          $generated = $user->fake_pages_generator($_POST['pages_num'], $_POST['random_avatar'], $_POST['names_language'], $_POST['category'], $_POST['country'], $_POST['language']);
           /* post async notification */
           $user->post_notification_async($generated . " " . __("fake pages generated successfully"));
           /* return */
@@ -110,11 +118,19 @@ try {
               throw new Exception(__("You must select valid country for your group"));
             }
           }
+          /* validate language */
+          if (is_empty($_POST['language'])) {
+            throw new Exception(__("You must select valid language for your group"));
+          } else {
+            if (!$user->check_language($_POST['language'])) {
+              throw new Exception(__("You must select valid language for your group"));
+            }
+          }
           // [BACKGROUND PROCESS]
           /* return async */
           return_json_async(['success' => true, 'message' => __("Your request has been sent successfully and will be processed in the background")]);
           /* fake groups generator */
-          $generated = $user->fake_groups_generator($_POST['groups_num'], $_POST['random_Avatar'], $_POST['language'], $_POST['category'], $_POST['country']);
+          $generated = $user->fake_groups_generator($_POST['groups_num'], $_POST['random_avatar'], $_POST['names_language'], $_POST['category'], $_POST['country'], $_POST['language']);
           /* post async notification */
           $user->post_notification_async($generated . " " . __("fake groups generated successfully"));
           /* return */

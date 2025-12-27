@@ -421,6 +421,44 @@
     <!-- Account Switcher -->
 
     <!-- Email Activation -->
+    <script id="activation-email" type="text/template">
+      <div class="modal-header">
+        <h6 class="modal-title">{__("Enter the code from the email")}</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form class="js_ajax-forms" data-url="core/activation_email.php">
+        <div class="modal-body">
+          <div class="mb20">
+            {__("Let us know if this email belongs to you. Enter the code in the email")}
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <input class="form-control" name="code" type="text" placeholder="######" required autofocus>
+                  {if $user->_data['user_email']}
+                  <div class="form-text">
+                    <span class="text-link" data-toggle="modal" data-url="core/activation_email_resend.php">{__("Resend Email")}</span>
+                  </div>
+                {/if}
+              </div>
+            </div>
+            <div class="col-md-6">
+              {if $user->_data['user_email']}
+                {__("We sent your code to")} <strong>{$user->_data['user_email']}</strong>
+              {/if}
+            </div>
+          </div>
+          <!-- error -->
+          <div class="alert alert-danger mb0 mt10 x-hidden"></div>
+          <!-- error -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
+          <button type="submit" class="btn btn-primary">{__("Continue")}</button>
+        </div>
+      </form>
+    </script>
+
     <script id="activation-email-reset" type="text/template">
       <div class="modal-header">
         <h6 class="modal-title">{__("Change Email Address")}</h6>
@@ -469,9 +507,6 @@
                   </div>
                 {/if}
               </div>
-              <!-- error -->
-              <div class="alert alert-danger mb0 mt10 x-hidden"></div>
-              <!-- error -->
             </div>
             <div class="col-md-6">
               {if $user->_data['user_phone']}
@@ -479,6 +514,9 @@
               {/if}
             </div>
           </div>
+          <!-- error -->
+          <div class="alert alert-danger mb0 mt10 x-hidden"></div>
+          <!-- error -->
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
@@ -1191,12 +1229,17 @@
         <form class="js_ajax-forms" data-url="users/gifts.php?do=send&uid={literal}{{uid}}{/literal}">
           <div class="modal-body">
             <div class="js_scroller" data-slimScroll-height="440">
-              <div class="row">
+              <div class="d-flex flex-wrap justify-content-start">
                 {foreach from=$gifts item=gift}
-                  <div class="col-12 col-sm-6 col-md-4 ptb5 plr5">
+                  <div style="width: calc(100% / 3); padding: 5px; text-align: center;">
                     <input class="x-hidden input-label" type="radio" name="gift" value="{$gift['gift_id']}" id="gift_{$gift['gift_id']}" />
                     <label class="button-label-image" for="gift_{$gift['gift_id']}">
-                      <img src="{$system['system_uploads']}/{$gift['image']}" />
+                      <img src="{$system['system_uploads']}/{$gift['image']}" style="width: 86px!important; height: 86px!important;" />
+                      {if $system['gifts_points_enabled']}
+                        <div class="mt5">
+                          <span class="badge badge-sm bg-light text-primary">{$gift['points']} {__("Points")}</span>
+                        </div>
+                      {/if}
                     </label>
                   </div>
                 {/foreach}
@@ -1221,6 +1264,11 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body text-center">
+          {if $system['gifts_points_enabled']}
+            <div class="mb5">
+              <span class="badge badge-sm bg-light text-primary">{$gift['points']} {__("Points")}</span>
+            </div>
+          {/if}
           <img class="img-fluid" src="{$system['system_uploads']}/{$gift['image']}">
         </div>
       </script>
@@ -1420,7 +1468,7 @@
             <div class="form-group">
                 <label class="form-label" for="amount">{__("Your Wallet Credit")}</label>
                 <div>
-                  <span class="badge badge-lg bg-info">{print_money($user->_data['user_wallet_balance']|number_format:2)}</span>
+                  <span class="badge badge-lg bg-info">{print_money($user->_data['user_wallet_balance'])}</span>
                 </div>
               </div>
               <div class="form-group">
@@ -1454,7 +1502,7 @@
         <div class="modal-header">
           <h6 class="modal-title">
           {include file='__svg_icons.tpl' icon="payments" class="main-icon mr10" width="24px" height="24px"}
-          {__("Replenish Credit")}
+          {__("Add Funds")}
           </h6>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -1531,7 +1579,7 @@
             <div class="form-group">
               <label class="form-label" for="amount">{__("Your Affiliates Credit")}</label>
               <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_affiliate_balance']|number_format:2)}</span>
+                <span class="badge badge-lg bg-info">{print_money($user->_data['user_affiliate_balance'])}</span>
               </div>
             </div>
             <div class="form-group">
@@ -1565,7 +1613,7 @@
               <label class="form-label" for="amount">{__("Your Points Credit")}</label>
               <div>
                 <span class="badge badge-lg bg-info">
-                  {if $system['points_per_currency'] == 0}0{else}{print_money((((1/$system['points_per_currency'])*$user->_data['user_points'])|number_format:2))}{/if}
+                  {if $system['points_per_currency'] == 0}0{else}{print_money((((1/$system['points_per_currency'])*$user->_data['user_points'])))}{/if}
                 </span>
               </div>
             </div>
@@ -1599,7 +1647,7 @@
             <div class="form-group">
               <label class="form-label" for="amount">{__("Your Funding Credit")}</label>
               <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_market_balance']|number_format:2)}</span>
+                <span class="badge badge-lg bg-info">{print_money($user->_data['user_market_balance'])}</span>
               </div>
             </div>
             <div class="form-group">
@@ -1632,7 +1680,7 @@
             <div class="form-group">
               <label class="form-label" for="amount">{__("Your Funding Credit")}</label>
               <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_funding_balance']|number_format:2)}</span>
+                <span class="badge badge-lg bg-info">{print_money($user->_data['user_funding_balance'])}</span>
               </div>
             </div>
             <div class="form-group">
@@ -1665,7 +1713,7 @@
             <div class="form-group">
               <label class="form-label" for="amount">{__("Your Monetization Credit")}</label>
               <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_monetization_balance']|number_format:2)}</span>
+                <span class="badge badge-lg bg-info">{print_money($user->_data['user_monetization_balance'])}</span>
               </div>
             </div>
             <div class="form-group">
@@ -2092,7 +2140,7 @@
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
                   <button class="js_payment-epayco btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#total}}{/literal} data-total="{literal}{{total}}{/literal}" {literal}{{/total}}{/literal}>
-                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/epayco.png" class="mr5">{__("Epayco")}
+                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/icons/epayco.png" class="mr5">{__("Epayco")}
                   </button>
                 </div>
               </div>
@@ -2110,7 +2158,7 @@
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
                   <button class="js_payment-verotel btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
-                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/verotel.png" class="mr5">{__("Verotel")}
+                    <img width="20px" height="20px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/icons/verotel.png" class="mr5">{__("Verotel")}
                   </button>
                 </div>
               </div>
@@ -2120,6 +2168,15 @@
                 <div class="d-grid">
                   <button class="js_payment-mercadopago btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
                     {include file='__svg_icons.tpl' icon="mercadopago" class="mr5" width="20px" height="20px"}{__("MercadoPago")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['plisio_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-plisio btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
+                    {include file='__svg_icons.tpl' icon="plisio" class="mr5" width="20px" height="20px"}{__("Plisio")}
                   </button>
                 </div>
               </div>
@@ -2613,7 +2670,7 @@
                     </div>
                   </div>
                   <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                  <input type="hidden" class="js_x-image-input" name="bank_receipt" value="">
+                  <input type="hidden" class="js_x-uploader-input" name="bank_receipt" value="">
 
                 </div>
                 <div class="form-text">

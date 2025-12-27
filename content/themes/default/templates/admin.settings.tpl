@@ -667,6 +667,22 @@
               </div>
             </div>
 
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="widget" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Blogs Widget")}</div>
+                <div class="form-text d-none d-sm-block">{__("Enbale latest blogs carousel widget to be displayed on the home page")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="blogs_widget_enabled">
+                  <input type="checkbox" name="blogs_widget_enabled" id="blogs_widget_enabled" {if $system['blogs_widget_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
             <div class="divider"></div>
 
             <div class="form-table-row">
@@ -888,6 +904,24 @@
 
             <div class="form-table-row">
               <div class="avatar">
+                {include file='__svg_icons.tpl' icon="support" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Support Center")}</div>
+                <div class="form-text d-none d-sm-block">{__("Turn the support tickets center On and Off")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="support_center_enabled">
+                  <input type="checkbox" name="support_center_enabled" id="support_center_enabled" {if $system['support_center_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="form-table-row">
+              <div class="avatar">
                 {include file='__svg_icons.tpl' icon="dark_light" class="main-icon" width="40px" height="40px"}
               </div>
               <div>
@@ -963,6 +997,25 @@
               <div class="text-end">
                 <label class="switch" for="gifts_enabled">
                   <input type="checkbox" name="gifts_enabled" id="gifts_enabled" {if $system['gifts_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="points" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Gifts with Points")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Enable users to send gifts with points to each others")}<br>
+                  {__("Make sure you have configured")} <a href="{$system['system_url']}/{$control_panel['url']}/points">{__("Points System")}</a>
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="gifts_points_enabled">
+                  <input type="checkbox" name="gifts_points_enabled" id="gifts_points_enabled" {if $system['gifts_points_enabled']}checked{/if}>
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -2360,6 +2413,34 @@
               </div>
             </div>
 
+            <div class="form-table-row">
+              <div class="avatar">
+                <img height="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/icons/ageverif.png">
+              </div>
+              <div>
+                <div class="form-label h6">{__("AgeVerif Enbaled")}</div>
+                <div class="form-text d-none d-sm-block">{__("Enable/Disable age verification using AgeVerify.com")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="ageverif_enabled">
+                  <input type="checkbox" name="ageverif_enabled" id="ageverif_enabled" {if $system['ageverif_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("AgeVerif API Key")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="ageverif_api_key" value="{$system['ageverif_api_key']}">
+                <div class="form-text">
+                  {__("The AgeVerif API Key")} ({__("Check the docs to learn how to get this key")})
+                </div>
+              </div>
+            </div>
+
             <div class="divider"></div>
 
             <div class="form-table-row">
@@ -2860,7 +2941,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="">
+                    <input type="hidden" class="js_x-uploader-input" name="Delus_app_icon" value="">
                   </div>
                 {else}
                   <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['Delus_app_icon']}')">
@@ -2871,7 +2952,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="{$system['Delus_app_icon']}">
+                    <input type="hidden" class="js_x-uploader-input" name="Delus_app_icon" value="{$system['Delus_app_icon']}">
                   </div>
                 {/if}
               </div>
@@ -4533,6 +4614,11 @@
             <i class="fa-solid fa-bolt fa-fw mr5"></i><strong>{__("Socket.io")}</strong>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#Apps" data-bs-toggle="tab">
+            <i class="fa-solid fa-mobile fa-fw mr5"></i><strong>{__("Apps")}</strong>
+          </a>
+        </li>
       </ul>
       <!-- panel nav -->
     </div>
@@ -4880,7 +4966,6 @@
       <div class="tab-pane" id="ChatSocket">
         <form class="js_ajax-forms" data-url="admin/settings.php?edit=chat_socket">
           <div class="card-body">
-
             <div class="form-table-row">
               <div class="avatar">
                 {include file='__svg_icons.tpl' icon="socketio" class="main-icon" width="40px" height="40px"}
@@ -5053,7 +5138,6 @@
             <!-- error -->
             <div class="alert alert-danger mt15 mb0 x-hidden"></div>
             <!-- error -->
-
           </div>
           <div class="card-footer d-flex justify-content-between align-items-center">
             <div>
@@ -5073,6 +5157,65 @@
               </button>
               <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
             </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="tab-pane" id="Apps">
+        <form class="js_ajax-forms" data-url="admin/settings.php?edit=chat_apps">
+          <div class="card-body">
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="mobile" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Redirect to Mobile Apps")}</div>
+                <div class="form-text d-none d-sm-block">
+                  {__("Turn the chat icon off on mobile devices if you have the mobile apps installed")}
+                </div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="redirect_to_mobile_apps">
+                  <input type="checkbox" name="redirect_to_mobile_apps" id="redirect_to_mobile_apps" {if $system['redirect_to_mobile_apps']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Google Play Store Link")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="messaging_app_android_link" value="{$system['messaging_app_android_link']}">
+                <div class="form-text">
+                  {__("The messaging app link on Google Play Store")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Apple App Store Link")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="messaging_app_ios_link" value="{$system['messaging_app_ios_link']}">
+                <div class="form-text">
+                  {__("The messaging app link on Apple App Store")}
+                </div>
+              </div>
+            </div>
+
+            <!-- success -->
+            <div class="alert alert-success mt15 mb0 x-hidden"></div>
+            <!-- success -->
+
+            <!-- error -->
+            <div class="alert alert-danger mt15 mb0 x-hidden"></div>
+            <!-- error -->
+          </div>
+          <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
           </div>
         </form>
       </div>
@@ -5216,7 +5359,7 @@
               <option value="ap-northeast-2" {if $system['agora_s3_region'] == "ap-northeast-2"}selected{/if}>Asia Pacific (Seoul) ap-northeast-2</option>
               <option value="sa-east-1" {if $system['agora_s3_region'] == "sa-east-1"}selected{/if}>South America (São Paulo) sa-east-1</option>
               <option value="ca-central-1" {if $system['agora_s3_region'] == "ca-central-1"}selected{/if}>Canada (Central) ca-central-1</option>
-              <option value="ap-south-1" {if $system['agora_s3_region'] == "ap-south-1"}selected{/if}>Asia Pacific (Mumbai)</option>
+              <option value="ap-south-1" {if $system['agora_s3_region'] == "ap-south-1"}selected{/if}>Asia Pacific (Mumbai) ap-south-1</option>
             </select>
             <div class="form-text">
               {__("Your Amazon S3 bucket region")}
@@ -5641,7 +5784,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="watermark_icon" value="">
+                    <input type="hidden" class="js_x-uploader-input" name="watermark_icon" value="">
                   </div>
                 {else}
                   <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['watermark_icon']}')">
@@ -5654,7 +5797,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="watermark_icon" value="{$system['watermark_icon']}">
+                    <input type="hidden" class="js_x-uploader-input" name="watermark_icon" value="{$system['watermark_icon']}">
                   </div>
                 {/if}
                 <div class="form-text">
@@ -5778,6 +5921,22 @@
               </div>
             </div>
 
+            <div class="form-table-row">
+              <div class="avatar">
+                <div style="width: 40px; height: 40px;"></div>
+              </div>
+              <div>
+                <div class="form-label h6 mb5">{__("Video Upload in Chat")} </div>
+                <div class="form-text d-none d-sm-block">{__("Enable video upload in chat")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="chat_videos_enabled">
+                  <input type="checkbox" name="chat_videos_enabled" id="chat_videos_enabled" {if $system['chat_videos_enabled']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
             <div class="row form-group">
               <label class="col-md-3 form-label">
                 {__("Max video size")}
@@ -5797,7 +5956,55 @@
               <div class="col-md-9">
                 <input type="text" class="form-control" name="video_extensions" value="{$system['video_extensions']}">
                 <div class="form-text">
-                  {__("Allowed video extensions (separated with comma ',)")}
+                  {__("Allowed video extensions (separated with comma ',')")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Video Minimum Duration")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="video_minimum_duration" value="{$system['video_minimum_duration']}">
+                <div class="form-text">
+                  {__("The Minimum duration of the video in seconds (0 for unlimited)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Video Maximum Duration")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="video_maximum_duration" value="{$system['video_maximum_duration']}">
+                <div class="form-text">
+                  {__("The Maximum duration of the video in seconds (0 for unlimited)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Reel Minimum Duration")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="reels_minimum_duration" value="{$system['reels_minimum_duration']}">
+                <div class="form-text">
+                  {__("The Minimum duration of the reel in seconds (0 for unlimited)")}
+                </div>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Reel Maximum Duration")}
+              </label>
+              <div class="col-md-9">
+                <input type="text" class="form-control" name="reels_maximum_duration" value="{$system['reels_maximum_duration']}">
+                <div class="form-text">
+                  {__("The Maximum duration of the reel in seconds (0 for unlimited)")}
                 </div>
               </div>
             </div>
@@ -5929,7 +6136,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="watermark_videos_icon" value="">
+                    <input type="hidden" class="js_x-uploader-input" name="watermark_videos_icon" value="">
                   </div>
                 {else}
                   <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['watermark_videos_icon']}')">
@@ -5942,7 +6149,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="watermark_videos_icon" value="{$system['watermark_videos_icon']}">
+                    <input type="hidden" class="js_x-uploader-input" name="watermark_videos_icon" value="{$system['watermark_videos_icon']}">
                   </div>
                 {/if}
                 <div class="form-text">
@@ -6042,7 +6249,7 @@
               <div class="col-md-9">
                 <input type="text" class="form-control" name="audio_extensions" value="{$system['audio_extensions']}">
                 <div class="form-text">
-                  {__("Allowed audio extensions (separated with comma ',)")}
+                  {__("Allowed audio extensions (separated with comma ',')")}
                 </div>
               </div>
             </div>
@@ -6100,7 +6307,7 @@
               <div class="col-md-9">
                 <input type="text" class="form-control" name="file_extensions" value="{$system['file_extensions']}">
                 <div class="form-text">
-                  {__("Allowed file extensions (separated with comma ',)")}
+                  {__("Allowed file extensions (separated with comma ',')")}
                 </div>
               </div>
             </div>
@@ -6184,7 +6391,7 @@
                   <option value="us-west-1" {if $system['s3_region'] == "us-west-1"}selected{/if}>US West (N. California) us-west-1</option>
                   <option value="us-west-2" {if $system['s3_region'] == "us-west-2"}selected{/if}>US West (Oregon) us-west-2</option>
                   <option value="ap-east-1" {if $system['s3_region'] == "ap-east-1"}selected{/if}>Asia Pacific (Hong Kong) ap-east-1</option>
-                  <option value="ap-south-1" {if $system['s3_region'] == "ap-south-1"}selected{/if}>Asia Pacific (Mumbai)</option>
+                  <option value="ap-south-1" {if $system['s3_region'] == "ap-south-1"}selected{/if}>Asia Pacific (Mumbai) ap-south-1</option>
                   <option value="ap-northeast-3" {if $system['s3_region'] == "ap-northeast-3"}selected{/if}>Asia Pacific (Osaka-Local) ap-northeast-3</option>
                   <option value="ap-northeast-2" {if $system['s3_region'] == "ap-northeast-2"}selected{/if}>Asia Pacific (Seoul) ap-northeast-2</option>
                   <option value="ap-southeast-1" {if $system['s3_region'] == "ap-southeast-1"}selected{/if}>Asia Pacific (Singapore) ap-southeast-1</option>
@@ -8399,7 +8606,7 @@
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  <img height="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/epayco.png">
+                  <img height="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/icons/epayco.png">
                 </div>
                 <div>
                   <div class="form-label h6">{__("Epayco Enabled")}</div>
@@ -8540,7 +8747,7 @@
             <div>
               <div class="form-table-row">
                 <div class="avatar">
-                  <img width="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/verotel.png">
+                  <img width="40px" src="{$system['system_url']}/content/themes/{$system['theme']}/images/icons/verotel.png">
                 </div>
                 <div>
                   <div class="form-label h6">{__("Verotel Enabled")}</div>
@@ -8629,6 +8836,41 @@
               </div>
             </div>
             <!-- MercadoPago -->
+
+            <div class="divider"></div>
+
+            <!-- Plisio -->
+            <div>
+              <div class="form-table-row">
+                <div class="avatar">
+                  {include file='__svg_icons.tpl' icon="plisio" width="40px" height="40px"}
+                </div>
+                <div>
+                  <div class="form-label h6">{__("Plisio Enabled")}</div>
+                  <div class="form-text d-none d-sm-block">{__("Enable payments via Plisio")}</div>
+                </div>
+                <div class="text-end">
+                  <label class="switch" for="plisio_enabled">
+                    <input type="checkbox" name="plisio_enabled" id="plisio_enabled" {if $system['plisio_enabled']}checked{/if}>
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="row form-group">
+                <label class="col-md-3 form-label">
+                  {__("Secret Key")}
+                </label>
+                <div class="col-md-9">
+                  {if !$user->_data['user_demo']}
+                    <input type="text" class="form-control" name="plisio_secret_key" value="{$system['plisio_secret_key']}">
+                  {else}
+                    <input type="password" class="form-control" value="*********">
+                  {/if}
+                </div>
+              </div>
+            </div>
+            <!-- Plisio -->
 
             <!-- success -->
             <div class="alert alert-success mt15 mb0 x-hidden"></div>

@@ -4,7 +4,7 @@
  * APIs -> modules -> auth -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // signUp
@@ -22,6 +22,7 @@ function signUp($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // accountActivation
 function accountActivation($req, $res)
 {
@@ -33,6 +34,7 @@ function accountActivation($req, $res)
   }
   apiResponse($res);
 }
+
 
 // accountActivationResend
 function accountActivationResend($req, $res)
@@ -46,6 +48,7 @@ function accountActivationResend($req, $res)
   apiResponse($res);
 }
 
+
 // accountActivationReset
 function accountActivationReset($req, $res)
 {
@@ -58,6 +61,7 @@ function accountActivationReset($req, $res)
   apiResponse($res);
 }
 
+
 // gettingStartedUpdate
 function gettingStartedUpdate($req, $res)
 {
@@ -66,6 +70,7 @@ function gettingStartedUpdate($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // gettingStartedFinish
 function gettingStartedFinish($req, $res)
 {
@@ -73,6 +78,7 @@ function gettingStartedFinish($req, $res)
   $user->getting_satrted_finish();
   apiResponse($res, ['data' => $response]);
 }
+
 
 // signIn
 function signIn($req, $res)
@@ -88,6 +94,7 @@ function signIn($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // twoFactorAuthentication
 function twoFactorAuthentication($req, $res)
 {
@@ -102,6 +109,7 @@ function twoFactorAuthentication($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // signOut
 function signOut($req, $res)
 {
@@ -109,6 +117,7 @@ function signOut($req, $res)
   $user->sign_out();
   apiResponse($res);
 }
+
 
 // forgetPassword
 function forgetPassword($req, $res)
@@ -118,6 +127,7 @@ function forgetPassword($req, $res)
   apiResponse($res);
 }
 
+
 // forgetPasswordConfirm
 function forgetPasswordConfirm($req, $res)
 {
@@ -125,6 +135,7 @@ function forgetPasswordConfirm($req, $res)
   $user->forget_password_confirm($req->body['email'], $req->body['reset_key']);
   apiResponse($res);
 }
+
 
 // forgetPasswordReset
 function forgetPasswordReset($req, $res)

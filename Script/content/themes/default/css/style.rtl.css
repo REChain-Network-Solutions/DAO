@@ -44,7 +44,7 @@
 /* ------------------------------- */
 
 :root {
-  --body-font-family: "Tajawal", Helvetica, "sans-serif";
+  --body-font-family: Tajawal, Helvetica, "sans-serif";
   --body-bg-color: #f0f2f5;
   --body-bg-color-dark: #1E252B;
   --body-color: #111;
@@ -1770,6 +1770,7 @@ body.night-mode .bs-callout {
 
 .bs-callout-danger {
   border-right-color: #d9534f;
+  background: #fff1f0;
 }
 
 .bs-callout-danger h4 {
@@ -1778,6 +1779,7 @@ body.night-mode .bs-callout {
 
 .bs-callout-warning {
   border-right-color: #f0ad4e;
+  background: #fdf5e9;
 }
 
 .bs-callout-warning h4 {
@@ -2957,6 +2959,22 @@ body.night-mode .feeds-item.unread {
 
 /* -- */
 
+/* feeds-action-item */
+
+.feeds-action-item.unread,
+.feeds-action-item:hover {
+  cursor: pointer;
+  background: #f4f4f4;
+  border-radius: 16px;
+}
+
+body.night-mode .feeds-action-item.unread,
+body.night-mode .feeds-action-item:hover {
+  background: var(--card-dark-input);
+}
+
+/* -- */
+
 /* data-container */
 .data-container {
   display: block;
@@ -3093,6 +3111,7 @@ body.night-mode .data-content {
   width: 48px;
   height: 48px;
   object-fit: cover;
+  border-radius: 14px;
 }
 
 .data-content .btn {
@@ -5422,7 +5441,7 @@ body.night-mode .poll-voters .more {
   margin-right: -36px;
   margin-top: -36px;
   position: absolute;
-  background-image: url(/content/themes/default/images/youtube.png);
+  background-image: url(/content/themes/default/images/icons/youtube.png);
   background-size: contain;
   cursor: pointer;
 }
@@ -6853,6 +6872,7 @@ body.night-mode .chat-colors-menu .item:hover {
 }
 
 .conversation-body .text {
+  float: right;
   background: #f0f2f5;
   padding: 6px 8px;
   border-radius: 12px;
@@ -6866,6 +6886,7 @@ body.night-mode .conversation-body .text {
 }
 
 .conversation.right .conversation-body .text {
+  float: left;
   background: var(--link-color);
   color: #fff;
   border-radius: 12px;
@@ -6886,6 +6907,64 @@ body.night-mode .conversation-body .text {
 
 .conversation-body .text .twa {
   font-size: 2em;
+}
+
+.conversation-body .img-wrapper {
+  max-width: 180px;
+  border-radius: 16px;
+}
+
+.conversation-body .video-wrapper {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.chat-product {
+  display: block;
+  background: #f7f7f7;
+  border-radius: 17px;
+  height: auto;
+  max-width: 240px;
+  min-width: 240px;
+}
+
+body.night-mode .chat-product {
+  background: var(--card-dark-input);
+}
+
+.chat-product-image {
+  width: 240px;
+  height: auto;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+}
+
+.chat-product-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chat-product-info {
+  padding: 10px;
+}
+
+.chat-product-title {
+  font-size: 16px;
+  font-weight: bold;
+  display: block;
+  overflow: hidden;
+  word-break: break-all;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-product-price {
+  font-size: 16px;
+  font-weight: 500;
+  color: red;
 }
 
 /* -- */

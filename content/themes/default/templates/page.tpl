@@ -165,23 +165,23 @@
 
           <!-- boost -->
           {if $system['packages_enabled'] && $spage['i_admin']}
-            {if $user->_data['can_boost_pages']}
-              {if $spage['page_boosted']}
-                <button type="button" class="btn btn-md rounded-pill btn-danger js_unboost-page" data-id="{$spage['page_id']}">
-                  <i class="fa fa-bolt"></i>
-                  <span class="d-none d-xxl-inline-block ml5">{__("Unboost")}</span>
-                </button>
-              {else}
+            {if $spage['page_boosted']}
+              <button type="button" class="btn btn-md rounded-pill btn-danger js_unboost-page" data-id="{$spage['page_id']}">
+                <i class="fa fa-bolt"></i>
+                <span class="d-none d-xxl-inline-block ml5">{__("Unboost")}</span>
+              </button>
+            {else}
+              {if $user->_data['can_boost_pages']}
                 <button type="button" class="btn btn-md rounded-pill btn-danger js_boost-page" data-id="{$spage['page_id']}">
                   <i class="fa fa-bolt"></i>
                   <span class="d-none d-xxl-inline-block ml5">{__("Boost")}</span>
                 </button>
+              {else}
+                <a href="{$system['system_url']}/packages" class="btn btn-md rounded-pill btn-danger">
+                  <i class="fa fa-bolt"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Boost Page")}</span>
+                </a>
               {/if}
-            {else}
-              <a href="{$system['system_url']}/packages" class="btn btn-md rounded-pill btn-danger">
-                <i class="fa fa-bolt"></i>
-                <span class="d-none d-xxl-inline-block ml5">{__("Boost Page")}</span>
-              </a>
             {/if}
           {/if}
           <!-- boost -->
@@ -319,7 +319,7 @@
             {if $user->_logged_in && !$spage['i_admin'] && $spage['has_subscriptions_plans']}
               <div class="d-grid">
                 <button class="btn btn-primary rounded rounded-pill mb20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$spage['page_id']}&node_type=page" data-size="large">
-                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($spage['page_monetization_min_price']|number_format:2)})
+                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($spage['page_monetization_min_price'])})
                 </button>
               </div>
             {/if}
@@ -399,11 +399,7 @@
                         {__($spage['reviews_count'])} {__("Reviews")}
                         {if $spage['page_rate']}
                           <span class="review-stars small ml5">
-                            <i class="fa fa-star {if $spage['page_rate'] >= 1}checked{/if}"></i>
-                            <i class="fa fa-star {if $spage['page_rate'] >= 2}checked{/if}"></i>
-                            <i class="fa fa-star {if $spage['page_rate'] >= 3}checked{/if}"></i>
-                            <i class="fa fa-star {if $spage['page_rate'] >= 4}checked{/if}"></i>
-                            <i class="fa fa-star {if $spage['page_rate'] >= 5}checked{/if}"></i>
+                            {include file='__stars_rate.tpl' rate=$spage['page_rate']}
                           </span>
                           <span class="badge bg-light text-primary">{$spage['page_rate']|number_format:1}</span>
                         {/if}
@@ -982,11 +978,7 @@
                   {__("Reviews")}
                   {if $spage['page_rate']}
                     <span class="review-stars small ml5">
-                      <i class="fa fa-star {if $spage['page_rate'] >= 1}checked{/if}"></i>
-                      <i class="fa fa-star {if $spage['page_rate'] >= 2}checked{/if}"></i>
-                      <i class="fa fa-star {if $spage['page_rate'] >= 3}checked{/if}"></i>
-                      <i class="fa fa-star {if $spage['page_rate'] >= 4}checked{/if}"></i>
-                      <i class="fa fa-star {if $spage['page_rate'] >= 5}checked{/if}"></i>
+                      {include file='__stars_rate.tpl' rate=$spage['page_rate']}
                     </span>
                     <span class="badge bg-light text-primary">{$spage['page_rate']|number_format:1}</span>
                   {/if}
@@ -1731,7 +1723,7 @@
                           <div class="stat-cell">
                             <i class="fa fa-donate bg-icon"></i>
                             <div class="h3 mtb10">
-                              {print_money($user->_data['user_monetization_balance']|number_format:2)}
+                              {print_money($user->_data['user_monetization_balance'])}
                             </div>
                           </div>
                         </div>
@@ -1793,7 +1785,7 @@
                                     </div>
                                   </div>
                                   <i class="fa fa-camera fa-2x js_x-uploader" data-handle="x-image"></i>
-                                  <input type="hidden" class="js_x-image-input" name="photo" value="">
+                                  <input type="hidden" class="js_x-uploader-input" name="photo" value="">
                                 </div>
                               </div>
                               <div class="col-sm-6">
@@ -1810,7 +1802,7 @@
                                     </div>
                                   </div>
                                   <i class="fa fa-camera fa-2x js_x-uploader" data-handle="x-image"></i>
-                                  <input type="hidden" class="js_x-image-input" name="passport" value="">
+                                  <input type="hidden" class="js_x-uploader-input" name="passport" value="">
                                 </div>
                               </div>
                             </div>

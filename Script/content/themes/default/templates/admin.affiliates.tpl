@@ -56,10 +56,6 @@
               <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
             </div>
             <div class="form-check form-check-inline">
-              <input type="checkbox" class="form-check-input" name="method_moneypoolscash" id="method_moneypoolscash" {if in_array("moneypoolscash", $system['affiliate_payment_method_array'])}checked{/if}>
-              <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
-            </div>
-            <div class="form-check form-check-inline">
               <input type="checkbox" class="form-check-input" name="method_bank" id="method_bank" {if in_array("bank", $system['affiliate_payment_method_array'])}checked{/if}>
               <label class="form-check-label" for="method_bank">{__("Bank Transfer")}</label>
             </div>
@@ -164,6 +160,11 @@
               <option {if $system['affiliates_levels'] == 3}selected{/if} value="3">3</option>
               <option {if $system['affiliates_levels'] == 4}selected{/if} value="4">4</option>
               <option {if $system['affiliates_levels'] == 5}selected{/if} value="5">5</option>
+              <option {if $system['affiliates_levels'] == 6}selected{/if} value="6">6</option>
+              <option {if $system['affiliates_levels'] == 7}selected{/if} value="7">7</option>
+              <option {if $system['affiliates_levels'] == 8}selected{/if} value="8">8</option>
+              <option {if $system['affiliates_levels'] == 9}selected{/if} value="9">9</option>
+              <option {if $system['affiliates_levels'] == 10}selected{/if} value="10">10</option>
             </select>
             <div class="form-text">
               {__("How many levels you want to set your affiliates program?")}
@@ -271,7 +272,7 @@
                     {if $system['show_usernames_enabled']}{$row['user_name']}{else}{$row['user_firstname']} {$row['user_lastname']}{/if}
                   </a>
                 </td>
-                <td>{print_money($row['amount']|number_format:2)}</td>
+                <td>{print_money($row['amount'])}</td>
                 <td>
                   <span class="badge rounded-pill badge-lg bg-{$row['method_color']}">
                     {$row['method']|ucfirst}

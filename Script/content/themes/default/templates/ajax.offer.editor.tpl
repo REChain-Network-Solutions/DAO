@@ -147,7 +147,7 @@
             </div>
           </div>
           <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-          <input type="hidden" class="js_x-image-input" name="thumbnail" value="{$post['offer']['thumbnail']}">
+          <input type="hidden" class="js_x-uploader-input" name="thumbnail" value="{$post['offer']['thumbnail']}">
         </div>
       </div>
     {/if}

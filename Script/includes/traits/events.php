@@ -4,7 +4,7 @@
  * trait -> events
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait EventsTrait
@@ -30,13 +30,15 @@ trait EventsTrait
     $type = !isset($args['type']) ? null : $args['type'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $offset = !isset($args['offset']) ? 0 : $args['offset'];
-    $get_all = !isset($args['get_all']) ? false : true;
-    $suggested = !isset($args['suggested']) ? false : true;
     $random = !isset($args['random']) ? false : true;
+    $get_all = !isset($args['get_all']) ? false : true;
+    $offset = !isset($args['offset']) ? 0 : $args['offset'];
+    $results = !isset($args['results']) ? $system['events_results'] : $args['results'];
+    $promoted = !isset($args['promoted']) ? false : true;
+    $boosted = !isset($args['boosted']) ? false : true;
+    $suggested = !isset($args['suggested']) ? false : true;
     $managed = !isset($args['managed']) ? false : true;
     $filter = !isset($args['filter']) ? "admin" : $args['filter'];
-    $results = !isset($args['results']) ? $system['events_results'] : $args['results'];
     /* initialize vars */
     $events = [];
     $offset *= $results;
@@ -61,7 +63,13 @@ trait EventsTrait
     $limit_statement = ($get_all) ? "" : sprintf(" LIMIT %s, %s ", secure($offset, 'int', false), secure($results, 'int', false));
     /* prepare date filter to exclude past events */
     $date_filter = " AND event_end_date >= NOW() ";
-    if ($suggested) {
+    if ($promoted) {
+      /* get promoted events */
+      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_boosted = '1' " . $type_statement . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false)));
+    } elseif ($boosted) {
+      /* get the "viewer" boosted events */
+      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_boosted = '1' AND event_boosted_by = %s " . $type_statement . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+    } elseif ($suggested) {
       /* get suggested events */
       $where_statement = sprintf(" AND event_id NOT IN (%s) ", $this->spread_ids($this->get_events_ids()));
       $category_statement = ($category_id) ? sprintf(" AND event_category = %s ", secure($category_id, 'int')) : "";
@@ -256,6 +264,8 @@ trait EventsTrait
           event_category, 
           event_title, 
           event_location, 
+          event_latitude, 
+          event_longitude, 
           event_country, 
           event_language, 
           event_description, 
@@ -265,7 +275,7 @@ trait EventsTrait
           event_date, 
           event_tickets_link, 
           event_prices
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         secure($args['is_sponsored']),
         secure($args['sponsor_name']),
         secure($args['sponsor_url']),
@@ -275,6 +285,8 @@ trait EventsTrait
         secure($args['category'], 'int'),
         secure($args['title']),
         secure($args['location']),
+        secure($args['latitude']),
+        secure($args['longitude']),
         secure($args['country'], 'int'),
         secure($args['language'], 'int'),
         secure($args['description']),
@@ -296,6 +308,8 @@ trait EventsTrait
           event_category, 
           event_title, 
           event_location, 
+          event_latitude, 
+          event_longitude, 
           event_country, 
           event_language, 
           event_description, 
@@ -303,7 +317,7 @@ trait EventsTrait
           event_end_date, 
           event_is_online,
           event_date
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         secure($args['is_sponsored']),
         secure($args['sponsor_name']),
         secure($args['sponsor_url']),
@@ -312,6 +326,8 @@ trait EventsTrait
         secure($args['category'], 'int'),
         secure($args['title']),
         secure($args['location']),
+        secure($args['latitude']),
+        secure($args['longitude']),
         secure($args['country'], 'int'),
         secure($args['language'], 'int'),
         secure($args['description']),
@@ -500,6 +516,8 @@ trait EventsTrait
         event_category = %s, 
         event_title = %s, 
         event_location = %s, 
+        event_latitude = %s, 
+        event_longitude = %s, 
         event_country = %s, 
         event_language = %s, 
         event_description = %s, 
@@ -519,6 +537,8 @@ trait EventsTrait
       secure($args['category'], 'int'),
       secure($args['title']),
       secure($args['location']),
+      secure($args['latitude']),
+      secure($args['longitude']),
       secure($args['country'], 'int'),
       secure($args['language'], 'int'),
       secure($args['description']),

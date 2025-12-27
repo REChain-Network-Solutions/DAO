@@ -4,7 +4,7 @@
  * ajax -> admin -> settings
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -102,9 +102,11 @@ try {
       $_POST['location_finder_enabled'] = (isset($_POST['location_finder_enabled'])) ? '1' : '0';
       $_POST['auto_language_detection'] = (isset($_POST['auto_language_detection'])) ? '1' : '0';
       $_POST['contact_enabled'] = (isset($_POST['contact_enabled'])) ? '1' : '0';
+      $_POST['support_center_enabled'] = (isset($_POST['support_center_enabled'])) ? '1' : '0';
       $_POST['daytime_msg_enabled'] = (isset($_POST['daytime_msg_enabled'])) ? '1' : '0';
       $_POST['pokes_enabled'] = (isset($_POST['pokes_enabled'])) ? '1' : '0';
       $_POST['gifts_enabled'] = (isset($_POST['gifts_enabled'])) ? '1' : '0';
+      $_POST['gifts_points_enabled'] = (isset($_POST['gifts_points_enabled'])) ? '1' : '0';
       $_POST['cookie_consent_enabled'] = (isset($_POST['cookie_consent_enabled'])) ? '1' : '0';
       $_POST['adblock_detector_enabled'] = (isset($_POST['adblock_detector_enabled'])) ? '1' : '0';
       /* update */
@@ -112,12 +114,14 @@ try {
         'location_finder_enabled' => secure($_POST['location_finder_enabled']),
         'auto_language_detection' => secure($_POST['auto_language_detection']),
         'contact_enabled' => secure($_POST['contact_enabled']),
+        'support_center_enabled' => secure($_POST['support_center_enabled']),
         'daytime_msg_enabled' => secure($_POST['daytime_msg_enabled']),
         'system_morning_message' => secure($_POST['system_morning_message']),
         'system_afternoon_message' => secure($_POST['system_afternoon_message']),
         'system_evening_message' => secure($_POST['system_evening_message']),
         'pokes_enabled' => secure($_POST['pokes_enabled']),
         'gifts_enabled' => secure($_POST['gifts_enabled']),
+        'gifts_points_enabled' => secure($_POST['gifts_points_enabled']),
         'cookie_consent_enabled' => secure($_POST['cookie_consent_enabled']),
         'adblock_detector_enabled' => secure($_POST['adblock_detector_enabled']),
       ]);
@@ -137,6 +141,7 @@ try {
       $_POST['events_reviews_enabled'] = (isset($_POST['events_reviews_enabled'])) ? '1' : '0';
       $_POST['events_reviews_replacement_enabled'] = (isset($_POST['events_reviews_replacement_enabled'])) ? '1' : '0';
       $_POST['blogs_enabled'] = (isset($_POST['blogs_enabled'])) ? '1' : '0';
+      $_POST['blogs_widget_enabled'] = (isset($_POST['blogs_widget_enabled'])) ? '1' : '0';
       $_POST['reels_enabled'] = (isset($_POST['reels_enabled'])) ? '1' : '0';
       $_POST['watch_enabled'] = (isset($_POST['watch_enabled'])) ? '1' : '0';
       $_POST['offers_enabled'] = (isset($_POST['offers_enabled'])) ? '1' : '0';
@@ -161,6 +166,7 @@ try {
         'events_reviews_enabled' => secure($_POST['events_reviews_enabled']),
         'events_reviews_replacement_enabled' => secure($_POST['events_reviews_replacement_enabled']),
         'blogs_enabled' => secure($_POST['blogs_enabled']),
+        'blogs_widget_enabled' => secure($_POST['blogs_widget_enabled']),
         'reels_enabled' => secure($_POST['reels_enabled']),
         'watch_enabled' => secure($_POST['watch_enabled']),
         'offers_enabled' => secure($_POST['offers_enabled']),
@@ -287,6 +293,7 @@ try {
       $_POST['users_approval_enabled'] = (isset($_POST['users_approval_enabled'])) ? '1' : '0';
       $_POST['whitelist_enabled'] = (isset($_POST['whitelist_enabled'])) ? '1' : '0';
       $_POST['age_restriction'] = (isset($_POST['age_restriction'])) ? '1' : '0';
+      $_POST['ageverif_enabled'] = (isset($_POST['ageverif_enabled'])) ? '1' : '0';
       $_POST['getting_started'] = (isset($_POST['getting_started'])) ? '1' : '0';
       $_POST['getting_started_profile_image_required'] = (isset($_POST['getting_started_profile_image_required'])) ? '1' : '0';
       $_POST['getting_started_location_required'] = (isset($_POST['getting_started_location_required'])) ? '1' : '0';
@@ -312,6 +319,8 @@ try {
         'whitelist_providers' => secure($_POST['whitelist_providers']),
         'age_restriction' => secure($_POST['age_restriction']),
         'minimum_age' => secure($_POST['minimum_age'], 'int'),
+        'ageverif_enabled' => secure($_POST['ageverif_enabled']),
+        'ageverif_api_key' => secure($_POST['ageverif_api_key']),
         'getting_started' => secure($_POST['getting_started']),
         'getting_started_profile_image_required' => secure($_POST['getting_started_profile_image_required']),
         'getting_started_location_required' => secure($_POST['getting_started_location_required']),
@@ -626,6 +635,16 @@ try {
         'chat_socket_ssl_allow_self_signed' => secure($_POST['chat_socket_ssl_allow_self_signed']),
       ]);
 
+    case 'chat_apps':
+      /* prepare */
+      $_POST['redirect_to_mobile_apps'] = (isset($_POST['redirect_to_mobile_apps'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'redirect_to_mobile_apps' => secure($_POST['redirect_to_mobile_apps']),
+        'messaging_app_android_link' => secure($_POST['messaging_app_android_link']),
+        'messaging_app_ios_link' => secure($_POST['messaging_app_ios_link']),
+      ]);
+
     case 'live':
       /* prepare */
       $_POST['live_enabled'] = (isset($_POST['live_enabled'])) ? '1' : '0';
@@ -656,7 +675,9 @@ try {
       $_POST['limit_cover_photo'] = (isset($_POST['limit_cover_photo'])) ? '1' : '0';
       $_POST['cover_crop_enabled'] = (isset($_POST['cover_crop_enabled'])) ? '1' : '0';
       $_POST['watermark_enabled'] = (isset($_POST['watermark_enabled'])) ? '1' : '0';
+      $_POST['adult_images_enabled'] = (isset($_POST['adult_images_enabled'])) ? '1' : '0';
       $_POST['videos_enabled'] = (isset($_POST['videos_enabled'])) ? '1' : '0';
+      $_POST['chat_videos_enabled'] = (isset($_POST['chat_videos_enabled'])) ? '1' : '0';
       $_POST['ffmpeg_enabled'] = (isset($_POST['ffmpeg_enabled'])) ? '1' : '0';
       $_POST['watermark_videos_enabled'] = (isset($_POST['watermark_videos_enabled'])) ? '1' : '0';
       $_POST['audio_enabled'] = (isset($_POST['audio_enabled'])) ? '1' : '0';
@@ -673,8 +694,6 @@ try {
         'uploads_cdn_url' => secure($_POST['uploads_cdn_url']),
         'max_daily_upload_size' => secure($_POST['max_daily_upload_size']),
         'chunk_upload_size' => secure($_POST['chunk_upload_size']),
-        'max_avatar_size' => secure($_POST['max_avatar_size']),
-        'max_cover_size' => secure($_POST['max_cover_size']),
         'photos_enabled' => secure($_POST['photos_enabled']),
         'comments_photos_enabled' => secure($_POST['comments_photos_enabled']),
         'chat_photos_enabled' => secure($_POST['chat_photos_enabled']),
@@ -685,6 +704,8 @@ try {
         'allow_animated_images' => secure($_POST['allow_animated_images']),
         'limit_cover_photo' => secure($_POST['limit_cover_photo']),
         'cover_crop_enabled' => secure($_POST['cover_crop_enabled']),
+        'max_cover_size' => secure($_POST['max_cover_size']),
+        'max_avatar_size' => secure($_POST['max_avatar_size']),
         'watermark_enabled' => secure($_POST['watermark_enabled']),
         'watermark_type' => secure($_POST['watermark_type']),
         'watermark_icon' => secure($_POST['watermark_icon']),
@@ -696,11 +717,16 @@ try {
         'adult_images_action' => secure($_POST['adult_images_action']),
         'adult_images_api_key' => secure($_POST['adult_images_api_key']),
         'videos_enabled' => secure($_POST['videos_enabled']),
+        'chat_videos_enabled' => secure($_POST['chat_videos_enabled']),
+        'max_video_size' => secure($_POST['max_video_size']),
+        'video_extensions' => secure($_POST['video_extensions']),
+        'video_minimum_duration' => secure($_POST['video_minimum_duration']),
+        'video_maximum_duration' => secure($_POST['video_maximum_duration']),
+        'reels_minimum_duration' => secure($_POST['reels_minimum_duration']),
+        'reels_maximum_duration' => secure($_POST['reels_maximum_duration']),
         'ffmpeg_enabled' => secure($_POST['ffmpeg_enabled']),
         'ffmpeg_path' => secure($_POST['ffmpeg_path']),
         'ffmpeg_speed' => secure($_POST['ffmpeg_speed']),
-        'max_video_size' => secure($_POST['max_video_size']),
-        'video_extensions' => secure($_POST['video_extensions']),
         'ffmpeg_240p_enabled' => secure($_POST['ffmpeg_240p_enabled']),
         'ffmpeg_360p_enabled' => secure($_POST['ffmpeg_360p_enabled']),
         'ffmpeg_480p_enabled' => secure($_POST['ffmpeg_480p_enabled']),
@@ -995,6 +1021,7 @@ try {
       $_POST['flutterwave_enabled'] = (isset($_POST['flutterwave_enabled'])) ? '1' : '0';
       $_POST['verotel_enabled'] = (isset($_POST['verotel_enabled'])) ? '1' : '0';
       $_POST['mercadopago_enabled'] = (isset($_POST['mercadopago_enabled'])) ? '1' : '0';
+      $_POST['plisio_enabled'] = (isset($_POST['plisio_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'paypal_enabled' => secure($_POST['paypal_enabled']),
@@ -1063,6 +1090,8 @@ try {
         'mercadopago_enabled' => secure($_POST['mercadopago_enabled']),
         'mercadopago_public_key' => secure($_POST['mercadopago_public_key']),
         'mercadopago_access_token' => secure($_POST['mercadopago_access_token']),
+        'plisio_enabled' => secure($_POST['plisio_enabled']),
+        'plisio_secret_key' => secure($_POST['plisio_secret_key']),
       ]);
       break;
 
@@ -1168,9 +1197,6 @@ try {
       if (isset($_POST['method_skrill'])) {
         $wallet_payment_methods[] = "skrill";
       }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $wallet_payment_methods[] = "moneypoolscash";
-      }
       if (isset($_POST['method_bank'])) {
         $wallet_payment_methods[] = "bank";
       }
@@ -1208,9 +1234,6 @@ try {
       if (isset($_POST['method_skrill'])) {
         $affiliate_payment_methods[] = "skrill";
       }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $affiliate_payment_methods[] = "moneypoolscash";
-      }
       if (isset($_POST['method_bank'])) {
         $affiliate_payment_methods[] = "bank";
       }
@@ -1246,6 +1269,16 @@ try {
         'affiliates_percentage_4' => secure($_POST['affiliates_percentage_4']),
         'affiliates_per_user_5' => secure($_POST['affiliates_per_user_5']),
         'affiliates_percentage_5' => secure($_POST['affiliates_percentage_5']),
+        'affiliates_per_user_6' => secure($_POST['affiliates_per_user_6']),
+        'affiliates_percentage_6' => secure($_POST['affiliates_percentage_6']),
+        'affiliates_per_user_7' => secure($_POST['affiliates_per_user_7']),
+        'affiliates_percentage_7' => secure($_POST['affiliates_percentage_7']),
+        'affiliates_per_user_8' => secure($_POST['affiliates_per_user_8']),
+        'affiliates_percentage_8' => secure($_POST['affiliates_percentage_8']),
+        'affiliates_per_user_9' => secure($_POST['affiliates_per_user_9']),
+        'affiliates_percentage_9' => secure($_POST['affiliates_percentage_9']),
+        'affiliates_per_user_10' => secure($_POST['affiliates_per_user_10']),
+        'affiliates_percentage_10' => secure($_POST['affiliates_percentage_10']),
       ]);
       break;
 
@@ -1263,9 +1296,6 @@ try {
       }
       if (isset($_POST['method_skrill'])) {
         $points_payment_methods[] = "skrill";
-      }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $points_payment_methods[] = "moneypoolscash";
       }
       if (isset($_POST['method_bank'])) {
         $points_payment_methods[] = "bank";
@@ -1299,6 +1329,31 @@ try {
       ]);
       break;
 
+    case 'paid_modules':
+      /* prepare */
+      $_POST['paid_blogs_enabled'] = (isset($_POST['paid_blogs_enabled'])) ? '1' : '0';
+      $_POST['paid_products_enabled'] = (isset($_POST['paid_products_enabled'])) ? '1' : '0';
+      $_POST['paid_funding_enabled'] = (isset($_POST['paid_funding_enabled'])) ? '1' : '0';
+      $_POST['paid_offers_enabled'] = (isset($_POST['paid_offers_enabled'])) ? '1' : '0';
+      $_POST['paid_jobs_enabled'] = (isset($_POST['paid_jobs_enabled'])) ? '1' : '0';
+      $_POST['paid_courses_enabled'] = (isset($_POST['paid_courses_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'paid_blogs_enabled' => secure($_POST['paid_blogs_enabled']),
+        'paid_blogs_cost' => secure($_POST['paid_blogs_cost']),
+        'paid_products_enabled' => secure($_POST['paid_products_enabled']),
+        'paid_products_cost' => secure($_POST['paid_products_cost']),
+        'paid_funding_enabled' => secure($_POST['paid_funding_enabled']),
+        'paid_funding_cost' => secure($_POST['paid_funding_cost']),
+        'paid_offers_enabled' => secure($_POST['paid_offers_enabled']),
+        'paid_offers_cost' => secure($_POST['paid_offers_cost']),
+        'paid_jobs_enabled' => secure($_POST['paid_jobs_enabled']),
+        'paid_jobs_cost' => secure($_POST['paid_jobs_cost']),
+        'paid_courses_enabled' => secure($_POST['paid_courses_enabled']),
+        'paid_courses_cost' => secure($_POST['paid_courses_cost']),
+      ]);
+      break;
+
     case 'market':
       /* valid inputs */
       if (!is_numeric($_POST['market_delivery_days']) || $_POST['market_delivery_days'] <= 0) {
@@ -1310,6 +1365,7 @@ try {
       /* prepare */
       $_POST['market_enabled'] = (isset($_POST['market_enabled'])) ? '1' : '0';
       $_POST['market_shopping_cart_enabled'] = (isset($_POST['market_shopping_cart_enabled'])) ? '1' : '0';
+      $_POST['market_digital_products_enabled'] = (isset($_POST['market_digital_products_enabled'])) ? '1' : '0';
       $_POST['market_wallet_payment_enabled'] = (isset($_POST['market_wallet_payment_enabled'])) ? '1' : '0';
       $_POST['market_cod_payment_enabled'] = (isset($_POST['market_cod_payment_enabled'])) ? '1' : '0';
       $_POST['market_money_withdraw_enabled'] = (isset($_POST['market_money_withdraw_enabled'])) ? '1' : '0';
@@ -1323,9 +1379,6 @@ try {
       }
       if (isset($_POST['method_skrill'])) {
         $market_payment_methods[] = "skrill";
-      }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $market_payment_methods[] = "moneypoolscash";
       }
       if (isset($_POST['method_bank'])) {
         $market_payment_methods[] = "bank";
@@ -1341,6 +1394,7 @@ try {
       update_system_options([
         'market_enabled' => secure($_POST['market_enabled']),
         'market_shopping_cart_enabled' => secure($_POST['market_shopping_cart_enabled']),
+        'market_digital_products_enabled' => secure($_POST['market_digital_products_enabled']),
         'market_wallet_payment_enabled' => secure($_POST['market_wallet_payment_enabled']),
         'market_cod_payment_enabled' => secure($_POST['market_cod_payment_enabled']),
         'market_delivery_days' => secure($_POST['market_delivery_days']),
@@ -1372,9 +1426,6 @@ try {
       }
       if (isset($_POST['method_skrill'])) {
         $funding_payment_methods[] = "skrill";
-      }
-      if (isset($_POST['method_moneypoolscash'])) {
-        $funding_payment_methods[] = "moneypoolscash";
       }
       if (isset($_POST['method_bank'])) {
         $funding_payment_methods[] = "bank";

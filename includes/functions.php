@@ -4,7 +4,7 @@
  * functions
  *
  * @package Delus
- * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
+ * @author Sorokin Dmitry Olegovich
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making..com/licenses/Delus/verify.php';
+  $url = 'https://Sorokin Dmitry Olegovich.com/licenses/Delus/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -201,12 +201,16 @@ function secure_system_values()
     'system_title',
     'activation_type',
     'chat_heartbeat',
+    'chat_typing_enabled',
     'chat_seen_enabled',
+    'chat_translation_enabled',
     'audio_call_enabled',
     'video_call_enabled',
-    'chat_typing_enabled',
+    'chat_socket_enabled',
     'chat_photos_enabled',
     'system_uploads',
+    'videos_enabled',
+    'chat_videos_enabled',
     'voice_notes_chat_enabled',
     'voice_notes_durtaion',
     'contact_enabled',
@@ -238,7 +242,9 @@ function secure_system_values()
     'system_theme_mode_select',
     'registration_type',
     'getting_started',
-    'users_approval_enabled'
+    'users_approval_enabled',
+    'reactions',
+    'reactions_enabled'
   ];
   return array_intersect_key($system, array_flip($allowed_values));
 }
@@ -636,6 +642,22 @@ function init_system()
   $system['market_payment_method_array'] = explode(",", $system['market_payment_method']);
   $system['funding_payment_method_array'] = explode(",", $system['funding_payment_method']);
   $system['monetization_payment_method_array'] = explode(",", $system['monetization_payment_method']);
+
+  /* get system reactions */
+  $reactions = [];
+  $reactions_enabled = [];
+  $get_reactions = $db->query("SELECT * FROM system_reactions ORDER BY reaction_order ASC");
+  if ($get_reactions->num_rows > 0) {
+    while ($reaction = $get_reactions->fetch_assoc()) {
+      $reaction['image_url'] = $system['system_uploads'] . '/' . $reaction['image'];
+      $reactions[$reaction['reaction']] = $reaction;
+      if ($reaction['enabled']) {
+        $reactions_enabled[$reaction['reaction']] = $reaction;
+      }
+    }
+  }
+  $system['reactions'] = $reactions;
+  $system['reactions_enabled'] = $reactions_enabled;
 
   /* check if viewer IP banned */
   $check_banned_ip = $db->query(sprintf("SELECT COUNT(*) as count FROM blacklist WHERE node_type = 'ip' AND node_value = %s", secure(get_user_ip())));
@@ -1126,7 +1148,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making..com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich.com/support'>" . "Delus Support" . ".</a></p>
                             </div>";
         break;
 
@@ -3035,11 +3057,15 @@ function delete_avatar_cover_image($handle, $id = null)
     case 'cover-user':
       /* update user cover */
       $db->query(sprintf("UPDATE users SET user_cover = null, user_cover_id = null, user_cover_position = null WHERE user_id = %s", secure($user->_data['user_id'], 'int')));
+      /* delete cover image from uploads folder */
+      delete_uploads_file($user->_data['user_cover']);
       break;
 
     case 'picture-user':
       /* update user picture */
       $db->query(sprintf("UPDATE users SET user_picture = null, user_picture_id = null WHERE user_id = %s", secure($user->_data['user_id'], 'int')));
+      /* delete picture image from uploads folder */
+      delete_uploads_file($user->_data['user_picture_raw']);
       /* return */
       return get_picture('', $user->_data['user_gender']);
       break;
@@ -3061,6 +3087,8 @@ function delete_avatar_cover_image($handle, $id = null)
       }
       /* update page cover */
       $db->query(sprintf("UPDATE pages SET page_cover = null, page_cover_id = null, page_cover_position = null WHERE page_id = %s", secure($id, 'int')));
+      /* delete cover image from uploads folder */
+      delete_uploads_file($page['page_cover']);
       break;
 
     case 'picture-page':
@@ -3080,6 +3108,8 @@ function delete_avatar_cover_image($handle, $id = null)
       }
       /* update page picture */
       $db->query(sprintf("UPDATE pages SET page_picture = null, page_picture_id = null WHERE page_id = %s", secure($id, 'int')));
+      /* delete picture image from uploads folder */
+      delete_uploads_file($page['page_picture']);
       /* return */
       return get_picture('', 'page');
       break;
@@ -3101,6 +3131,8 @@ function delete_avatar_cover_image($handle, $id = null)
       }
       /* update group cover */
       $db->query(sprintf("UPDATE `groups` SET group_cover = null, group_cover_id = null, group_cover_position = null WHERE group_id = %s", secure($id, 'int')));
+      /* delete cover image from uploads folder */
+      delete_uploads_file($group['group_cover']);
       break;
 
     case 'picture-group':
@@ -3120,6 +3152,8 @@ function delete_avatar_cover_image($handle, $id = null)
       }
       /* update group picture */
       $db->query(sprintf("UPDATE `groups` SET group_picture = null, group_picture_id = null WHERE group_id = %s", secure($id, 'int')));
+      /* delete picture image from uploads folder */
+      delete_uploads_file($group['group_picture']);
       /* return */
       return get_picture('', 'group');
       break;
@@ -3141,6 +3175,8 @@ function delete_avatar_cover_image($handle, $id = null)
       }
       /* update event cover */
       $db->query(sprintf("UPDATE `events` SET event_cover = null, event_cover_id = null, event_cover_position = null WHERE event_id = %s", secure($id, 'int')));
+      /* delete cover image from uploads folder */
+      delete_uploads_file($event['event_cover']);
       break;
 
     default:
@@ -5891,6 +5927,10 @@ function paystack($handle, $price, $id = null)
       $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=packages&package_id=$id";
       break;
 
+    case 'subscribe':
+      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=subscribe&plan_id=$id";
+      break;
+
     case 'wallet':
       $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=wallet";
       $_SESSION['wallet_replenish_amount'] = $price;
@@ -5899,10 +5939,6 @@ function paystack($handle, $price, $id = null)
     case 'donate':
       $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=donate&post_id=$id";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=subscribe&plan_id=$id";
       break;
 
     case 'paid_post':
@@ -6051,6 +6087,10 @@ function cashfree($handle, $price, $id, $billing_name, $billing_email, $billing_
       $return_url .= "&handle=packages&package_id=$id";
       break;
 
+    case 'subscribe':
+      $return_url .= "&handle=subscribe&plan_id=$id";
+      break;
+
     case 'wallet':
       $return_url .= "&handle=wallet";
       $_SESSION['wallet_replenish_amount'] = $price;
@@ -6059,10 +6099,6 @@ function cashfree($handle, $price, $id, $billing_name, $billing_email, $billing_
     case 'donate':
       $return_url .= "&handle=donate&post_id=$id";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $return_url .= "&handle=subscribe&plan_id=$id";
       break;
 
     case 'paid_post':
@@ -6133,7 +6169,7 @@ function cashfree_check($orderId)
   $cashfree = new Cashfree\Cashfree();
   try {
     $result = $cashfree->PGOrderFetchPayments($x_api_version, $orderId, null, null, null);
-    if ($result && $result[0][0]->getPaymentStatus() == "SUCCESS") {
+    if ($result && isset($result[0][0]) && $result[0][0] && $result[0][0]->getPaymentStatus() == "SUCCESS") {
       return true;
     }
     return false;
@@ -6170,6 +6206,13 @@ function coinbase($handle, $price, $id = null)
       $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
       break;
 
+    case 'subscribe':
+      $product = __($system['system_title']) . " " . __('Subscribe');
+      $description = __('Pay For') . " " . __($system['system_title']);
+      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=subscribe&plan_id=$id&coinbase_hash=$coinbase_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
+      break;
+
     case 'wallet':
       $product = __($system['system_title']) . " " . __('Wallet');
       $description = __('Pay For') . " " . __($system['system_title']);
@@ -6184,13 +6227,6 @@ function coinbase($handle, $price, $id = null)
       $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=donate&post_id=$id&coinbase_hash=$coinbase_hash";
       $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $product = __($system['system_title']) . " " . __('Subscribe');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=subscribe&plan_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
       break;
 
     case 'paid_post':
@@ -6470,6 +6506,11 @@ function moneypoolscash($handle, $price, $id = null)
       $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
       break;
 
+    case 'subscribe':
+      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=subscribe&plan_id=$id";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
+      break;
+
     case 'wallet':
       $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=wallet";
       $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
@@ -6480,11 +6521,6 @@ function moneypoolscash($handle, $price, $id = null)
       $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=donate&post_id=$id";
       $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
       break;
 
     case 'paid_post':
@@ -6675,6 +6711,10 @@ function myfatoorah($handle, $price, $id = null)
       $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=packages&package_id=$id";
       break;
 
+    case 'subscribe':
+      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=subscribe&plan_id=$id";
+      break;
+
     case 'wallet':
       $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=wallet";
       $_SESSION['wallet_replenish_amount'] = $price;
@@ -6683,10 +6723,6 @@ function myfatoorah($handle, $price, $id = null)
     case 'donate':
       $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=donate&post_id=$id";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=subscribe&plan_id=$id";
       break;
 
     case 'paid_post':
@@ -6831,6 +6867,10 @@ function flutterwave($handle, $price, $id = null)
       $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=packages&package_id=$id";
       break;
 
+    case 'subscribe':
+      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=subscribe&plan_id=$id";
+      break;
+
     case 'wallet':
       $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=wallet";
       $_SESSION['wallet_replenish_amount'] = $price;
@@ -6839,10 +6879,6 @@ function flutterwave($handle, $price, $id = null)
     case 'donate':
       $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=donate&post_id=$id";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=subscribe&plan_id=$id";
       break;
 
     case 'paid_post':
@@ -6969,6 +7005,13 @@ function verotel($handle, $price, $id = null)
       ];
       break;
 
+    case 'subscribe':
+      $customs = [
+        "custom1" => "subscribe",
+        'custom2' => $id,
+      ];
+      break;
+
     case 'wallet':
       $customs = [
         "custom1" => "wallet",
@@ -6982,13 +7025,6 @@ function verotel($handle, $price, $id = null)
         'custom2' => $id,
       ];
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $customs = [
-        "custom1" => "subscribe",
-        'custom2' => $id,
-      ];
       break;
 
     case 'paid_post':
@@ -7088,6 +7124,10 @@ function mercadopago($handle, $price, $id = null)
       $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=packages&package_id=$id";
       break;
 
+    case 'subscribe':
+      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=subscribe&plan_id=$id";
+      break;
+
     case 'wallet':
       $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=wallet";
       $_SESSION['wallet_replenish_amount'] = $price;
@@ -7096,10 +7136,6 @@ function mercadopago($handle, $price, $id = null)
     case 'donate':
       $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=donate&post_id=$id";
       $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=subscribe&plan_id=$id";
       break;
 
     case 'paid_post':
@@ -7210,6 +7246,149 @@ function mercadopago_check($payment_id)
 
 
 /* ------------------------------- */
+/* Plisio */
+/* ------------------------------- */
+
+/**
+ * plisio
+ *
+ * @param string $handle
+ * @param string $price
+ * @param integer $id
+ * @return string
+ */
+function plisio($handle, $price, $id = null)
+{
+  global $system, $user;
+  /* prepare */
+  $total = get_payment_total_value($price);
+  $plisio_hash = get_hash_token();
+  switch ($handle) {
+    case 'packages':
+      $product = __($system['system_title']) . " " . __('Pro Package');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=packages&package_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      break;
+
+    case 'subscribe':
+      $product = __($system['system_title']) . " " . __('Subscribe');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=subscribe&plan_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      break;
+
+    case 'wallet':
+      $product = __($system['system_title']) . " " . __('Wallet');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=wallet&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      $_SESSION['wallet_replenish_amount'] = $price;
+      break;
+
+    case 'donate':
+      $product = __($system['system_title']) . " " . __('Funding Donation');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=donate&post_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      $_SESSION['donation_amount'] = $price;
+      break;
+
+    case 'paid_post':
+      $product = __($system['system_title']) . " " . __('Paid Post');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=paid_post&post_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      break;
+
+    case 'movies':
+      $product = __($system['system_title']) . " " . __('Movies');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=movies&movie_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      break;
+
+    case 'marketplace':
+      $product = __($system['system_title']) . " " . __('Marketplace');
+      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=marketplace&orders_collection_id=$id&plisio_hash=$plisio_hash";
+      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
+      break;
+
+    default:
+      _error(400);
+      break;
+  }
+  /* Plisio */
+  $request_params = [
+    'api_key' => $system['plisio_secret_key'],
+    'source_currency' => $system['system_currency'],
+    'source_amount' => $total,
+    'order_number' => uniqid(),
+    'order_name' => $product,
+    'email' => $user->_data['user_email'],
+    'callback_url' => $system['system_url'],
+    'success_callback_url' => $URL['success'],
+    'fail_callback_url' => $URL['cancel'],
+    'success_invoice_url' => $URL['success'],
+    'fail_invoice_url' => $URL['cancel'],
+  ];
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, "https://api.plisio.net/api/v1/invoices/new?" . http_build_query($request_params));
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  if (curl_errno($ch)) {
+    throw new Exception("Error Processing Request");
+  }
+  curl_close($ch);
+  $responseJson = json_decode($response, true);
+  if (!$responseJson['status']) {
+    throw new Exception($responseJson['message']);
+  }
+  return [
+    'plisio_hash' => $plisio_hash,
+    'txn_id' => $responseJson['data']['txn_id'],
+    'invoice_url' => $responseJson['data']['invoice_url'],
+  ];
+}
+
+
+/**
+ * plisio_check
+ *
+ * @param string $payment_id
+ * @return boolean
+ */
+function plisio_check($txn_id)
+{
+  global $system;
+  $request_params = [
+    'api_key' => $system['plisio_secret_key'],
+    'txn_id' => $txn_id
+  ];
+  /* Plisio */
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, "https://api.plisio.net/api/v1/operations?" . http_build_query($request_params));
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  if (curl_errno($ch)) {
+    return false;
+  }
+  curl_close($ch);
+  $responseJson = json_decode($response, true);
+  if (!$responseJson['status']) {
+    return false;
+  }
+  if (isset($responseJson['data']) && is_array($responseJson['data'])) {
+    foreach ($responseJson['data'] as $transaction) {
+      if ($transaction['txn_id'] == $txn_id && $transaction['status'] == 'completed') {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
+
+/* ------------------------------- */
 /* User Access */
 /* ------------------------------- */
 
@@ -7266,12 +7445,6 @@ function user_access($is_ajax = false, $bypass_subscription = false, $bypass_get
     if ($system['registration_type'] == "paid" && $user->_data['user_group'] > '1' && !$user->_data['user_subscribed'] && !$bypass_subscription) {
       redirect('/packages');
     }
-    /* check callback_redirect */
-    if ($_SESSION['callback_redirect']) {
-      $callback_redirect = $_SESSION['callback_redirect'];
-      unset($_SESSION['callback_redirect']);
-      redirect($callback_redirect);
-    }
   }
 }
 
@@ -7293,10 +7466,6 @@ function user_login($oauth_app_id = null)
   }
   if ($oauth_app_id) {
     $smarty->assign('oauth_app_id', $oauth_app_id);
-  }
-  /* check if the current url is not the main url */
-  if ($_SERVER['REQUEST_URI'] != "/") {
-    $_SESSION['callback_redirect'] = $_SERVER['REQUEST_URI'];
   }
   page_header(__("Sign in"));
   page_footer('sign');
@@ -8310,8 +8479,8 @@ function get_base_domain($url)
  */
 function decode_urls($text)
 {
-  $text = ($text) ? preg_replace('/(https?:\/\/[^\s]+)/', "<a target='_blank' rel='nofollow' href=\"$1\">$1</a>", $text) : $text;
-  return $text;
+  if (!$text) return $text;
+  return preg_replace('@(https?://([-\w\.]+[-\w])+(:\d+)?(/([\w/_\.#-]*(\?\S+)?[^\.\s])?)?)@', '<a href="$1">$1</a>', $text);
 }
 
 
@@ -8457,18 +8626,19 @@ function get_array_key($array, $current, $offset = 1)
  * @param string $amount
  * @param string $symbol
  * @param string $dir
+ * @param boolean $formated
  * @return string
  */
-
-function print_money($amount, $symbol = null, $dir = null)
+function print_money($amount, $symbol = null, $dir = null, $formated = true)
 {
   global $system;
+  $amount = (float) $amount;
   $symbol = ($symbol) ? $symbol : $system['system_currency_symbol'];
   $dir = ($dir) ? $dir : $system['system_currency_dir'];
   if ($dir == "right") {
-    return $amount . $symbol;
+    return ($formated) ? number_format($amount, 2) . $symbol : $amount . $symbol;
   } else {
-    return $symbol . $amount;
+    return ($formated) ? $symbol . number_format($amount, 2) : $symbol . $amount;
   }
 }
 
@@ -8487,5 +8657,36 @@ function abbreviate_count($count)
     return round($count / 1000) . __('K');
   } else {
     return round($count / 1000000) . __('M');
+  }
+}
+
+
+/**
+ * calculate_distance
+ *
+ * @param float $lat1
+ * @param float $lon1
+ * @param float $lat2
+ * @param float $lon2
+ * @return string
+ */
+function calculate_distance($lat1, $lon1, $lat2, $lon2)
+{
+  if (!$lat1 || !$lon1 || !$lat2 || !$lon2) {
+    return null;
+  }
+  $earth_radius = 6371000;
+  $lat_from = deg2rad($lat1);
+  $lon_from = deg2rad($lon1);
+  $lat_to = deg2rad($lat2);
+  $lon_to = deg2rad($lon2);
+  $lat_delta = $lat_to - $lat_from;
+  $lon_delta = $lon_to - $lon_from;
+  $angle = 2 * asin(sqrt(pow(sin($lat_delta / 2), 2) + cos($lat_from) * cos($lat_to) * pow(sin($lon_delta / 2), 2)));
+  $distance = $earth_radius * $angle;
+  if ($distance >= 1000) {
+    return round($distance / 1000, 2) . ' KM';
+  } else {
+    return round($distance) . ' M';
   }
 }

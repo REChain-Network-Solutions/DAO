@@ -144,21 +144,35 @@
             </li>
           {/if}
 
-          {if $user->_data['can_boost_posts'] || $user->_data['can_boost_pages']}
-            <a href="#boosted" data-bs-toggle="collapse" {if $page == "index" && ($view == "boosted_posts" || $view == "boosted_pages")}aria-expanded="true" {/if}>
+          {if $user->_data['can_boost_posts'] || $user->_data['can_boost_pages'] || $user->_data['can_boost_groups'] || $user->_data['can_boost_events']}
+            <a href="#boosted" data-bs-toggle="collapse" {if $page == "index" && ($view == "boosted_posts" || $view == "boosted_pages" || $view == "boosted_groups" || $view == "boosted_events")}aria-expanded="true" {/if}>
               {include file='__svg_icons.tpl' icon="boosted" class="main-icon mr10" width="24px" height="24px"}{__("Boosted")}
             </a>
-            <div class='collapse {if $page == "index" && ($view == "boosted_posts" || $view == "boosted_pages")}show{/if}' id="boosted">
+            <div class='collapse {if $page == "index" && ($view == "boosted_posts" || $view == "boosted_pages" || $view == "boosted_groups" || $view == "boosted_events")}show{/if}' id="boosted">
               <ul>
                 <li {if $page == "index" && $view == "boosted_posts"}class="active" {/if}>
                   <a href="{$system['system_url']}/boosted/posts">
-                    {__("Boosted Posts")}
+                    {__("Posts")}
                   </a>
                 </li>
                 {if $system['pages_enabled']}
                   <li {if $page == "index" && $view == "boosted_pages"}class="active" {/if}>
                     <a href="{$system['system_url']}/boosted/pages">
-                      {__("Boosted Pages")}
+                      {__("Pages")}
+                    </a>
+                  </li>
+                {/if}
+                {if $system['groups_enabled']}
+                  <li {if $page == "index" && $view == "boosted_groups"}class="active" {/if}>
+                    <a href="{$system['system_url']}/boosted/groups">
+                      {__("Groups")}
+                    </a>
+                  </li>
+                {/if}
+                {if $system['events_enabled']}
+                  <li {if $page == "index" && $view == "boosted_events"}class="active" {/if}>
+                    <a href="{$system['system_url']}/boosted/events">
+                      {__("Events")}
                     </a>
                   </li>
                 {/if}

@@ -294,6 +294,20 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
+                {__("Language")}
+              </label>
+              <div class="col-md-9">
+                <select class="form-select" name="language">
+                  <option value="none">{__("Select Language")}</option>
+                  {foreach $languages as $language}
+                    <option value="{$language['language_id']}" {if $data['event_language'] == $language['language_id']}selected{/if}>{$language['title']}</option>
+                  {/foreach}
+                </select>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
                 {__("About")}
               </label>
               <div class="col-md-9">

@@ -2,7 +2,7 @@
  * chat js
  * 
  * @package Delus
- * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
+ * @author Sorokin Dmitry Olegovich
  */
 
 // initialize API URLs
@@ -10,7 +10,8 @@
 api['chat/live'] = ajax_path + 'chat/live.php';
 api['chat/call'] = ajax_path + 'chat/call.php';
 api['chat/post'] = ajax_path + 'chat/post.php';
-api['chat/reaction'] = ajax_path + 'chat/reaction.php';
+api['chat/product'] = ajax_path + 'chat/product.php';
+api['chat/actions'] = ajax_path + 'chat/actions.php';
 /* AJAX & Socket */
 api['chat/messages'] = ajax_path + 'chat/messages.php';
 api['chat/conversation/check'] = ajax_path + 'chat/conversation.php?do=check';
@@ -696,7 +697,7 @@ function chat_heartbeat() {
     }
     // update convertaion(s) seen status
     if (chat_seen_enabled && updated_seen_conversations.length > 0) {
-      $.post(api['chat/reaction'], { 'do': 'seen', 'ids': updated_seen_conversations }, function (response) {
+      $.post(api['chat/actions'], { 'do': 'seen', 'ids': updated_seen_conversations }, function (response) {
         /* check if there is a callback */
         if (response.callback) {
           eval(response.callback);
@@ -861,7 +862,7 @@ function handle_declined_call() {
 
 // handle answered call
 function handle_answered_call(call, is_caller = true) {
-  var type = (call.is_video_call) ? "video" : "audio";
+  var type = (call.is_video_call == '1') ? "video" : "audio";
   chat_incall_process = true;
   chat_incall_heartbeat(call['call_id']);
   if (is_caller) {
@@ -893,13 +894,13 @@ function handle_answered_call(call, is_caller = true) {
   /* remove the ending call callback timeout */
   clearTimeout(chat_ending_call_timeout);
   if (audio_video_provider == "twilio") {
-    /* init_Twilio */
+    /* init Twilio */
     init_Twilio(type, token, call['room'], call['call_id']);
   } else if (audio_video_provider == "livekit") {
-    /* init_LiveKit */
+    /* init LiveKit */
     init_LiveKit(type, token, call['room'], call['call_id']);
   } else if (audio_video_provider == "agora") {
-    /* init_Agora */
+    /* init Agora */
     init_Agora(type, token, call['room'], call['call_id']);
   }
 }
@@ -1127,6 +1128,18 @@ async function init_Agora(type, token, room_name, call_id) {
   });
 }
 
+
+// open_messenger_app
+function open_messenger_app() {
+  if (/Android|DelusAndroid/i.test(navigator.userAgent)) {
+    window.location = messaging_app_android_link;
+  } else if (/iPhone|iPad|iPod|DelusIOS/i.test(navigator.userAgent)) {
+    window.location = messaging_app_ios_link;
+  } else {
+    window.location = site_path + "/messages";
+  }
+}
+
 $(function () {
 
   // init chat socket
@@ -1148,7 +1161,7 @@ $(function () {
 
   // turn chat (on|off)
   $('body').on('click', '.js_chat-toggle', function (e) {
-    e.preventDefault;
+    e.preventDefault();
     /* get status */
     var status = $(this).data('status');
     /* update the UI */
@@ -1222,6 +1235,7 @@ $(function () {
     var link = $(this).data('link');
     var picture = $(this).data('picture');
     var chatbox_enabled = $(this).data('chat-box');
+    var product_post_id = $(this).data('product-post-id') || false;
     /* check if the viewer in the messages page */
     if (is_page('messages')) {
       /* [A] user is in the messages page */
@@ -1256,6 +1270,11 @@ $(function () {
       }
     } else {
       /* [B] user is not in the messages page */
+      /* share product message */
+      if (product_post_id !== false) {
+        _share_product_message(user_id, product_post_id);
+      }
+      /* check if chat is enabled or mobile view */
       if (!chat_enabled || is_mobile()) {
         /* [1] chat disabled or mobile view */
         if (conversation_id) return; /* (return will allow default behave of anchor tag) */
@@ -1316,7 +1335,7 @@ $(function () {
           chat_socket.emit('event_client_seen', { ids: [conversation_id] });
         } else {
           /* using ajax */
-          $.post(api['chat/reaction'], { 'do': 'seen', 'ids': [conversation_id] }, function (response) {
+          $.post(api['chat/actions'], { 'do': 'seen', 'ids': [conversation_id] }, function (response) {
             /* check if there is a callback */
             if (response.callback) {
               eval(response.callback);
@@ -1351,7 +1370,7 @@ $(function () {
         chatbox_closing_process = false;
       } else {
         /* using ajax */
-        $.post(api['chat/reaction'], { 'do': 'close', 'conversation_id': conversation_id }, function (response) {
+        $.post(api['chat/actions'], { 'do': 'close', 'conversation_id': conversation_id }, function (response) {
           /* check if there is a callback */
           if (response.callback) {
             eval(response.callback);
@@ -1430,7 +1449,7 @@ $(function () {
       /* add the message directly if widget not fresh & not sending photo & not sending voice note */
       if (!widget.hasClass('fresh') && photo === undefined && voice_note === undefined) {
         textarea.trigger('focus').val('').height(textarea.css('line-height'));
-        var _guid = guid()
+        var _guid = guid();
         widget.find(".js_scroller:first ul").append(render_template('#chat-message', { 'message': htmlEntities(message), 'id': _guid, 'time': moment.utc().format("YYYY-MM-DD H:mm:ss") }));
         widget.find(".js_scroller:first .seen").remove(); // remove any seen status before
         widget.find(".js_scroller:first").scrollTop(widget.find(".js_scroller:first")[0].scrollHeight);
@@ -1478,10 +1497,10 @@ $(function () {
           widget.find('.x-form-tools-colors').show();
         }
         if (photo === undefined && voice_note === undefined) {
-          widget.find(".js_scroller:first ul").find("#" + _guid).replaceWith(render_template('#chat-message', { 'message': response.message, 'image': response.image, 'voice_note': response.voice_note, 'id': response.last_message_id, 'time': moment.utc().format("YYYY-MM-DD H:mm:ss"), 'color': widget.data('color') }));
+          widget.find(".js_scroller:first ul").find("#" + _guid).replaceWith(render_template('#chat-message', { 'message': response.last_message.message, 'image': response.last_message.image, 'voice_note': response.last_message.voice_note, 'id': response.last_message_id, 'time': moment.utc().format("YYYY-MM-DD H:mm:ss"), 'color': widget.data('color') }));
         } else {
           textarea.trigger('focus').val('').height(textarea.css('line-height'));
-          widget.find(".js_scroller:first ul").append(render_template('#chat-message', { 'message': response.message, 'image': response.image, 'voice_note': response.voice_note, 'id': response.last_message_id, 'time': moment.utc().format("YYYY-MM-DD H:mm:ss"), 'color': widget.data('color') }));
+          widget.find(".js_scroller:first ul").append(render_template('#chat-message', { 'message': response.last_message.message, 'image': response.last_message.image, 'voice_note': response.last_message.voice_note, 'id': response.last_message_id, 'time': moment.utc().format("YYYY-MM-DD H:mm:ss"), 'color': widget.data('color') }));
           widget.find(".js_scroller:first .seen").remove(); // remove any seen status before
           widget.find(".js_scroller:first").scrollTop(widget.find(".js_scroller:first")[0].scrollHeight);
           /* handle attachments */
@@ -1503,7 +1522,7 @@ $(function () {
         if (chat_socket_enabled) {
           chat_socket.emit('event_client_typing', { conversation_id: conversation_id, is_typing: false });
         } else {
-          $.post(api['chat/reaction'], { 'do': 'typing', 'is_typing': false, 'conversation_id': conversation_id }, function (response) {
+          $.post(api['chat/actions'], { 'do': 'typing', 'is_typing': false, 'conversation_id': conversation_id }, function (response) {
             if (response.callback) {
               eval(response.callback);
             }
@@ -1514,6 +1533,23 @@ $(function () {
       if ($('#modal').hasClass('show')) {
         $('#modal').modal('hide');
       }
+    }
+  }
+  /* share product message */
+  function _share_product_message(user_id, product_post_id) {
+    var data = { 'recipients': JSON.stringify([user_id]), 'product_post_id': product_post_id };
+    if (chat_socket_enabled) {
+      /* using socket */
+      chat_socket.emit('event_client_send_message', data);
+    } else {
+      /* using ajax */
+      $.post(api['chat/product'], data, function (response) {
+        if (!response) return;
+        if (response.callback) {
+          eval(response.callback);
+          return;
+        }
+      }, 'json');
     }
   }
   $('body').on('keydown', 'textarea.js_post-message', function (event) {
@@ -1563,7 +1599,7 @@ $(function () {
         chat_socket.emit('event_client_typing', { conversation_id: conversation_id, is_typing: is_typing });
       } else {
         /* using ajax */
-        $.post(api['chat/reaction'], { 'do': 'typing', 'is_typing': is_typing, 'conversation_id': conversation_id }, function (response) {
+        $.post(api['chat/actions'], { 'do': 'typing', 'is_typing': is_typing, 'conversation_id': conversation_id }, function (response) {
           /* check if there is a callback */
           if (response.callback) {
             eval(response.callback);
@@ -1602,7 +1638,7 @@ $(function () {
       chat_socket.emit('event_client_color', { conversation_id: conversation_id, color: color });
     } else {
       /* using ajax */
-      $.post(api['chat/reaction'], { 'do': 'color', 'conversation_id': conversation_id, 'color': color }, function (response) {
+      $.post(api['chat/actions'], { 'do': 'color', 'conversation_id': conversation_id, 'color': color }, function (response) {
         /* check if there is a callback */
         if (response.callback) {
           eval(response.callback);
@@ -1630,7 +1666,7 @@ $(function () {
         });
       } else {
         /* using ajax */
-        $.post(api['chat/reaction'], { 'do': 'delete', 'conversation_id': conversation_id }, function (response) {
+        $.post(api['chat/actions'], { 'do': 'delete', 'conversation_id': conversation_id }, function (response) {
           /* redirect to messages page */
           window.location.replace(site_path + '/messages');
         }, 'json')
@@ -1656,7 +1692,7 @@ $(function () {
         });
       } else {
         /* using ajax */
-        $.post(api['chat/reaction'], { 'do': 'leave', 'conversation_id': conversation_id }, function (response) {
+        $.post(api['chat/actions'], { 'do': 'leave', 'conversation_id': conversation_id }, function (response) {
           /* redirect to messages page */
           window.location.replace(site_path + '/messages');
         }, 'json')

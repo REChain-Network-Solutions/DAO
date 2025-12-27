@@ -35,6 +35,11 @@
           {__("Contact Us")}
         </a>
       {/if}
+      {if $system['support_center_enabled']}
+        <a class="pl10" href="{$system['system_url']}/support">
+          {__("Support Center")}
+        </a>
+      {/if}
       {if $system['directory_enabled']}
         <a class="pl10" href="{$system['system_url']}/directory">
           {__("Directory")}

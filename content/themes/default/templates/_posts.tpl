@@ -29,9 +29,36 @@
   {else}
     <span>{if $_title}{$_title}{else}{__("Recent Updates")}{/if}</span>
   {/if}
-  {if $user->_logged_in && !$_filter && !$_query}
-    <div class="float-end">
-      <div class="btn-group btn-group-sm js_posts-filter" data-value="all" title='{__("All")}'>
+
+  <div class="float-end">
+
+    <!-- newsfeed location filter -->
+    {if $system['newsfeed_location_filter_enabled'] && in_array($page, ['index', 'group', 'event']) && $view != "scheduled" && $view != "boosted_posts" && (!$_filter || $view == "watch")}
+      <a href="#" data-bs-toggle="dropdown" class="dropdown-toggle countries-filter">
+        <i class="fa fa-globe fa-fw"></i>
+        {if $selected_country}
+          <span>{$selected_country['country_name']}</span>
+        {else}
+          <span>{__("All Countries")}</span>
+        {/if}
+      </a>
+      <div class="dropdown-menu dropdown-menu-end countries-dropdown">
+        <div class="js_scroller">
+          <a class="dropdown-item" href="?country=all">
+            {__("All Countries")}
+          </a>
+          {foreach $countries as $country}
+            <a class="dropdown-item" href="?country={$country['country_name_native']}">
+              {$country['country_name']}
+            </a>
+          {/foreach}
+        </div>
+      </div>
+    {/if}
+    <!-- newsfeed location filter -->
+
+    {if $user->_logged_in && !$_filter && !$_query}
+      <div class="btn-group btn-group-sm js_posts-filter ml10" data-value="all" title='{__("All")}'>
         <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
           <i class="btn-group-icon fa fa-bars fa-fw"></i> <span class="btn-group-text">{__("All")}</span>
         </button>
@@ -143,86 +170,48 @@
           </div>
         </div>
       </div>
-    </div>
-  {elseif $_filter == "article"}
-    {if $user->_data['can_write_blogs']}
-      <div class="float-end">
+    {elseif $_filter == "article"}
+      {if $user->_data['can_write_blogs']}
         <a href="{$system['system_url']}/blogs/new" class="btn btn-sm btn-primary">
           {__("Create Blog")}
         </a>
-      </div>
-    {/if}
-  {elseif $_filter == "product" && !$_query}
-    {if $system['market_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
-      <div class="float-end">
+      {/if}
+    {elseif $_filter == "product" && !$_query}
+      {if $system['market_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/product.php?do=create">
           {__("Create Product")}
         </button>
-      </div>
-    {/if}
-  {elseif $_filter == "funding"}
-    {if $user->_data['can_raise_funding'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
-      <div class="float-end">
+      {/if}
+    {elseif $_filter == "funding"}
+      {if $user->_data['can_raise_funding'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/funding.php?do=create">
           {__("Create Funding")}
         </button>
-      </div>
-    {/if}
+      {/if}
 
-  {elseif $_filter == "offer"}
-    {if $system['offers_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
-      <div class="float-end">
+    {elseif $_filter == "offer"}
+      {if $system['offers_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/offer.php?do=create">
           {__("Create Offer")}
         </button>
-      </div>
-    {/if}
+      {/if}
 
-  {elseif $_filter == "job"}
-    {if $system['jobs_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
-      <div class="float-end">
+    {elseif $_filter == "job"}
+      {if $system['jobs_enabled'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/job.php?do=create">
           {__("Create Job")}
         </button>
-      </div>
-    {/if}
+      {/if}
 
-  {elseif $_filter == "course"}
-    {if $user->_data['can_create_courses'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
-      <div class="float-end">
+    {elseif $_filter == "course"}
+      {if $user->_data['can_create_courses'] && !in_array($_get, ['posts_page', 'posts_group', 'posts_event'])}
         <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-url="posts/course.php?do=create">
           {__("Create Course")}
         </button>
-      </div>
+      {/if}
     {/if}
-  {/if}
 
-  <!-- newsfeed location filter -->
-  {if $system['newsfeed_location_filter_enabled'] && in_array($page, ['index', 'group', 'event']) && $view != "scheduled" && $view != "boosted_posts" && (!$_filter || $view == "watch")}
-    <div class="float-end mr10">
-      <a href="#" data-bs-toggle="dropdown" class="dropdown-toggle countries-filter">
-        <i class="fa fa-globe fa-fw"></i>
-        {if $selected_country}
-          <span>{$selected_country['country_name']}</span>
-        {else}
-          <span>{__("All Countries")}</span>
-        {/if}
-      </a>
-      <div class="dropdown-menu dropdown-menu-end countries-dropdown">
-        <div class="js_scroller">
-          <a class="dropdown-item" href="?country=all">
-            {__("All Countries")}
-          </a>
-          {foreach $countries as $country}
-            <a class="dropdown-item" href="?country={$country['country_name_native']}">
-              {$country['country_name']}
-            </a>
-          {/foreach}
-        </div>
-      </div>
-    </div>
-  {/if}
-  <!-- newsfeed location filter -->
+  </div>
 </div>
 <!-- posts-filter -->
 

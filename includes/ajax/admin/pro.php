@@ -4,7 +4,7 @@
  * ajax -> admin -> pro
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -34,13 +34,17 @@ try {
       $_POST['packages_ads_free_enabled'] = (isset($_POST['packages_ads_free_enabled'])) ? '1' : '0';
       $_POST['pro_users_widget_enabled'] = (isset($_POST['pro_users_widget_enabled'])) ? '1' : '0';
       $_POST['pro_page_widget_enabled'] = (isset($_POST['pro_page_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_groups_widget_enabled'] = (isset($_POST['pro_groups_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_events_widget_enabled'] = (isset($_POST['pro_events_widget_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'packages_enabled' => secure($_POST['packages_enabled']),
         'packages_wallet_payment_enabled' => secure($_POST['packages_wallet_payment_enabled']),
         'packages_ads_free_enabled' => secure($_POST['packages_ads_free_enabled']),
         'pro_users_widget_enabled' => secure($_POST['pro_users_widget_enabled']),
-        'pro_page_widget_enabled' => secure($_POST['pro_page_widget_enabled'])
+        'pro_page_widget_enabled' => secure($_POST['pro_page_widget_enabled']),
+        'pro_groups_widget_enabled' => secure($_POST['pro_groups_widget_enabled']),
+        'pro_events_widget_enabled' => secure($_POST['pro_events_widget_enabled']),
       ]);
       /* return */
       return_json(['success' => true, 'message' => __("Settings have been updated")]);
@@ -50,9 +54,12 @@ try {
       /* get the package */
       $package = $user->get_package($_GET['id']);
       /* prepare */
+      $_POST['package_hidden'] = (isset($_POST['package_hidden'])) ? '1' : '0';
       $_POST['verification_badge_enabled'] = (isset($_POST['verification_badge_enabled'])) ? '1' : '0';
       $_POST['boost_posts_enabled'] = (isset($_POST['boost_posts_enabled'])) ? '1' : '0';
       $_POST['boost_pages_enabled'] = (isset($_POST['boost_pages_enabled'])) ? '1' : '0';
+      $_POST['boost_groups_enabled'] = (isset($_POST['boost_groups_enabled'])) ? '1' : '0';
+      $_POST['boost_events_enabled'] = (isset($_POST['boost_events_enabled'])) ? '1' : '0';
       /* valid inputs */
       if (is_empty($_POST['name'])) {
         throw new Exception(__("You have to enter the package name"));
@@ -79,6 +86,20 @@ try {
         }
       } else {
         $_POST['boost_pages'] = 0;
+      }
+      if ($_POST['boost_groups_enabled']) {
+        if (is_empty($_POST['boost_groups']) || !is_numeric($_POST['boost_groups'])) {
+          throw new Exception(__("You have to enter valid boost groups number"));
+        }
+      } else {
+        $_POST['boost_groups'] = 0;
+      }
+      if ($_POST['boost_events_enabled']) {
+        if (is_empty($_POST['boost_events']) || !is_numeric($_POST['boost_events'])) {
+          throw new Exception(__("You have to enter valid boost events number"));
+        }
+      } else {
+        $_POST['boost_events'] = 0;
       }
       /* PayPal billing plan */
       $paypal_billing_plan = $package['paypal_billing_plan'];
@@ -137,7 +158,61 @@ try {
         $db->query(sprintf("DELETE FROM users_recurring_payments WHERE handle = 'packages' AND handle_id = %s", secure($_GET['id'], 'int')));
       }
       /* update */
-      $db->query(sprintf("UPDATE packages SET name = %s, price = %s, period_num = %s, period = %s, color = %s, icon = %s, package_permissions_group_id = %s, allowed_videos_categories = %s, allowed_blogs_categories = %s, allowed_products = %s, verification_badge_enabled = %s, boost_posts_enabled = %s, boost_posts = %s, boost_pages_enabled = %s, boost_pages = %s, custom_description = %s, package_order = %s, paypal_billing_plan = %s, stripe_billing_plan = %s WHERE package_id = %s", secure($_POST['name']), secure($_POST['price']), secure($_POST['period_num']), secure($_POST['period']), secure($_POST['color']), secure($_POST['icon']), secure($_POST['permissions_group']), secure($_POST['allowed_videos_categories'], 'int'), secure($_POST['allowed_blogs_categories'], 'int'), secure($_POST['allowed_products'], 'int'), secure($_POST['verification_badge_enabled']), secure($_POST['boost_posts_enabled']), secure($_POST['boost_posts'], 'int'), secure($_POST['boost_pages_enabled']), secure($_POST['boost_pages'], 'int'), secure($_POST['custom_description']), secure($_POST['package_order'], 'int'), secure($paypal_billing_plan), secure($stripe_billing_plan), secure($_GET['id'], 'int')));
+      $db->query(sprintf(
+        "UPDATE packages SET 
+          name = %s, 
+          price = %s, 
+          period_num = %s, 
+          period = %s, 
+          color = %s, 
+          icon = %s, 
+          custom_description = %s, 
+          package_order = %s,
+          package_hidden = %s, 
+          verification_badge_enabled = %s, 
+          package_permissions_group_id = %s, 
+          allowed_videos_categories = %s, 
+          allowed_blogs_categories = %s, 
+          allowed_products = %s, 
+          free_points = %s, 
+          boost_posts_enabled = %s, 
+          boost_posts = %s, 
+          boost_pages_enabled = %s, 
+          boost_pages = %s, 
+          boost_groups_enabled = %s, 
+          boost_groups = %s, 
+          boost_events_enabled = %s, 
+          boost_events = %s, 
+          paypal_billing_plan = %s, 
+          stripe_billing_plan = %s 
+          WHERE package_id = %s",
+        secure($_POST['name']),
+        secure($_POST['price']),
+        secure($_POST['period_num']),
+        secure($_POST['period']),
+        secure($_POST['color']),
+        secure($_POST['icon']),
+        secure($_POST['custom_description']),
+        secure($_POST['package_order'], 'int'),
+        secure($_POST['package_hidden']),
+        secure($_POST['verification_badge_enabled']),
+        secure($_POST['permissions_group']),
+        secure($_POST['allowed_videos_categories'], 'int'),
+        secure($_POST['allowed_blogs_categories'], 'int'),
+        secure($_POST['allowed_products'], 'int'),
+        secure($_POST['free_points'], 'int'),
+        secure($_POST['boost_posts_enabled']),
+        secure($_POST['boost_posts'], 'int'),
+        secure($_POST['boost_pages_enabled']),
+        secure($_POST['boost_pages'], 'int'),
+        secure($_POST['boost_groups_enabled']),
+        secure($_POST['boost_groups'], 'int'),
+        secure($_POST['boost_events_enabled']),
+        secure($_POST['boost_events'], 'int'),
+        secure($paypal_billing_plan),
+        secure($stripe_billing_plan),
+        secure($_GET['id'], 'int')
+      ));
       /* remove pending uploads */
       remove_pending_uploads([$_POST['icon']]);
       /* return */
@@ -146,9 +221,12 @@ try {
 
     case 'add':
       /* prepare */
+      $_POST['package_hidden'] = (isset($_POST['package_hidden'])) ? '1' : '0';
       $_POST['verification_badge_enabled'] = (isset($_POST['verification_badge_enabled'])) ? '1' : '0';
       $_POST['boost_posts_enabled'] = (isset($_POST['boost_posts_enabled'])) ? '1' : '0';
       $_POST['boost_pages_enabled'] = (isset($_POST['boost_pages_enabled'])) ? '1' : '0';
+      $_POST['boost_groups_enabled'] = (isset($_POST['boost_groups_enabled'])) ? '1' : '0';
+      $_POST['boost_events_enabled'] = (isset($_POST['boost_events_enabled'])) ? '1' : '0';
       /* valid inputs */
       if (is_empty($_POST['name'])) {
         throw new Exception(__("You have to enter the package name"));
@@ -176,6 +254,20 @@ try {
       } else {
         $_POST['boost_pages'] = 0;
       }
+      if ($_POST['boost_groups_enabled']) {
+        if (is_empty($_POST['boost_groups']) || !is_numeric($_POST['boost_groups'])) {
+          throw new Exception(__("You have to enter valid boost groups number"));
+        }
+      } else {
+        $_POST['boost_groups'] = 0;
+      }
+      if ($_POST['boost_events_enabled']) {
+        if (is_empty($_POST['boost_events']) || !is_numeric($_POST['boost_events'])) {
+          throw new Exception(__("You have to enter valid boost events number"));
+        }
+      } else {
+        $_POST['boost_events'] = 0;
+      }
       /* PayPal billing plan */
       $paypal_billing_plan = '';
       $paypal_recurring_enabled = $system['paypal_enabled'] && !is_empty($system['paypal_webhook']);
@@ -191,7 +283,60 @@ try {
         $stripe_billing_plan = stripe_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
       }
       /* insert */
-      $db->query(sprintf("INSERT INTO packages (name, price, period_num, period, color, icon, package_permissions_group_id, allowed_videos_categories, allowed_blogs_categories, allowed_products, verification_badge_enabled, boost_posts_enabled, boost_posts, boost_pages_enabled, boost_pages, custom_description, package_order, paypal_billing_plan, stripe_billing_plan) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($_POST['name']), secure($_POST['price']), secure($_POST['period_num']), secure($_POST['period']), secure($_POST['color']), secure($_POST['icon']), secure($_POST['permissions_group'], 'int'), secure($_POST['allowed_videos_categories'], 'int'), secure($_POST['allowed_blogs_categories'], 'int'), secure($_POST['allowed_products'], 'int'), secure($_POST['verification_badge_enabled']), secure($_POST['boost_posts_enabled']), secure($_POST['boost_posts'], 'int'), secure($_POST['boost_pages_enabled']), secure($_POST['boost_pages'], 'int'), secure($_POST['custom_description']), secure($_POST['package_order'], 'int'), secure($paypal_billing_plan), secure($stripe_billing_plan)));
+      $db->query(sprintf(
+        "INSERT INTO packages (
+          name, 
+          price, 
+          period_num, 
+          period, 
+          color, 
+          icon, 
+          custom_description, 
+          package_order, 
+          package_hidden,
+          verification_badge_enabled,
+          package_permissions_group_id, 
+          allowed_videos_categories, 
+          allowed_blogs_categories, 
+          allowed_products, 
+          free_points, 
+          boost_posts_enabled, 
+          boost_posts, 
+          boost_pages_enabled, 
+          boost_pages, 
+          boost_groups_enabled, 
+          boost_groups, 
+          boost_events_enabled, 
+          boost_events, 
+          paypal_billing_plan, 
+          stripe_billing_plan
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        secure($_POST['name']),
+        secure($_POST['price']),
+        secure($_POST['period_num']),
+        secure($_POST['period']),
+        secure($_POST['color']),
+        secure($_POST['icon']),
+        secure($_POST['custom_description']),
+        secure($_POST['package_order'], 'int'),
+        secure($_POST['package_hidden']),
+        secure($_POST['verification_badge_enabled']),
+        secure($_POST['permissions_group'], 'int'),
+        secure($_POST['allowed_videos_categories'], 'int'),
+        secure($_POST['allowed_blogs_categories'], 'int'),
+        secure($_POST['allowed_products'], 'int'),
+        secure($_POST['free_points'], 'int'),
+        secure($_POST['boost_posts_enabled']),
+        secure($_POST['boost_posts'], 'int'),
+        secure($_POST['boost_pages_enabled']),
+        secure($_POST['boost_pages'], 'int'),
+        secure($_POST['boost_groups_enabled']),
+        secure($_POST['boost_groups'], 'int'),
+        secure($_POST['boost_events_enabled']),
+        secure($_POST['boost_events'], 'int'),
+        secure($paypal_billing_plan),
+        secure($stripe_billing_plan)
+      ));
       /* remove pending uploads */
       remove_pending_uploads([$_POST['icon']]);
       /* return */

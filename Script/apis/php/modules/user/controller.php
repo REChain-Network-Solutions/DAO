@@ -4,7 +4,7 @@
  * APIs -> modules -> user -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // connectUser
@@ -20,6 +20,7 @@ function connectUser($req, $res)
   apiResponse($res);
 }
 
+
 // deleteAvatarCoverImage
 function deleteAvatarCoverImage($req, $res)
 {
@@ -32,6 +33,7 @@ function deleteAvatarCoverImage($req, $res)
   apiResponse($res, ['data' => $response]);
 }
 
+
 // updateOnesignalId
 function updateOnesignalId($req, $res)
 {
@@ -39,6 +41,7 @@ function updateOnesignalId($req, $res)
   $user->update_session_onesignal_id($req->body['onesignal_id']);
   apiResponse($res);
 }
+
 
 // deleteUser
 function deleteUser($req, $res)

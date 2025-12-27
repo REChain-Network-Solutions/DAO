@@ -28,7 +28,7 @@
           <div class="col-md-9">
             <h6>
               <span class="badge badge-lg bg-info">
-                {print_money($user->_data['user_funding_balance']|number_format:2)}
+                {print_money($user->_data['user_funding_balance'])}
               </span>
             </h6>
           </div>
@@ -61,12 +61,6 @@
               <div class="form-check form-check-inline">
                 <input type="radio" name="method" id="method_skrill" value="skrill" class="form-check-input">
                 <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
-              </div>
-            {/if}
-            {if in_array("moneypoolscash", $system['funding_payment_method_array'])}
-              <div class="form-check form-check-inline">
-                <input type="radio" name="method" id="method_moneypoolscash" value="moneypoolscash" class="form-check-input">
-                <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
               </div>
             {/if}
             {if in_array("bank", $system['funding_payment_method_array'])}
@@ -132,7 +126,7 @@
               {foreach $payments as $payment}
                 <tr>
                   <td>{$payment@iteration}</td>
-                  <td>{print_money($payment['amount']|number_format:2)}</td>
+                  <td>{print_money($payment['amount'])}</td>
                   <td>
                     {if $payment['method'] == "custom"}
                       {$system['affiliate_payment_method_custom']}
@@ -173,7 +167,7 @@
           <div class="stat-cell">
             <i class="fa fas fa-donate bg-icon"></i>
             <div class="h3 mtb10">
-              {print_money($user->_data['user_funding_balance']|number_format:2)}
+              {print_money($user->_data['user_funding_balance'])}
             </div>
           </div>
         </div>

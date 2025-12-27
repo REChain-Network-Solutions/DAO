@@ -536,14 +536,14 @@
                                 {include file='__reaction_emojis.tpl' _reaction=$blog['i_reaction']}
                               </div>
                             </div>
-                            <span class="reaction-btn-name" style="{$reactions[$blog['i_reaction']]['color']}">{__($reactions[$blog['i_reaction']]['title'])}</span>
+                            <span class="reaction-btn-name" style="{$system['reactions'][$blog['i_reaction']]['color']}">{__($system['reactions'][$blog['i_reaction']]['title'])}</span>
                           {/if}
                         </div>
                         <!-- reaction-btn -->
 
                         <!-- reactions-container -->
                         <div class="reactions-container">
-                          {foreach $reactions_enabled as $reaction}
+                          {foreach $system['reactions_enabled'] as $reaction}
                             <div class="reactions_item reaction reaction-{$reaction@iteration} js_react-post" data-reaction="{$reaction['reaction']}" data-reaction-color="{$reaction['color']}" data-title="{__($reaction['title'])}">
                               {include file='__reaction_emojis.tpl' _reaction=$reaction['reaction']}
                             </div>
@@ -742,6 +742,7 @@
             }
           </script>
           <!-- Schema.org structured data for blog edit page -->
+
           <div class="js_ajax-forms-html " data-url="posts/blog.php?do=edit&id={$blog['post_id']}">
             <div class="card-body">
               <div class="row form-group">
@@ -769,16 +770,14 @@
                 <div class="col-md-10">
                   {if $blog['blog']['cover'] == ''}
                     <div class="x-image">
-                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'>
-
-                      </button>
+                      <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                       <div class="x-image-loader">
                         <div class="progress x-progress">
                           <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                      <input type="hidden" class="js_x-image-input" name="cover" value="">
+                      <input type="hidden" class="js_x-uploader-input" name="cover" value="">
                     </div>
                   {else}
                     <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$blog['blog']['cover']}')">
@@ -791,7 +790,7 @@
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                      <input type="hidden" class="js_x-image-input" name="cover" value="{$blog['blog']['cover']}">
+                      <input type="hidden" class="js_x-uploader-input" name="cover" value="{$blog['blog']['cover']}">
                     </div>
                   {/if}
                 </div>
@@ -955,8 +954,21 @@
             }
           </script>
           <!-- Schema.org structured data for blog creation page -->
+
           <div class="js_ajax-forms-html" data-url="posts/blog.php?do=create">
             <div class="card-body">
+
+              {if $system['paid_blogs_enabled']}
+                <div class="alert alert-warning">
+                  <div class="icon">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                  </div>
+                  <div class="text">
+                    {__("This blog post will cost you")} <span class="badge rounded-pill text-bg-light">{$system['paid_blogs_cost']} {$system['system_currency']}</span> {__("to publish. The cost will be deducted from your wallet balance")}
+                  </div>
+                </div>
+              {/if}
+
               <div class="row form-group">
                 <label class="col-md-2 form-label">
                   {__("Publish To")}
@@ -1089,7 +1101,7 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="cover">
+                    <input type="hidden" class="js_x-uploader-input" name="cover">
                   </div>
                 </div>
               </div>

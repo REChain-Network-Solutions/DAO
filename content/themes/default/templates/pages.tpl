@@ -111,6 +111,17 @@
     <!-- content panel -->
     <div class="{if $view == "" || $view == "category"}col-md-8 col-lg-9 sg-offcanvas-mainbar{else}col-12 sg-offcanvas-mainbar{/if}">
 
+      {if $view == "" && $promoted_pages}
+        <div class="posts-filter">
+          <span>{__("Promoted Pages")}</span>
+        </div>
+        <ul class="row mb20">
+          {foreach $promoted_pages as $_page}
+            {include file='__feeds_page.tpl' _tpl='box'}
+          {/foreach}
+        </ul>
+      {/if}
+
       <div class="posts-filter">
         <span>{$view_title}</span>
         <div class="float-end">
@@ -161,7 +172,6 @@
             </div>
           </div>
           <!-- language filter -->
-
         </div>
       </div>
 

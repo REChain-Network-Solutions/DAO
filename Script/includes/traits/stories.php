@@ -4,7 +4,7 @@
  * trait -> stories
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait StoriesTrait
@@ -118,11 +118,30 @@ trait StoriesTrait
   /**
    * delete_my_story
    * 
+   * @param boolean $delete_media
    * @return void
    */
-  public function delete_my_story()
+  public function delete_my_story($delete_media = false)
   {
-    global $db, $system;
-    $check_story = $db->query(sprintf("DELETE FROM stories WHERE time >= DATE_SUB(NOW(), INTERVAL 1 DAY) AND user_id = %s", secure($this->_data['user_id'], 'int')));
+    global $db;
+    /* get story */
+    $get_story = $db->query(sprintf("SELECT * FROM stories WHERE time >= DATE_SUB(NOW(), INTERVAL 1 DAY) AND user_id = %s", secure($this->_data['user_id'], 'int')));
+    if ($get_story->num_rows > 0) {
+      $story = $get_story->fetch_assoc();
+      if ($delete_media) {
+        /* get story media items */
+        $get_media_items = $db->query(sprintf("SELECT * FROM stories_media WHERE story_id = %s", secure($story['story_id'], 'int')));
+        if ($get_media_items->num_rows > 0) {
+          while ($media_item = $get_media_items->fetch_assoc()) {
+            /* delete media item from uploads folder */
+            delete_uploads_file($media_item['source']);
+          }
+        }
+      }
+      /* delete story */
+      $db->query(sprintf("DELETE FROM stories WHERE story_id = %s", secure($story['story_id'], 'int')));
+      /* delete story media items */
+      $db->query(sprintf("DELETE FROM stories_media WHERE story_id = %s", secure($story['story_id'], 'int')));
+    }
   }
 }

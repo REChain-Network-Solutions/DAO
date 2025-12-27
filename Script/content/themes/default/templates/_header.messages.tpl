@@ -1,4 +1,14 @@
-<li class="dropdown js_live-messages">
+{if $system['redirect_to_mobile_apps']}
+  <li class="d-block d-md-none">
+    <a href="#" onclick="open_messenger_app()">
+      {include file='__svg_icons.tpl' icon="header-messages" class="header-icon" width="24px" height="24px"}
+      <span class="counter red shadow-sm rounded-pill {if $user->_data['user_live_messages_counter'] == 0}x-hidden{/if}">
+        {$user->_data['user_live_messages_counter']}
+      </span>
+    </a>
+  </li>
+{/if}
+<li class="dropdown js_live-messages {if $system['redirect_to_mobile_apps']}d-none d-md-block{/if}">
   <a href="#" data-bs-toggle="dropdown" data-display="static">
     {include file='__svg_icons.tpl' icon="header-messages" class="header-icon" width="24px" height="24px"}
     <span class="counter red shadow-sm rounded-pill {if $user->_data['user_live_messages_counter'] == 0}x-hidden{/if}">

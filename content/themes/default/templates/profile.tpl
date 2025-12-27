@@ -512,7 +512,7 @@
             {if $user->_logged_in && $user->_data['user_id'] != $profile['user_id'] && $profile['has_subscriptions_plans']}
               <div class="d-grid">
                 <button class="btn btn-primary rounded rounded-pill mb20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$profile['user_id']}&node_type=profile" data-size="large">
-                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($profile['user_monetization_min_price']|number_format:2)})
+                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($profile['user_monetization_min_price'])})
                 </button>
               </div>
             {/if}
@@ -908,6 +908,41 @@
               {/if}
             {/if}
             <!-- social links -->
+
+            <!-- gifts transactions -->
+            {if $system['gifts_enabled']}
+              {if $profile['gift_transactions']}
+                <div class="card">
+                  <div class="card-header bg-transparent">
+                    {include file='__svg_icons.tpl' icon="gifts" class="main-icon mr5" width="24px" height="24px"}
+                    <strong>{__("Gifts")}</strong>
+                  </div>
+                  <div class="card-body">
+                    {foreach $profile['gift_transactions'] as $gift_transaction}
+                      <div class="d-flex align-items-center {if !$gift_transaction@last}mb-2 p-2 border-bottom{/if}">
+                        <img src="{$gift_transaction['image']}" style="width: 50px; height: 50px;" class="rounded-circle me-3 flex-shrink-0" alt="Gift Image" />
+                        <div class="flex-grow-1">
+                          <div class="fw-bold text-dark">
+                            <a href="{$system['system_url']}/{$gift_transaction['user_name']}">
+                              <img src="{$gift_transaction['user_picture']}" style="width: 20px; height: 20px;" class="rounded-circle me-2 flex-shrink-0" alt="User Picture" />
+                            </a>
+                            <a href="{$system['system_url']}/{$gift_transaction['user_name']}">
+                              {$gift_transaction['user_fullname']}
+                            </a>
+                          </div>
+                          {if $gift_transaction['points']}
+                            <div class="mt-1">
+                              <span class="badge rounded-pill badge-sm bg-info">{$gift_transaction['points']} {__("Points")}</span>
+                            </div>
+                          {/if}
+                        </div>
+                      </div>
+                    {/foreach}
+                  </div>
+                </div>
+              {/if}
+            {/if}
+            <!-- gifts transactions -->
 
             <!-- search -->
             <div class="card">

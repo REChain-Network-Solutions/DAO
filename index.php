@@ -4,7 +4,7 @@
  * index
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -46,9 +46,7 @@ try {
       $smarty->assign('announcements', $user->get_announcements());
 
       // get widgets (newsfeed top)
-      $newsfeed_widgets = $user->widgets('newsfeed_top');
-      /* assign variables */
-      $smarty->assign('newsfeed_widgets', $newsfeed_widgets);
+      $smarty->assign('newsfeed_widgets', $user->widgets('newsfeed_top'));
 
       // newsfeed location filter
       if ($system['newsfeed_location_filter_enabled']) {
@@ -72,14 +70,10 @@ try {
       }
 
       // get posts (newsfeed)
-      $posts = ($selected_country) ? $user->get_posts(['country' => $selected_country['country_id']]) : $user->get_posts();
-      /* assign variables */
-      $smarty->assign('posts', $posts);
+      $smarty->assign('posts', ($selected_country) ? $user->get_posts(['country' => $selected_country['country_id']]) : $user->get_posts());
 
       // get ads campaigns
-      $ads_campaigns = $user->ads_campaigns();
-      /* assign variables */
-      $smarty->assign('ads_campaigns', $ads_campaigns);
+      $smarty->assign('ads_campaigns', $user->ads_campaigns());
     }
   } else {
 
@@ -117,13 +111,10 @@ try {
         }
 
         // check daytime messages
-        $daytime_msg_enabled = (isset($_COOKIE['dt_msg'])) ? false : $system['daytime_msg_enabled'];
-        $smarty->assign('daytime_msg_enabled', $daytime_msg_enabled);
+        $smarty->assign('daytime_msg_enabled', (isset($_COOKIE['dt_msg'])) ? false : $system['daytime_msg_enabled']);
 
         // get widgets (newsfeed top)
-        $newsfeed_widgets = $user->widgets('newsfeed_top');
-        /* assign variables */
-        $smarty->assign('newsfeed_widgets', $newsfeed_widgets);
+        $smarty->assign('newsfeed_widgets', $user->widgets('newsfeed_top'));
 
         // newsfeed location filter
         if ($system['newsfeed_location_filter_enabled']) {
@@ -400,7 +391,7 @@ try {
       case 'boosted_posts':
         // check if packages enabled
         if (!$system['packages_enabled']) {
-          error(404);
+          _error(404);
         }
 
         // page header
@@ -415,12 +406,12 @@ try {
       case 'boosted_pages':
         // check if packages enabled
         if (!$system['packages_enabled']) {
-          error(404);
+          _error(404);
         }
 
         // check if pages enabled
         if (!$system['pages_enabled']) {
-          error(404);
+          _error(404);
         }
 
         // page header
@@ -430,6 +421,46 @@ try {
         $boosted_pages = $user->get_pages(['boosted' => true]);
         /* assign variables */
         $smarty->assign('boosted_pages', $boosted_pages);
+        break;
+
+      case 'boosted_groups':
+        // check if packages enabled
+        if (!$system['packages_enabled']) {
+          _error(404);
+        }
+
+        // check if groups enabled
+        if (!$system['groups_enabled']) {
+          _error(404);
+        }
+
+        // page header
+        page_header(__("Boosted Groups"));
+
+        // get groups (boosted)
+        $boosted_groups = $user->get_groups(['boosted' => true]);
+        /* assign variables */
+        $smarty->assign('boosted_groups', $boosted_groups);
+        break;
+
+      case 'boosted_events':
+        // check if packages enabled
+        if (!$system['packages_enabled']) {
+          _error(404);
+        }
+
+        // check if events enabled
+        if (!$system['events_enabled']) {
+          _error(404);
+        }
+
+        // page header
+        page_header(__("Boosted Events"));
+
+        // get events (boosted)
+        $boosted_events = $user->get_events(['boosted' => true]);
+        /* assign variables */
+        $smarty->assign('boosted_events', $boosted_events);
         break;
 
       case 'watch':
@@ -495,54 +526,53 @@ try {
       $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true]));
     }
 
+    // get promoted groups
+    if ($system['packages_enabled'] && $system['pro_groups_widget_enabled']) {
+      $smarty->assign('promoted_groups', $user->get_groups(['promoted' => true]));
+    }
+
+    // get promoted events
+    if ($system['packages_enabled'] && $system['pro_events_widget_enabled']) {
+      $smarty->assign('promoted_events', $user->get_events(['promoted' => true]));
+    }
+
+    // get suggested blogs
+    if ($system['blogs_enabled'] && $system['blogs_widget_enabled']) {
+      $smarty->assign('latest_blogs', $user->get_blogs(['suggested' => true, 'random' => 'true', 'results' => 5]));
+    }
+
     // get suggested people
-    $new_people = $user->get_new_people(0, true);
-    /* assign variables */
-    $smarty->assign('new_people', $new_people);
+    $smarty->assign('new_people', $user->get_new_people(0, true));
 
     // get suggested pages
     if ($system['pages_enabled']) {
-      $new_pages = $user->get_pages(['suggested' => true, 'random' => 'true', 'results' => 5]);
-      /* assign variables */
-      $smarty->assign('new_pages', $new_pages);
+      $smarty->assign('new_pages', $user->get_pages(['suggested' => true, 'random' => 'true', 'results' => 5]));
     }
 
     // get suggested groups
     if ($system['groups_enabled']) {
-      $new_groups = $user->get_groups(['suggested' => true, 'random' => 'true', 'results' => 5]);
-      /* assign variables */
-      $smarty->assign('new_groups', $new_groups);
+      $smarty->assign('new_groups', $user->get_groups(['suggested' => true, 'random' => 'true', 'results' => 5]));
     }
 
     // get suggested events
     if ($system['events_enabled']) {
-      $new_events = $user->get_events(['suggested' => true, 'random' => 'true', 'results' => 5]);
-      /* assign variables */
-      $smarty->assign('new_events', $new_events);
+      $smarty->assign('new_events', $user->get_events(['suggested' => true, 'random' => 'true', 'results' => 5]));
     }
 
     // get ads campaigns
-    $ads_campaigns = $user->ads_campaigns();
-    /* assign variables */
-    $smarty->assign('ads_campaigns', $ads_campaigns);
+    $smarty->assign('ads_campaigns', $user->ads_campaigns());
   }
 
   // get trending hashtags
   if (!(!$user->_logged_in && !$system['newsfeed_public']) && $system['trending_hashtags_enabled']) {
-    $trending_hashtags = $user->get_trending_hashtags();
-    /* assign variables */
-    $smarty->assign('trending_hashtags', $trending_hashtags);
+    $smarty->assign('trending_hashtags', $user->get_trending_hashtags());
   }
 
   // get ads
-  $ads = $user->ads('home');
-  /* assign variables */
-  $smarty->assign('ads', $ads);
+  $smarty->assign('ads', $user->ads('home'));
 
   // get widgets
-  $widgets = $user->widgets('home');
-  /* assign variables */
-  $smarty->assign('widgets', $widgets);
+  $smarty->assign('widgets', $user->widgets('home'));
 } catch (Exception $e) {
   _error(__("Error"), $e->getMessage());
 }

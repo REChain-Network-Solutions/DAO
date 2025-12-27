@@ -4,7 +4,7 @@
  * ajax -> posts -> story
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -81,7 +81,7 @@ try {
 
     case 'delete':
       // delete story
-      $user->delete_my_story();
+      $user->delete_my_story(true);
       break;
 
     default:

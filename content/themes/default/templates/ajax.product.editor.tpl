@@ -7,47 +7,49 @@
 </div>
 <form class="js_ajax-forms" data-url="posts/edit.php">
   <div class="modal-body">
-    <!-- digital product -->
-    <div class="form-table-row">
-      <div>
-        <div class="form-label h6 mb5">{__("Digital Product")}</div>
-        <div class="form-text d-none d-sm-block">{__("Enable this option if you are selling a digital product")}</div>
+    {if $system['market_digital_products_enabled']}
+      <!-- digital product -->
+      <div class="form-table-row">
+        <div>
+          <div class="form-label h6 mb5">{__("Digital Product")}</div>
+          <div class="form-text d-none d-sm-block">{__("Enable this option if you are selling a digital product")}</div>
+        </div>
+        <div class="text-end">
+          <label class="switch" for="is_digital">
+            <input type="checkbox" name="is_digital" id="is_digital" class="js_publisher-digital" {if $post['product']['is_digital']}checked{/if}>
+            <span class="slider round"></span>
+          </label>
+        </div>
       </div>
-      <div class="text-end">
-        <label class="switch" for="is_digital">
-          <input type="checkbox" name="is_digital" id="is_digital" class="js_publisher-digital" {if $post['product']['is_digital']}checked{/if}>
-          <span class="slider round"></span>
-        </label>
-      </div>
-    </div>
-    <!-- digital product -->
-    <!-- download url -->
-    <div id="digital_product" {if !$post['product']['is_digital']}class="x-hidden" {/if}>
-      <div class="form-group">
-        <label class="form-label">{__("Download URL")}</label>
-        <input name="product_url" type="text" class="form-control" value="{$post['product']['product_download_url']}">
-      </div>
+      <!-- digital product -->
       <!-- download url -->
-      <!-- upload file -->
-      <div class="form-group">
-        <label class="form-label">{__("OR Upload your File")}</label>
-        <div class="x-image">
-          <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
-          <div class="x-image-loader">
-            <div class="progress x-progress">
-              <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+      <div id="digital_product" {if !$post['product']['is_digital']}class="x-hidden" {/if}>
+        <div class="form-group">
+          <label class="form-label">{__("Download URL")}</label>
+          <input name="product_url" type="text" class="form-control" value="{$post['product']['product_download_url']}">
+        </div>
+        <!-- download url -->
+        <!-- upload file -->
+        <div class="form-group">
+          <label class="form-label">{__("OR Upload your File")}</label>
+          <div class="x-image">
+            <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
+            <div class="x-image-loader">
+              <div class="progress x-progress">
+                <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
             </div>
+            <i class="fa fa-paperclip fa-lg js_x-uploader" data-handle="x-file" data-type="file"></i>
+            <input type="hidden" class="js_x-uploader-input" name="product_file" value="{$post['product']['product_file_source']}">
           </div>
-          <i class="fa fa-paperclip fa-lg js_x-uploader" data-handle="x-file" data-type="file"></i>
-          <input type="hidden" class="js_x-image-input" name="product_file" value="{$post['product']['product_file_source']}">
+          <div class="form-text">
+            {__("Allowed file types")}: {$system['file_extensions']}
+          </div>
         </div>
-        <div class="form-text">
-          {__("Allowed file types")}: {$system['file_extensions']}
-        </div>
+        <!-- upload file -->
       </div>
-      <!-- upload file -->
-    </div>
-    <div class="divider dashed"></div>
+      <div class="divider dashed"></div>
+    {/if}
     <!-- product name -->
     <div class="form-group">
       <label class="form-label">{__("Product Name")}</label>

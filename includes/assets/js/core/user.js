@@ -2,7 +2,7 @@
  * user js
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // initialize API URLs
@@ -21,7 +21,8 @@ api['users/delete'] = ajax_path + "users/delete.php";
 api['users/session'] = ajax_path + "users/session.php";
 api['users/switch'] = ajax_path + "users/switch.php";
 api['users/location'] = ajax_path + "users/location.php";
-api['users/notifications'] = ajax_path + "users/push_notifications.php";
+api['users/push_notifications'] = ajax_path + "users/push_notifications.php";
+api['users/notifications'] = ajax_path + "users/notifications.php";
 api['users/popover'] = ajax_path + "users/popover.php";
 api['users/mention'] = ajax_path + "users/mention.php";
 api['users/settings'] = ajax_path + "users/settings.php";
@@ -48,7 +49,10 @@ function init_geocomplete() {
     return;
   }
   if (typeof $.fn.geocomplete === "function" && typeof google !== "undefined" && google.maps && google.maps.places) {
-    $(".js_geocomplete").geocomplete();
+    $(".js_geocomplete").geocomplete({
+      details: "form",
+      detailsAttribute: "data-geo"
+    });
   }
 }
 
@@ -367,6 +371,41 @@ function init_picture_position() {
     });
   }
 
+}
+
+
+// check video duration
+function check_video_duration(file, min_duration, max_duration) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(false);
+      return;
+    }
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = function () {
+      window.URL.revokeObjectURL(video.src);
+      const duration = video.duration;
+      video.remove();
+      if (min_duration != 0 && duration < min_duration) {
+        modal('#modal-error', { title: __['Error'], message: __['Your video is too short, it must be at least'] + ' ' + min_duration + ' ' + __['seconds'] });
+        resolve(false);
+        return;
+      }
+      if (max_duration != 0 && duration > max_duration) {
+        modal('#modal-error', { title: __['Error'], message: __['Your video is too long, it must be at most'] + ' ' + max_duration + ' ' + __['seconds'] });
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    };
+    video.onerror = function () {
+      window.URL.revokeObjectURL(video.src);
+      video.remove();
+      resolve(false);
+    };
+    video.src = URL.createObjectURL(file);
+  });
 }
 
 
@@ -948,13 +987,13 @@ $(function () {
     initialize_uploader();
   });
   /* initialize uploading */
-  $('body').on('change', '.x-uploader input[type="file"]', function () {
+  $('body').on('change', '.x-uploader input[type="file"]', function (e) {
     $(this).parent('.x-uploader').trigger("submit");
-    $(this).val('');
   });
   /* uploading */
-  $('body').on('submit', '.x-uploader', function (e) {
-    e.preventDefault;
+  $('body').on('submit', '.x-uploader', async function (e) {
+    e.preventDefault();
+    e.stopPropagation();
     /* get form */
     var _form = $(this);
     /* get secret */
@@ -1059,6 +1098,13 @@ $(function () {
     } else if (type == "reel") {
       /* check handle */
       if (handle == "publisher") {
+        /* check video duration */
+        if (reels_minimum_duration != 0 || reels_maximum_duration != 0) {
+          var valid_duration = await check_video_duration(uploader[0].files[0], reels_minimum_duration, reels_maximum_duration);
+          if (!valid_duration) {
+            return false;
+          }
+        }
         var publisher = $(this).parents('.publisher');
         var publisher_button = publisher.find('.js_publisher-btn');
         /* check if there is current scraping process */
@@ -1082,6 +1128,13 @@ $(function () {
     } else if (type == "video") {
       /* check handle */
       if (handle == "publisher") {
+        /* check video duration */
+        if (video_minimum_duration != 0 || video_maximum_duration != 0) {
+          var valid_duration = await check_video_duration(uploader[0].files[0], video_minimum_duration, video_maximum_duration);
+          if (!valid_duration) {
+            return false;
+          }
+        }
         var publisher = $(this).parents('.publisher');
         var publisher_button = publisher.find('.js_publisher-btn');
         /* check if there is current scraping process */
@@ -1246,7 +1299,7 @@ $(function () {
             var image_path = uploads_path + '/' + response.file;
             parent.css("background-image", 'url(' + image_path + ')');
             /* add the image to input */
-            parent.find('.js_x-image-input').val(response.file).trigger('change');
+            parent.find('.js_x-uploader-input').val(response.file).trigger('change');
             /* show the remover */
             parent.find('button').show();
           }
@@ -1271,14 +1324,14 @@ $(function () {
             button_status(publisher_button, "reset");
             /* get subscribers only */
             var subscriptions_image_wrapper = publisher.find("#subscriptions-image-wrapper")
-            var subscriptions_image_input = subscriptions_image_wrapper.find('input.js_x-image-input');
+            var subscriptions_image_input = subscriptions_image_wrapper.find('input.js_x-uploader-input');
             /* get paid post */
             var paid_price_wrapper = publisher.find("#paid-price-wrapper")
             var paid_price_input = paid_price_wrapper.find('input');
             var paid_text_wrapper = publisher.find("#paid-text-wrapper")
             var paid_text_input = paid_text_wrapper.find('textarea');
             var paid_image_wrapper = publisher.find("#paid-image-wrapper")
-            var paid_image_input = paid_image_wrapper.find('input.js_x-image-input');
+            var paid_image_input = paid_image_wrapper.find('input.js_x-uploader-input');
             /* uncheck adult toggle */
             publisher.find('.js_publisher-adult-toggle').prop('checked', false);
             publisher.find('.js_publisher-adult-toggle').prop('disabled', true);
@@ -1350,7 +1403,7 @@ $(function () {
             /* update x-video */
             parent.find('.x-image-success').show();
             /* add the image to input */
-            parent.find('.js_x-image-input').val(response.file);
+            parent.find('.js_x-uploader-input').val(response.file);
             /* show the remover */
             parent.find('button').show();
           }
@@ -1376,7 +1429,7 @@ $(function () {
             /* update x-audio */
             parent.find('.x-image-success').show();
             /* add the image to input */
-            parent.find('.js_x-image-input').val(response.file);
+            parent.find('.js_x-uploader-input').val(response.file);
             /* show the remover */
             parent.find('button').show();
           }
@@ -1490,7 +1543,11 @@ $(function () {
         }
       });
     }
+    /* call upload chunk */
     uploadChunk();
+    /* clear uploader input */
+    uploader.val('');
+    /* return false */
     return false;
   });
   /* handle profile (cover|picture) trigger */
@@ -1550,12 +1607,12 @@ $(function () {
   $('body').on('click', '.js_x-image-remover', function () {
     var _this = $(this);
     var parent = _this.parents('.x-image');
-    var image = parent.find('.js_x-image-input').val();
+    var image = parent.find('.js_x-uploader-input').val();
     confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
       /* remove x-image image */
       parent.attr('style', '');
       /* add the image to input */
-      parent.find('.js_x-image-input').val('').trigger('change');
+      parent.find('.js_x-uploader-input').val('').trigger('change');
       /* hide the remover */
       _this.hide();
       /* hide x-image-success (if any) */
@@ -1564,6 +1621,36 @@ $(function () {
       $('#modal').modal('hide');
       /* remove the image from the server */
       $.post(api['users/image_delete'], { 'handle': 'x-image', 'image': image }, function (response) {
+        /* check the response */
+        if (response.callback) {
+          eval(response.callback);
+        } else {
+          $('#modal').modal('hide');
+        }
+      }, 'json')
+        .fail(function () {
+          show_error_modal();
+        });
+    });
+  });
+  /* handle x-video remover */
+  $('body').on('click', '.js_x-video-remover', function () {
+    var _this = $(this);
+    var parent = _this.parents('.x-image');
+    var src = parent.find('.js_x-uploader-input').val();
+    confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
+      /* remove x-image image */
+      parent.attr('style', '');
+      /* add the image to input */
+      parent.find('.js_x-uploader-input').val('').trigger('change');
+      /* hide the remover */
+      _this.hide();
+      /* hide x-image-success (if any) */
+      parent.find('.x-image-success').attr('style', '');
+      /* hide the confimation */
+      $('#modal').modal('hide');
+      /* remove the image from the server */
+      $.post(api['data/delete'], { 'src': src }, function (response) {
         /* check the response */
         if (response.callback) {
           eval(response.callback);
@@ -1758,7 +1845,8 @@ $(function () {
   });
 
 
-  // handle notifications sound
+  // handle notifications
+  /* notifications sound */
   $('body').on('click', '.js_notifications-sound-toggle', function () {
     notifications_sound = $(this).is(":checked");
     $.get(api['users/settings'], { 'edit': 'notifications_sound', 'notifications_sound': (notifications_sound) ? 1 : 0 }, function (response) {
@@ -1772,6 +1860,29 @@ $(function () {
       .fail(function () {
         show_error_modal();
       });
+  });
+  /* delete a notification */
+  $('body').on('click', '.js_notification-deleter', function (e) {
+    e.preventDefault();
+    var _this = $(this);
+    var id = _this.data('id');
+    var notification = _this.parents('.feeds-action-item');
+    confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
+      $.post(api['users/notifications'], { 'handle': 'delete', 'id': id }, function (response) {
+        /* check the response */
+        if (response.callback) {
+          eval(response.callback);
+        } else {
+          /* remove the notification */
+          notification.slideUp();
+          /* hide the confimation */
+          $('#modal').modal('hide');
+        }
+      }, 'json')
+        .fail(function () {
+          show_error_modal();
+        });
+    });
   });
 
 
@@ -2167,6 +2278,35 @@ $(function () {
         show_error_modal();
       });
   });
+  /* boost & unboost group */
+  $('body').on('click', '.js_boost-group, .js_unboost-group', function () {
+    var _this = $(this);
+    var id = _this.data('id');
+    var _do = (_this.hasClass('js_boost-group')) ? 'group-boost' : 'group-unboost';
+    /* button loading */
+    button_status(_this, "loading");
+    /* post the request */
+    $.post(api['users/connect'], { 'do': _do, 'id': id }, function (response) {
+      /* button reset */
+      button_status(_this, "reset");
+      if (response.callback) {
+        eval(response.callback);
+      } else {
+        if (_do == 'group-boost') {
+          _this.removeClass('js_boost-group').addClass('js_unboost-group');
+          _this.html('<i class="fa fa-bolt mr5"></i>' + __['Unboost']);
+        } else {
+          _this.removeClass('js_unboost-group').addClass('js_boost-group');
+          _this.html('<i class="fa fa-bolt mr5"></i>' + __['Boost']);
+        }
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(_this, "reset");
+        show_error_modal();
+      });
+  });
   /* group admin addation & remove */
   $('body').on('click', '.js_group-admin-addation, .js_group-admin-remove', function () {
     var _this = $(this);
@@ -2269,6 +2409,35 @@ $(function () {
         } else {
           _this.removeClass('js_uninterest-event btn-light').addClass('js_interest-event btn-primary');
           _this.html('<i class="fa fa-star mr5"></i>' + __['Interested']);
+        }
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(_this, "reset");
+        show_error_modal();
+      });
+  });
+  /* boost & unboost event */
+  $('body').on('click', '.js_boost-event, .js_unboost-event', function () {
+    var _this = $(this);
+    var id = _this.data('id');
+    var _do = (_this.hasClass('js_boost-event')) ? 'event-boost' : 'event-unboost';
+    /* button loading */
+    button_status(_this, "loading");
+    /* post the request */
+    $.post(api['users/connect'], { 'do': _do, 'id': id }, function (response) {
+      /* button reset */
+      button_status(_this, "reset");
+      if (response.callback) {
+        eval(response.callback);
+      } else {
+        if (_do == 'event-boost') {
+          _this.removeClass('js_boost-event').addClass('js_unboost-event');
+          _this.html('<i class="fa fa-bolt mr5"></i>' + __['Unboost']);
+        } else {
+          _this.removeClass('js_unboost-event').addClass('js_boost-event');
+          _this.html('<i class="fa fa-bolt mr5"></i>' + __['Boost']);
         }
       }
     }, "json")
@@ -2497,7 +2666,7 @@ $(function () {
   });
   /* sneak peak */
   $('body').on('click', '.js_sneak-peak', function (e) {
-    e.preventDefault;
+    e.preventDefault();
     var id = $(this).data('id');
     confirm(__['Sneak Peak'], __['Are you sure you want to subscribe to this free plan?'], function () {
       $.post(api['payments/trial'], { 'type': 'monetization_plan', 'plan_id': id }, function (response) {
@@ -2720,9 +2889,11 @@ $(function () {
       $('#js_campaign-type-event').hide();
       $('#js_campaign-placement').hide();
       $('#js_campaign-image').hide();
+      $('#js_campaign-video').hide();
     } else {
       $('#js_campaign-placement').show();
       $('#js_campaign-image').show();
+      $('#js_campaign-video').show();
     }
     if ($(this).val() == "page") {
       $('#js_campaign-type-url').hide();

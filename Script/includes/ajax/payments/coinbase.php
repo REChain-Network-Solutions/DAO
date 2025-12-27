@@ -4,7 +4,7 @@
  * ajax -> payments -> coinbase
  * 
  * @package Delus
- * @author A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap

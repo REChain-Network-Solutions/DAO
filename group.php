@@ -4,7 +4,7 @@
  * group
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -23,7 +23,7 @@ if (is_empty($_GET['username']) || !valid_username($_GET['username'])) {
 try {
 
   // [1] get main group info
-  $get_group = $db->query(sprintf("SELECT `groups`.*, picture_photo.source as group_picture_full, cover_photo.source as group_cover_full, groups_categories.category_name as group_category_name FROM `groups` LEFT JOIN posts_photos as picture_photo ON groups.group_picture_id = picture_photo.photo_id LEFT JOIN posts_photos as cover_photo ON `groups`.group_cover_id = cover_photo.photo_id LEFT JOIN groups_categories ON `groups`.group_category = groups_categories.category_id WHERE `groups`.group_name = %s", secure($_GET['username'])));
+  $get_group = $db->query(sprintf("SELECT `groups`.*, picture_photo.source as group_picture_full, cover_photo.source as group_cover_full, groups_categories.category_name as group_category_name FROM `groups` LEFT JOIN posts_photos as picture_photo ON `groups`.group_picture_id = picture_photo.photo_id LEFT JOIN posts_photos as cover_photo ON `groups`.group_cover_id = cover_photo.photo_id LEFT JOIN groups_categories ON `groups`.group_category = groups_categories.category_id WHERE `groups`.group_name = %s", secure($_GET['username'])));
   if ($get_group->num_rows == 0) {
     _error(404);
   }

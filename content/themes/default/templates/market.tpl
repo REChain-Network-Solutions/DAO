@@ -133,8 +133,8 @@
         {/if}
 
         {if $view == "" && $promoted_products}
-          <div class="blogs-widget-header">
-            <div class="blogs-widget-title">{__("Promoted Products")}</div>
+          <div class="posts-filter">
+            <span>{__("Promoted Products")}</span>
           </div>
           <div class="row mb20">
             {foreach $promoted_products as $post}
@@ -144,64 +144,59 @@
         {/if}
 
         {if $rows}
-          <div class="blogs-widget-header clearfix">
-            <!-- sort -->
+          <div class="posts-filter">
+            <span>{__("Products")}</span>
             <div class="float-end">
-              <div class="dropdown">
-                <button type="button" class="btn btn-sm btn-light dropdown-toggle ml10" data-bs-toggle="dropdown" data-display="static">
-                  {if !$sort || $sort == "latest"}
-                    <i class="fas fa-bars fa-fw"></i> {__("Latest")}
-                  {elseif $sort == "price-high"}
-                    <i class="fas fa-sort-amount-down fa-fw"></i> {__("Price High")}
-                  {elseif $sort == "price-low"}
-                    <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Price Low")}
-                  {/if}
-                </button>
-                <div class="dropdown-menu dropdown-menu-end">
-                  <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
-                  <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Price High")}</a>
-                  <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Price Low")}</a>
-                </div>
+              <!-- sort -->
+              <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+                {if !$sort || $sort == "latest"}
+                  <i class="fas fa-bars fa-fw"></i> {__("Latest")}
+                {elseif $sort == "price-high"}
+                  <i class="fas fa-sort-amount-down fa-fw"></i> {__("Price High")}
+                {elseif $sort == "price-low"}
+                  <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Price Low")}
+                {/if}
+              </a>
+              <div class="dropdown-menu dropdown-menu-end">
+                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
+                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Price High")}</a>
+                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Price Low")}</a>
               </div>
-            </div>
-            <!-- sort -->
-            {if $user->_logged_in && $system['location_finder_enabled']}
+              <!-- sort -->
               <!-- location filter -->
-              <div class="float-end">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
-                    <i class="fa fa-map-marker-alt mr5"></i>{__("Distance")}
-                  </button>
-                  <div class="dropdown-menu dropdown-menu-end">
-                    <form class="ptb15 plr15" method="get" action="?">
-                      <div class="form-group">
-                        <label class="form-label">{__("Distance")}</label>
-                        <div>
-                          {if $location}
-                            <input type="hidden" name="location" value="{$location}">
-                          {/if}
-                          {if $sort}
-                            <input type="hidden" name="sort" value="{$sort}">
-                          {/if}
-                          <div class="d-grid mb10">
-                            <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
-                          </div>
-                          <div class="input-group">
-                            <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
-                            <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
-                          </div>
+              {if $user->_logged_in && $system['location_finder_enabled']}
+                <a href="#" data-bs-toggle="dropdown" class="countries-filter">
+                  <i class="fa fa-map-marker-alt mr5"></i>
+                  <span>{__("Distance")}</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <form class="ptb15 plr15" method="get" action="?">
+                    <div class="form-group">
+                      <label class="form-label">{__("Distance")}</label>
+                      <div>
+                        {if $location}
+                          <input type="hidden" name="location" value="{$location}">
+                        {/if}
+                        {if $sort}
+                          <input type="hidden" name="sort" value="{$sort}">
+                        {/if}
+                        <div class="d-grid mb10">
+                          <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
+                        </div>
+                        <div class="input-group">
+                          <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
+                          <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
                         </div>
                       </div>
-                      <div class="d-grid">
-                        <button type="submit" class="btn btn-md btn-primary">{__("Filter")}</button>
-                      </div>
-                    </form>
-                  </div>
+                    </div>
+                    <div class="d-grid">
+                      <button type="submit" class="btn btn-md btn-primary">{__("Filter")}</button>
+                    </div>
+                  </form>
                 </div>
-              </div>
+              {/if}
               <!-- location filter -->
-            {/if}
-            <div class="blogs-widget-title">{__("Products")}</div>
+            </div>
           </div>
 
           <div class="row">
@@ -255,7 +250,7 @@
                         <div class="product-image">
                           <div class="product-price">
                             {if $cart_item['post']['product']['price'] > 0}
-                              {print_money($cart_item['post']['product']['price'])}
+                              {$cart_item['post']['product']['price_formatted']}
                             {else}
                               {__("Free")}
                             {/if}
@@ -408,7 +403,7 @@
         <div class="stat-panel bg-gradient-info">
           <div class="stat-cell narrow">
             <i class="fa fa-dollar-sign bg-icon"></i>
-            <span class="text-xxlg">{print_money($monthly_sales|number_format:2)}</span><br>
+            <span class="text-xxlg">{print_money($monthly_sales)}</span><br>
             <span class="text-lg">{__("This Month Earnings")}</span><br>
           </div>
         </div>
@@ -417,7 +412,7 @@
         <div class="stat-panel bg-gradient-info">
           <div class="stat-cell narrow">
             <i class="fa fa-dollar-sign bg-icon"></i>
-            <span class="text-xxlg">{print_money($user->_data['user_market_balance']|number_format:2)}</span><br>
+            <span class="text-xxlg">{print_money($user->_data['user_market_balance'])}</span><br>
             <span class="text-lg">{__("Total Earnings")}</span><br>
           </div>
         </div>

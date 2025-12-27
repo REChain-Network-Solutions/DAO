@@ -4,7 +4,7 @@
  * ajax -> admin -> export
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set execution time
@@ -232,6 +232,46 @@ try {
       }
       /* retrun */
       return_json(['download' => true, 'data' => $csv_data, 'filename' => 'movies_payments.csv', 'type' => 'text/csv']);
+      break;
+
+    case 'paid_modules':
+      // get paid modules stats
+      /* where query */
+      $where_query = "";
+      $from_to_query = "";
+      if ($from && $to) {
+        $where_query = sprintf(" WHERE (wallet_transactions.date BETWEEN %s AND %s)", secure($from, 'datetime'), secure($to, 'datetime'));
+        $from_to_query = $from . " - " . $to;
+      } else {
+        $from_to_query = __("All Time");
+      }
+      /* limit query */
+      $limit_query = ($_POST['results'] != 0) ? " LIMIT " . $_POST['from_row'] . ", " . $_POST['results'] : "";
+      /* get results */
+      $results = $db->query("SELECT * FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment') " . $where_query . " ORDER BY transaction_id ASC " . $limit_query);
+      /* output the CSV data */
+      $csv_data = "";
+      $csv_data .= "ID,User ID,Module,Amount,Date\n";
+      while ($result = $results->fetch_assoc()) {
+        /* prepare module name */
+        $module_name = "";
+        if ($result['node_type'] == "blogs_module_payment") {
+          $module_name = __("Paid Blogs");
+        } elseif ($result['node_type'] == "products_module_payment") {
+          $module_name = __("Paid Products");
+        } elseif ($result['node_type'] == "funding_module_payment") {
+          $module_name = __("Paid Funding");
+        } elseif ($result['node_type'] == "offers_module_payment") {
+          $module_name = __("Paid Offers");
+        } elseif ($result['node_type'] == "jobs_module_payment") {
+          $module_name = __("Paid Jobs");
+        } elseif ($result['node_type'] == "courses_module_payment") {
+          $module_name = __("Paid Courses");
+        }
+        $csv_data .= $result['transaction_id'] . "," . $result['user_id'] . "," . $module_name . "," . print_money(number_format($result['amount'])) . "," . $result['date'] . "\n";
+      }
+      /* retrun */
+      return_json(['download' => true, 'data' => $csv_data, 'filename' => 'paid_modules.csv', 'type' => 'text/csv']);
       break;
 
     default:

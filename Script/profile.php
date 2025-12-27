@@ -4,7 +4,7 @@
  * profile
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -211,6 +211,9 @@ try {
           /* assign variables */
           $smarty->assign('gift', $gift);
         }
+
+        /* get gift transactions */
+        $profile['gift_transactions'] = $user->get_gift_transactions($profile['user_id']);
       }
 
       /* get friends */

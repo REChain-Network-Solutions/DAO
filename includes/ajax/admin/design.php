@@ -4,7 +4,7 @@
  * ajax -> admin -> design
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -30,7 +30,6 @@ try {
   $_POST['fluid_design'] = (isset($_POST['fluid_design'])) ? '1' : '0';
   $_POST['system_theme_night_on'] = (isset($_POST['system_theme_night_on'])) ? '1' : '0';
   $_POST['system_theme_mode_select'] = (isset($_POST['system_theme_mode_select'])) ? '1' : '0';
-  $_POST['system_back_swipe'] = (isset($_POST['system_back_swipe'])) ? '1' : '0';
   $_POST['system_favicon_default'] = (isset($_POST['system_favicon_default'])) ? '1' : '0';
   $system_favicon = ($_POST['system_favicon_default']) ? '' : $_POST['system_favicon'];
   $_POST['system_ogimage_default'] = (isset($_POST['system_ogimage_default'])) ? '1' : '0';
@@ -44,7 +43,6 @@ try {
     'fluid_design' => secure($_POST['fluid_design']),
     'system_theme_night_on' => secure($_POST['system_theme_night_on']),
     'system_theme_mode_select' => secure($_POST['system_theme_mode_select']),
-    'system_back_swipe' => secure($_POST['system_back_swipe']),
     'system_logo' => secure($_POST['system_logo']),
     'system_logo_dark' => secure($_POST['system_logo_dark']),
     'system_wallpaper_default' => secure($_POST['system_wallpaper_default']),

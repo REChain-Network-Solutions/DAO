@@ -4,7 +4,7 @@
  * ajax -> posts -> product
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -91,13 +91,20 @@ try {
       if (!is_object($_POST['product'])) {
         _error(400);
       }
-      /* check if product digital and has no file nor link */
-      if ($_POST['product']->is_digital == "1" && is_empty($_POST['product']->product_url) && is_empty($_POST['product']->product_file)) {
-        return_json(['error' => true, 'message' => __("Please add your product file or download URL")]);
-      }
-      /* check product download URL */
-      if (!is_empty($_POST['product']->product_url) && !valid_url($_POST['product']->product_url)) {
-        return_json(['error' => true, 'message' => __("Please add valid product download URL")]);
+      /* check if digital products enabled and product is digital */
+      if ($system['market_digital_products_enabled'] && $_POST['product']->is_digital == "1") {
+        /* check if product digital and has no file nor link */
+        if (is_empty($_POST['product']->product_url) && is_empty($_POST['product']->product_file)) {
+          return_json(['error' => true, 'message' => __("Please add your product file or download URL")]);
+        }
+        /* check product download URL */
+        if (!is_empty($_POST['product']->product_url) && !valid_url($_POST['product']->product_url)) {
+          return_json(['error' => true, 'message' => __("Please add valid product download URL")]);
+        }
+      } else {
+        $_POST['product']->is_digital = '0';
+        $_POST['product']->product_url = '';
+        $_POST['product']->product_file = '';
       }
       /* check product name */
       if (is_empty($_POST['product']->name)) {

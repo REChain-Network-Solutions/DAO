@@ -158,3 +158,168 @@
     </div>
   </div>
 </div>
+
+<div class="{if $system['affiliates_levels'] < 6}x-hidden{/if}" id="affiliates-levels-6">
+  <div class="divider dashed"></div>
+
+  <div class="heading-small mb20">
+    {__("level 6")}
+  </div>
+  <div class="pl-md-4">
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Price/Referred")} ({$system['system_currency']})
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_per_user_6" value="{$_affiliate['affiliates_per_user_6']}">
+        <div class="form-text">
+          {__("The fixed price for each new referred user")} ({__("level 6")})
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Percentage")} (%)
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_percentage_6" value="{$_affiliate['affiliates_percentage_6']}">
+        <div class="form-text">
+          {__("The percentage from price for each new referred user")} ({__("level 6")})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="{if $system['affiliates_levels'] < 7}x-hidden{/if}" id="affiliates-levels-7">
+  <div class="divider dashed"></div>
+
+  <div class="heading-small mb20">
+    {__("level 7")}
+  </div>
+  <div class="pl-md-4">
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Price/Referred")} ({$system['system_currency']})
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_per_user_7" value="{$_affiliate['affiliates_per_user_7']}">
+        <div class="form-text">
+          {__("The fixed price for each new referred user")} ({__("level 7")})
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Percentage")} (%)
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_percentage_7" value="{$_affiliate['affiliates_percentage_7']}">
+        <div class="form-text">
+          {__("The percentage from price for each new referred user")} ({__("level 7")})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="{if $system['affiliates_levels'] < 8}x-hidden{/if}" id="affiliates-levels-8">
+  <div class="divider dashed"></div>
+
+  <div class="heading-small mb20">
+    {__("level 8")}
+  </div>
+  <div class="pl-md-4">
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Price/Referred")} ({$system['system_currency']})
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_per_user_8" value="{$_affiliate['affiliates_per_user_8']}">
+        <div class="form-text">
+          {__("The fixed price for each new referred user")} ({__("level 8")})
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Percentage")} (%)
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_percentage_8" value="{$_affiliate['affiliates_percentage_8']}">
+        <div class="form-text">
+          {__("The percentage from price for each new referred user")} ({__("level 8")})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="{if $system['affiliates_levels'] < 9}x-hidden{/if}" id="affiliates-levels-9">
+  <div class="divider dashed"></div>
+
+  <div class="heading-small mb20">
+    {__("level 9")}
+  </div>
+  <div class="pl-md-4">
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Price/Referred")} ({$system['system_currency']})
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_per_user_9" value="{$_affiliate['affiliates_per_user_9']}">
+        <div class="form-text">
+          {__("The fixed price for each new referred user")} ({__("level 9")})
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Percentage")} (%)
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_percentage_9" value="{$_affiliate['affiliates_percentage_9']}">
+        <div class="form-text">
+          {__("The percentage from price for each new referred user")} ({__("level 9")})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="{if $system['affiliates_levels'] < 10}x-hidden{/if}" id="affiliates-levels-10">
+  <div class="divider dashed"></div>
+
+  <div class="heading-small mb20">
+    {__("level 10")}
+  </div>
+  <div class="pl-md-4">
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Price/Referred")} ({$system['system_currency']})
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_per_user_10" value="{$_affiliate['affiliates_per_user_10']}">
+        <div class="form-text">
+          {__("The fixed price for each new referred user")} ({__("level 10")})
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-group">
+      <label class="col-md-3 form-label">
+        {__("Percentage")} (%)
+      </label>
+      <div class="col-md-9">
+        <input type="text" class="form-control" name="affiliates_percentage_10" value="{$_affiliate['affiliates_percentage_10']}">
+        <div class="form-text">
+          {__("The percentage from price for each new referred user")} ({__("level 10")})
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

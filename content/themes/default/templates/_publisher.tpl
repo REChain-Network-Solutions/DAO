@@ -214,7 +214,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="video_thumbnail" value="">
+              <input type="hidden" class="js_x-uploader-input" name="video_thumbnail" value="">
             </div>
           </div>
           <!-- post reel -->
@@ -244,7 +244,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="video_thumbnail" value="">
+              <input type="hidden" class="js_x-uploader-input" name="video_thumbnail" value="">
             </div>
           </div>
           <!-- post video -->
@@ -347,7 +347,7 @@
                   <li class="col-md-6">
                     <a class="publisher-tools-tab link js_publisher-tab" data-tab="blog" href='{$system['system_url']}/blogs/new{if $_handle == "page"}?page={$_id}{/if}{if $_handle == "group"}?group={$_id}{/if}{if $_handle == "event"}?event={$_id}{/if}'>
                       {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Blog")}
+                      {__("Create Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </a>
                   </li>
                 {/if}
@@ -355,7 +355,7 @@
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="product" data-toggle="modal" data-url="posts/product.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="products" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Product")}
+                      {__("Create Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </div>
                   </li>
                 {/if}
@@ -363,7 +363,7 @@
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="funding" data-toggle="modal" data-url="posts/funding.php?do=create">
                       {include file='__svg_icons.tpl' icon="funding" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Funding")}
+                      {__("Create Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </div>
                   </li>
                 {/if}
@@ -371,7 +371,7 @@
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="offer" data-toggle="modal" data-url="posts/offer.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="offers" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Offer")}
+                      {__("Create Offer")} {if $system['paid_offers_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </div>
                   </li>
                 {/if}
@@ -379,7 +379,7 @@
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="job" data-toggle="modal" data-url="posts/job.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="jobs" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Job")}
+                      {__("Create Job")} {if $system['paid_jobs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </div>
                   </li>
                 {/if}
@@ -387,7 +387,7 @@
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="job" data-toggle="modal" data-url="posts/course.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="courses" class="main-icon mr5" width="24px" height="24px"}
-                      {__("Create Course")}
+                      {__("Create Course")} {if $system['paid_courses_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
                     </div>
                   </li>
                 {/if}
@@ -562,7 +562,7 @@
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image" data-blur="true"></i>
-                      <input type="hidden" class="js_x-image-input" name="subscriptions_image" value="">
+                      <input type="hidden" class="js_x-uploader-input" name="subscriptions_image" value="">
                     </div>
                     <div class="form-text">
                       {__("Upload a preview image for your post (This image will be blured)")}
@@ -618,7 +618,7 @@
                         </div>
                       </div>
                       <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image" data-blur="true"></i>
-                      <input type="hidden" class="js_x-image-input" name="paid_image" value="">
+                      <input type="hidden" class="js_x-uploader-input" name="paid_image" value="">
                     </div>
                     <div class="form-text">
                       {__("Upload a preview image for your post (This image will be blured)")}

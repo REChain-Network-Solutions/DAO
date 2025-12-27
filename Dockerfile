@@ -1,60 +1,42 @@
-# Multi-stage Docker build for REChain DAO Platform
+# PHP image
+FROM php:8.3-apache
 
-# Build stage
-FROM node:25-alpine AS builder
+# enable required packages and gd lib
+RUN apt-get update && apt-get install -y \
+    libwebp-dev libxpm-dev zlib1g-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd zip mysqli \
+    && docker-php-ext-enable mysqli zip
 
-# Install security updates
-RUN apk update && apk upgrade
+# enable mysqli
+RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# set working directory
+WORKDIR /var/www/html/Delus
 
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy source code
+# copy project files
 COPY . .
 
-# Build application
-RUN npm run build
+# set server name >> localhost
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Production stage
-FROM node:25-alpine AS production
+# enable apache rewrite mod
+RUN a2enmod rewrite
 
-# Install security updates
-RUN apk update && apk upgrade
+# Configure Apache to trust proxy headers
+RUN echo "RemoteIPHeader X-Forwarded-For" >> /etc/apache2/apache2.conf && \
+    echo "RemoteIPInternalProxy 172.16.0.0/12" >> /etc/apache2/apache2.conf
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# restart server
+RUN service apache2 restart
 
-# Set working directory
-WORKDIR /app
+# listen to port 80
+EXPOSE 80
 
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
-
-# Create necessary directories
-RUN mkdir -p logs uploads && chown -R nextjs:nodejs logs uploads
-
-# Switch to non-root user
-USER nextjs
-
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
-
-# Start application
-CMD ["npm", "start"]
+# run apache foreground
+CMD ["apache2-foreground"]

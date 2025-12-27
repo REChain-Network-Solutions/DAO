@@ -580,11 +580,7 @@
       {if $system['posts_reviews_enabled'] && $post['post_type'] != "product"}
         {if $_post['post_rate']}
           <span class="review-stars small ml5">
-            <i class="fa fa-star {if $_post['post_rate'] >= 1}checked{/if}"></i>
-            <i class="fa fa-star {if $_post['post_rate'] >= 2}checked{/if}"></i>
-            <i class="fa fa-star {if $_post['post_rate'] >= 3}checked{/if}"></i>
-            <i class="fa fa-star {if $_post['post_rate'] >= 4}checked{/if}"></i>
-            <i class="fa fa-star {if $_post['post_rate'] >= 5}checked{/if}"></i>
+            {include file='__stars_rate.tpl' rate=$_post['post_rate']}
           </span>
           <span class="badge bg-light text-primary">{$_post['post_rate']|number_format:1}</span>
         {/if}
@@ -768,7 +764,7 @@
         <div class="mb20 text-lg text-success">
           <strong>
             {if $_post['product']['price'] > 0}
-              {print_money($_post['product']['price'])}
+              {$_post['product']['price_formatted']}
             {else}
               {__("Free")}
             {/if}
@@ -804,11 +800,7 @@
             </span>
             {if $post['post_rate']}
               <span class="review-stars small ml5">
-                <i class="fa fa-star {if $post['post_rate'] >= 1}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 2}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 3}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 4}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 5}checked{/if}"></i>
+                {include file='__stars_rate.tpl' rate=$post['post_rate']}
               </span>
               <span class="badge bg-light text-primary">{$post['post_rate']|number_format:1}</span>
             {/if}
@@ -866,7 +858,7 @@
             {if $system['chat_enabled'] && $_post['user_type'] == 'user'}
               <div class="col-12 {if $system['market_shopping_cart_enabled']}col-md-3{/if}">
                 <div class="d-grid">
-                  <button type="button" class="btn btn-light js_chat-start" data-uid="{$_post['author_id']}" data-name="{$_post['post_author_name']}" data-link="{$_post['user_name']}" data-picture="{$_post['post_author_picture']}">
+                  <button type="button" class="btn btn-light js_chat-start" data-uid="{$_post['author_id']}" data-name="{$_post['post_author_name']}" data-link="{$_post['user_name']}" data-picture="{$_post['post_author_picture']}" data-product-post-id="{$_post['post_id']}">
                     {include file='__svg_icons.tpl' icon="header-messages" class="main-icon" width="20px" height="20px"}
                     {if !$system['market_shopping_cart_enabled']}
                       <span class="ml10">{__("Contact Seller")}</span>
@@ -1273,7 +1265,7 @@
           <div class="mt10">
             {if $_post['needs_payment']}
               <button class="btn btn-info btn-sm {if !$user->_logged_in}js_login{/if}" {if $user->_logged_in}data-toggle="modal" data-url="#payment" data-options='{ "handle": "paid_post", "paid_post": "true", "id": {$_post['post_id']}, "price": {$_post['post_price']}, "vat": "{get_payment_vat_value($_post['post_price'])}", "fees": "{get_payment_fees_value($_post['post_price'])}", "total": "{get_payment_total_value($_post['post_price'])}", "total_printed": "{get_payment_total_value($_post['post_price'], true)}" }' {/if}>
-                <i class="fa fa-money-check-alt mr5"></i>{__("PAY TO DOWNLOAD")} ({print_money($_post['post_price']|number_format:2)})
+                <i class="fa fa-money-check-alt mr5"></i>{__("PAY TO DOWNLOAD")} ({print_money($_post['post_price'])})
               </button>
             {else}
               <a class="btn btn-primary btn-sm" href="{if $system['mask_file_path_enabled']}{$system['system_url']}/downloads.php?id={$_post['post_id']}{else}{$system['system_uploads']}/{$_post['file']['source']}{/if}">{__("Download")}</a>

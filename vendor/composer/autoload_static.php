@@ -13,12 +13,12 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         '9c67151ae59aff4788964ce8eb2a0f43' => __DIR__ . '/..' . '/clue/stream-filter/src/functions_include.php',
         '8cff32064859f4559445b89279f3199c' => __DIR__ . '/..' . '/php-http/message/src/filters.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
-        'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+        'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
+        '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
         'fb4ca2d97fe7ba6af750497425204e70' => __DIR__ . '/..' . '/sentry/sentry/src/functions.php',
         'b067bc7112e384b61c701452d53a14a8' => __DIR__ . '/..' . '/mtdowling/jmespath.php/src/JmesPath.php',
-        '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         '8a9dc1de0ca7e01f3e08231539562f61' => __DIR__ . '/..' . '/aws/aws-sdk-php/src/functions.php',
         '09fc349b549513bf7f4291502426f919' => __DIR__ . '/..' . '/embed/embed/src/functions.php',
         '2cffec82183ee1cea088009cef9a6fc3' => __DIR__ . '/..' . '/ezyang/htmlpurifier/library/HTMLPurifier.composer.php',
@@ -28,21 +28,21 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
     );
 
     public static $prefixLengthsPsr4 = array (
-        'W' => 
+        'W' =>
         array (
             'Workerman\\' => 10,
         ),
-        'V' => 
+        'V' =>
         array (
             'Verotel\\' => 8,
         ),
-        'T' => 
+        'T' =>
         array (
             'Twirp\\' => 6,
             'Twilio\\' => 7,
             'TaylanUnutmaz\\AgoraTokenBuilder\\' => 32,
         ),
-        'S' => 
+        'S' =>
         array (
             'Symfony\\Polyfill\\Php83\\' => 23,
             'Symfony\\Polyfill\\Php80\\' => 23,
@@ -53,20 +53,21 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'Symfony\\Component\\Yaml\\' => 23,
             'Symfony\\Component\\OptionsResolver\\' => 34,
             'Symfony\\Component\\HttpClient\\' => 29,
+            'Symfony\\Component\\Filesystem\\' => 29,
             'Stripe\\' => 7,
             'Sonata\\GoogleAuthenticator\\' => 27,
             'Smarty\\' => 7,
             'Shift4\\' => 7,
             'Sentry\\' => 7,
         ),
-        'R' => 
+        'R' =>
         array (
             'Rize\\' => 5,
             'ReCaptcha\\' => 10,
             'Ramsey\\Uuid\\' => 12,
             'Ramsey\\Collection\\' => 18,
         ),
-        'P' => 
+        'P' =>
         array (
             'Psr\\SimpleCache\\' => 16,
             'Psr\\Log\\' => 8,
@@ -78,22 +79,22 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'PHPSocketIO\\' => 12,
             'PHPMailer\\PHPMailer\\' => 20,
         ),
-        'M' => 
+        'M' =>
         array (
             'Monolog\\' => 8,
             'ML\\JsonLD\\' => 10,
         ),
-        'L' => 
+        'L' =>
         array (
             'Livekit\\' => 8,
             'League\\ColorExtractor\\' => 22,
         ),
-        'J' => 
+        'J' =>
         array (
             'JmesPath\\' => 9,
             'Jean85\\' => 7,
         ),
-        'H' => 
+        'H' =>
         array (
             'Hybridauth\\' => 11,
             'Http\\Promise\\' => 13,
@@ -104,7 +105,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'Http\\Client\\' => 12,
             'HtmlParser\\' => 11,
         ),
-        'G' => 
+        'G' =>
         array (
             'GuzzleHttp\\Psr7\\' => 16,
             'GuzzleHttp\\Promise\\' => 19,
@@ -137,31 +138,31 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'GPBMetadata\\ApiCore\\' => 20,
             'GPBMetadata\\' => 12,
         ),
-        'F' => 
+        'F' =>
         array (
             'Firebase\\JWT\\' => 13,
             'Faker\\' => 6,
         ),
-        'E' => 
+        'E' =>
         array (
             'Embed\\' => 6,
         ),
-        'D' => 
+        'D' =>
         array (
             'Detection\\' => 10,
         ),
-        'C' => 
+        'C' =>
         array (
             'Composer\\CaBundle\\' => 18,
             'Clue\\StreamFilter\\' => 18,
             'Channel\\' => 8,
             'Cashfree\\' => 9,
         ),
-        'B' => 
+        'B' =>
         array (
             'Brick\\Math\\' => 11,
         ),
-        'A' => 
+        'A' =>
         array (
             'Aws\\' => 4,
             'Agence104\\LiveKit\\' => 18,
@@ -169,390 +170,394 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
     );
 
     public static $prefixDirsPsr4 = array (
-        'Workerman\\' => 
+        'Workerman\\' =>
         array (
             0 => __DIR__ . '/..' . '/workerman/workerman',
         ),
-        'Verotel\\' => 
+        'Verotel\\' =>
         array (
             0 => __DIR__ . '/..' . '/verotel/flexpay-php-client/src/Verotel',
         ),
-        'Twirp\\' => 
+        'Twirp\\' =>
         array (
             0 => __DIR__ . '/..' . '/twirp/twirp/lib/src',
         ),
-        'Twilio\\' => 
+        'Twilio\\' =>
         array (
             0 => __DIR__ . '/..' . '/twilio/sdk/src/Twilio',
         ),
-        'TaylanUnutmaz\\AgoraTokenBuilder\\' => 
+        'TaylanUnutmaz\\AgoraTokenBuilder\\' =>
         array (
             0 => __DIR__ . '/..' . '/taylanunutmaz/agora-token-builder/src',
         ),
-        'Symfony\\Polyfill\\Php83\\' => 
+        'Symfony\\Polyfill\\Php83\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php83',
         ),
-        'Symfony\\Polyfill\\Php80\\' => 
+        'Symfony\\Polyfill\\Php80\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php80',
         ),
-        'Symfony\\Polyfill\\Mbstring\\' => 
+        'Symfony\\Polyfill\\Mbstring\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
         ),
-        'Symfony\\Polyfill\\Ctype\\' => 
+        'Symfony\\Polyfill\\Ctype\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
-        'Symfony\\Contracts\\Service\\' => 
+        'Symfony\\Contracts\\Service\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/service-contracts',
         ),
-        'Symfony\\Contracts\\HttpClient\\' => 
+        'Symfony\\Contracts\\HttpClient\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/http-client-contracts',
         ),
-        'Symfony\\Component\\Yaml\\' => 
+        'Symfony\\Component\\Yaml\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/yaml',
         ),
-        'Symfony\\Component\\OptionsResolver\\' => 
+        'Symfony\\Component\\OptionsResolver\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/options-resolver',
         ),
-        'Symfony\\Component\\HttpClient\\' => 
+        'Symfony\\Component\\HttpClient\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/http-client',
         ),
-        'Stripe\\' => 
+        'Symfony\\Component\\Filesystem\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/symfony/filesystem',
+        ),
+        'Stripe\\' =>
         array (
             0 => __DIR__ . '/..' . '/stripe/stripe-php/lib',
         ),
-        'Sonata\\GoogleAuthenticator\\' => 
+        'Sonata\\GoogleAuthenticator\\' =>
         array (
             0 => __DIR__ . '/..' . '/sonata-project/google-authenticator/src',
         ),
-        'Smarty\\' => 
+        'Smarty\\' =>
         array (
             0 => __DIR__ . '/..' . '/smarty/smarty/src',
         ),
-        'Shift4\\' => 
+        'Shift4\\' =>
         array (
             0 => __DIR__ . '/..' . '/shift4/shift4-php/lib/Shift4',
         ),
-        'Sentry\\' => 
+        'Sentry\\' =>
         array (
             0 => __DIR__ . '/..' . '/sentry/sentry/src',
         ),
-        'Rize\\' => 
+        'Rize\\' =>
         array (
             0 => __DIR__ . '/..' . '/rize/uri-template/src/Rize',
         ),
-        'ReCaptcha\\' => 
+        'ReCaptcha\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/recaptcha/src/ReCaptcha',
         ),
-        'Ramsey\\Uuid\\' => 
+        'Ramsey\\Uuid\\' =>
         array (
             0 => __DIR__ . '/..' . '/ramsey/uuid/src',
         ),
-        'Ramsey\\Collection\\' => 
+        'Ramsey\\Collection\\' =>
         array (
             0 => __DIR__ . '/..' . '/ramsey/collection/src',
         ),
-        'Psr\\SimpleCache\\' => 
+        'Psr\\SimpleCache\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/simple-cache/src',
         ),
-        'Psr\\Log\\' => 
+        'Psr\\Log\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/log/src',
         ),
-        'Psr\\Http\\Server\\' => 
+        'Psr\\Http\\Server\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-server-handler/src',
         ),
-        'Psr\\Http\\Message\\' => 
+        'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-factory/src',
             1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
-        'Psr\\Http\\Client\\' => 
+        'Psr\\Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-client/src',
         ),
-        'Psr\\Container\\' => 
+        'Psr\\Container\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/container/src',
         ),
-        'Psr\\Cache\\' => 
+        'Psr\\Cache\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/cache/src',
         ),
-        'PHPSocketIO\\' => 
+        'PHPSocketIO\\' =>
         array (
             0 => __DIR__ . '/..' . '/workerman/phpsocket.io/src',
         ),
-        'PHPMailer\\PHPMailer\\' => 
+        'PHPMailer\\PHPMailer\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
-        'Monolog\\' => 
+        'Monolog\\' =>
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
         ),
-        'ML\\JsonLD\\' => 
+        'ML\\JsonLD\\' =>
         array (
             0 => __DIR__ . '/..' . '/ml/json-ld',
         ),
-        'Livekit\\' => 
+        'Livekit\\' =>
         array (
             0 => __DIR__ . '/..' . '/agence104/livekit-server-sdk/src/proto/Livekit',
         ),
-        'League\\ColorExtractor\\' => 
+        'League\\ColorExtractor\\' =>
         array (
             0 => __DIR__ . '/..' . '/league/color-extractor/src',
         ),
-        'JmesPath\\' => 
+        'JmesPath\\' =>
         array (
             0 => __DIR__ . '/..' . '/mtdowling/jmespath.php/src',
         ),
-        'Jean85\\' => 
+        'Jean85\\' =>
         array (
             0 => __DIR__ . '/..' . '/jean85/pretty-package-versions/src',
         ),
-        'Hybridauth\\' => 
+        'Hybridauth\\' =>
         array (
             0 => __DIR__ . '/..' . '/hybridauth/hybridauth/src',
         ),
-        'Http\\Promise\\' => 
+        'Http\\Promise\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/promise/src',
         ),
-        'Http\\Message\\' => 
+        'Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/message-factory/src',
             1 => __DIR__ . '/..' . '/php-http/message/src',
         ),
-        'Http\\Factory\\Guzzle\\' => 
+        'Http\\Factory\\Guzzle\\' =>
         array (
             0 => __DIR__ . '/..' . '/http-interop/http-factory-guzzle/src',
         ),
-        'Http\\Discovery\\' => 
+        'Http\\Discovery\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/discovery/src',
         ),
-        'Http\\Client\\Common\\' => 
+        'Http\\Client\\Common\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/client-common/src',
         ),
-        'Http\\Client\\' => 
+        'Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/httplug/src',
         ),
-        'HtmlParser\\' => 
+        'HtmlParser\\' =>
         array (
             0 => __DIR__ . '/..' . '/oscarotero/html-parser/src',
         ),
-        'GuzzleHttp\\Psr7\\' => 
+        'GuzzleHttp\\Psr7\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/psr7/src',
         ),
-        'GuzzleHttp\\Promise\\' => 
+        'GuzzleHttp\\Promise\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/promises/src',
         ),
-        'GuzzleHttp\\' => 
+        'GuzzleHttp\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/guzzle/src',
         ),
-        'Grpc\\Gcp\\' => 
+        'Grpc\\Gcp\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/grpc-gcp/src',
         ),
-        'Grpc\\' => 
+        'Grpc\\' =>
         array (
             0 => __DIR__ . '/..' . '/grpc/grpc/src/lib',
         ),
-        'Google\\Type\\' => 
+        'Google\\Type\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/src/Type',
         ),
-        'Google\\Rpc\\' => 
+        'Google\\Rpc\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/src/Rpc',
         ),
-        'Google\\Protobuf\\' => 
+        'Google\\Protobuf\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/protobuf/src/Google/Protobuf',
         ),
-        'Google\\LongRunning\\' => 
+        'Google\\LongRunning\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/longrunning/src/LongRunning',
         ),
-        'Google\\Iam\\' => 
+        'Google\\Iam\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/src/Iam',
         ),
-        'Google\\Cloud\\Storage\\' => 
+        'Google\\Cloud\\Storage\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/cloud-storage/src',
         ),
-        'Google\\Cloud\\Core\\' => 
+        'Google\\Cloud\\Core\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/cloud-core/src',
         ),
-        'Google\\Cloud\\' => 
+        'Google\\Cloud\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/src/Cloud',
         ),
-        'Google\\Authenticator\\' => 
+        'Google\\Authenticator\\' =>
         array (
             0 => __DIR__ . '/..' . '/sonata-project/google-authenticator/src',
         ),
-        'Google\\Auth\\' => 
+        'Google\\Auth\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/auth/src',
         ),
-        'Google\\Api\\' => 
+        'Google\\Api\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/src/Api',
         ),
-        'Google\\ApiCore\\LongRunning\\' => 
+        'Google\\ApiCore\\LongRunning\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/longrunning/src/ApiCore/LongRunning',
         ),
-        'Google\\ApiCore\\' => 
+        'Google\\ApiCore\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/gax/src',
         ),
-        'Gettext\\Languages\\' => 
+        'Gettext\\Languages\\' =>
         array (
             0 => __DIR__ . '/..' . '/gettext/languages/src',
         ),
-        'Gettext\\' => 
+        'Gettext\\' =>
         array (
             0 => __DIR__ . '/..' . '/gettext/gettext/src',
         ),
-        'GPBMetadata\\Google\\Type\\' => 
+        'GPBMetadata\\Google\\Type\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Type',
         ),
-        'GPBMetadata\\Google\\Rpc\\' => 
+        'GPBMetadata\\Google\\Rpc\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Rpc',
         ),
-        'GPBMetadata\\Google\\Protobuf\\' => 
+        'GPBMetadata\\Google\\Protobuf\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/protobuf/src/GPBMetadata/Google/Protobuf',
         ),
-        'GPBMetadata\\Google\\Longrunning\\' => 
+        'GPBMetadata\\Google\\Longrunning\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/longrunning/metadata/Longrunning',
         ),
-        'GPBMetadata\\Google\\Logging\\' => 
+        'GPBMetadata\\Google\\Logging\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Logging',
         ),
-        'GPBMetadata\\Google\\Iam\\' => 
+        'GPBMetadata\\Google\\Iam\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Iam',
         ),
-        'GPBMetadata\\Google\\Cloud\\' => 
+        'GPBMetadata\\Google\\Cloud\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Cloud',
         ),
-        'GPBMetadata\\Google\\Api\\' => 
+        'GPBMetadata\\Google\\Api\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/common-protos/metadata/Api',
         ),
-        'GPBMetadata\\ApiCore\\' => 
+        'GPBMetadata\\ApiCore\\' =>
         array (
             0 => __DIR__ . '/..' . '/google/gax/metadata/ApiCore',
         ),
-        'GPBMetadata\\' => 
+        'GPBMetadata\\' =>
         array (
             0 => __DIR__ . '/..' . '/agence104/livekit-server-sdk/src/proto/GPBMetadata',
         ),
-        'Firebase\\JWT\\' => 
+        'Firebase\\JWT\\' =>
         array (
             0 => __DIR__ . '/..' . '/firebase/php-jwt/src',
         ),
-        'Faker\\' => 
+        'Faker\\' =>
         array (
             0 => __DIR__ . '/..' . '/fakerphp/faker/src/Faker',
         ),
-        'Embed\\' => 
+        'Embed\\' =>
         array (
             0 => __DIR__ . '/..' . '/embed/embed/src',
         ),
-        'Detection\\' => 
+        'Detection\\' =>
         array (
             0 => __DIR__ . '/..' . '/mobiledetect/mobiledetectlib/src',
         ),
-        'Composer\\CaBundle\\' => 
+        'Composer\\CaBundle\\' =>
         array (
             0 => __DIR__ . '/..' . '/composer/ca-bundle/src',
         ),
-        'Clue\\StreamFilter\\' => 
+        'Clue\\StreamFilter\\' =>
         array (
             0 => __DIR__ . '/..' . '/clue/stream-filter/src',
         ),
-        'Channel\\' => 
+        'Channel\\' =>
         array (
             0 => __DIR__ . '/..' . '/workerman/channel/src',
         ),
-        'Cashfree\\' => 
+        'Cashfree\\' =>
         array (
             0 => __DIR__ . '/..' . '/cashfree/cashfree-pg/lib',
         ),
-        'Brick\\Math\\' => 
+        'Brick\\Math\\' =>
         array (
             0 => __DIR__ . '/..' . '/brick/math/src',
         ),
-        'Aws\\' => 
+        'Aws\\' =>
         array (
             0 => __DIR__ . '/..' . '/aws/aws-sdk-php/src',
         ),
-        'Agence104\\LiveKit\\' => 
+        'Agence104\\LiveKit\\' =>
         array (
             0 => __DIR__ . '/..' . '/agence104/livekit-server-sdk/src',
         ),
     );
 
     public static $prefixesPsr0 = array (
-        'c' => 
+        'c' =>
         array (
-            'claviska' => 
+            'claviska' =>
             array (
                 0 => __DIR__ . '/..' . '/claviska/simpleimage/src',
             ),
         ),
-        'T' => 
+        'T' =>
         array (
-            'Twocheckout' => 
+            'Twocheckout' =>
             array (
                 0 => __DIR__ . '/..' . '/2checkout/2checkout-php/lib',
             ),
         ),
-        'M' => 
+        'M' =>
         array (
-            'ML\\IRI' => 
+            'ML\\IRI' =>
             array (
                 0 => __DIR__ . '/..' . '/ml/iri',
             ),
         ),
-        'H' => 
+        'H' =>
         array (
-            'HTMLPurifier' => 
+            'HTMLPurifier' =>
             array (
                 0 => __DIR__ . '/..' . '/ezyang/htmlpurifier/library',
             ),
         ),
-        'F' => 
+        'F' =>
         array (
-            'FtpClient' => 
+            'FtpClient' =>
             array (
                 0 => __DIR__ . '/..' . '/nicolab/php-ftp-client/src',
             ),

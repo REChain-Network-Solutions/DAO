@@ -4,7 +4,7 @@
  * webhooks -> coinpayments
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -39,7 +39,7 @@ try {
         $payment = $user->check_coinpayments_payment($transaction['transaction_id']);
         if ($payment) {
           /* update user package */
-          $user->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled'], $transaction['user_id']);
+          $user->update_user_package($package, $transaction['user_id']);
           /* update coinpayments transaction */
           $user->update_coinpayments_transaction($transaction['transaction_id'], __("Transaction complete successfully"), '2');
           /* notify the user */

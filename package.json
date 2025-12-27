@@ -1,209 +1,26 @@
 {
-  "name": "rechain-dao",
-  "version": "1.0.0",
-  "description": "A comprehensive Decentralized Autonomous Organization (DAO) platform for community governance and token management",
-  "main": "dist/index.js",
-  "scripts": {
-    "dev": "nodemon src/index.ts",
-    "build": "tsc && npm run copy-assets",
-    "start": "node dist/index.js",
-    "test": "jest",
-    "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "cypress run",
-    "test:coverage": "jest --coverage",
-    "test:watch": "jest --watch",
-    "lint": "eslint src/**/*.{ts,tsx}",
-    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
-    "type-check": "tsc --noEmit",
-    "format": "prettier --write src/**/*.{ts,tsx,json,md}",
-    "format:check": "prettier --check src/**/*.{ts,tsx,json,md}",
-    "db:migrate": "knex migrate:latest",
-    "db:rollback": "knex migrate:rollback",
-    "db:seed": "knex seed:run",
-    "db:reset": "npm run db:rollback && npm run db:migrate && npm run db:seed",
-    "db:create": "knex migrate:make",
-    "db:seed:create": "knex seed:make",
-    "copy-assets": "cp -r src/public dist/",
-    "clean": "rm -rf dist",
-    "prebuild": "npm run clean",
-    "postbuild": "npm run copy-assets",
-    "docker:build": "docker build -t rechain-dao .",
-    "docker:run": "docker run -p 3000:3000 rechain-dao",
-    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
-    "docker:prod": "docker-compose -f docker-compose.prod.yml up",
-    "security:audit": "npm audit",
-    "security:scan": "npm audit --audit-level moderate",
-    "docs:generate": "typedoc src --out docs/api",
-    "docs:serve": "docsify serve docs",
-    "release": "standard-version",
-    "release:major": "standard-version --release-as major",
-    "release:minor": "standard-version --release-as minor",
-    "release:patch": "standard-version --release-as patch"
-  },
-  "keywords": [
-    "dao",
-    "decentralized",
-    "governance",
-    "blockchain",
-    "ethereum",
-    "smart-contracts",
-    "voting",
-    "tokens",
-    "defi",
-    "web3"
-  ],
-  "author": "REChain DAO Community",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-username/rechain-dao.git"
-  },
-  "bugs": {
-    "url": "https://github.com/your-username/rechain-dao/issues"
-  },
-  "homepage": "https://github.com/your-username/rechain-dao#readme",
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "compression": "^1.7.4",
-    "morgan": "^1.10.0",
-    "dotenv": "^16.3.1",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
-    "mysql2": "^3.6.5",
-    "redis": "^4.6.10",
-    "knex": "^3.0.1",
-    "socket.io": "^4.7.4",
-    "nodemailer": "^6.9.7",
-    "multer": "^1.4.5-lts.1",
-    "sharp": "^0.32.6",
-    "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1",
-    "joi": "^17.11.0",
-    "uuid": "^9.0.1",
-    "moment": "^2.29.4",
-    "lodash": "^4.17.21",
-    "axios": "^1.6.2",
-    "web3": "^4.2.2",
-    "ethers": "^6.8.1",
-    "qrcode": "^1.5.3",
-    "speakeasy": "^2.0.0",
-    "node-cron": "^3.0.3",
-    "express-session": "^1.17.3",
-    "connect-redis": "^7.1.0",
-    "passport": "^0.7.0",
-    "passport-local": "^1.0.0",
-    "passport-jwt": "^4.0.1",
-    "passport-google-oauth20": "^2.0.0",
-    "passport-github2": "^0.1.12",
-    "swagger-ui-express": "^5.0.0",
-    "swagger-jsdoc": "^6.2.8",
-    "prometheus-api-metrics": "^1.2.0",
-    "express-prometheus-middleware": "^1.2.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.10.4",
-    "@types/express": "^4.17.21",
-    "@types/cors": "^2.8.17",
-    "@types/compression": "^1.7.5",
-    "@types/morgan": "^1.9.9",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.5",
-    "@types/multer": "^1.4.11",
-    "@types/uuid": "^9.0.7",
-    "@types/lodash": "^4.14.202",
-    "@types/qrcode": "^1.5.5",
-    "@types/speakeasy": "^2.0.10",
-    "@types/express-session": "^1.17.10",
-    "@types/passport": "^1.0.16",
-    "@types/passport-local": "^1.0.38",
-    "@types/passport-jwt": "^3.0.13",
-    "@types/swagger-ui-express": "^4.1.6",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/jest": "^29.5.8",
-    "@types/supertest": "^2.0.16",
-    "@types/cypress": "^13.6.0",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.1",
-    "nodemon": "^3.0.2",
-    "tsconfig-paths": "^4.2.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "supertest": "^6.3.3",
-    "cypress": "^13.6.0",
-    "eslint": "^8.55.0",
-    "@typescript-eslint/eslint-plugin": "^6.13.1",
-    "@typescript-eslint/parser": "^6.13.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.0.1",
-    "prettier": "^3.1.0",
-    "husky": "^8.0.3",
-    "lint-staged": "^15.2.0",
-    "standard-version": "^9.5.0",
-    "typedoc": "^0.25.4",
-    "docsify-cli": "^4.4.4",
-    "knex": "^3.0.1",
-    "mysql2": "^3.6.5",
-    "redis": "^4.6.10"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run type-check && npm run test:unit"
-    }
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/src"
-    ],
-    "testMatch": [
-      "**/__tests__/**/*.ts",
-      "**/?(*.)+(spec|test).ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/**/*.d.ts",
-      "!src/**/*.test.ts",
-      "!src/**/*.spec.ts"
-    ],
-    "coverageDirectory": "coverage",
-    "coverageReporters": [
-      "text",
-      "lcov",
-      "html"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/test/setup.ts"
-    ]
-  },
-  "cypress": {
-    "baseUrl": "http://localhost:3000",
-    "video": true,
-    "screenshotOnRunFailure": true,
-    "defaultCommandTimeout": 10000,
-    "requestTimeout": 10000,
-    "responseTimeout": 10000
-  }
+ "dependencies": {
+  "@benmajor/jquery-touch-events": "^2.0.3",
+  "@yaireo/tagify": "^4.33.2",
+  "autosize": "^6.0.1",
+  "bootstrap": "^5.3.3",
+  "easytimer.js": "^4.6.0",
+  "JQ-Image-Drag": "github:Sorokin Dmitry Olegovichtech/JQ-Image-Drag",
+  "jquery-form": "^4.3.0",
+  "jquery-fracs": "^0.15.1",
+  "jquery-inview": "^1.1.2",
+  "jquery-treegrid": "^0.3.0",
+  "jquery-ui-touch-punch": "^0.2.3",
+  "moment": "^2.30.1",
+  "mustache": "^4.2.0",
+  "rcrop": "github:Sorokin Dmitry Olegovichtech/rcrop",
+  "readmore-js": "^2.2.1",
+  "slick-carousel": "^1.8.1",
+  "theia-sticky-sidebar": "^1.7.0",
+  "tinymce": "^7.6.1",
+  "tinymce-i18n": "^25.2.3",
+  "triggeredautocomplete": "github:Sorokin Dmitry Olegovichtech/triggeredAutocomplete",
+  "web-audio-recorder-js": "^0.0.2",
+  "zuck.js": "^1.6.0"
+ }
 }

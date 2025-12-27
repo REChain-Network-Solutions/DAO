@@ -36,6 +36,13 @@
         </a>
       </li>
     {/if}
+    {if $system['support_center_enabled']}
+      <li>
+        <a href="{$system['system_url']}/support">
+          {__("Support Center")}
+        </a>
+      </li>
+    {/if}
     {if $system['directory_enabled']}
       <li>
         <a href="{$system['system_url']}/directory">

@@ -4,7 +4,7 @@
  * trait -> notifications
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait NotificationsTrait
@@ -780,6 +780,30 @@ trait NotificationsTrait
             $notification['url'] = $system['system_url'];
             $notification['message'] = __("You still have ") . $notification['node_url'] . __(" merits to send");
             break;
+
+          case 'support_ticket_created':
+            $notification['icon'] = "fa fa-ticket";
+            $notification['url'] = $system['system_url'] . '/support/tickets/';
+            $notification['message'] = __("created a new support ticket");
+            break;
+
+          case 'support_ticket_updated':
+            $notification['system_notification'] = true;
+            $notification['icon'] = "fa fa-bell";
+            $notification['user_picture'] = get_picture("", "system");
+            $notification['name'] = __("Support Center");
+            $notification['url'] = $system['system_url'] . '/support/tickets/' . $notification['node_url'];
+            $notification['message'] = __("Your ticket has been updated");
+            break;
+
+          case 'support_ticket_replied':
+            $notification['system_notification'] = true;
+            $notification['icon'] = "fa fa-bell";
+            $notification['user_picture'] = get_picture("", "system");
+            $notification['name'] = __("Support Center");
+            $notification['url'] = $system['system_url'] . '/support/tickets/' . $notification['node_url'];
+            $notification['message'] = __("Your ticket has a new reply");
+            break;
         }
         /* prepare message */
         $notification['full_message'] = html_entity_decode($notification['name'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
@@ -1398,6 +1422,21 @@ trait NotificationsTrait
           $notification['url'] = $system['system_url'];
           $notification['message'] = __("You still have ") . $node_url . __(" merits to send");
           break;
+
+        case 'support_ticket_created':
+          $notification['url'] = $system['system_url'] . '/support/tickets/';
+          $notification['message'] = __("created a new support ticket");
+          break;
+
+        case 'support_ticket_updated':
+          $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
+          $notification['message'] = __("Your ticket has been updated");
+          break;
+
+        case 'support_ticket_replied':
+          $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
+          $notification['message'] = __("Your ticket has a new reply");
+          break;
       }
       /* prepare notification for web */
       $notification['full_message'] = html_entity_decode($this->_data['user_fullname'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
@@ -1628,6 +1667,30 @@ trait NotificationsTrait
           $notification['message'] = __("Your account has been approved");
           break;
 
+        case 'support_ticket_created':
+          if (!$system['email_support_tickets'] || !$receiver['email_support_tickets']) {
+            return;
+          }
+          $notification['url'] = $system['system_url'] . '/support/tickets/';
+          $notification['message'] = __("created a new support ticket");
+          break;
+
+        case 'support_ticket_updated':
+          if (!$system['email_support_tickets'] || !$receiver['email_support_tickets']) {
+            return;
+          }
+          $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
+          $notification['message'] = __("Your ticket has been updated");
+          break;
+
+        case 'support_ticket_replied':
+          if (!$system['email_support_tickets'] || !$receiver['email_support_tickets']) {
+            return;
+          }
+          $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
+          $notification['message'] = __("Your ticket has a new reply");
+          break;
+
         default:
           return;
           break;
@@ -1686,6 +1749,20 @@ trait NotificationsTrait
     $db->query(sprintf("DELETE FROM notifications WHERE to_user_id = %s AND from_user_id = %s AND action = %s AND node_type = %s AND node_url = %s", secure($to_user_id, 'int'), secure($this->_data['user_id'], 'int'), secure($action), secure($node_type), secure($node_url)));
     /* update notifications counter -1 */
     $db->query(sprintf("UPDATE users SET user_live_notifications_counter = IF(user_live_notifications_counter=0,0,user_live_notifications_counter-1) WHERE user_id = %s", secure($to_user_id, 'int')));
+  }
+
+
+  /**
+   * delete_notification_by_id
+   * 
+   * @param integer $notification_id
+   * @return void
+   */
+  public function delete_notification_by_id($notification_id)
+  {
+    global $db;
+    /* delete notification */
+    $db->query(sprintf("DELETE FROM notifications WHERE to_user_id = %s AND notification_id = %s", secure($this->_data['user_id'], 'int'), secure($notification_id, 'int')));
   }
 
 

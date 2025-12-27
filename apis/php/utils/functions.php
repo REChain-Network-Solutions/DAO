@@ -4,7 +4,7 @@
  * APIs -> utils -> functions
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 /**
@@ -47,8 +47,8 @@ function isUserAuthenticated()
     '/403',
     '/404',
     '/500',
-    '/app/settings',
     '/app/contact_us',
+    '/app/settings',
     '/app/static_pages',
     '/app/genders',
     '/app/user_groups',

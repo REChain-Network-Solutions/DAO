@@ -47,8 +47,8 @@
                 <div class="form-text d-none d-sm-block">{__("Profile pictures will be generated randomly and may be dublicated")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="users_random_Avatar">
-                  <input type="checkbox" name="random_Avatar" id="users_random_Avatar">
+                <label class="switch" for="users_random_avatar">
+                  <input type="checkbox" name="random_avatar" id="users_random_avatar">
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -83,7 +83,7 @@
                 {__("Names Language")}
               </label>
               <div class="col-md-9">
-                <select class="form-select" name="language">
+                <select class="form-select" name="names_language">
                   {foreach $system['languages'] as $language}
                     {$parts = explode('_', $language['code'])}
                     <option {if $system['default_language']['language_id'] == $language['language_id']}selected{/if} value="{$parts[0]}_{strtoupper($parts[1])}">{$language['title']}</option>
@@ -123,8 +123,8 @@
                 <div class="form-text d-none d-sm-block">{__("Profile pictures will be generated randomly and may be dublicated")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="pages_random_Avatar">
-                  <input type="checkbox" name="random_Avatar" id="pages_random_Avatar">
+                <label class="switch" for="pages_random_avatar">
+                  <input type="checkbox" name="random_avatar" id="pages_random_avatar">
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -147,7 +147,7 @@
                 {__("Names Language")}
               </label>
               <div class="col-md-9">
-                <select class="form-select" name="language">
+                <select class="form-select" name="names_language">
                   {foreach $system['languages'] as $language}
                     {$parts = explode('_', $language['code'])}
                     <option {if $system['default_language']['language_id'] == $language['language_id']}selected{/if} value="{$parts[0]}_{strtoupper($parts[1])}">{$language['title']}</option>
@@ -175,13 +175,27 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Country")}
+                {__("Page Country")}
               </label>
               <div class="col-md-9">
                 <select class="form-select" name="country" id="country">
                   <option>{__("Select Country")}</option>
                   {foreach $countries as $country}
                     <option value="{$country['country_id']}">{$country['country_name']}</option>
+                  {/foreach}
+                </select>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Page Language")}
+              </label>
+              <div class="col-md-9">
+                <select class="form-select" name="language" id="language">
+                  <option>{__("Select Language")}</option>
+                  {foreach $languages as $language}
+                    <option value="{$language['language_id']}">{$language['title']}</option>
                   {/foreach}
                 </select>
               </div>
@@ -215,8 +229,8 @@
                 <div class="form-text d-none d-sm-block">{__("Profile pictures will be generated randomly and may be dublicated")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="groups_random_Avatar">
-                  <input type="checkbox" name="random_Avatar" id="groups_random_Avatar">
+                <label class="switch" for="groups_random_avatar">
+                  <input type="checkbox" name="random_avatar" id="groups_random_avatar">
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -239,7 +253,7 @@
                 {__("Names Language")}
               </label>
               <div class="col-md-9">
-                <select class="form-select" name="language">
+                <select class="form-select" name="names_language">
                   {foreach $system['languages'] as $language}
                     {$parts = explode('_', $language['code'])}
                     <option {if $system['default_language']['language_id'] == $language['language_id']}selected{/if} value="{$parts[0]}_{strtoupper($parts[1])}">{$language['title']}</option>
@@ -267,13 +281,27 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Country")}
+                {__("Group Country")}
               </label>
               <div class="col-md-9">
                 <select class="form-select" name="country" id="country">
                   <option>{__("Select Country")}</option>
                   {foreach $countries as $country}
                     <option value="{$country['country_id']}">{$country['country_name']}</option>
+                  {/foreach}
+                </select>
+              </div>
+            </div>
+
+            <div class="row form-group">
+              <label class="col-md-3 form-label">
+                {__("Group Language")}
+              </label>
+              <div class="col-md-9">
+                <select class="form-select" name="language" id="language">
+                  <option>{__("Select Language")}</option>
+                  {foreach $languages as $language}
+                    <option value="{$language['language_id']}">{$language['title']}</option>
                   {/foreach}
                 </select>
               </div>

@@ -151,7 +151,7 @@
             <div class="stat-cell">
               <i class="fa fas fa-donate bg-icon"></i>
               <div class="h3 mtb10">
-                {print_money(((1/$system['points_per_currency'])*$user->_data['user_points'])|number_format:2)}
+                {print_money(((1/$system['points_per_currency'])*$user->_data['user_points']))}
               </div>
             </div>
           </div>
@@ -172,7 +172,7 @@
               <tr>
                 <th>{__("ID")}</th>
                 <th>{__("Points")}</th>
-                <th>{__("From")}</th>
+                <th>{__("From / To")}</th>
                 <th>{__("Time")}</th>
               </tr>
             </thead>
@@ -180,7 +180,17 @@
               {foreach $transactions as $transaction}
                 <tr>
                   <td>{$transaction@iteration}</td>
-                  <td><span class="badge rounded-pill badge-lg bg-light text-primary">{$transaction['points']}</span></td>
+                  <td>
+                    {if $transaction['is_added']}
+                      <span class="badge rounded-pill badge-lg bg-success ">
+                        <i class="far fa-arrow-alt-circle-up mr5"></i>{$transaction['points']}
+                      </span>
+                    {else}
+                      <span class="badge rounded-pill badge-lg bg-danger ">
+                        <i class="far fa-arrow-alt-circle-down mr5"></i>{$transaction['points']}
+                      </span>
+                    {/if}
+                  </td>
                   <td>
                     {if $transaction['node_type'] == "post"}
                       {__("Added Post")}
@@ -202,6 +212,12 @@
                       {__("Followed")}
                     {elseif $transaction['node_type'] == "referred"}
                       {__("Referred User")}
+                    {elseif $transaction['node_type'] == "gift"}
+                      {if $transaction['is_added']}
+                        {__("Received Gift")}
+                      {else}
+                        {__("Sent Gift")}
+                      {/if}
                     {/if}
                   </td>
                   <td><span class="js_moment" data-time="{$transaction['time']}">{$transaction['time']}</span></td>
@@ -228,7 +244,7 @@
           <div class="col-md-9">
             <h6>
               <span class="badge badge-lg bg-info">
-                {print_money(((1/$system['points_per_currency'])*$user->_data['user_points'])|number_format:2)}
+                {print_money(((1/$system['points_per_currency'])*$user->_data['user_points']))}
               </span>
             </h6>
           </div>
@@ -261,12 +277,6 @@
               <div class="form-check form-check-inline">
                 <input type="radio" name="method" id="method_skrill" value="skrill" class="form-check-input">
                 <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
-              </div>
-            {/if}
-            {if in_array("moneypoolscash", $system['points_payment_method_array'])}
-              <div class="form-check form-check-inline">
-                <input type="radio" name="method" id="method_moneypoolscash" value="moneypoolscash" class="form-check-input">
-                <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
               </div>
             {/if}
             {if in_array("bank", $system['points_payment_method_array'])}
@@ -332,7 +342,7 @@
               {foreach $payments as $payment}
                 <tr>
                   <td>{$payment@iteration}</td>
-                  <td>{print_money($payment['amount']|number_format:2)}</td>
+                  <td>{print_money($payment['amount'])}</td>
                   <td>
                     {if $payment['method'] == "custom"}
                       {$system['points_payment_method_custom']}

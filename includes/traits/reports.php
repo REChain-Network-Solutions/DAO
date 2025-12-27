@@ -4,7 +4,7 @@
  * trait -> reports
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait ReportsTrait
@@ -57,6 +57,11 @@ trait ReportsTrait
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_comments WHERE comment_id = %s", secure($id, 'int')));
         break;
 
+      case 'message':
+        /* check the message */
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_messages WHERE message_id = %s", secure($id, 'int')));
+        break;
+
       case 'forum_thread':
         /* check the forum thread */
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM forums_threads WHERE thread_id = %s", secure($id, 'int')));
@@ -65,6 +70,11 @@ trait ReportsTrait
       case 'forum_reply':
         /* check the forum thread */
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM forums_replies WHERE reply_id = %s", secure($id, 'int')));
+        break;
+
+      case 'ads_campaign':
+        /* check the ads campaign */
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM ads_campaigns WHERE campaign_id = %s", secure($id, 'int')));
         break;
 
       default:

@@ -4,7 +4,7 @@
  * class -> user
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 /* 
@@ -80,13 +80,14 @@ class User
     PointsTrait,
     PostsTrait,
     PublisherTrait,
-    ReactionsEmojiesTrait,
+    EmojiesStickersTrait,
     RealtimeTrait,
     ReelsTrait,
     ReportsTrait,
     ReviewsTrait,
     SearchTrait,
     StoriesTrait,
+    SupportTrait,
     SystemTrait,
     ToolsTrait,
     VideosTrait,
@@ -188,7 +189,7 @@ class User
         /* prepare full name */
         $this->_data['user_fullname'] = ($system['show_usernames_enabled']) ? $this->_data['user_name'] : $this->_data['user_firstname'] . " " . $this->_data['user_lastname'];
         /* check unusual login */
-        if (!$this->_login_as && $system['unusual_login_enabled']) {
+        if (!$this->_login_as && $system['unusual_login_enabled'] && !defined('SKIP_UNUSUAL_LOGIN_CHECK')) {
           if ($this->_data['user_ip'] != get_user_ip()) {
             return;
           }
@@ -234,6 +235,12 @@ class User
           }
           if ($this->_is_admin || ($this->_data['boost_pages_enabled'] && ($this->_data['user_boosted_pages'] < $this->_data['boost_pages']))) {
             $this->_data['can_boost_pages'] = true;
+          }
+          if ($this->_is_admin || ($this->_data['boost_groups_enabled'] && ($this->_data['user_boosted_groups'] < $this->_data['boost_groups']))) {
+            $this->_data['can_boost_groups'] = true;
+          }
+          if ($this->_is_admin || ($this->_data['boost_events_enabled'] && ($this->_data['user_boosted_events'] < $this->_data['boost_events']))) {
+            $this->_data['can_boost_events'] = true;
           }
           if ($this->_data['allowed_videos_categories'] > 0 || $this->_data['allowed_blogs_categories'] > 0) {
             $this->_data['can_pick_categories'] = true;
@@ -1371,6 +1378,41 @@ class User
   }
 
 
+  /**
+   * get_admins_moderators
+   * 
+   * @param boolean $only_admins
+   * @return array
+   */
+  public function get_admins_moderators($only_admins = false)
+  {
+    global $db;
+    $admins_moderators = [];
+    $where_query = ($only_admins) ? "user_group = 1" : "user_group < 3";
+    $get_admins_moderators = $db->query(
+      "SELECT 
+        user_id, 
+        user_name, 
+        user_firstname, 
+        user_lastname, 
+        user_gender, 
+        user_picture, 
+        user_subscribed, 
+        user_verified 
+      FROM users 
+      WHERE " . $where_query
+    );
+    if ($get_admins_moderators->num_rows > 0) {
+      while ($user = $get_admins_moderators->fetch_assoc()) {
+        $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
+        $user['user_fullname'] = ($system['show_usernames_enabled']) ? $user['user_name'] : $user['user_firstname'] . " " . $user['user_lastname'];
+        $admins_moderators[] = $user;
+      }
+    }
+    return $admins_moderators;
+  }
+
+
 
   /* ------------------------------- */
   /* User & Connections */
@@ -1388,7 +1430,7 @@ class User
   {
     global $db, $system;
     /* valid inputs */
-    if (!in_array($do, ['favorite', 'unfavorite', 'block', 'unblock', 'friend-accept', 'friend-decline', 'friend-add', 'friend-cancel', 'friend-remove', 'follow', 'unfollow', 'poke', 'page-like', 'page-unlike', 'page-boost', 'page-unboost', 'page-invite', 'page-admin-addation', 'page-admin-remove', 'page-member-remove', 'group-join', 'group-leave', 'group-invite', 'group-accept', 'group-decline', 'group-admin-addation', 'group-admin-remove', 'group-member-remove', 'event-go', 'event-ungo', 'event-interest', 'event-uninterest', 'event-invite', 'delete-app'])) {
+    if (!in_array($do, ['favorite', 'unfavorite', 'block', 'unblock', 'friend-accept', 'friend-decline', 'friend-add', 'friend-cancel', 'friend-remove', 'follow', 'unfollow', 'poke', 'page-like', 'page-unlike', 'page-boost', 'page-unboost', 'page-invite', 'page-admin-addation', 'page-admin-remove', 'page-member-remove', 'group-join', 'group-leave', 'group-invite', 'group-accept', 'group-decline', 'group-boost', 'group-unboost', 'group-admin-addation', 'group-admin-remove', 'group-member-remove', 'event-go', 'event-ungo', 'event-interest', 'event-uninterest', 'event-boost', 'event-unboost', 'event-invite', 'delete-app'])) {
       throw new BadRequestException(__("Invalid input"));
     }
     /* check id */
@@ -1838,6 +1880,52 @@ class User
         $db->query(sprintf("DELETE FROM groups_members WHERE user_id = %s AND group_id = %s", secure($uid, 'int'), secure($id, 'int')));
         break;
 
+      case 'group-boost':
+        if ($this->_is_admin) {
+          /* check if the user is the system admin */
+          $check = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($id, 'int')));
+        } else {
+          /* check if the user is the page admin */
+          $check = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s AND group_admin = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
+        }
+        if ($check->num_rows == 0) {
+          throw new AuthorizationException(__("You can't boost this group"));
+        }
+        $group = $check->fetch_assoc();
+        /* check if viewer can boost group */
+        if (!$this->_data['can_boost_groups']) {
+          throw new AuthorizationException(__("You reached the maximum number of boosted groups! Upgrade your package to get more"));
+        }
+        /* boost group */
+        if (!$group['group_boosted']) {
+          /* boost group */
+          $db->query(sprintf("UPDATE `groups` SET group_boosted = '1', group_boosted_by = %s WHERE group_id = %s", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+          /* update user */
+          $db->query(sprintf("UPDATE users SET user_boosted_groups = user_boosted_groups + 1 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        }
+        break;
+
+      case 'group-unboost':
+        if ($this->_is_admin) {
+          /* check if the user is the system admin */
+          $check = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($id, 'int')));
+        } else {
+          /* check if the user is the page admin */
+          $check = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s AND group_admin = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
+        }
+        if ($check->num_rows == 0) {
+          throw new AuthorizationException(__("You can't unboost this group"));
+        }
+        $group = $check->fetch_assoc();
+        /* unboost group */
+        if ($group['group_boosted']) {
+          /* unboost group */
+          $db->query(sprintf("UPDATE `groups` SET group_boosted = '0', group_boosted_by = NULL WHERE group_id = %s", secure($id, 'int')));
+          /* update user */
+          $db->query(sprintf("UPDATE users SET user_boosted_groups = IF(user_boosted_groups=0,0,user_boosted_groups-1) WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        }
+        break;
+
       case 'group-admin-addation':
         if ($uid == null) {
           throw new BadRequestException(__("Invalid input"));
@@ -2027,6 +2115,52 @@ class User
         }
         /* update interested counter -1 */
         $db->query(sprintf("UPDATE `events` SET event_interested = IF(event_interested=0,0,event_interested-1)  WHERE event_id = %s", secure($id, 'int')));
+        break;
+
+      case 'event-boost':
+        if ($this->_is_admin) {
+          /* check if the user is the system admin */
+          $check = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s", secure($id, 'int')));
+        } else {
+          /* check if the user is the page admin */
+          $check = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s AND event_admin = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
+        }
+        if ($check->num_rows == 0) {
+          throw new AuthorizationException(__("You can't boost this event"));
+        }
+        $event = $check->fetch_assoc();
+        /* check if viewer can boost event */
+        if (!$this->_data['can_boost_events']) {
+          throw new AuthorizationException(__("You reached the maximum number of boosted events! Upgrade your package to get more"));
+        }
+        /* boost event */
+        if (!$event['event_boosted']) {
+          /* boost group */
+          $db->query(sprintf("UPDATE `events` SET event_boosted = '1', event_boosted_by = %s WHERE event_id = %s", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+          /* update user */
+          $db->query(sprintf("UPDATE users SET user_boosted_events = user_boosted_events + 1 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        }
+        break;
+
+      case 'event-unboost':
+        if ($this->_is_admin) {
+          /* check if the user is the system admin */
+          $check = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s", secure($id, 'int')));
+        } else {
+          /* check if the user is the page admin */
+          $check = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s AND event_admin = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
+        }
+        if ($check->num_rows == 0) {
+          throw new AuthorizationException(__("You can't unboost this event"));
+        }
+        $event = $check->fetch_assoc();
+        /* unboost event */
+        if ($event['event_boosted']) {
+          /* unboost event */
+          $db->query(sprintf("UPDATE `events` SET event_boosted = '0', event_boosted_by = NULL WHERE event_id = %s", secure($id, 'int')));
+          /* update user */
+          $db->query(sprintf("UPDATE users SET user_boosted_events = IF(user_boosted_events=0,0,user_boosted_events-1) WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        }
         break;
 
       case 'event-invite':

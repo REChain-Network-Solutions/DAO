@@ -4,7 +4,7 @@
  * webhooks -> verotel
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -40,7 +40,7 @@ try {
         $payment = verotel_check($_GET['saleID']);
         if ($payment) {
           /* update user package */
-          $user->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled']);
+          $user->update_user_package($package);
           /* log payment */
           $user->log_payment($user->_data['user_id'], $package['price'], 'verotel', 'packages');
           /* redirect*/

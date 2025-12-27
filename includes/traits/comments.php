@@ -4,7 +4,7 @@
  * trait -> comments
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait CommentsTrait
@@ -111,7 +111,7 @@ trait CommentsTrait
 
       /* parse text */
       $comment['text_plain'] = $comment['text'];
-      $comment['text'] = $this->_parse(["text" => $comment['text']]);
+      $comment['text'] = $this->parse(["text" => $comment['text']]);
 
       /* get the comment author */
       if ($comment['user_type'] == "user") {
@@ -235,7 +235,7 @@ trait CommentsTrait
 
       /* parse text */
       $reply['text_plain'] = $reply['text'];
-      $reply['text'] = $this->_parse(["text" => $reply['text']]);
+      $reply['text'] = $this->parse(["text" => $reply['text']]);
 
       /* get the reply author */
       if ($reply['user_type'] == "user") {
@@ -442,7 +442,7 @@ trait CommentsTrait
 
     /* parse text */
     $comment['text_plain'] = htmlentities($comment['text'], ENT_QUOTES, 'utf-8');
-    $comment['text'] = $this->_parse(["text" => $comment['text_plain']]);
+    $comment['text'] = $this->parse(["text" => $comment['text_plain']]);
 
     /* check if viewer can manage comment [Edit|Delete] */
     $comment['edit_comment'] = true;
@@ -684,7 +684,7 @@ trait CommentsTrait
     }
     /* parse text */
     $comment['text_plain'] = htmlentities($comment['text'], ENT_QUOTES, 'utf-8');
-    $comment['text'] = $this->_parse(["text" => $comment['text_plain']]);
+    $comment['text'] = $this->parse(["text" => $comment['text_plain']]);
     /* return */
     return $comment;
   }

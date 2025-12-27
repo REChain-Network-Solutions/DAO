@@ -4,7 +4,7 @@
  * ajax -> admin -> permissions groups
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -122,9 +122,19 @@ try {
         affiliates_percentage_4,
         affiliates_per_user_5,
         affiliates_percentage_5,
+        affiliates_per_user_6,
+        affiliates_percentage_6,
+        affiliates_per_user_7,
+        affiliates_percentage_7,
+        affiliates_per_user_8,
+        affiliates_percentage_8,
+        affiliates_per_user_9,
+        affiliates_percentage_9,
+        affiliates_per_user_10,
+        affiliates_percentage_10,
         custom_points_system,
         points_per_currency
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
         secure($_POST['title']),
         secure($_POST['pages_permission'], 'int'),
         secure($_POST['groups_permission'], 'int'),
@@ -173,6 +183,16 @@ try {
         secure($_POST['affiliates_percentage_4'], 'float'),
         secure($_POST['affiliates_per_user_5'], 'float'),
         secure($_POST['affiliates_percentage_5'], 'float'),
+        secure($_POST['affiliates_per_user_6'], 'float'),
+        secure($_POST['affiliates_percentage_6'], 'float'),
+        secure($_POST['affiliates_per_user_7'], 'float'),
+        secure($_POST['affiliates_percentage_7'], 'float'),
+        secure($_POST['affiliates_per_user_8'], 'float'),
+        secure($_POST['affiliates_percentage_8'], 'float'),
+        secure($_POST['affiliates_per_user_9'], 'float'),
+        secure($_POST['affiliates_percentage_9'], 'float'),
+        secure($_POST['affiliates_per_user_10'], 'float'),
+        secure($_POST['affiliates_percentage_10'], 'float'),
         secure($_POST['custom_points_system'], 'int'),
         secure($_POST['points_per_currency'], 'int')
       ));
@@ -281,6 +301,16 @@ try {
         affiliates_percentage_4 = %s,
         affiliates_per_user_5 = %s,
         affiliates_percentage_5 = %s,
+        affiliates_per_user_6 = %s,
+        affiliates_percentage_6 = %s,
+        affiliates_per_user_7 = %s,
+        affiliates_percentage_7 = %s,
+        affiliates_per_user_8 = %s,
+        affiliates_percentage_8 = %s,
+        affiliates_per_user_9 = %s,
+        affiliates_percentage_9 = %s,
+        affiliates_per_user_10 = %s,
+        affiliates_percentage_10 = %s,
         custom_points_system = %s,
         points_per_currency = %s
         WHERE permissions_group_id = %s",
@@ -332,6 +362,16 @@ try {
         secure($_POST['affiliates_percentage_4'], 'float'),
         secure($_POST['affiliates_per_user_5'], 'float'),
         secure($_POST['affiliates_percentage_5'], 'float'),
+        secure($_POST['affiliates_per_user_6'], 'float'),
+        secure($_POST['affiliates_percentage_6'], 'float'),
+        secure($_POST['affiliates_per_user_7'], 'float'),
+        secure($_POST['affiliates_percentage_7'], 'float'),
+        secure($_POST['affiliates_per_user_8'], 'float'),
+        secure($_POST['affiliates_percentage_8'], 'float'),
+        secure($_POST['affiliates_per_user_9'], 'float'),
+        secure($_POST['affiliates_percentage_9'], 'float'),
+        secure($_POST['affiliates_per_user_10'], 'float'),
+        secure($_POST['affiliates_percentage_10'], 'float'),
         secure($_POST['custom_points_system'], 'int'),
         secure($_POST['points_per_currency'], 'int'),
         secure($_GET['id'], 'int')

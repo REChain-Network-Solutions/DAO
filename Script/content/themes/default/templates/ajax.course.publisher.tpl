@@ -7,6 +7,17 @@
 </div>
 <form class="js_ajax-forms" data-url="posts/course.php?do=publish">
   <div class="modal-body">
+    {if $system['paid_courses_enabled']}
+      <div class="alert alert-warning">
+        <div class="icon">
+          <i class="fas fa-exclamation-triangle fa-lg"></i>
+        </div>
+        <div class="text">
+          {__("This course post will cost you")} <span class="badge rounded-pill text-bg-light">{$system['paid_courses_cost']} {$system['system_currency']}</span> {__("to publish. The cost will be deducted from your wallet balance")}
+        </div>
+      </div>
+    {/if}
+
     <div class="row">
       <!-- title -->
       <div class="form-group col-md-6">
@@ -82,7 +93,7 @@
           </div>
         </div>
         <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-        <input type="hidden" class="js_x-image-input" name="cover_image" value="">
+        <input type="hidden" class="js_x-uploader-input" name="cover_image" value="">
       </div>
     </div>
     <!-- cover image -->

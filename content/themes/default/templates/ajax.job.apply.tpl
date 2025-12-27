@@ -207,7 +207,7 @@
           </div>
         </div>
         <i class="fa fa-paperclip fa-lg js_x-uploader" data-handle="x-file" data-type="file"></i>
-        <input type="hidden" class="js_x-image-input" name="cv" value="">
+        <input type="hidden" class="js_x-uploader-input" name="cv" value="">
       </div>
       <div class="form-text">
         {__("Allowed file types")}: {$system['file_extensions']}

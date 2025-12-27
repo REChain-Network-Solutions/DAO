@@ -48,7 +48,7 @@
     {else}
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
     {/if}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Fonts [Poppins|Tajawal|Font-Awesome] -->
 
     <!-- CSS -->
@@ -101,5 +101,11 @@
       <!-- unregister service worker -->
     {/if}
     <!-- PWA -->
+
+    <!-- AgeVerif Checker -->
+    {if !$user->_is_admin && $system['age_restriction'] && $system['ageverif_enabled'] && $system['ageverif_api_key']}
+      <script src="https://www.ageverif.com/checker.js?key={$system['ageverif_api_key']}"></script>
+    {/if}
+    <!-- AgeVerif Checker -->
 
 </head>

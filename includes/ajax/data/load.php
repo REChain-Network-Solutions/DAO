@@ -4,7 +4,7 @@
  * ajax -> data -> load
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -59,7 +59,7 @@ try {
         $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       }
 
-      if ($user->_logged_in) {
+      if ($user->_logged_in && $system['reels_enabled']) {
         // get posts (reels)
         /* first get the reels from discover */
         $offset = $_POST['offset'] - 1;
@@ -428,7 +428,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['post_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']]);
+      $data = $user->who_reacts(['post_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
       break;
 
     case 'photo_reactions':
@@ -437,7 +437,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['photo_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']]);
+      $data = $user->who_reacts(['photo_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
       break;
 
     case 'comment_reactions':
@@ -446,7 +446,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['comment_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']]);
+      $data = $user->who_reacts(['comment_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
       break;
 
     case 'donors':
@@ -726,6 +726,11 @@ try {
       $data = $user->get_groups(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
       break;
 
+    case 'boosted_groups':
+      /* get boosted groups */
+      $data = $user->get_groups(['boosted' => true, 'offset' => $_POST['offset']]);
+      break;
+
     case 'events':
       /* get viewer events */
       $data = $user->get_events(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
@@ -776,6 +781,11 @@ try {
         _error(400);
       }
       $data = $user->get_events(['page_id' => $_POST['id'], 'results' => $system['max_results_even'], 'offset' => $_POST['offset']]);
+      break;
+
+    case 'boosted_events':
+      /* get boosted events */
+      $data = $user->get_events(['boosted' => true, 'offset' => $_POST['offset']]);
       break;
 
     case 'games':

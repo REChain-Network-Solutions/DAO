@@ -20,6 +20,7 @@ return array(
     'Symfony\\Component\\Yaml\\' => array($vendorDir . '/symfony/yaml'),
     'Symfony\\Component\\OptionsResolver\\' => array($vendorDir . '/symfony/options-resolver'),
     'Symfony\\Component\\HttpClient\\' => array($vendorDir . '/symfony/http-client'),
+    'Symfony\\Component\\Filesystem\\' => array($vendorDir . '/symfony/filesystem'),
     'Stripe\\' => array($vendorDir . '/stripe/stripe-php/lib'),
     'Sonata\\GoogleAuthenticator\\' => array($vendorDir . '/sonata-project/google-authenticator/src'),
     'Smarty\\' => array($vendorDir . '/smarty/smarty/src'),

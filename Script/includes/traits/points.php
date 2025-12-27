@@ -4,7 +4,7 @@
  * trait -> points
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait PointsTrait
@@ -23,7 +23,7 @@ trait PointsTrait
    * @param integer $node_id
    * @return void
    */
-  public function points_balance($type, $user_id, $node_type, $node_id = null)
+  public function points_balance($type, $user_id, $node_type, $node_id = null, $points = null)
   {
     global $db, $system;
     /* check if points enabled */
@@ -63,6 +63,10 @@ trait PointsTrait
 
       case 'referred':
         $points_per_node = $system['points_per_referred'];
+        break;
+
+      case 'gift':
+        $points_per_node = $points;
         break;
     }
     switch ($type) {
@@ -113,8 +117,8 @@ trait PointsTrait
       case 'delete':
         /* delete points */
         $db->query(sprintf('UPDATE users SET user_points = IF(user_points-%1$s<=0,0,user_points-%1$s) WHERE user_id = %2$s', secure($points_per_node, 'float'), secure($user_id, 'int')));
-        /* remove the log */
-        $db->query(sprintf("DELETE FROM log_points WHERE user_id = %s AND node_id = %s AND node_type = %s AND points = %s", secure($user_id, 'int'), secure($node_id, 'int'), secure($node_type), secure($points_per_node, 'float')));
+        /* log the points */
+        $db->query(sprintf("INSERT INTO log_points (user_id, node_id, node_type, points, time, is_added) VALUES (%s, %s, %s, %s, %s, '0')", secure($user_id, 'int'), secure($node_id, 'int'), secure($node_type), secure($points_per_node, 'float'), secure(date('Y-m-d H:i:s'))));
         break;
     }
   }

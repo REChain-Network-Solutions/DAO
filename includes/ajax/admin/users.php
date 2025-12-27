@@ -4,7 +4,7 @@
  * ajax -> admin -> users
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set execution time
@@ -356,8 +356,7 @@ try {
         _error(400);
       }
       /* update */
-      $verification_statement = ($package['verification_badge_enabled']) ? "user_verified = '1'," : ""; /* to not affect already verified users */
-      $db->query(sprintf("UPDATE users SET " . $verification_statement . " user_subscribed = '1', user_package = %s, user_subscription_date = %s, user_boosted_posts = '0', user_boosted_pages = '0' WHERE user_id = %s", secure($_POST['package'], 'int'), secure($date), secure($_GET['id'], 'int')));
+      $user->update_user_package($package, $_GET['id'], true);
       /* return */
       return_json(['success' => true, 'message' => __("User info have been updated")]);
       break;
@@ -397,6 +396,21 @@ try {
         if (is_empty($_POST['affiliates_percentage_5']) || !is_numeric($_POST['affiliates_percentage_5']) || $_POST['affiliates_percentage_5'] < 0) {
           throw new Exception(__("You must enter valid percentage"));
         }
+        if (is_empty($_POST['affiliates_percentage_6']) || !is_numeric($_POST['affiliates_percentage_6']) || $_POST['affiliates_percentage_6'] < 0) {
+          throw new Exception(__("You must enter valid percentage"));
+        }
+        if (is_empty($_POST['affiliates_percentage_7']) || !is_numeric($_POST['affiliates_percentage_7']) || $_POST['affiliates_percentage_7'] < 0) {
+          throw new Exception(__("You must enter valid percentage"));
+        }
+        if (is_empty($_POST['affiliates_percentage_8']) || !is_numeric($_POST['affiliates_percentage_8']) || $_POST['affiliates_percentage_8'] < 0) {
+          throw new Exception(__("You must enter valid percentage"));
+        }
+        if (is_empty($_POST['affiliates_percentage_9']) || !is_numeric($_POST['affiliates_percentage_9']) || $_POST['affiliates_percentage_9'] < 0) {
+          throw new Exception(__("You must enter valid percentage"));
+        }
+        if (is_empty($_POST['affiliates_percentage_10']) || !is_numeric($_POST['affiliates_percentage_10']) || $_POST['affiliates_percentage_10'] < 0) {
+          throw new Exception(__("You must enter valid percentage"));
+        }
       } else {
         $_POST['affiliates_per_user'] = $user_info['affiliates_per_user'];
         $_POST['affiliates_percentage'] = $user_info['affiliates_percentage'];
@@ -408,6 +422,16 @@ try {
         $_POST['affiliates_percentage_4'] = $user_info['affiliates_percentage_4'];
         $_POST['affiliates_per_user_5'] = $user_info['affiliates_per_user_5'];
         $_POST['affiliates_percentage_5'] = $user_info['affiliates_percentage_5'];
+        $_POST['affiliates_per_user_6'] = $user_info['affiliates_per_user_6'];
+        $_POST['affiliates_percentage_6'] = $user_info['affiliates_percentage_6'];
+        $_POST['affiliates_per_user_7'] = $user_info['affiliates_per_user_7'];
+        $_POST['affiliates_percentage_7'] = $user_info['affiliates_percentage_7'];
+        $_POST['affiliates_per_user_8'] = $user_info['affiliates_per_user_8'];
+        $_POST['affiliates_percentage_8'] = $user_info['affiliates_percentage_8'];
+        $_POST['affiliates_per_user_9'] = $user_info['affiliates_per_user_9'];
+        $_POST['affiliates_percentage_9'] = $user_info['affiliates_percentage_9'];
+        $_POST['affiliates_per_user_10'] = $user_info['affiliates_per_user_10'];
+        $_POST['affiliates_percentage_10'] = $user_info['affiliates_percentage_10'];
       }
       /* wallet */
       if (!isset($_POST['user_wallet_balance'])) {
@@ -441,6 +465,16 @@ try {
         affiliates_percentage_4 = %s, 
         affiliates_per_user_5 = %s, 
         affiliates_percentage_5 = %s, 
+        affiliates_per_user_6 = %s, 
+        affiliates_percentage_6 = %s, 
+        affiliates_per_user_7 = %s, 
+        affiliates_percentage_7 = %s, 
+        affiliates_per_user_8 = %s, 
+        affiliates_percentage_8 = %s, 
+        affiliates_per_user_9 = %s, 
+        affiliates_percentage_9 = %s, 
+        affiliates_per_user_10 = %s, 
+        affiliates_percentage_10 = %s, 
         user_wallet_balance = %s, 
         user_points = %s, 
         user_monetization_enabled = %s 
@@ -456,6 +490,16 @@ try {
         secure($_POST['affiliates_percentage_4'], 'float'),
         secure($_POST['affiliates_per_user_5'], 'float'),
         secure($_POST['affiliates_percentage_5'], 'float'),
+        secure($_POST['affiliates_per_user_6'], 'float'),
+        secure($_POST['affiliates_percentage_6'], 'float'),
+        secure($_POST['affiliates_per_user_7'], 'float'),
+        secure($_POST['affiliates_percentage_7'], 'float'),
+        secure($_POST['affiliates_per_user_8'], 'float'),
+        secure($_POST['affiliates_percentage_8'], 'float'),
+        secure($_POST['affiliates_per_user_9'], 'float'),
+        secure($_POST['affiliates_percentage_9'], 'float'),
+        secure($_POST['affiliates_per_user_10'], 'float'),
+        secure($_POST['affiliates_percentage_10'], 'float'),
         secure($_POST['user_wallet_balance']),
         secure($_POST['user_points']),
         secure($_POST['user_monetization_enabled']),

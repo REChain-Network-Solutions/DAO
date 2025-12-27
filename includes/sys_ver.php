@@ -4,7 +4,7 @@
 define('SYS_NAME', 'Delus');
 
 // set system version
-define('SYS_VER', '4.1.1');
+define('SYS_VER', '4.2');
 
 // set api version
 define('API_VER', '1.0');

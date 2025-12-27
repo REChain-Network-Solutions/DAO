@@ -4,7 +4,7 @@
  * Sockets -> loader
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set ABSPATH
@@ -26,7 +26,6 @@ require(ABSPATH . 'includes/functions.php');
 
 // check config file
 if (!file_exists(ABSPATH . 'includes/config.php')) {
-  /* the config file doesn't exist -> start the installer */
   print("❌ Config file not found\n");
   exit;
 }

@@ -145,14 +145,16 @@
             </span>
           </div>
           {if $sales}
-            <div class="mb5">
-              <span class="text-lg">{__("Commission")}:</span>
-              <span class="float-end">
-                <span class="text-lg">
-                  - {print_money(number_format($order['total_commission'], 2))}
+            {if $order['total_commission'] > 0}
+              <div class="mb5">
+                <span class="text-lg">{__("Commission")}:</span>
+                <span class="float-end">
+                  <span class="text-lg">
+                    - {print_money(number_format($order['total_commission'], 2))}
+                  </span>
                 </span>
-              </span>
-            </div>
+              </div>
+            {/if}
             <div class="divider mtb5"></div>
             <div class="mb5">
               <span class="text-lg"><strong>{__("Total")}:</strong></span>
@@ -180,7 +182,7 @@
                 <div class="product-image">
                   <div class="product-price">
                     {if $order_item['post']['product']['price'] > 0}
-                      {print_money($order_item['post']['product']['price'])}
+                      {$order_item['post']['product']['price_formatted']}
                     {else}
                       {__("Free")}
                     {/if}

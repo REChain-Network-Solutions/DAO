@@ -4,7 +4,7 @@
  * ajax -> admin -> delete
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -425,7 +425,7 @@ try {
       /* get the package */
       $package = $user->get_package($_POST['id']);
       /* update all users who have this package */
-      $db->query(sprintf("UPDATE users SET user_subscribed = '0', user_package = null, user_subscription_date = null, user_boosted_posts = '0', user_boosted_pages = '0' WHERE user_package = %s", secure($_POST['id'], 'int')));
+      $db->query(sprintf("UPDATE users SET user_subscribed = '0', user_package = null, user_subscription_date = null, user_boosted_posts = '0', user_boosted_pages = '0', user_boosted_groups = '0', user_boosted_events = '0' WHERE user_package = %s", secure($_POST['id'], 'int')));
       /* remove all users recurring payments */
       $db->query(sprintf("DELETE FROM users_recurring_payments WHERE handle = 'packages' AND handle_id = %s", secure($_POST['id'], 'int')));
       /* delete package */

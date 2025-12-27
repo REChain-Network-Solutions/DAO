@@ -4,7 +4,7 @@
  * ajax -> users -> image crop
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootstrap
@@ -103,7 +103,7 @@ try {
       case 'event':
         // crop event cover picture
         /* check the event & get full picture */
-        $get_event = $db->query(sprintf("SELECT posts_photos.source FROM events INNER JOIN posts_photos ON events.event_cover_id = posts_photos.photo_id WHERE events.event_id = %s", secure($_POST['id'], 'int')));
+        $get_event = $db->query(sprintf("SELECT posts_photos.source FROM `events` INNER JOIN posts_photos ON `events`.event_cover_id = posts_photos.photo_id WHERE `events`.event_id = %s", secure($_POST['id'], 'int')));
         if ($get_event->num_rows == 0) {
           _error(403);
         }

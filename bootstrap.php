@@ -4,7 +4,7 @@
  * bootstrap
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // set ABSPATH
@@ -25,7 +25,6 @@ require(ABSPATH . 'includes/functions.php');
 
 // check config file
 if (!file_exists(ABSPATH . 'includes/config.php')) {
-  /* the config file doesn't exist -> start the installer */
   header('Location: ./install');
 }
 
@@ -144,5 +143,3 @@ $smarty->assign('date', $date);
 $smarty->assign('system', $system);
 $smarty->assign('user', $user);
 $smarty->assign('emojis', $emojis);
-$smarty->assign('reactions', $user->get_reactions());
-$smarty->assign('reactions_enabled', $user->get_reactions(true));

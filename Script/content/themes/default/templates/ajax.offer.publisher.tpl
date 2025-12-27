@@ -6,6 +6,17 @@
 </div>
 <form class="js_ajax-forms publisher-mini" data-url="posts/offer.php?do=publish">
   <div class="modal-body">
+    {if $system['paid_offers_enabled']}
+      <div class="alert alert-warning">
+        <div class="icon">
+          <i class="fas fa-exclamation-triangle fa-lg"></i>
+        </div>
+        <div class="text">
+          {__("This offer post will cost you")} <span class="badge rounded-pill text-bg-light">{$system['paid_offers_cost']} {$system['system_currency']}</span> {__("to publish. The cost will be deducted from your wallet balance")}
+        </div>
+      </div>
+    {/if}
+
     <div class="row">
       <!-- discount type -->
       <div class="form-group col-md-6">

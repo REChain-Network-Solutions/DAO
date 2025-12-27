@@ -2,7 +2,7 @@
  * post js
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // initialize API URLs
@@ -915,7 +915,7 @@ $(function () {
       /* remove the thumbnail */
       var attachments_reel_thumbnail = publisher.find('.publisher-reel-custom-thumbnail');
       attachments_reel_thumbnail.find('.x-image').removeAttr("style");
-      attachments_reel_thumbnail.find('input.js_x-image-input').val("");
+      attachments_reel_thumbnail.find('input.js_x-uploader-input').val("");
       attachments_reel_thumbnail.hide();
       /* uncheck adult toggle */
       publisher.find('.js_publisher-adult-toggle').prop('disabled', false);
@@ -933,7 +933,7 @@ $(function () {
       /* remove the thumbnail */
       var attachments_video_thumbnail = publisher.find('.publisher-video-custom-thumbnail');
       attachments_video_thumbnail.find('.x-image').removeAttr("style");
-      attachments_video_thumbnail.find('input.js_x-image-input').val("");
+      attachments_video_thumbnail.find('input.js_x-uploader-input').val("");
       attachments_video_thumbnail.hide();
     }
     publisher_tab(publisher, type);
@@ -989,13 +989,13 @@ $(function () {
     var attachments_reel_meta = publisher.find('.publisher-meta[data-meta="reel"]');
     var reel = publisher.data('reel');
     var attachments_reel_thumbnail = publisher.find('.publisher-reel-custom-thumbnail');
-    var reel_thumbnail = attachments_reel_thumbnail.find('input.js_x-image-input').val();
+    var reel_thumbnail = attachments_reel_thumbnail.find('input.js_x-uploader-input').val();
     /* get video */
     var attachments_video = publisher.find('.js_attachments-video');
     var attachments_video_meta = publisher.find('.publisher-meta[data-meta="video"]');
     var video = publisher.data('video');
     var attachments_video_thumbnail = publisher.find('.publisher-video-custom-thumbnail');
-    var video_thumbnail = attachments_video_thumbnail.find('input.js_x-image-input').val();
+    var video_thumbnail = attachments_video_thumbnail.find('input.js_x-uploader-input').val();
     var video_category = attachments_video_meta.find('select').val();
     /* get audio */
     var attachments_audio = publisher.find('.js_attachments-audio');
@@ -1021,7 +1021,7 @@ $(function () {
     /* get subscribers only */
     var for_subscriptions = publisher.find('.js_publisher-subscribers-toggle').is(":checked");
     var subscriptions_image_wrapper = publisher.find("#subscriptions-image-wrapper")
-    var subscriptions_image_input = subscriptions_image_wrapper.find('input.js_x-image-input');
+    var subscriptions_image_input = subscriptions_image_wrapper.find('input.js_x-uploader-input');
     /* get paid post */
     var is_paid = publisher.find('.js_publisher-paid-toggle').is(":checked");
     var paid_locked_wrapper = publisher.find("#paid-lock-toggle-wrapper");
@@ -1031,7 +1031,7 @@ $(function () {
     var paid_text_wrapper = publisher.find("#paid-text-wrapper")
     var paid_text_input = paid_text_wrapper.find('textarea');
     var paid_image_wrapper = publisher.find("#paid-image-wrapper")
-    var paid_image_input = paid_image_wrapper.find('input.js_x-image-input');
+    var paid_image_input = paid_image_wrapper.find('input.js_x-uploader-input');
     /* get post_as_page from hidden input if exists */
     var post_as_page = publisher.find('input[name="post_as_page"]').val();
     /* get the error element */
@@ -1113,11 +1113,11 @@ $(function () {
         publisher.removeData('file');
         /* hide & empty reel custom thumbnail */
         attachments_reel_thumbnail.find('.x-image').removeAttr("style");
-        attachments_reel_thumbnail.find('input.js_x-image-input').val("");
+        attachments_reel_thumbnail.find('input.js_x-uploader-input').val("");
         attachments_reel_thumbnail.hide();
         /* hide & empty video custom thumbnail */
         attachments_video_thumbnail.find('.x-image').removeAttr("style");
-        attachments_video_thumbnail.find('input.js_x-image-input').val("");
+        attachments_video_thumbnail.find('input.js_x-uploader-input').val("");
         attachments_video_thumbnail.hide();
         /* hide & empty scraper */
         $('.publisher-scraper').hide().html('');

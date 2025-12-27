@@ -4,7 +4,7 @@
  * APIs -> modules -> data -> controller
  *
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // loadData
@@ -27,6 +27,7 @@ function loadData($req, $res)
   apiResponse($res, ['data' => $data]);
 }
 
+
 // uploadFiles
 function uploadFiles($req, $res)
 {
@@ -38,6 +39,7 @@ function uploadFiles($req, $res)
   $response = upload_file();
   apiResponse($res, ['data' => $response]);
 }
+
 
 // deleteUploadedFile
 function deleteUploadedFile($req, $res)
@@ -51,10 +53,20 @@ function deleteUploadedFile($req, $res)
   apiResponse($res);
 }
 
+
 // resetRealtimeCounters
 function resetRealtimeCounters($req, $res)
 {
   global $user;
   $user->reset_realtime_counters($req->body['reset']);
   apiResponse($res);
+}
+
+
+// reportContent
+function reportContent($req, $res)
+{
+  global $user;
+  $user->report($req->body['id'], $req->body['handle'], $req->body['category'], $req->body['reason']);
+  apiResponse($res, ['message' => __("Your report has been submitted")]);
 }

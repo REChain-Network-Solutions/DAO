@@ -56,10 +56,6 @@
               <label class="form-check-label" for="method_skrill">{__("Skrill")}</label>
             </div>
             <div class="form-check form-check-inline">
-              <input type="checkbox" class="form-check-input" name="method_moneypoolscash" id="method_moneypoolscash" {if in_array("moneypoolscash", $system['points_payment_method_array'])}checked{/if}>
-              <label class="form-check-label" for="method_moneypoolscash">{__("MoneyPoolsCash")}</label>
-            </div>
-            <div class="form-check form-check-inline">
               <input type="checkbox" class="form-check-input" name="method_bank" id="method_bank" {if in_array("bank", $system['points_payment_method_array'])}checked{/if}>
               <label class="form-check-label" for="method_bank">{__("Bank Transfer")}</label>
             </div>
@@ -317,7 +313,7 @@
                     {if $system['show_usernames_enabled']}{$row['user_name']}{else}{$row['user_firstname']} {$row['user_lastname']}{/if}
                   </a>
                 </td>
-                <td>{print_money($row['amount']|number_format:2)}</td>
+                <td>{print_money($row['amount'])}</td>
                 <td>
                   <span class="badge rounded-pill badge-lg bg-{$row['method_color']}">
                     {$row['method']|ucfirst}

@@ -51,7 +51,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="pwa_192_icon" value="">
+              <input type="hidden" class="js_x-uploader-input" name="pwa_192_icon" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['pwa_192_icon']}')">
@@ -62,7 +62,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="pwa_192_icon" value="{$system['pwa_192_icon']}">
+              <input type="hidden" class="js_x-uploader-input" name="pwa_192_icon" value="{$system['pwa_192_icon']}">
             </div>
           {/if}
           <div class="form-text">
@@ -85,7 +85,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="pwa_512_icon" value="">
+              <input type="hidden" class="js_x-uploader-input" name="pwa_512_icon" value="">
             </div>
           {else}
             <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['pwa_512_icon']}')">
@@ -96,7 +96,7 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="pwa_512_icon" value="{$system['pwa_512_icon']}">
+              <input type="hidden" class="js_x-uploader-input" name="pwa_512_icon" value="{$system['pwa_512_icon']}">
             </div>
           {/if}
           <div class="form-text">

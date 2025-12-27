@@ -27,6 +27,9 @@
             <tr>
               <th>{__("ID")}</th>
               <th>{__("Preview")}</th>
+              {if $system['gifts_points_enabled']}
+                <th>{__("Points")}</th>
+              {/if}
               <th>{__("Actions")}</th>
             </tr>
           </thead>
@@ -35,6 +38,9 @@
               <tr>
                 <td>{$row['gift_id']}</td>
                 <td><img class="img-thumbnail table-img-thumbnail" src="{$system['system_uploads']}/{$row['image']}" width="96"></td>
+                {if $system['gifts_points_enabled']}
+                  <td>{$row['points']}</td>
+                {/if}
                 <td>
                   <a data-bs-toggle="tooltip" title='{__("Edit")}' href="{$system['system_url']}/{$control_panel['url']}/gifts/edit/{$row['gift_id']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
                     <i class="fa fa-pencil-alt"></i>
@@ -67,13 +73,24 @@
                 </div>
               </div>
               <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-              <input type="hidden" class="js_x-image-input" name="image" value="">
+              <input type="hidden" class="js_x-uploader-input" name="image" value="">
             </div>
             <div class="form-text">
               {__("The perfect size for your gift image should be (wdith: 250px & height: 250px)")}
             </div>
           </div>
         </div>
+
+        {if $system['gifts_points_enabled']}
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Points")}
+            </label>
+            <div class="col-md-9">
+              <input type="number" class="form-control" name="points" value="0">
+            </div>
+          </div>
+        {/if}
 
         <!-- success -->
         <div class="alert alert-success mt15 mb0 x-hidden"></div>
@@ -106,7 +123,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="image" value="">
+                <input type="hidden" class="js_x-uploader-input" name="image" value="">
               </div>
             {else}
               <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$data['image']}')">
@@ -117,7 +134,7 @@
                   </div>
                 </div>
                 <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                <input type="hidden" class="js_x-image-input" name="image" value="{$data['image']}">
+                <input type="hidden" class="js_x-uploader-input" name="image" value="{$data['image']}">
               </div>
             {/if}
             <div class="form-text">
@@ -125,6 +142,17 @@
             </div>
           </div>
         </div>
+
+        {if $system['gifts_points_enabled']}
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Points")}
+            </label>
+            <div class="col-md-9">
+              <input type="number" class="form-control" name="points" value="{$data['points']}">
+            </div>
+          </div>
+        {/if}
 
         <!-- success -->
         <div class="alert alert-success mt15 mb0 x-hidden"></div>

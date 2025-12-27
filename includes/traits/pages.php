@@ -4,7 +4,7 @@
  * trait -> pages
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait PagesTrait
@@ -28,14 +28,14 @@ trait PagesTrait
     $category_id = !isset($args['category_id']) ? null : $args['category_id'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $offset = !isset($args['offset']) ? 0 : $args['offset'];
-    $get_all = !isset($args['get_all']) ? false : true;
-    $promoted = !isset($args['promoted']) ? false : true;
-    $suggested = !isset($args['suggested']) ? false : true;
     $random = !isset($args['random']) ? false : true;
-    $boosted = !isset($args['boosted']) ? false : true;
-    $managed = !isset($args['managed']) ? false : true;
+    $get_all = !isset($args['get_all']) ? false : true;
+    $offset = !isset($args['offset']) ? 0 : $args['offset'];
     $results = !isset($args['results']) ? $system['pages_results'] : $args['results'];
+    $promoted = !isset($args['promoted']) ? false : true;
+    $boosted = !isset($args['boosted']) ? false : true;
+    $suggested = !isset($args['suggested']) ? false : true;
+    $managed = !isset($args['managed']) ? false : true;
     /* initialize vars */
     $pages = [];
     $offset *= $results;
@@ -50,15 +50,15 @@ trait PagesTrait
     if ($promoted) {
       /* get promoted pages */
       $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' " . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s", $system['max_results']));
+    } elseif ($boosted) {
+      /* get the "viewer" boosted pages */
+      $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' AND page_boosted_by = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } elseif ($suggested) {
       /* get suggested pages */
       $category_statement = ($category_id) ? "AND page_category = " . secure($category_id, 'int') : "";
       $sort_statement = ($random) ? " ORDER BY RAND() " : " ORDER BY page_id DESC ";
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
       $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_id NOT IN (%s) %s " . $country_statement . $language_statement . $sort_statement .  " LIMIT %s, %s", $this->spread_ids($this->get_pages_ids()), $category_statement, secure($offset, 'int', false), secure($results, 'int', false)));
-    } elseif ($boosted) {
-      /* get the "viewer" boosted pages */
-      $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' AND page_boosted_by = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } elseif ($managed) {
       /* get the "taget" all pages who admin */
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));

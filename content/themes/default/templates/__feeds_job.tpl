@@ -44,11 +44,7 @@
             <span>{$post['reviews_count']} {__("Reviews")}</span>
             {if $post['post_rate']}
               <span class="review-stars small ml5">
-                <i class="fa fa-star {if $post['post_rate'] >= 1}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 2}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 3}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 4}checked{/if}"></i>
-                <i class="fa fa-star {if $post['post_rate'] >= 5}checked{/if}"></i>
+                {include file='__stars_rate.tpl' rate=$post['post_rate']}
               </span>
               <span class="badge bg-light text-primary">{$post['post_rate']|number_format:1}</span>
             {/if}

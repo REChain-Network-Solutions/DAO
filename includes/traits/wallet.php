@@ -4,7 +4,7 @@
  * trait -> wallet
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait WalletTrait
@@ -52,7 +52,7 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $amount) {
-      throw new Exception(__("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
@@ -113,7 +113,7 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $amount) {
-      throw new Exception(__("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
@@ -394,14 +394,14 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $package['price']) {
-      modal("ERROR", __("Sorry"), __("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($package['price']), secure($this->_data['user_id'], 'int')));
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'package_payment', $package['package_id'], $package['price'], 'out');
     /* update user package */
-    $this->update_user_package($package['package_id'], $package['name'], $package['price'], $package['verification_badge_enabled']);
+    $this->update_user_package($package);
     $_SESSION['wallet_package_payment_amount'] = $package['price'];
   }
 
@@ -434,7 +434,7 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $orders_collection['total']) {
-      modal("ERROR", __("Sorry"), __("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($orders_collection['total']), secure($this->_data['user_id'], 'int')));
@@ -474,7 +474,7 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $monetization_plan['price']) {
-      modal("ERROR", __("Sorry"), __("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($monetization_plan['price'], 'float'), secure($this->_data['user_id'], 'int')));
@@ -513,7 +513,7 @@ trait WalletTrait
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $post['post_price']) {
-      modal("ERROR", __("Sorry"), __("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($post['post_price'], 'float'), secure($this->_data['user_id'], 'int')));
@@ -553,7 +553,7 @@ trait WalletTrait
     $donation_amount_net = $donation_amount - $commission;
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $donation_amount) {
-      modal("ERROR", __("Sorry"), __("There is no enough credit in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+      modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* update funding request */
     $db->query(sprintf("UPDATE posts_funding SET raised_amount = raised_amount + %s, total_donations = total_donations + 1 WHERE post_id = %s", secure($donation_amount_net), secure($post_id, 'int')));
@@ -642,6 +642,59 @@ trait WalletTrait
     $db->query(sprintf("UPDATE users SET user_monetization_balance = user_monetization_balance + %s WHERE user_id = %s", secure($call_price, 'float'), secure($to_user_id, 'int')));
     /* log commission */
     $this->log_commission($to_user_id, $commission, 'paid_call');
+  }
+
+
+  /**
+   * wallet_paid_module_payment
+   * 
+   * @param float $module
+   * @return void
+   */
+  public function wallet_paid_module_payment($module)
+  {
+    global $db, $system;
+    /* check if wallet enabled */
+    if (!$system['wallet_enabled']) {
+      throw new Exception(__("The wallet system has been disabled by the admin"));
+    }
+    /* check the module enabled */
+    switch ($module) {
+      case 'blogs':
+        $module_price = $system['paid_blogs_cost'];
+        $post_type = __('blog post');
+        break;
+      case 'products':
+        $module_price = $system['paid_products_cost'];
+        $post_type = __('product post');
+        break;
+      case 'funding':
+        $module_price = $system['paid_funding_cost'];
+        $post_type = __('funding post');
+        break;
+      case 'offers':
+        $module_price = $system['paid_offers_cost'];
+        $post_type = __('offer post');
+        break;
+      case 'jobs':
+        $module_price = $system['paid_jobs_cost'];
+        $post_type = __('job post');
+        break;
+      case 'courses':
+        $module_price = $system['paid_courses_cost'];
+        $post_type = __('course post');
+        break;
+      default:
+        throw new Exception(__("Invalid module"));
+    }
+    /* check user wallet balance */
+    if ($this->_data['user_wallet_balance'] < $module_price) {
+      throw new Exception(__("This") . " " . $post_type . " " . __("will cost you") . " " . print_money($module_price) . " " . __("and you have") . " " . print_money($this->_data['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+    }
+    /* decrease user wallet balance */
+    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($module_price, 'float'), secure($this->_data['user_id'], 'int')));
+    /* log this transaction */
+    $this->wallet_set_transaction($this->_data['user_id'], $module . '_module_payment', 0, $module_price, 'out');
   }
 
 

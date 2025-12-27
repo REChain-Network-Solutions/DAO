@@ -21,7 +21,7 @@
             </button>
           {else}
             <button class="btn btn-info rounded rounded-pill mt20" data-toggle="modal" data-url="#payment" data-options='{ "handle": "subscribe", "subscribe": "true", "id": {$plan['plan_id']}, "price": {$plan['price']}, "vat": "{get_payment_vat_value($plan['price'])}", "fees": "{get_payment_fees_value($plan['price'])}", "total": "{get_payment_total_value($plan['price'])}", "total_printed": "{get_payment_total_value($plan['price'], true)}" }'>
-              <i class="fa fa-money-check-alt mr5"></i>{__("Subscribe")} ({print_money($plan['price']|number_format:2)})
+              <i class="fa fa-money-check-alt mr5"></i>{__("Subscribe")} ({print_money($plan['price'])})
             </button>
           {/if}
         </div>

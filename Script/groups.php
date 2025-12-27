@@ -4,7 +4,7 @@
  * groups
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 // fetch bootloader
@@ -46,6 +46,11 @@ try {
 
       // get groups categories
       $smarty->assign('categories', $user->get_categories("groups_categories"));
+
+      // get promoted groups
+      if ($system['packages_enabled']) {
+        $smarty->assign('promoted_groups', $user->get_groups(['promoted' => true, 'results' => 4]));
+      }
 
       // get new groups
       $groups = $user->get_groups(['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);

@@ -4,7 +4,7 @@
  * trait -> groups
  * 
  * @package Delus
- * @author Sorokin Dmitry Olegovich - Handles - @sorydima @sorydev @durovshater @DmitrySoro90935 @tanechfund - also check https://dmitry.rechain.network for more information!
+ * @author Sorokin Dmitry Olegovich
  */
 
 trait GroupsTrait
@@ -28,12 +28,14 @@ trait GroupsTrait
     $category_id = !isset($args['category_id']) ? null : $args['category_id'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $offset = !isset($args['offset']) ? 0 : $args['offset'];
-    $get_all = !isset($args['get_all']) ? false : true;
-    $suggested = !isset($args['suggested']) ? false : true;
     $random = !isset($args['random']) ? false : true;
-    $managed = !isset($args['managed']) ? false : true;
+    $get_all = !isset($args['get_all']) ? false : true;
+    $offset = !isset($args['offset']) ? 0 : $args['offset'];
     $results = !isset($args['results']) ? $system['groups_results'] : $args['results'];
+    $promoted = !isset($args['promoted']) ? false : true;
+    $boosted = !isset($args['boosted']) ? false : true;
+    $suggested = !isset($args['suggested']) ? false : true;
+    $managed = !isset($args['managed']) ? false : true;
     /* initialize vars */
     $groups = [];
     $offset *= $results;
@@ -45,7 +47,13 @@ trait GroupsTrait
     if ($language && $language != "all") {
       $language_statement = sprintf(" AND group_language = %s ", secure($language, 'int'));
     }
-    if ($suggested) {
+    if ($promoted) {
+      /* get promoted groups */
+      $get_groups = $db->query(sprintf("SELECT * FROM `groups` WHERE group_boosted = '1' " . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false)));
+    } elseif ($boosted) {
+      /* get the "viewer" boosted groups */
+      $get_groups = $db->query(sprintf("SELECT * FROM `groups` WHERE group_boosted = '1' AND group_boosted_by = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+    } elseif ($suggested) {
       /* get suggested groups */
       $where_statement = "";
       /* make a list from joined groups (approved|pending) */

@@ -14,11 +14,54 @@
     </div>
 
     <!-- Changelog -->
+    <h3>Version <span class="badge bg-warning rounded-pill">4.2</span></h3>
+    <blockquote>Release Date: 20th December 2025</blockquote>
+    <ul class="change-log-list mb20">
+      <li>[Updated] Documentation</li>
+      <li>[Updated] System Security</li>
+      <li>[Updated] System Optimization</li>
+      <li>[Updated] Delus PHP Dependencies</li>
+      <li>[Updated] Delus JS Dependencies</li>
+      <li>[Added] Packages Payments History For User Settings</li>
+      <li>[Added] Boosted Groups System</li>
+      <li>[Added] Boosted Events System</li>
+      <li>[Added] Plisio Payments</li>
+      <li>[Added] Hidden Packages</li>
+      <li>[Added] Admin Ability To Turn Digital Products On/Off</li>
+      <li>[Added] AgeVerif Service</li>
+      <li>[Added] Ads Videos</li>
+      <li>[Added] Ads Reports</li>
+      <li>[Added] Paid Modules</li>
+      <li>[Added] Pro Packages Free Points</li>
+      <li>[Added] Delete Notifications</li>
+      <li>[Added] Reels Minimum Length</li>
+      <li>[Added] Reels Maximum Length</li>
+      <li>[Added] Videos Minimum Length</li>
+      <li>[Added] Videos Maximum Length</li>
+      <li>[Added] 5 More Affiliates Levels (Now 10 Levels)</li>
+      <li>[Added] Event Distance</li>
+      <li>[Added] Redirect to Messaging Mobile Apps</li>
+      <li>[Added] Gifts with Points System</li>
+      <li>[Added] Latest Blogs Widget</li>
+      <li>[Added] Support Center (Tickets System)</li>
+      <li>[Added] Ability to Enter Activation Code From Email</li>
+      <li>[Fixed] Minor Bugs</li>
+      <li>[Fixed] Orientation of Live Stream Recorded Videos</li>
+      <li>[Fixed] Forums Descriptions Multiple lines</li>
+      <li>[Fixed] Cropped images not deleted with profile photo/cover</li>
+      <li>[Fixed] Story deletion now removes all media</li>
+      <li>[Fixed] Adult images shown in user gallery and widget</li>
+    </ul>
+
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.1.1</span></h3>
     <blockquote>Release Date: 15th September 2025</blockquote>
     <ul class="change-log-list mb20">
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">4.1</span></h3>
     <blockquote>Release Date: 31st August 2025</blockquote>
@@ -57,12 +100,16 @@
       <li>[Fixed] Cover Image Limit Error Issue</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.6</span></h3>
     <blockquote>Release Date: 17th June 2025</blockquote>
     <ul class="change-log-list mb20">
       <li>[Added] Cloudflare R2 Storage Support</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.5</span></h3>
     <blockquote>Release Date: 27th May 2025</blockquote>
@@ -75,6 +122,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.4</span></h3>
     <blockquote>Release Date: 18th May 2025</blockquote>
     <ul class="change-log-list mb20">
@@ -85,6 +134,8 @@
       <li>[Fixed] Yandex Upload Issue</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.3</span></h3>
     <blockquote>Release Date: 8th May 2025</blockquote>
@@ -97,6 +148,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.2</span></h3>
     <blockquote>Release Date: 5th May 2025</blockquote>
     <ul class="change-log-list mb20">
@@ -104,6 +157,8 @@
       <li>[Fixed] PWA JS Error</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">4.0.1</span></h3>
     <blockquote>Release Date: 3rd May 2025</blockquote>
@@ -115,6 +170,8 @@
       <li>[Fixed] Login Issue</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">4.0</span></h3>
     <blockquote>Release Date: 30th April 2025</blockquote>
@@ -227,6 +284,8 @@
       <li>[Fixed] Hide Points Card & Transaction with 0 Value</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.13</span></h3>
     <blockquote>Release Date: 30th September 2024</blockquote>
     <ul class="change-log-list mb20">
@@ -337,6 +396,8 @@
       <li>[Fixed] Responsive Images Inside Blogs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.12</span></h3>
     <blockquote>Release Date: 31st March 2024</blockquote>
     <ul class="change-log-list mb20">
@@ -401,6 +462,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.11.1</span></h3>
     <blockquote>Release Date: 25th December 2023</blockquote>
     <ul class="change-log-list mb20">
@@ -409,6 +472,8 @@
       <li>[Fixed] Blocked Recipients In Chatbox</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.11</span></h3>
     <blockquote>Release Date: 5th December 2023</blockquote>
@@ -467,6 +532,8 @@
       <li>[Fixed] Exclude Banned Users from Newsfeed</li>
       <li>[Fixed] Stoies Issue</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.10</span></h3>
     <blockquote>Release Date: 7th September 2023</blockquote>
@@ -527,6 +594,8 @@
       <li>[Fixed] OneSignal Icon Position Issue</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.9.1</span></h3>
     <blockquote>Release Date: 17th June 2023</blockquote>
     <ul class="change-log-list mb20">
@@ -541,6 +610,8 @@
       <li>[Fixed] Stories Issue</li>
       <li>[Fixed] Funding Permission</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.9</span></h3>
     <blockquote>Release Date: 5th June 2023</blockquote>
@@ -586,6 +657,8 @@
       <li>[Fixed] Backup contains content\backups folder</li>
       <li>[Fixed] Facebook Embed Responsive Issue</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.8</span></h3>
     <blockquote>Release Date: 31st March 2023</blockquote>
@@ -634,6 +707,8 @@
       <li>[Fixed] Images & Videos Aspect Ratio</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.7</span></h3>
     <blockquote>Release Date: 1st January 2023</blockquote>
     <ul class="change-log-list mb20">
@@ -679,6 +754,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.6.3</span></h3>
     <blockquote>Release Date: 12th October 2022</blockquote>
     <ul class="change-log-list mb20">
@@ -687,6 +764,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.6.2</span></h3>
     <blockquote>Release Date: 20th September 2022</blockquote>
     <ul class="change-log-list mb20">
@@ -694,6 +773,8 @@
       <li>[Added] New Post Reactions Images</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.6.1</span></h3>
     <blockquote>Release Date: 12th September 2022</blockquote>
@@ -706,6 +787,8 @@
       <li>[Fixed] Custom CSS Colors Issue</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.6</span></h3>
     <blockquote>Release Date: 1st September 2022</blockquote>
@@ -758,6 +841,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.5</span></h3>
     <blockquote>Release Date: 5th June 2022</blockquote>
     <ul class="change-log-list mb20">
@@ -807,6 +892,8 @@
       <li>[Fixed] Disabled Countries Issue</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.4</span></h3>
     <blockquote>Release Date: 10th February 2022</blockquote>
@@ -875,6 +962,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.3</span></h3>
     <blockquote>Release Date: 25th November 2021</blockquote>
     <ul class="change-log-list mb20">
@@ -921,6 +1010,8 @@
       <li>[Fixed] Minor Bugs</li>
     </ul>
 
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">3.2.1</span></h3>
     <blockquote>Release Date: 25th August 2021</blockquote>
     <ul class="change-log-list mb20">
@@ -930,6 +1021,8 @@
       <li>[Fixed] PayStack 404 Error</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
+    <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.2</span></h3>
     <blockquote>Release Date: 15th August 2021</blockquote>
@@ -982,6 +1075,7 @@
       <li>[Fixed] Video/Audio Views for Shared Post</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.1</span></h3>
@@ -1023,6 +1117,7 @@
       <li>[Fixed] Chat issue when with blocked user</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">3.0</span></h3>
@@ -1069,6 +1164,7 @@
       <li>[Fixed] Anonymous photos showing in user profile & albums</li>
       <li>[Removed] Instagram Login</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.9</span></h3>
@@ -1099,6 +1195,7 @@
       <li>[Fixed] Total friend requests sent count</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.8</span></h3>
@@ -1161,6 +1258,7 @@
       <li>[Fixed] Reaction translation</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.7.2</span></h3>
@@ -1168,6 +1266,7 @@
     <ul class="change-log-list mb20">
       <li>[Fixed] Critical Bug</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.7.1</span></h3>
@@ -1175,6 +1274,7 @@
     <ul class="change-log-list mb20">
       <li>[Fixed] Critical Bug</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.7</span></h3>
@@ -1213,6 +1313,7 @@
       <li>[Fixed] Minor Bugs</li>
       <li>[Removed] Windows Phone App</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.6.1</span></h3>
@@ -1285,6 +1386,7 @@
       <li>[Fixed] Minor Bugs</li>
       <li>[Removed] Google+ profile link from User & Page settings & profile page</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.6</span></h3>
@@ -1343,6 +1445,7 @@
       <li>[Fixed] Minor Bugs</li>
       <li>[Removed] Intl PHP extension as requirement for Delus</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.10</span></h3>
@@ -1389,6 +1492,7 @@
       <li>[Fixed] Disable "privacy changing" for cover photo/profile image posts</li>
       <li>[Fixed] Story close button on small screens</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.9</span></h3>
@@ -1419,6 +1523,7 @@
       <li>[Fixed] Can't delete replies on my own post</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.8</span></h3>
@@ -1447,6 +1552,7 @@
       <li>[Fixed] All Reported Bugs</li>
       <li>[Removed] Google+ Login</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.7</span></h3>
@@ -1454,6 +1560,7 @@
     <ul class="change-log-list mb20">
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.6</span></h3>
@@ -1520,6 +1627,7 @@
       <li>[Fixed] Getting notifications from deleted users</li>
       <li>[Fixed] All Reported Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.5</span></h3>
@@ -1527,6 +1635,7 @@
     <ul class="change-log-list mb20">
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.4</span></h3>
@@ -1581,6 +1690,7 @@
       <li>[Fixed] Blocked users from people you may know</li>
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.3</span></h3>
@@ -1634,6 +1744,7 @@
 
       <li>[Removed] Bitcoin Payments</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.2</span></h3>
@@ -1666,6 +1777,7 @@
       <li>[Fixed] Message button on mobile need to enter username again</li>
       <li>[Fixed] All Reported Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5.1</span></h3>
@@ -1673,6 +1785,7 @@
     <ul class="change-log-list mb20">
       <li>[Fixed] Minor Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.5</span></h3>
@@ -1743,6 +1856,7 @@
       <li>[Fixed] CSS Bugs</li>
       <li>[Fixed] All Reported Bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.4.3</span></h3>
@@ -1751,6 +1865,7 @@
       <li>[Updated] Android APP</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.4.2</span></h3>
@@ -1763,6 +1878,7 @@
       <li>[Fixed] Minor CSS bugs</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.4.1</span></h3>
@@ -1776,6 +1892,7 @@
       <li>[Fixed] Show Online Friends on Mobile</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.4</span></h3>
@@ -1864,6 +1981,7 @@
       <li>[Fixed] Chat Bugs</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.3.1</span></h3>
@@ -1871,6 +1989,7 @@
     <ul class="change-log-list mb20">
       <li>[Updated] Delus Libs [PHPMailer]</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.3</span></h3>
@@ -1921,6 +2040,7 @@
       <li>[Fixed] Minor bugs</li>
       <li>[Removed] Material Theme</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.2.1</span></h3>
@@ -1928,6 +2048,7 @@
     <ul class="change-log-list mb20">
       <li>[Updated] Delus Dependencies [Smarty|HybridAuth|Google reCAPTCHA]</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.2</span></h3>
@@ -1950,13 +2071,13 @@
       <li>[Added] [Admin] User Status Enabled | Turn the Last Seen On and Off</li>
       <li>[Added] [Admin] Uploads Prefix | Add a prefix to the uploaded files</li>
       <li>[Added] [Admin] Photo Upload | Enable photo upload to share & upload photos to the site</li>
-      <li>[Added] [Admin] Allowed video extensions | Allowed video extensions (separated with comma ',)</li>
+      <li>[Added] [Admin] Allowed video extensions | Allowed video extensions (separated with comma ',')</li>
       <li>[Added] [Admin] Audio Upload | Enable audio upload to share & upload sounds to the site</li>
       <li>[Added] [Admin] Max audio size | The Maximum size of uploaded audio in posts in kilobytes (1M = 1024KB)</li>
-      <li>[Added] [Admin] Allowed audio extensions | Allowed audio extensions (separated with comma ',)</li>
+      <li>[Added] [Admin] Allowed audio extensions | Allowed audio extensions (separated with comma ',')</li>
       <li>[Added] [Admin] File Upload | Enable file upload to share & upload sounds to the site</li>
       <li>[Added] [Admin] Max file size | The Maximum size of uploaded file in posts in kilobytes (1M = 1024KB)</li>
-      <li>[Added] [Admin] Allowed file extensions | Allowed file extensions (separated with comma ',)</li>
+      <li>[Added] [Admin] Allowed file extensions | Allowed file extensions (separated with comma ',')</li>
       <li>[Added] [Admin] Censored Words Enabled | Enable/Disable Words to be censored</li>
       <li>[Added] [Admin] Censored Words | Words to be censored, separated by a comma (,)</li>
       <li>[Added] [Admin] Data Heartbeat | The update interval to check for new data (in seconds)</li>
@@ -1980,6 +2101,7 @@
       <li>[Fixed] Username validation (admin and must be 3 char)</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.1</span></h3>
@@ -2000,6 +2122,7 @@
       <li>[Fixed] See more for visitor</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.5</span></h3>
@@ -2009,6 +2132,7 @@
       <li>[Added] Android APP</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.4</span></h3>
@@ -2023,6 +2147,7 @@
       <li>[Fixed] Comments encoding problem</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.3</span></h3>
@@ -2045,6 +2170,7 @@
       <li>[Fixed] Photos Grid System</li>
       <li>[Fixed] Single photo post comments/likes</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.2</span></h3>
@@ -2057,6 +2183,7 @@
       <li>[Added] UI Enhancements (From your feedback)</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.1</span></h3>
@@ -2077,6 +2204,7 @@
       <li>[Fixed] Fixed the suggested pages/groups section (get only new pages/groups)</li>
       <li>[Fixed] Minor bugs</li>
     </ul>
+
     <div class="divider"></div>
 
     <h3>Version <span class="badge bg-warning rounded-pill">2.0.0</span></h3>

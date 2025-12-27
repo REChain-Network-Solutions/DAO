@@ -163,6 +163,29 @@
           {/if}
           <!-- join -->
 
+          <!-- boost -->
+          {if $system['packages_enabled'] && $group['i_admin']}
+            {if $group['group_boosted']}
+              <button type="button" class="btn btn-md rounded-pill btn-danger js_unboost-group" data-id="{$group['group_id']}">
+                <i class="fa fa-bolt"></i>
+                <span class="d-none d-xxl-inline-block ml5">{__("Unboost")}</span>
+              </button>
+            {else}
+              {if $user->_data['can_boost_groups']}
+                <button type="button" class="btn btn-md rounded-pill btn-danger js_boost-group" data-id="{$group['group_id']}">
+                  <i class="fa fa-bolt"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Boost")}</span>
+                </button>
+              {else}
+                <a href="{$system['system_url']}/packages" class="btn btn-md rounded-pill btn-danger">
+                  <i class="fa fa-bolt"></i>
+                  <span class="d-none d-xxl-inline-block ml5">{__("Boost Group")}</span>
+                </a>
+              {/if}
+            {/if}
+          {/if}
+          <!-- boost -->
+
           <!-- review -->
           {if $system['groups_reviews_enabled']}
             {if !$group['i_admin']}
@@ -296,7 +319,7 @@
             {if $user->_logged_in && !$group['i_admin'] && $group['has_subscriptions_plans']}
               <div class="d-grid">
                 <button class="btn btn-primary rounded rounded-pill mb20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$group['group_id']}&node_type=group" data-size="large">
-                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($group['group_monetization_min_price']|number_format:2)})
+                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($group['group_monetization_min_price'])})
                 </button>
               </div>
             {/if}
@@ -372,11 +395,7 @@
                         {__($group['reviews_count'])} {__("Reviews")}
                         {if $group['group_rate']}
                           <span class="review-stars small ml5">
-                            <i class="fa fa-star {if $group['group_rate'] >= 1}checked{/if}"></i>
-                            <i class="fa fa-star {if $group['group_rate'] >= 2}checked{/if}"></i>
-                            <i class="fa fa-star {if $group['group_rate'] >= 3}checked{/if}"></i>
-                            <i class="fa fa-star {if $group['group_rate'] >= 4}checked{/if}"></i>
-                            <i class="fa fa-star {if $group['group_rate'] >= 5}checked{/if}"></i>
+                            {include file='__stars_rate.tpl' rate=$group['group_rate']}
                           </span>
                           <span class="badge bg-light text-primary">{$group['group_rate']|number_format:1}</span>
                         {/if}
@@ -904,11 +923,7 @@
                   {__("Reviews")}
                   {if $group['group_rate']}
                     <span class="review-stars small ml5">
-                      <i class="fa fa-star {if $group['group_rate'] >= 1}checked{/if}"></i>
-                      <i class="fa fa-star {if $group['group_rate'] >= 2}checked{/if}"></i>
-                      <i class="fa fa-star {if $group['group_rate'] >= 3}checked{/if}"></i>
-                      <i class="fa fa-star {if $group['group_rate'] >= 4}checked{/if}"></i>
-                      <i class="fa fa-star {if $group['group_rate'] >= 5}checked{/if}"></i>
+                      {include file='__stars_rate.tpl' rate=$group['group_rate']}
                     </span>
                     <span class="badge bg-light text-primary">{$group['group_rate']|number_format:1}</span>
                   {/if}
@@ -1548,7 +1563,7 @@
                           <div class="stat-cell">
                             <i class="fa fa-donate bg-icon"></i>
                             <div class="h3 mtb10">
-                              {print_money($user->_data['user_monetization_balance']|number_format:2)}
+                              {print_money($user->_data['user_monetization_balance'])}
                             </div>
                           </div>
                         </div>

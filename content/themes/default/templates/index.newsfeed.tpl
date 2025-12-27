@@ -80,7 +80,7 @@
               {include file='_publisher.tpl' _handle="me" _node_can_monetize_content=$user->_data['can_monetize_content'] _node_monetization_enabled=$user->_data['user_monetization_enabled'] _node_monetization_plans=$user->_data['user_monetization_plans'] _privacy=true}
               <!-- publisher -->
 
-              <!-- pro users -->
+              <!-- promoted users -->
               {if $pro_members}
                 <div class="d-block d-lg-none">
                   <div class="card bg-indigo border-0">
@@ -92,7 +92,7 @@
                       {/if}
                       <h6 class="pb0">
                         {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
-                        {__("Pro Users")}
+                        {__("Promoted Users")}
                       </h6>
                     </div>
                     <div class="card-body pt0 plr5">
@@ -114,9 +114,9 @@
                   </div>
                 </div>
               {/if}
-              <!-- pro users -->
+              <!-- promoted users -->
 
-              <!-- pro pages -->
+              <!-- promoted pages -->
               {if $promoted_pages}
                 <div class="d-block d-lg-none">
                   <div class="card bg-teal border-0">
@@ -128,7 +128,7 @@
                       {/if}
                       <h6 class="pb0">
                         {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
-                        {__("Pro Pages")}
+                        {__("Promoted Pages")}
                       </h6>
                     </div>
                     <div class="card-body pt0 plr5">
@@ -146,7 +146,72 @@
                   </div>
                 </div>
               {/if}
-              <!-- pro pages -->
+              <!-- promoted pages -->
+
+              <!-- promoted groups -->
+              {if $promoted_groups}
+                <div class="d-block d-lg-none">
+                  <div class="card bg-teal border-0">
+                    <div class="card-header ptb20 bg-transparent border-bottom-0">
+                      {if $system['packages_enabled'] && !$user->_data['user_subscribed']}
+                        <div class="float-end">
+                          <small><a class="text-white text-underline" href="{$system['system_url']}/packages">{__("Upgrade")}</a></small>
+                        </div>
+                      {/if}
+                      <h6 class="pb0">
+                        {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
+                        {__("Promoted Groups")}
+                      </h6>
+                    </div>
+                    <div class="card-body pt0 plr5">
+                      <div class="pro-box-wrapper {if count($promoted_groups) > 3}js_slick{else}full-opacity{/if}">
+                        {foreach $promoted_groups as $_group}
+                          <a class="user-box text-white" href="{$system['system_url']}/groups/{$_group['group_name']}">
+                            <img alt="{$_group['group_title']}" src="{$_group['group_picture']}" />
+                            <div class="name" title="{$_group['group_title']}">
+                              {$_group['group_title']}
+                            </div>
+                          </a>
+                        {/foreach}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {/if}
+              <!-- promoted groups -->
+
+              <!-- promoted events -->
+              {if $promoted_events}
+                <div class="d-block d-lg-none">
+                  <div class="card bg-teal border-0">
+                    <div class="card-header ptb20 bg-transparent border-bottom-0">
+                      {if $system['packages_enabled'] && !$user->_data['user_subscribed']}
+                        <div class="float-end">
+                          <small><a class="text-white text-underline" href="{$system['system_url']}/packages">{__("Upgrade")}</a></small>
+                        </div>
+                      {/if}
+                      <h6 class="pb0">
+                        {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
+                        {__("Promoted Events")}
+                      </h6>
+                    </div>
+                    <div class="card-body pt0 plr5">
+                      <div class="pro-box-wrapper {if count($promoted_events) > 3}js_slick{else}full-opacity{/if}">
+                        {foreach $promoted_events as $_event}
+                          <a class="user-box text-white" href="{$system['system_url']}/events/{$_event['event_id']}">
+                            <img alt="{$_event['event_title']}" src="{$_event['event_picture']}" />
+                            <div class="name" title="{$_event['event_title']}">
+                              {$_event['event_title']}
+                            </div>
+                          </a>
+                        {/foreach}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {/if}
+              <!-- promoted events -->
+
             {/if}
 
             {include file='_widget.tpl' widgets=$newsfeed_widgets}
@@ -263,9 +328,97 @@
                       {/foreach}
                     </ul>
 
-                    {if count($boosted_pages) >= $system['max_results_even']}
+                    {if count($boosted_pages) >= $system['pages_results']}
                       <!-- see-more -->
                       <div class="alert alert-info see-more js_see-more" data-get="boosted_pages">
+                        <span>{__("See More")}</span>
+                        <div class="loader loader_small x-hidden"></div>
+                      </div>
+                      <!-- see-more -->
+                    {/if}
+                  {else}
+                    {include file='_no_data.tpl'}
+                  {/if}
+                </div>
+              </div>
+            {else}
+              <!-- upgrade -->
+              <div class="alert alert-warning">
+                <div class="icon">
+                  <i class="fa fa-id-card fa-2x"></i>
+                </div>
+                <div class="text">
+                  <strong>{__("Membership")}</strong><br>
+                  {__("Choose the Plan That's Right for You")}, {__("Check the package from")} <a href="{$system['system_url']}/packages">{__("Here")}</a>
+                </div>
+              </div>
+              <div class="text-center">
+                <a href="{$system['system_url']}/packages" class="btn btn-primary"><i class="fa fa-rocket mr5"></i>{__("Upgrade to Pro")}</a>
+              </div>
+              <!-- upgrade -->
+            {/if}
+
+          {elseif $view == "boosted_groups"}
+            {if $user->_is_admin || $user->_data['user_subscribed']}
+              <div class="card">
+                <div class="card-header">
+                  <strong>{__("My Boosted Groups")}</strong>
+                </div>
+                <div class="card-body">
+                  {if $boosted_groups}
+                    <ul>
+                      {foreach $boosted_groups as $_group}
+                        {include file='__feeds_group.tpl' _tpl="list"}
+                      {/foreach}
+                    </ul>
+
+                    {if count($boosted_groups) >= $system['groups_results']}
+                      <!-- see-more -->
+                      <div class="alert alert-info see-more js_see-more" data-get="boosted_groups">
+                        <span>{__("See More")}</span>
+                        <div class="loader loader_small x-hidden"></div>
+                      </div>
+                      <!-- see-more -->
+                    {/if}
+                  {else}
+                    {include file='_no_data.tpl'}
+                  {/if}
+                </div>
+              </div>
+            {else}
+              <!-- upgrade -->
+              <div class="alert alert-warning">
+                <div class="icon">
+                  <i class="fa fa-id-card fa-2x"></i>
+                </div>
+                <div class="text">
+                  <strong>{__("Membership")}</strong><br>
+                  {__("Choose the Plan That's Right for You")}, {__("Check the package from")} <a href="{$system['system_url']}/packages">{__("Here")}</a>
+                </div>
+              </div>
+              <div class="text-center">
+                <a href="{$system['system_url']}/packages" class="btn btn-primary"><i class="fa fa-rocket mr5"></i>{__("Upgrade to Pro")}</a>
+              </div>
+              <!-- upgrade -->
+            {/if}
+
+          {elseif $view == "boosted_events"}
+            {if $user->_is_admin || $user->_data['user_subscribed']}
+              <div class="card">
+                <div class="card-header">
+                  <strong>{__("My Boosted Events")}</strong>
+                </div>
+                <div class="card-body">
+                  {if $boosted_events}
+                    <ul>
+                      {foreach $boosted_events as $_event}
+                        {include file='__feeds_event.tpl' _tpl="list" _small=true}
+                      {/foreach}
+                    </ul>
+
+                    {if count($boosted_events) >= $system['events_results']}
+                      <!-- see-more -->
+                      <div class="alert alert-info see-more js_see-more" data-get="boosted_events">
                         <span>{__("See More")}</span>
                         <div class="loader loader_small x-hidden"></div>
                       </div>
@@ -320,7 +473,7 @@
             <!-- merits -->
           {/if}
 
-          <!-- pro users -->
+          <!-- promoted users -->
           {if $pro_members}
             <div class="d-none d-lg-block">
               <div class="card bg-indigo border-0">
@@ -332,7 +485,7 @@
                   {/if}
                   <h6 class="pb0">
                     {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
-                    {__("Pro Users")}
+                    {__("Promoted Users")}
                   </h6>
                 </div>
                 <div class="card-body pt0 plr5">
@@ -354,9 +507,9 @@
               </div>
             </div>
           {/if}
-          <!-- pro users -->
+          <!-- promoted users -->
 
-          <!-- pro pages -->
+          <!-- promoted pages -->
           {if $promoted_pages}
             <div class="d-none d-lg-block">
               <div class="card bg-teal border-0">
@@ -368,7 +521,7 @@
                   {/if}
                   <h6 class="pb0">
                     {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
-                    {__("Pro Pages")}
+                    {__("Promoted Pages")}
                   </h6>
                 </div>
                 <div class="card-body pt0 plr5">
@@ -386,7 +539,71 @@
               </div>
             </div>
           {/if}
-          <!-- pro pages -->
+          <!-- promoted pages -->
+
+          <!-- promoted groups -->
+          {if $promoted_groups}
+            <div class="d-none d-lg-block">
+              <div class="card bg-teal border-0">
+                <div class="card-header ptb20 bg-transparent border-bottom-0">
+                  {if $system['packages_enabled'] && !$user->_data['user_subscribed']}
+                    <div class="float-end">
+                      <small><a class="text-white text-underline" href="{$system['system_url']}/packages">{__("Upgrade")}</a></small>
+                    </div>
+                  {/if}
+                  <h6 class="pb0">
+                    {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
+                    {__("Promoted Groups")}
+                  </h6>
+                </div>
+                <div class="card-body pt0 plr5">
+                  <div class="pro-box-wrapper {if count($promoted_groups) > 3}js_slick{else}full-opacity{/if}">
+                    {foreach $promoted_groups as $_group}
+                      <a class="user-box text-white" href="{$system['system_url']}/groups/{$_group['group_name']}">
+                        <img alt="{$_group['group_title']}" src="{$_group['group_picture']}" />
+                        <div class="name" title="{$_group['group_title']}">
+                          {$_group['group_title']}
+                        </div>
+                      </a>
+                    {/foreach}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/if}
+          <!-- promoted groups -->
+
+          <!-- promoted events -->
+          {if $promoted_events}
+            <div class="d-none d-lg-block">
+              <div class="card bg-teal border-0">
+                <div class="card-header ptb20 bg-transparent border-bottom-0">
+                  {if $system['packages_enabled'] && !$user->_data['user_subscribed']}
+                    <div class="float-end">
+                      <small><a class="text-white text-underline" href="{$system['system_url']}/packages">{__("Upgrade")}</a></small>
+                    </div>
+                  {/if}
+                  <h6 class="pb0">
+                    {include file='__svg_icons.tpl' icon="pro" class="mr5" width="20px" height="20px" style="fill: #fff;"}
+                    {__("Promoted Events")}
+                  </h6>
+                </div>
+                <div class="card-body pt0 plr5">
+                  <div class="pro-box-wrapper {if count($promoted_events) > 3}js_slick{else}full-opacity{/if}">
+                    {foreach $promoted_events as $_event}
+                      <a class="user-box text-white" href="{$system['system_url']}/events/{$_event['event_id']}">
+                        <img alt="{$_event['event_title']}" src="{$_event['event_picture']}" />
+                        <div class="name" title="{$_event['event_title']}">
+                          {$_event['event_title']}
+                        </div>
+                      </a>
+                    {/foreach}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/if}
+          <!-- promoted events -->
 
           <!-- trending -->
           {if $trending_hashtags}
@@ -397,6 +614,12 @@
           {include file='_ads.tpl'}
           {include file='_ads_campaigns.tpl'}
           {include file='_widget.tpl'}
+
+          <!-- latest blogs -->
+          {if $latest_blogs}
+            {include file='_blogs_carousel.tpl'}
+          {/if}
+          <!-- latest blogs -->
 
           {if $top_merits_users}
             <!-- merits top users -->

@@ -302,7 +302,7 @@
         {/if}
         {if $_donation}
           <div>
-            <span class="badge bg-success">{print_money($_donation|number_format:2)}</span>
+            <span class="badge bg-success">{print_money($_donation)}</span>
             <span class="js_moment" data-time="{$_donation_time}">{$_donation_time}</span>
           </div>
         {/if}

@@ -1,5 +1,5 @@
 # PHP image
-FROM php:8.3-apache
+FROM php:8.5-apache
 
 # enable required packages and gd lib
 RUN apt-get update && apt-get install -y \

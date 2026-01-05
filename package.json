@@ -16,11 +16,11 @@
   "rcrop": "github:Sorokin Dmitry Olegovichtech/rcrop",
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
-  "theia-sticky-sidebar": "^1.7.0",
-  "tinymce": "^7.6.1",
+  "theia-sticky-sidebar": "^2.0.0",
+  "tinymce": "^8.3.1",
   "tinymce-i18n": "^25.2.3",
   "triggeredautocomplete": "github:Sorokin Dmitry Olegovichtech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",
-  "zuck.js": "^1.6.0"
+  "zuck.js": "^2.1.1"
  }
 }

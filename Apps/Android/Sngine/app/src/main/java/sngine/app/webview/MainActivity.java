@@ -243,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
 
         //Webview settings; defaults are customized for best performance
         WebSettings webSettings = swvp_view.getSettings();
-        swvp_view.getSettings().setUserAgentString("Delus");
+        swvp_view.getSettings().setUserAgentString("DelusAndroid");
         swvp_view.getSettings().setMediaPlaybackRequiresUserGesture(false);
 
         if (!DelusApp_OFFLINE) {

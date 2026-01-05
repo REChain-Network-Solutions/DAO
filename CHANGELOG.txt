@@ -1,4 +1,48 @@
-﻿#== v4.1 == ( 31-8-2025 )
+﻿#== v4.2.1 == ( 30-12-2025 )
+- [Fixed] Minor Bugs
+
+#== v4.2 == ( 20-12-2025 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Delus PHP Dependencies
+- [Updated] Delus JS Dependencies
+
+- [Added] Packages Payments History For User Settings
+- [Added] Boosted Groups System
+- [Added] Boosted Events System
+- [Added] Plisio Payments
+- [Added] Hidden Packages
+- [Added] Admin Ability To Turn Digital Products On/Off
+- [Added] AgeVerif Service
+- [Added] Ads Videos
+- [Added] Ads Reports
+- [Added] Paid Modules
+- [Added] Pro Packages Free Points
+- [Added] Delete Notifications
+- [Added] Reels Minimum Length
+- [Added] Reels Maximum Length
+- [Added] Videos Minimum Length
+- [Added] Videos Maximum Length
+- [Added] 5 More Affiliates Levels (Now 10 Levels)
+- [Added] Event Distance
+- [Added] Redirect to Messaging Mobile Apps
+- [Added] Gifts with Points System
+- [Added] Latest Blogs Widget
+- [Added] Support Center (Tickets System)
+- [Added] Ability to Enter Activation Code From Email
+
+- [Fixed] Minor Bugs
+- [Fixed] Orientation of Live Stream Recorded Videos
+- [Fixed] Forums Descriptions Multiple lines
+- [Fixed] Cropped images not deleted with profile photo/cover
+- [Fixed] Story deletion now removes all media
+- [Fixed] Adult images shown in user gallery and widget
+
+#== v4.1.1 == ( 15-09-2025 )
+- [Fixed] Minor Bugs
+
+#== v4.1 == ( 31-8-2025 )
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
@@ -1809,13 +1853,13 @@
 - [Added] [Admin] User Status Enabled | Turn the Last Seen On and Off
 - [Added] [Admin] Uploads Prefix | Add a prefix to the uploaded files
 - [Added] [Admin] Photo Upload | Enable photo upload to share & upload photos to the site
-- [Added] [Admin] Allowed video extensions | Allowed video extensions (separated with comma ',)
+- [Added] [Admin] Allowed video extensions | Allowed video extensions (separated with comma ',')
 - [Added] [Admin] Audio Upload | Enable audio upload to share & upload sounds to the site
 - [Added] [Admin] Max audio size | The Maximum size of uploaded audio in posts in kilobytes (1M = 1024KB)
-- [Added] [Admin] Allowed audio extensions | Allowed audio extensions (separated with comma ',)
+- [Added] [Admin] Allowed audio extensions | Allowed audio extensions (separated with comma ',')
 - [Added] [Admin] File Upload | Enable file upload to share & upload sounds to the site
 - [Added] [Admin] Max file size | The Maximum size of uploaded file in posts in kilobytes (1M = 1024KB)
-- [Added] [Admin] Allowed file extensions | Allowed file extensions (separated with comma ',)
+- [Added] [Admin] Allowed file extensions | Allowed file extensions (separated with comma ',')
 - [Added] [Admin] Censored Words Enabled | Enable/Disable Words to be censored
 - [Added] [Admin] Censored Words | Words to be censored, separated by a comma (,)
 - [Added] [Admin] Data Heartbeat | The update interval to check for new data (in seconds)

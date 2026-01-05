@@ -1,0 +1,2507 @@
+<?php
+
+/**
+ * update wizard
+ * 
+ * @package Delus
+ * @author Sorokin Dmitry Olegovich
+ */
+
+// set execution time
+set_time_limit(0); /* unlimited max execution time */
+
+
+// set system version
+define('SYS_VER', '3.6');
+
+
+// set absolut & base path
+define('ABSPATH', dirname(__FILE__) . '/');
+define('BASEPATH', dirname($_SERVER['PHP_SELF']));
+
+
+// check the config file
+if (!file_exists(ABSPATH . 'includes/config.php')) {
+  /* the config file doesn't exist -> start the installer */
+  header('Location: ./install');
+}
+
+
+// get system configurations
+require_once(ABSPATH . 'includes/config.php');
+
+
+// enviroment settings
+if (DEBUGGING) {
+  ini_set("display_errors", true);
+  error_reporting(E_ALL ^ E_NOTICE);
+} else {
+  ini_set("display_errors", false);
+  error_reporting(0);
+}
+
+
+// get functions
+require_once(ABSPATH . 'includes/functions.php');
+
+
+// connect to the database
+$db = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT);
+$db->set_charset('utf8mb4');
+if (mysqli_connect_error()) {
+  _error("DB_ERROR");
+}
+
+
+
+// update
+if (isset($_POST['submit'])) {
+
+  // check valid purchase code
+  try {
+    $licence_key = get_licence_key($_POST['purchase_code']);
+    if (is_empty($_POST['purchase_code']) || $licence_key === false) {
+      _error("Error", "Please enter a valid purchase code");
+    }
+    $session_hash = $licence_key;
+  } catch (Exception $e) {
+    _error("Error", $e->getMessage());
+  }
+
+
+  // update the Delus tables
+  $structure = "
+
+CREATE TABLE `auto_connect` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `type` varchar(32) NOT NULL,
+  `country_id` int(10) unsigned NOT NULL,
+  `nodes_ids` text NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `country_id` (`country_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+
+# Changing table pages_categories fields, indexes
+ALTER TABLE `pages_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table conversations_calls_video fields, indexes
+ALTER TABLE `conversations_calls_video`
+	MODIFY COLUMN `from_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `call_id`,
+	MODIFY COLUMN `to_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `from_user_token`,
+	ADD INDEX `to_user_id` USING BTREE (to_user_id),
+	ADD INDEX `from_user_id` USING BTREE (from_user_id);
+
+# Changing table users_searches fields, indexes
+ALTER TABLE `users_searches`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `log_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table stories fields, indexes
+ALTER TABLE `stories`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `story_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table pages fields, indexes
+ALTER TABLE `pages`
+	MODIFY COLUMN `page_admin` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `page_id`,
+	MODIFY COLUMN `page_category` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `page_admin`,
+	MODIFY COLUMN `page_picture_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `page_picture`,
+	MODIFY COLUMN `page_cover_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `page_cover`,
+	MODIFY COLUMN `page_album_pictures` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `page_cover_position`,
+	MODIFY COLUMN `page_album_covers` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `page_album_pictures`,
+	MODIFY COLUMN `page_album_timeline` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `page_album_covers`,
+	ADD COLUMN `page_country` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `page_location`,
+	MODIFY COLUMN `page_description` MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `page_country`,
+	ADD INDEX `page_category` USING BTREE (page_category),
+	ADD INDEX `page_album_covers` USING BTREE (page_album_covers),
+	ADD INDEX `page_cover_id` USING BTREE (page_cover_id),
+	ADD INDEX `page_album_pictures` USING BTREE (page_album_pictures),
+	ADD INDEX `page_country` USING BTREE (page_country),
+	ADD INDEX `page_album_timeline` USING BTREE (page_album_timeline),
+	ADD INDEX `page_admin` USING BTREE (page_admin),
+	ADD INDEX `page_picture_id` USING BTREE (page_picture_id);
+
+# Changing table jobs_categories fields, indexes
+ALTER TABLE `jobs_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table users fields, indexes
+ALTER TABLE `users`
+	MODIFY COLUMN `user_gender` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_lastname`,
+	MODIFY COLUMN `user_picture_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_picture`,
+	MODIFY COLUMN `user_cover_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_cover`,
+	MODIFY COLUMN `user_album_pictures` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_cover_position`,
+	MODIFY COLUMN `user_album_covers` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_album_pictures`,
+	MODIFY COLUMN `user_album_timeline` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_album_covers`,
+	MODIFY COLUMN `user_country` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `user_failed_login_count`,
+	MODIFY COLUMN `user_points` FLOAT NOT NULL DEFAULT 0  COMMENT '' AFTER `user_wallet_balance`,
+	ADD INDEX `user_country` USING BTREE (user_country),
+	ADD INDEX `user_cover_id` USING BTREE (user_cover_id),
+	ADD INDEX `user_album_timeline` USING BTREE (user_album_timeline),
+	ADD INDEX `user_album_pictures` USING BTREE (user_album_pictures),
+	ADD INDEX `user_picture_id` USING BTREE (user_picture_id),
+	ADD INDEX `user_album_covers` USING BTREE (user_album_covers),
+	ADD INDEX `user_gender` USING BTREE (user_gender);
+
+# Changing table groups_categories fields, indexes
+ALTER TABLE `groups_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table wallet_payments fields, indexes
+ALTER TABLE `wallet_payments`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `payment_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table conversations_calls_audio fields, indexes
+ALTER TABLE `conversations_calls_audio`
+	MODIFY COLUMN `from_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `call_id`,
+	MODIFY COLUMN `to_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `from_user_token`,
+	ADD INDEX `to_user_id` USING BTREE (to_user_id),
+	ADD INDEX `from_user_id` USING BTREE (from_user_id);
+
+# Changing table forums_replies fields, indexes
+ALTER TABLE `forums_replies`
+	MODIFY COLUMN `thread_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `reply_id`,
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `thread_id`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `thread_id` USING BTREE (thread_id);
+
+# Changing table notifications fields, indexes
+ALTER TABLE `notifications`
+	MODIFY COLUMN `to_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `notification_id`,
+	MODIFY COLUMN `from_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `to_user_id`,
+	ADD INDEX `to_user_id` USING BTREE (to_user_id),
+	ADD INDEX `from_user_id` USING BTREE (from_user_id, from_user_type);
+
+# Changing table posts_polls fields, indexes
+ALTER TABLE `posts_polls`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `poll_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table posts_live fields, indexes
+ALTER TABLE `posts_live`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `live_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table posts_articles fields, indexes
+ALTER TABLE `posts_articles`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `article_id`,
+	MODIFY COLUMN `category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `text`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `category_id` USING BTREE (category_id);
+
+# Changing table posts_videos fields, indexes
+ALTER TABLE `posts_videos`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `video_id`,
+	ADD COLUMN `source_240p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source`,
+	ADD COLUMN `source_360p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_240p`,
+	ADD COLUMN `source_480p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_360p`,
+	ADD COLUMN `source_720p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_480p`,
+	ADD COLUMN `source_1080p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_720p`,
+	ADD COLUMN `source_1440p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_1080p`,
+	ADD COLUMN `source_2160p` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_1440p`,
+	MODIFY COLUMN `thumbnail` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `source_2160p`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table packages_payments fields, indexes
+ALTER TABLE `packages_payments`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `package_price`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table posts_funding fields, indexes
+ALTER TABLE `posts_funding`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `funding_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table conversations fields, indexes
+ALTER TABLE `conversations`
+	MODIFY COLUMN `last_message_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `conversation_id`,
+	ADD INDEX `last_message_id` USING BTREE (last_message_id);
+
+# Changing table posts_funding_donors fields, indexes
+ALTER TABLE `posts_funding_donors`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `donation_id`,
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `user_id`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table posts fields, indexes
+ALTER TABLE `posts`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `post_id`,
+	MODIFY COLUMN `group_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `in_group`,
+	MODIFY COLUMN `event_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `in_event`,
+	MODIFY COLUMN `wall_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `in_wall`,
+	MODIFY COLUMN `colored_pattern` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `post_type`,
+	MODIFY COLUMN `origin_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `colored_pattern`,
+	MODIFY COLUMN `boosted_by` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `boosted`,
+	ADD COLUMN `views` INT(10) UNSIGNED NOT NULL DEFAULT 0  COMMENT '' AFTER `shares`,
+	MODIFY COLUMN `points_earned` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'  COMMENT '' AFTER `views`,
+	ADD COLUMN `processing` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'  COMMENT '' AFTER `points_earned`,
+	ADD INDEX `boosted_by` USING BTREE (boosted_by),
+	ADD INDEX `group_id` USING BTREE (group_id),
+	ADD INDEX `colored_pattern` USING BTREE (colored_pattern),
+	ADD INDEX `event_id` USING BTREE (event_id),
+	ADD INDEX `origin_id` USING BTREE (origin_id),
+	ADD INDEX `user_id` USING BTREE (user_id, user_type),
+	ADD INDEX `wall_id` USING BTREE (wall_id);
+
+# Changing table posts_polls_options fields, indexes
+ALTER TABLE `posts_polls_options`
+	MODIFY COLUMN `poll_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `option_id`,
+	ADD INDEX `poll_id` USING BTREE (poll_id);
+
+# Changing table posts_jobs fields, indexes
+ALTER TABLE `posts_jobs`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `job_id`,
+	MODIFY COLUMN `category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `post_id`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `category_id` USING BTREE (category_id);
+
+# Changing table forums_threads fields, indexes
+ALTER TABLE `forums_threads`
+	MODIFY COLUMN `forum_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `thread_id`,
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `forum_id`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `forum_id` USING BTREE (forum_id);
+
+# Changing table emojis fields
+ALTER TABLE `emojis`
+	ADD COLUMN `unicode_char` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `emoji_id`,
+	MODIFY COLUMN `pattern` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `unicode_char`;
+
+# Changing table users_gifts fields, indexes
+ALTER TABLE `users_gifts`
+	MODIFY COLUMN `from_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `id`,
+	MODIFY COLUMN `to_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `from_user_id`,
+	MODIFY COLUMN `gift_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `to_user_id`,
+	ADD INDEX `to_user_id` USING BTREE (to_user_id),
+	ADD INDEX `gift_id` USING BTREE (gift_id),
+	ADD INDEX `from_user_id` USING BTREE (from_user_id);
+
+# Changing table funding_payments fields, indexes
+ALTER TABLE `funding_payments`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `payment_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table users_pokes indexes
+ALTER TABLE `users_pokes`
+	ADD UNIQUE INDEX `user_id_poked_id` USING BTREE (user_id, poked_id),
+	DROP INDEX `user_id_blocked_id`;
+
+# Changing table posts_photos fields, indexes
+ALTER TABLE `posts_photos`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `photo_id`,
+	MODIFY COLUMN `album_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `post_id`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `album_id` USING BTREE (album_id);
+
+# Changing table developers_apps fields, indexes
+ALTER TABLE `developers_apps`
+	MODIFY COLUMN `app_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `app_id`,
+	MODIFY COLUMN `app_category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `app_user_id`,
+	ADD INDEX `app_user_id` USING BTREE (app_user_id),
+	ADD INDEX `app_category_id` USING BTREE (app_category_id);
+
+# Changing table posts_comments fields, indexes
+ALTER TABLE `posts_comments`
+	MODIFY COLUMN `node_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `comment_id`,
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `node_type`,
+	ADD INDEX `node_id` USING BTREE (node_id, node_type),
+	ADD INDEX `user_id` USING BTREE (user_id, user_type);
+
+# Changing table posts_photos_albums fields, indexes
+ALTER TABLE `posts_photos_albums`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `album_id`,
+	MODIFY COLUMN `group_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `in_group`,
+	MODIFY COLUMN `event_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `in_event`,
+	ADD INDEX `user_id` USING BTREE (user_id, user_type),
+	ADD INDEX `event_id` USING BTREE (event_id),
+	ADD INDEX `group_id` USING BTREE (group_id);
+
+# Changing table affiliates_payments fields, indexes
+ALTER TABLE `affiliates_payments`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `payment_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table offers_categories fields, indexes
+ALTER TABLE `offers_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table posts_products fields, indexes
+ALTER TABLE `posts_products`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `product_id`,
+	MODIFY COLUMN `currency_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `price`,
+	MODIFY COLUMN `category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `currency_id`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `category_id` USING BTREE (category_id),
+	ADD INDEX `currency_id` USING BTREE (currency_id);
+
+# Changing table custom_fields_values fields, indexes
+ALTER TABLE `custom_fields_values`
+	MODIFY COLUMN `value` MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `value_id`,
+	ADD INDEX `value` USING BTREE (value(20));
+
+# Changing table hashtags fields, indexes
+ALTER TABLE `hashtags`
+	MODIFY COLUMN `hashtag` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `hashtag_id`,
+	ADD INDEX `hashtag` USING BTREE (hashtag);
+
+# Changing table posts_files fields, indexes
+ALTER TABLE `posts_files`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `file_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table posts_media fields, indexes
+ALTER TABLE `posts_media`
+	MODIFY COLUMN `post_id` INT(10) NOT NULL  COMMENT '' AFTER `media_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table users_sessions fields, indexes
+ALTER TABLE `users_sessions`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `session_date`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table coinpayments_transactions fields, indexes
+ALTER TABLE `coinpayments_transactions`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `transaction_txn_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table forums fields, indexes
+ALTER TABLE `forums`
+	MODIFY COLUMN `forum_section` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `forum_id`,
+	ADD INDEX `forum_section` USING BTREE (forum_section);
+
+# Changing table bank_transfers fields, indexes
+ALTER TABLE `bank_transfers`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `transfer_id`,
+	MODIFY COLUMN `package_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `handle`,
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `package_id`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `package_id` USING BTREE (package_id),
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table events fields, indexes
+ALTER TABLE `events`
+	MODIFY COLUMN `event_admin` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `event_privacy`,
+	MODIFY COLUMN `event_category` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `event_admin`,
+	MODIFY COLUMN `event_cover_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `event_cover`,
+	MODIFY COLUMN `event_album_covers` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `event_cover_position`,
+	MODIFY COLUMN `event_album_timeline` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `event_album_covers`,
+	ADD INDEX `event_album_timeline` USING BTREE (event_album_timeline),
+	ADD INDEX `event_category` USING BTREE (event_category),
+	ADD INDEX `event_admin` USING BTREE (event_admin),
+	ADD INDEX `event_cover_id` USING BTREE (event_cover_id),
+	ADD INDEX `event_album_covers` USING BTREE (event_album_covers);
+
+# Changing table developers_apps_categories fields, indexes
+ALTER TABLE `developers_apps_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table groups fields, indexes
+ALTER TABLE `groups`
+	MODIFY COLUMN `group_admin` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `group_privacy`,
+	MODIFY COLUMN `group_category` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `group_admin`,
+	MODIFY COLUMN `group_picture_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `group_picture`,
+	MODIFY COLUMN `group_cover_id` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `group_cover`,
+	MODIFY COLUMN `group_album_pictures` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `group_cover_position`,
+	MODIFY COLUMN `group_album_covers` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `group_album_pictures`,
+	MODIFY COLUMN `group_album_timeline` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `group_album_covers`,
+	ADD INDEX `group_album_pictures` USING BTREE (group_album_pictures),
+	ADD INDEX `group_category` USING BTREE (group_category),
+	ADD INDEX `group_album_timeline` USING BTREE (group_album_timeline),
+	ADD INDEX `group_album_covers` USING BTREE (group_album_covers),
+	ADD INDEX `group_picture_id` USING BTREE (group_picture_id),
+	ADD INDEX `group_admin` USING BTREE (group_admin),
+	ADD INDEX `group_cover_id` USING BTREE (group_cover_id);
+
+# Changing table events_categories fields, indexes
+ALTER TABLE `events_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table stories_media fields, indexes
+ALTER TABLE `stories_media`
+	MODIFY COLUMN `story_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `media_id`,
+	ADD INDEX `story_id` USING BTREE (story_id);
+
+# Changing table posts_audios fields, indexes
+ALTER TABLE `posts_audios`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `audio_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table points_payments fields, indexes
+ALTER TABLE `points_payments`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `payment_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table reports fields, indexes
+ALTER TABLE `reports`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `report_id`,
+	MODIFY COLUMN `node_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `user_id`,
+	MODIFY COLUMN `category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `node_type`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `category_id` USING BTREE (category_id),
+	ADD INDEX `node_id` USING BTREE (node_id);
+
+# Changing table ads_campaigns fields, indexes
+ALTER TABLE `ads_campaigns`
+	MODIFY COLUMN `campaign_user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `campaign_id`,
+	ADD INDEX `campaign_user_id` USING BTREE (campaign_user_id);
+
+# Changing table posts_jobs_applications fields, indexes
+ALTER TABLE `posts_jobs_applications`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `application_id`,
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `post_id`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table market_categories fields, indexes
+ALTER TABLE `market_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table posts_offers fields, indexes
+ALTER TABLE `posts_offers`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `offer_id`,
+	MODIFY COLUMN `category_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `post_id`,
+	ADD INDEX `post_id` USING BTREE (post_id),
+	ADD INDEX `category_id` USING BTREE (category_id);
+
+# Changing table blacklist fields, indexes
+ALTER TABLE `blacklist`
+	MODIFY COLUMN `node_value` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL  COMMENT '' AFTER `node_type`,
+	ADD INDEX `node_value` USING BTREE (node_value);
+
+# Changing table wallet_transactions fields, indexes
+ALTER TABLE `wallet_transactions`
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `transaction_id`,
+	ADD INDEX `user_id` USING BTREE (user_id);
+
+# Changing table posts_links fields, indexes
+ALTER TABLE `posts_links`
+	MODIFY COLUMN `post_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `link_id`,
+	ADD INDEX `post_id` USING BTREE (post_id);
+
+# Changing table invitation_codes fields, indexes
+ALTER TABLE `invitation_codes`
+	MODIFY COLUMN `created_by` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `code`,
+	MODIFY COLUMN `used_by` INT(10) UNSIGNED NULL DEFAULT NULL  COMMENT '' AFTER `created_date`,
+	ADD INDEX `used_by` USING BTREE (used_by),
+	ADD INDEX `created_by` USING BTREE (created_by);
+
+# Changing table blogs_categories fields, indexes
+ALTER TABLE `blogs_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Changing table conversations_messages fields, indexes
+ALTER TABLE `conversations_messages`
+	MODIFY COLUMN `conversation_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `message_id`,
+	MODIFY COLUMN `user_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `conversation_id`,
+	ADD INDEX `user_id` USING BTREE (user_id),
+	ADD INDEX `conversation_id` USING BTREE (conversation_id);
+
+# Changing table reports_categories fields, indexes
+ALTER TABLE `reports_categories`
+	MODIFY COLUMN `category_parent_id` INT(10) UNSIGNED NOT NULL  COMMENT '' AFTER `category_id`,
+	ADD INDEX `category_parent_id` USING BTREE (category_parent_id);
+
+# Empty table emojis
+DROP TABLE `emojis`;
+
+--
+-- Table structure for table `emojis`
+--
+
+CREATE TABLE `emojis` (
+  `emoji_id` int(10) UNSIGNED NOT NULL,
+  `unicode_char` varchar(256) NOT NULL,
+  `pattern` varchar(256) NOT NULL,
+  `class` varchar(256) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+
+--
+-- Indexes for table `emojis`
+--
+ALTER TABLE `emojis`
+  ADD PRIMARY KEY (`emoji_id`);
+
+--
+-- Dumping data for table `emojis`
+--
+
+# Insert new emojis
+INSERT INTO `emojis` (`emoji_id`, `unicode_char`, `pattern`, `class`) VALUES
+(1, '😀', ':grinning-face:', 'grinning-face'),
+(2, '😃', ':grinning-face-with-big-eyes:', 'grinning-face-with-big-eyes'),
+(3, '😄', ':grinning-face-with-smiling-eyes:', 'grinning-face-with-smiling-eyes'),
+(4, '😁', ':beaming-face-with-smiling-eyes:', 'beaming-face-with-smiling-eyes'),
+(5, '😆', ':grinning-squinting-face:', 'grinning-squinting-face'),
+(6, '😅', ':grinning-face-with-sweat:', 'grinning-face-with-sweat'),
+(7, '🤣', ':rolling-on-the-floor-laughing:', 'rolling-on-the-floor-laughing'),
+(8, '😂', ':face-with-tears-of-joy:', 'face-with-tears-of-joy'),
+(9, '🙂', ':slightly-smiling-face:', 'slightly-smiling-face'),
+(10, '🙃', ':upside-down-face:', 'upside-down-face'),
+(11, '😉', ':winking-face:', 'winking-face'),
+(12, '😊', ':smiling-face-with-smiling-eyes:', 'smiling-face-with-smiling-eyes'),
+(13, '😇', ':smiling-face-with-halo:', 'smiling-face-with-halo'),
+(14, '🥰', ':smiling-face-with-hearts:', 'smiling-face-with-hearts'),
+(15, '😍', ':smiling-face-with-heart-eyes:', 'smiling-face-with-heart-eyes'),
+(16, '🤩', ':star-struck:', 'star-struck'),
+(17, '😘', ':face-blowing-a-kiss:', 'face-blowing-a-kiss'),
+(18, '😗', ':kissing-face:', 'kissing-face'),
+(19, '☺️', ':smiling-face:', 'smiling-face'),
+(20, '😚', ':kissing-face-with-closed-eyes:', 'kissing-face-with-closed-eyes'),
+(21, '😙', ':kissing-face-with-smiling-eyes:', 'kissing-face-with-smiling-eyes'),
+(22, '🥲', ':smiling-face-with-tear:', 'smiling-face-with-tear'),
+(23, '😋', ':face-savoring-food:', 'face-savoring-food'),
+(24, '😛', ':face-with-tongue:', 'face-with-tongue'),
+(25, '😜', ':winking-face-with-tongue:', 'winking-face-with-tongue'),
+(26, '🤪', ':zany-face:', 'zany-face'),
+(27, '😝', ':squinting-face-with-tongue:', 'squinting-face-with-tongue'),
+(28, '🤑', ':money-mouth-face:', 'money-mouth-face'),
+(29, '🤗', ':hugging-face:', 'hugging-face'),
+(30, '🤭', ':face-with-hand-over-mouth:', 'face-with-hand-over-mouth'),
+(31, '🤫', ':shushing-face:', 'shushing-face'),
+(32, '🤔', ':thinking-face:', 'thinking-face'),
+(33, '🤐', ':zipper-mouth-face:', 'zipper-mouth-face'),
+(34, '🤨', ':face-with-raised-eyebrow:', 'face-with-raised-eyebrow'),
+(35, '😐', ':neutral-face:', 'neutral-face'),
+(36, '😑', ':expressionless-face:', 'expressionless-face'),
+(37, '😶', ':face-without-mouth:', 'face-without-mouth'),
+(39, '😏', ':smirking-face:', 'smirking-face'),
+(40, '😒', ':unamused-face:', 'unamused-face'),
+(41, '🙄', ':face-with-rolling-eyes:', 'face-with-rolling-eyes'),
+(42, '😬', ':grimacing-face:', 'grimacing-face'),
+(44, '🤥', ':lying-face:', 'lying-face'),
+(45, '😌', ':relieved-face:', 'relieved-face'),
+(46, '😔', ':pensive-face:', 'pensive-face'),
+(47, '😪', ':sleepy-face:', 'sleepy-face'),
+(48, '🤤', ':drooling-face:', 'drooling-face'),
+(49, '😴', ':sleeping-face:', 'sleeping-face'),
+(50, '😷', ':face-with-medical-mask:', 'face-with-medical-mask'),
+(51, '🤒', ':face-with-thermometer:', 'face-with-thermometer'),
+(52, '🤕', ':face-with-head-bandage:', 'face-with-head-bandage'),
+(53, '🤢', ':nauseated-face:', 'nauseated-face'),
+(54, '🤮', ':face-vomiting:', 'face-vomiting'),
+(55, '🤧', ':sneezing-face:', 'sneezing-face'),
+(56, '🥵', ':hot-face:', 'hot-face'),
+(57, '🥶', ':cold-face:', 'cold-face'),
+(58, '🥴', ':woozy-face:', 'woozy-face'),
+(59, '😵', ':knocked-out-face:', 'knocked-out-face'),
+(61, '🤯', ':exploding-head:', 'exploding-head'),
+(62, '🤠', ':cowboy-hat-face:', 'cowboy-hat-face'),
+(63, '🥳', ':partying-face:', 'partying-face'),
+(64, '🥸', ':disguised-face:', 'disguised-face'),
+(65, '😎', ':smiling-face-with-sunglasses:', 'smiling-face-with-sunglasses'),
+(66, '🤓', ':nerd-face:', 'nerd-face'),
+(67, '🧐', ':face-with-monocle:', 'face-with-monocle'),
+(68, '😕', ':confused-face:', 'confused-face'),
+(69, '😟', ':worried-face:', 'worried-face'),
+(70, '🙁', ':slightly-frowning-face:', 'slightly-frowning-face'),
+(71, '☹️', ':frowning-face:', 'frowning-face'),
+(72, '😮', ':face-with-open-mouth:', 'face-with-open-mouth'),
+(73, '😯', ':hushed-face:', 'hushed-face'),
+(74, '😲', ':astonished-face:', 'astonished-face'),
+(75, '😳', ':flushed-face:', 'flushed-face'),
+(76, '🥺', ':pleading-face:', 'pleading-face'),
+(77, '😦', ':frowning-face-with-open-mouth:', 'frowning-face-with-open-mouth'),
+(78, '😧', ':anguished-face:', 'anguished-face'),
+(79, '😨', ':fearful-face:', 'fearful-face'),
+(80, '😰', ':anxious-face-with-sweat:', 'anxious-face-with-sweat'),
+(81, '😥', ':sad-but-relieved-face:', 'sad-but-relieved-face'),
+(82, '😢', ':crying-face:', 'crying-face'),
+(83, '😭', ':loudly-crying-face:', 'loudly-crying-face'),
+(84, '😱', ':face-screaming-in-fear:', 'face-screaming-in-fear'),
+(85, '😖', ':confounded-face:', 'confounded-face'),
+(86, '😣', ':persevering-face:', 'persevering-face'),
+(87, '😞', ':disappointed-face:', 'disappointed-face'),
+(88, '😓', ':downcast-face-with-sweat:', 'downcast-face-with-sweat'),
+(89, '😩', ':weary-face:', 'weary-face'),
+(90, '😫', ':tired-face:', 'tired-face'),
+(91, '🥱', ':yawning-face:', 'yawning-face'),
+(92, '😤', ':face-with-steam-from-nose:', 'face-with-steam-from-nose'),
+(93, '😡', ':pouting-face:', 'pouting-face'),
+(94, '😠', ':angry-face:', 'angry-face'),
+(95, '🤬', ':face-with-symbols-on-mouth:', 'face-with-symbols-on-mouth'),
+(96, '😈', ':smiling-face-with-horns:', 'smiling-face-with-horns'),
+(97, '👿', ':angry-face-with-horns:', 'angry-face-with-horns'),
+(98, '💀', ':skull:', 'skull'),
+(99, '☠️', ':skull-and-crossbones:', 'skull-and-crossbones'),
+(100, '💩', ':pile-of-poo:', 'pile-of-poo'),
+(101, '🤡', ':clown-face:', 'clown-face'),
+(102, '👹', ':ogre:', 'ogre'),
+(103, '👺', ':goblin:', 'goblin'),
+(104, '👻', ':ghost:', 'ghost'),
+(105, '👽', ':alien:', 'alien'),
+(106, '👾', ':alien-monster:', 'alien-monster'),
+(107, '🤖', ':robot:', 'robot'),
+(108, '😺', ':grinning-cat:', 'grinning-cat'),
+(109, '😸', ':grinning-cat-with-smiling-eyes:', 'grinning-cat-with-smiling-eyes'),
+(110, '😹', ':cat-with-tears-of-joy:', 'cat-with-tears-of-joy'),
+(111, '😻', ':smiling-cat-with-heart-eyes:', 'smiling-cat-with-heart-eyes'),
+(112, '😼', ':cat-with-wry-smile:', 'cat-with-wry-smile'),
+(113, '😽', ':kissing-cat:', 'kissing-cat'),
+(114, '🙀', ':weary-cat:', 'weary-cat'),
+(115, '😿', ':crying-cat:', 'crying-cat'),
+(116, '😾', ':pouting-cat:', 'pouting-cat'),
+(117, '🙈', ':see-no-evil-monkey:', 'see-no-evil-monkey'),
+(118, '🙉', ':hear-no-evil-monkey:', 'hear-no-evil-monkey'),
+(119, '🙊', ':speak-no-evil-monkey:', 'speak-no-evil-monkey'),
+(120, '💋', ':kiss-mark:', 'kiss-mark'),
+(121, '💌', ':love-letter:', 'love-letter'),
+(122, '💘', ':heart-with-arrow:', 'heart-with-arrow'),
+(123, '💝', ':heart-with-ribbon:', 'heart-with-ribbon'),
+(124, '💖', ':sparkling-heart:', 'sparkling-heart'),
+(125, '💗', ':growing-heart:', 'growing-heart'),
+(126, '💓', ':beating-heart:', 'beating-heart'),
+(127, '💞', ':revolving-hearts:', 'revolving-hearts'),
+(128, '💕', ':two-hearts:', 'two-hearts'),
+(129, '💟', ':heart-decoration:', 'heart-decoration'),
+(130, '❣️', ':heart-exclamation:', 'heart-exclamation'),
+(131, '💔', ':broken-heart:', 'broken-heart'),
+(132, '❤️‍🔥', ':heart-on-fire:', 'heart-on-fire'),
+(133, '❤️‍🩹', ':mending-heart:', 'mending-heart'),
+(134, '❤️', ':red-heart:', 'red-heart'),
+(135, '🧡', ':orange-heart:', 'orange-heart'),
+(136, '💛', ':yellow-heart:', 'yellow-heart'),
+(137, '💚', ':green-heart:', 'green-heart'),
+(138, '💙', ':blue-heart:', 'blue-heart'),
+(139, '💜', ':purple-heart:', 'purple-heart'),
+(140, '🤎', ':brown-heart:', 'brown-heart'),
+(141, '🖤', ':black-heart:', 'black-heart'),
+(142, '🤍', ':white-heart:', 'white-heart'),
+(143, '💯', ':hundred-points:', 'hundred-points'),
+(144, '💢', ':anger-symbol:', 'anger-symbol'),
+(145, '💥', ':collision:', 'collision'),
+(146, '💫', ':dizzy:', 'dizzy'),
+(147, '💦', ':sweat-droplets:', 'sweat-droplets'),
+(148, '💨', ':dashing-away:', 'dashing-away'),
+(149, '🕳️', ':hole:', 'hole'),
+(150, '💣', ':bomb:', 'bomb'),
+(151, '💬', ':speech-balloon:', 'speech-balloon'),
+(153, '🗨️', ':left-speech-bubble:', 'left-speech-bubble'),
+(154, '🗯️', ':right-anger-bubble:', 'right-anger-bubble'),
+(155, '💭', ':thought-balloon:', 'thought-balloon'),
+(156, '💤', ':zzz:', 'zzz'),
+(157, '👋', ':waving-hand:', 'waving-hand'),
+(158, '🤚', ':raised-back-of-hand:', 'raised-back-of-hand'),
+(159, '🖐️', ':hand-with-fingers-splayed:', 'hand-with-fingers-splayed'),
+(160, '✋', ':raised-hand:', 'raised-hand'),
+(161, '🖖', ':vulcan-salute:', 'vulcan-salute'),
+(162, '👌', ':ok-hand:', 'ok-hand'),
+(163, '🤌', ':pinched-fingers:', 'pinched-fingers'),
+(164, '🤏', ':pinching-hand:', 'pinching-hand'),
+(165, '✌️', ':victory-hand:', 'victory-hand'),
+(166, '🤞', ':crossed-fingers:', 'crossed-fingers'),
+(167, '🤟', ':love-you-gesture:', 'love-you-gesture'),
+(168, '🤘', ':sign-of-the-horns:', 'sign-of-the-horns'),
+(169, '🤙', ':call-me-hand:', 'call-me-hand'),
+(170, '👈', ':backhand-index-pointing-left:', 'backhand-index-pointing-left'),
+(171, '👉', ':backhand-index-pointing-right:', 'backhand-index-pointing-right'),
+(172, '👆', ':backhand-index-pointing-up:', 'backhand-index-pointing-up'),
+(173, '🖕', ':middle-finger:', 'middle-finger'),
+(174, '👇', ':backhand-index-pointing-down:', 'backhand-index-pointing-down'),
+(175, '☝️', ':index-pointing-up:', 'index-pointing-up'),
+(176, '👍', ':thumbs-up:', 'thumbs-up'),
+(177, '👎', ':thumbs-down:', 'thumbs-down'),
+(178, '✊', ':raised-fist:', 'raised-fist'),
+(179, '👊', ':oncoming-fist:', 'oncoming-fist'),
+(180, '🤛', ':left-facing-fist:', 'left-facing-fist'),
+(181, '🤜', ':right-facing-fist:', 'right-facing-fist'),
+(182, '👏', ':clapping-hands:', 'clapping-hands'),
+(183, '🙌', ':raising-hands:', 'raising-hands'),
+(184, '👐', ':open-hands:', 'open-hands'),
+(185, '🤲', ':palms-up-together:', 'palms-up-together'),
+(186, '🤝', ':handshake:', 'handshake'),
+(187, '🙏', ':folded-hands:', 'folded-hands'),
+(188, '✍️', ':writing-hand:', 'writing-hand'),
+(189, '💅', ':nail-polish:', 'nail-polish'),
+(190, '🤳', ':selfie:', 'selfie'),
+(191, '💪', ':flexed-biceps:', 'flexed-biceps'),
+(192, '🦾', ':mechanical-arm:', 'mechanical-arm'),
+(193, '🦿', ':mechanical-leg:', 'mechanical-leg'),
+(194, '🦵', ':leg:', 'leg'),
+(195, '🦶', ':foot:', 'foot'),
+(196, '👂', ':ear:', 'ear'),
+(197, '🦻', ':ear-with-hearing-aid:', 'ear-with-hearing-aid'),
+(198, '👃', ':nose:', 'nose'),
+(199, '🧠', ':brain:', 'brain'),
+(200, '🫀', ':anatomical-heart:', 'anatomical-heart'),
+(201, '🫁', ':lungs:', 'lungs'),
+(202, '🦷', ':tooth:', 'tooth'),
+(203, '🦴', ':bone:', 'bone'),
+(204, '👀', ':eyes:', 'eyes'),
+(205, '👁️', ':eye:', 'eye'),
+(206, '👅', ':tongue:', 'tongue'),
+(207, '👄', ':mouth:', 'mouth'),
+(208, '👶', ':baby:', 'baby'),
+(209, '🧒', ':child:', 'child'),
+(210, '👦', ':boy:', 'boy'),
+(211, '👧', ':girl:', 'girl'),
+(212, '🧑', ':person:', 'person'),
+(213, '👱', ':person-blond-hair:', 'person-blond-hair'),
+(214, '👨', ':man:', 'man'),
+(215, '🧔', ':person-beard:', 'person-beard'),
+(216, '🧔‍♂️', ':man-beard:', 'man-beard'),
+(217, '🧔‍♀️', ':woman-beard:', 'woman-beard'),
+(218, '👨‍🦰', ':man-red-hair:', 'man-red-hair'),
+(219, '👨‍🦱', ':man-curly-hair:', 'man-curly-hair'),
+(220, '👨‍🦳', ':man-white-hair:', 'man-white-hair'),
+(221, '👨‍🦲', ':man-bald:', 'man-bald'),
+(222, '👩', ':woman:', 'woman'),
+(223, '👩‍🦰', ':woman-red-hair:', 'woman-red-hair'),
+(224, '🧑‍🦰', ':person-red-hair:', 'person-red-hair'),
+(225, '👩‍🦱', ':woman-curly-hair:', 'woman-curly-hair'),
+(226, '🧑‍🦱', ':person-curly-hair:', 'person-curly-hair'),
+(227, '👩‍🦳', ':woman-white-hair:', 'woman-white-hair'),
+(228, '🧑‍🦳', ':person-white-hair:', 'person-white-hair'),
+(229, '👩‍🦲', ':woman-bald:', 'woman-bald'),
+(230, '🧑‍🦲', ':person-bald:', 'person-bald'),
+(231, '👱‍♀️', ':woman-blond-hair:', 'woman-blond-hair'),
+(232, '👱‍♂️', ':man-blond-hair:', 'man-blond-hair'),
+(233, '🧓', ':older-person:', 'older-person'),
+(234, '👴', ':old-man:', 'old-man'),
+(235, '👵', ':old-woman:', 'old-woman'),
+(236, '🙍', ':person-frowning:', 'person-frowning'),
+(237, '🙍‍♂️', ':man-frowning:', 'man-frowning'),
+(238, '🙍‍♀️', ':woman-frowning:', 'woman-frowning'),
+(239, '🙎', ':person-pouting:', 'person-pouting'),
+(240, '🙎‍♂️', ':man-pouting:', 'man-pouting'),
+(241, '🙎‍♀️', ':woman-pouting:', 'woman-pouting'),
+(242, '🙅', ':person-gesturing-no:', 'person-gesturing-no'),
+(243, '🙅‍♂️', ':man-gesturing-no:', 'man-gesturing-no'),
+(244, '🙅‍♀️', ':woman-gesturing-no:', 'woman-gesturing-no'),
+(245, '🙆', ':person-gesturing-ok:', 'person-gesturing-ok'),
+(246, '🙆‍♂️', ':man-gesturing-ok:', 'man-gesturing-ok'),
+(247, '🙆‍♀️', ':woman-gesturing-ok:', 'woman-gesturing-ok'),
+(248, '💁', ':person-tipping-hand:', 'person-tipping-hand'),
+(249, '💁‍♂️', ':man-tipping-hand:', 'man-tipping-hand'),
+(250, '💁‍♀️', ':woman-tipping-hand:', 'woman-tipping-hand'),
+(251, '🙋', ':person-raising-hand:', 'person-raising-hand'),
+(252, '🙋‍♂️', ':man-raising-hand:', 'man-raising-hand'),
+(253, '🙋‍♀️', ':woman-raising-hand:', 'woman-raising-hand'),
+(254, '🧏', ':deaf-person:', 'deaf-person'),
+(255, '🧏‍♂️', ':deaf-man:', 'deaf-man'),
+(256, '🧏‍♀️', ':deaf-woman:', 'deaf-woman'),
+(257, '🙇', ':person-bowing:', 'person-bowing'),
+(258, '🙇‍♂️', ':man-bowing:', 'man-bowing'),
+(259, '🙇‍♀️', ':woman-bowing:', 'woman-bowing'),
+(260, '🤦', ':person-facepalming:', 'person-facepalming'),
+(261, '🤦‍♂️', ':man-facepalming:', 'man-facepalming'),
+(262, '🤦‍♀️', ':woman-facepalming:', 'woman-facepalming'),
+(263, '🤷', ':person-shrugging:', 'person-shrugging'),
+(264, '🤷‍♂️', ':man-shrugging:', 'man-shrugging'),
+(265, '🤷‍♀️', ':woman-shrugging:', 'woman-shrugging'),
+(266, '🧑‍⚕️', ':health-worker:', 'health-worker'),
+(267, '👨‍⚕️', ':man-health-worker:', 'man-health-worker'),
+(268, '👩‍⚕️', ':woman-health-worker:', 'woman-health-worker'),
+(269, '🧑‍🎓', ':student:', 'student'),
+(270, '👨‍🎓', ':man-student:', 'man-student'),
+(271, '👩‍🎓', ':woman-student:', 'woman-student'),
+(272, '🧑‍🏫', ':teacher:', 'teacher'),
+(273, '👨‍🏫', ':man-teacher:', 'man-teacher'),
+(274, '👩‍🏫', ':woman-teacher:', 'woman-teacher'),
+(275, '🧑‍⚖️', ':judge:', 'judge'),
+(276, '👨‍⚖️', ':man-judge:', 'man-judge'),
+(277, '👩‍⚖️', ':woman-judge:', 'woman-judge'),
+(278, '🧑‍🌾', ':farmer:', 'farmer'),
+(279, '👨‍🌾', ':man-farmer:', 'man-farmer'),
+(280, '👩‍🌾', ':woman-farmer:', 'woman-farmer'),
+(281, '🧑‍🍳', ':cook:', 'cook'),
+(282, '👨‍🍳', ':man-cook:', 'man-cook'),
+(283, '👩‍🍳', ':woman-cook:', 'woman-cook'),
+(284, '🧑‍🔧', ':mechanic:', 'mechanic'),
+(285, '👨‍🔧', ':man-mechanic:', 'man-mechanic'),
+(286, '👩‍🔧', ':woman-mechanic:', 'woman-mechanic'),
+(287, '🧑‍🏭', ':factory-worker:', 'factory-worker'),
+(288, '👨‍🏭', ':man-factory-worker:', 'man-factory-worker'),
+(289, '👩‍🏭', ':woman-factory-worker:', 'woman-factory-worker'),
+(290, '🧑‍💼', ':office-worker:', 'office-worker'),
+(291, '👨‍💼', ':man-office-worker:', 'man-office-worker'),
+(292, '👩‍💼', ':woman-office-worker:', 'woman-office-worker'),
+(293, '🧑‍🔬', ':scientist:', 'scientist'),
+(294, '👨‍🔬', ':man-scientist:', 'man-scientist'),
+(295, '👩‍🔬', ':woman-scientist:', 'woman-scientist'),
+(296, '🧑‍💻', ':technologist:', 'technologist'),
+(297, '👨‍💻', ':man-technologist:', 'man-technologist'),
+(298, '👩‍💻', ':woman-technologist:', 'woman-technologist'),
+(299, '🧑‍🎤', ':singer:', 'singer'),
+(300, '👨‍🎤', ':man-singer:', 'man-singer'),
+(301, '👩‍🎤', ':woman-singer:', 'woman-singer'),
+(302, '🧑‍🎨', ':artist:', 'artist'),
+(303, '👨‍🎨', ':man-artist:', 'man-artist'),
+(304, '👩‍🎨', ':woman-artist:', 'woman-artist'),
+(305, '🧑‍✈️', ':pilot:', 'pilot'),
+(306, '👨‍✈️', ':man-pilot:', 'man-pilot'),
+(307, '👩‍✈️', ':woman-pilot:', 'woman-pilot'),
+(308, '🧑‍🚀', ':astronaut:', 'astronaut'),
+(309, '👨‍🚀', ':man-astronaut:', 'man-astronaut'),
+(310, '👩‍🚀', ':woman-astronaut:', 'woman-astronaut'),
+(311, '🧑‍🚒', ':firefighter:', 'firefighter'),
+(312, '👨‍🚒', ':man-firefighter:', 'man-firefighter'),
+(313, '👩‍🚒', ':woman-firefighter:', 'woman-firefighter'),
+(314, '👮', ':police-officer:', 'police-officer'),
+(315, '👮‍♂️', ':man-police-officer:', 'man-police-officer'),
+(316, '👮‍♀️', ':woman-police-officer:', 'woman-police-officer'),
+(317, '🕵️', ':detective:', 'detective'),
+(318, '🕵️‍♂️', ':man-detective:', 'man-detective'),
+(319, '🕵️‍♀️', ':woman-detective:', 'woman-detective'),
+(320, '💂', ':guard:', 'guard'),
+(321, '💂‍♂️', ':man-guard:', 'man-guard'),
+(322, '💂‍♀️', ':woman-guard:', 'woman-guard'),
+(323, '🥷', ':ninja:', 'ninja'),
+(324, '👷', ':construction-worker:', 'construction-worker'),
+(325, '👷‍♂️', ':man-construction-worker:', 'man-construction-worker'),
+(326, '👷‍♀️', ':woman-construction-worker:', 'woman-construction-worker'),
+(327, '🤴', ':prince:', 'prince'),
+(328, '👸', ':princess:', 'princess'),
+(329, '👳', ':person-wearing-turban:', 'person-wearing-turban'),
+(330, '👳‍♂️', ':man-wearing-turban:', 'man-wearing-turban'),
+(331, '👳‍♀️', ':woman-wearing-turban:', 'woman-wearing-turban'),
+(332, '👲', ':person-with-skullcap:', 'person-with-skullcap'),
+(333, '🧕', ':woman-with-headscarf:', 'woman-with-headscarf'),
+(334, '🤵', ':person-in-tuxedo:', 'person-in-tuxedo'),
+(335, '🤵‍♂️', ':man-in-tuxedo:', 'man-in-tuxedo'),
+(336, '🤵‍♀️', ':woman-in-tuxedo:', 'woman-in-tuxedo'),
+(337, '👰', ':person-with-veil:', 'person-with-veil'),
+(338, '👰‍♂️', ':man-with-veil:', 'man-with-veil'),
+(339, '👰‍♀️', ':woman-with-veil:', 'woman-with-veil'),
+(340, '🤰', ':pregnant-woman:', 'pregnant-woman'),
+(341, '🤱', ':breast-feeding:', 'breast-feeding'),
+(342, '👩‍🍼', ':woman-feeding-baby:', 'woman-feeding-baby'),
+(343, '👨‍🍼', ':man-feeding-baby:', 'man-feeding-baby'),
+(344, '🧑‍🍼', ':person-feeding-baby:', 'person-feeding-baby'),
+(345, '👼', ':baby-angel:', 'baby-angel'),
+(346, '🎅', ':santa-claus:', 'santa-claus'),
+(348, '🧑‍🎄', ':mx-claus:', 'mx-claus'),
+(349, '🦸', ':superhero:', 'superhero'),
+(350, '🦸‍♂️', ':man-superhero:', 'man-superhero'),
+(351, '🦸‍♀️', ':woman-superhero:', 'woman-superhero'),
+(352, '🦹', ':supervillain:', 'supervillain'),
+(353, '🦹‍♂️', ':man-supervillain:', 'man-supervillain'),
+(354, '🦹‍♀️', ':woman-supervillain:', 'woman-supervillain'),
+(355, '🧙', ':mage:', 'mage'),
+(356, '🧙‍♂️', ':man-mage:', 'man-mage'),
+(357, '🧙‍♀️', ':woman-mage:', 'woman-mage'),
+(358, '🧚', ':fairy:', 'fairy'),
+(359, '🧚‍♂️', ':man-fairy:', 'man-fairy'),
+(360, '🧚‍♀️', ':woman-fairy:', 'woman-fairy'),
+(361, '🧛', ':vampire:', 'vampire'),
+(362, '🧛‍♂️', ':man-vampire:', 'man-vampire'),
+(363, '🧛‍♀️', ':woman-vampire:', 'woman-vampire'),
+(364, '🧜', ':merperson:', 'merperson'),
+(365, '🧜‍♂️', ':merman:', 'merman'),
+(366, '🧜‍♀️', ':mermaid:', 'mermaid'),
+(367, '🧝', ':elf:', 'elf'),
+(368, '🧝‍♂️', ':man-elf:', 'man-elf'),
+(369, '🧝‍♀️', ':woman-elf:', 'woman-elf'),
+(370, '🧞', ':genie:', 'genie'),
+(371, '🧞‍♂️', ':man-genie:', 'man-genie'),
+(372, '🧞‍♀️', ':woman-genie:', 'woman-genie'),
+(373, '🧟', ':zombie:', 'zombie'),
+(374, '🧟‍♂️', ':man-zombie:', 'man-zombie'),
+(375, '🧟‍♀️', ':woman-zombie:', 'woman-zombie'),
+(376, '💆', ':person-getting-massage:', 'person-getting-massage'),
+(377, '💆‍♂️', ':man-getting-massage:', 'man-getting-massage'),
+(378, '💆‍♀️', ':woman-getting-massage:', 'woman-getting-massage'),
+(379, '💇', ':person-getting-haircut:', 'person-getting-haircut'),
+(380, '💇‍♂️', ':man-getting-haircut:', 'man-getting-haircut'),
+(381, '💇‍♀️', ':woman-getting-haircut:', 'woman-getting-haircut'),
+(382, '🚶', ':person-walking:', 'person-walking'),
+(383, '🚶‍♂️', ':man-walking:', 'man-walking'),
+(384, '🚶‍♀️', ':woman-walking:', 'woman-walking'),
+(385, '🧍', ':person-standing:', 'person-standing'),
+(386, '🧍‍♂️', ':man-standing:', 'man-standing'),
+(387, '🧍‍♀️', ':woman-standing:', 'woman-standing'),
+(388, '🧎', ':person-kneeling:', 'person-kneeling'),
+(389, '🧎‍♂️', ':man-kneeling:', 'man-kneeling'),
+(390, '🧎‍♀️', ':woman-kneeling:', 'woman-kneeling'),
+(391, '🧑‍🦯', ':person-with-white-cane:', 'person-with-white-cane'),
+(392, '👨‍🦯', ':man-with-white-cane:', 'man-with-white-cane'),
+(393, '👩‍🦯', ':woman-with-white-cane:', 'woman-with-white-cane'),
+(394, '🧑‍🦼', ':person-in-motorized-wheelchair:', 'person-in-motorized-wheelchair'),
+(395, '👨‍🦼', ':man-in-motorized-wheelchair:', 'man-in-motorized-wheelchair'),
+(396, '👩‍🦼', ':woman-in-motorized-wheelchair:', 'woman-in-motorized-wheelchair'),
+(397, '🧑‍🦽', ':person-in-manual-wheelchair:', 'person-in-manual-wheelchair'),
+(398, '👨‍🦽', ':man-in-manual-wheelchair:', 'man-in-manual-wheelchair'),
+(399, '👩‍🦽', ':woman-in-manual-wheelchair:', 'woman-in-manual-wheelchair'),
+(400, '🏃', ':person-running:', 'person-running'),
+(401, '🏃‍♂️', ':man-running:', 'man-running'),
+(402, '🏃‍♀️', ':woman-running:', 'woman-running'),
+(403, '💃', ':woman-dancing:', 'woman-dancing'),
+(404, '🕺', ':man-dancing:', 'man-dancing'),
+(405, '🕴️', ':person-in-suit-levitating:', 'person-in-suit-levitating'),
+(406, '👯', ':people-with-bunny-ears:', 'people-with-bunny-ears'),
+(407, '👯‍♂️', ':men-with-bunny-ears:', 'men-with-bunny-ears'),
+(408, '👯‍♀️', ':women-with-bunny-ears:', 'women-with-bunny-ears'),
+(409, '🧖', ':person-in-steamy-room:', 'person-in-steamy-room'),
+(410, '🧖‍♂️', ':man-in-steamy-room:', 'man-in-steamy-room'),
+(411, '🧖‍♀️', ':woman-in-steamy-room:', 'woman-in-steamy-room'),
+(412, '🧗', ':person-climbing:', 'person-climbing'),
+(413, '🧗‍♂️', ':man-climbing:', 'man-climbing'),
+(414, '🧗‍♀️', ':woman-climbing:', 'woman-climbing'),
+(415, '🤺', ':person-fencing:', 'person-fencing'),
+(416, '🏇', ':horse-racing:', 'horse-racing'),
+(417, '⛷️', ':skier:', 'skier'),
+(418, '🏂', ':snowboarder:', 'snowboarder'),
+(419, '🏌️', ':person-golfing:', 'person-golfing'),
+(420, '🏌️‍♂️', ':man-golfing:', 'man-golfing'),
+(421, '🏌️‍♀️', ':woman-golfing:', 'woman-golfing'),
+(422, '🏄', ':person-surfing:', 'person-surfing'),
+(423, '🏄‍♂️', ':man-surfing:', 'man-surfing'),
+(424, '🏄‍♀️', ':woman-surfing:', 'woman-surfing'),
+(425, '🚣', ':person-rowing-boat:', 'person-rowing-boat'),
+(426, '🚣‍♂️', ':man-rowing-boat:', 'man-rowing-boat'),
+(427, '🚣‍♀️', ':woman-rowing-boat:', 'woman-rowing-boat'),
+(428, '🏊', ':person-swimming:', 'person-swimming'),
+(429, '🏊‍♂️', ':man-swimming:', 'man-swimming'),
+(430, '🏊‍♀️', ':woman-swimming:', 'woman-swimming'),
+(431, '⛹️', ':person-bouncing-ball:', 'person-bouncing-ball'),
+(432, '⛹️‍♂️', ':man-bouncing-ball:', 'man-bouncing-ball'),
+(433, '⛹️‍♀️', ':woman-bouncing-ball:', 'woman-bouncing-ball'),
+(434, '🏋️', ':person-lifting-weights:', 'person-lifting-weights'),
+(435, '🏋️‍♂️', ':man-lifting-weights:', 'man-lifting-weights'),
+(436, '🏋️‍♀️', ':woman-lifting-weights:', 'woman-lifting-weights'),
+(437, '🚴', ':person-biking:', 'person-biking'),
+(438, '🚴‍♂️', ':man-biking:', 'man-biking'),
+(439, '🚴‍♀️', ':woman-biking:', 'woman-biking'),
+(440, '🚵', ':person-mountain-biking:', 'person-mountain-biking'),
+(441, '🚵‍♂️', ':man-mountain-biking:', 'man-mountain-biking'),
+(442, '🚵‍♀️', ':woman-mountain-biking:', 'woman-mountain-biking'),
+(443, '🤸', ':person-cartwheeling:', 'person-cartwheeling'),
+(444, '🤸‍♂️', ':man-cartwheeling:', 'man-cartwheeling'),
+(445, '🤸‍♀️', ':woman-cartwheeling:', 'woman-cartwheeling'),
+(446, '🤼', ':people-wrestling:', 'people-wrestling'),
+(447, '🤼‍♂️', ':men-wrestling:', 'men-wrestling'),
+(448, '🤼‍♀️', ':women-wrestling:', 'women-wrestling'),
+(449, '🤽', ':person-playing-water-polo:', 'person-playing-water-polo'),
+(450, '🤽‍♂️', ':man-playing-water-polo:', 'man-playing-water-polo'),
+(451, '🤽‍♀️', ':woman-playing-water-polo:', 'woman-playing-water-polo'),
+(452, '🤾', ':person-playing-handball:', 'person-playing-handball'),
+(453, '🤾‍♂️', ':man-playing-handball:', 'man-playing-handball'),
+(454, '🤾‍♀️', ':woman-playing-handball:', 'woman-playing-handball'),
+(455, '🤹', ':person-juggling:', 'person-juggling'),
+(456, '🤹‍♂️', ':man-juggling:', 'man-juggling'),
+(457, '🤹‍♀️', ':woman-juggling:', 'woman-juggling'),
+(458, '🧘', ':person-in-lotus-position:', 'person-in-lotus-position'),
+(459, '🧘‍♂️', ':man-in-lotus-position:', 'man-in-lotus-position'),
+(460, '🧘‍♀️', ':woman-in-lotus-position:', 'woman-in-lotus-position'),
+(461, '🛀', ':person-taking-bath:', 'person-taking-bath'),
+(462, '🛌', ':person-in-bed:', 'person-in-bed'),
+(463, '🧑‍🤝‍🧑', ':people-holding-hands:', 'people-holding-hands'),
+(464, '👭', ':women-holding-hands:', 'women-holding-hands'),
+(465, '👫', ':woman-and-man-holding-hands:', 'woman-and-man-holding-hands'),
+(466, '👬', ':men-holding-hands:', 'men-holding-hands'),
+(467, '💏', ':kiss:', 'kiss'),
+(468, '👩‍❤️‍💋‍👨', ':kiss-woman-man:', 'kiss-woman-man'),
+(469, '👨‍❤️‍💋‍👨', ':kiss-man-man:', 'kiss-man-man'),
+(470, '👩‍❤️‍💋‍👩', ':kiss-woman-woman:', 'kiss-woman-woman'),
+(471, '💑', ':couple-with-heart:', 'couple-with-heart'),
+(472, '👩‍❤️‍👨', ':couple-with-heart-woman-man:', 'couple-with-heart-woman-man'),
+(473, '👨‍❤️‍👨', ':couple-with-heart-man-man:', 'couple-with-heart-man-man'),
+(474, '👩‍❤️‍👩', ':couple-with-heart-woman-woman:', 'couple-with-heart-woman-woman'),
+(475, '👪', ':family:', 'family'),
+(476, '👨‍👩‍👦', ':family-man-woman-boy:', 'family-man-woman-boy'),
+(477, '👨‍👩‍👧', ':family-man-woman-girl:', 'family-man-woman-girl'),
+(478, '👨‍👩‍👧‍👦', ':family-man-woman-girl-boy:', 'family-man-woman-girl-boy'),
+(479, '👨‍👩‍👦‍👦', ':family-man-woman-boy-boy:', 'family-man-woman-boy-boy'),
+(480, '👨‍👩‍👧‍👧', ':family-man-woman-girl-girl:', 'family-man-woman-girl-girl'),
+(481, '👨‍👨‍👦', ':family-man-man-boy:', 'family-man-man-boy'),
+(482, '👨‍👨‍👧', ':family-man-man-girl:', 'family-man-man-girl'),
+(483, '👨‍👨‍👧‍👦', ':family-man-man-girl-boy:', 'family-man-man-girl-boy'),
+(484, '👨‍👨‍👦‍👦', ':family-man-man-boy-boy:', 'family-man-man-boy-boy'),
+(485, '👨‍👨‍👧‍👧', ':family-man-man-girl-girl:', 'family-man-man-girl-girl'),
+(486, '👩‍👩‍👦', ':family-woman-woman-boy:', 'family-woman-woman-boy'),
+(487, '👩‍👩‍👧', ':family-woman-woman-girl:', 'family-woman-woman-girl'),
+(488, '👩‍👩‍👧‍👦', ':family-woman-woman-girl-boy:', 'family-woman-woman-girl-boy'),
+(489, '👩‍👩‍👦‍👦', ':family-woman-woman-boy-boy:', 'family-woman-woman-boy-boy'),
+(490, '👩‍👩‍👧‍👧', ':family-woman-woman-girl-girl:', 'family-woman-woman-girl-girl'),
+(491, '👨‍👦', ':family-man-boy:', 'family-man-boy'),
+(492, '👨‍👦‍👦', ':family-man-boy-boy:', 'family-man-boy-boy'),
+(493, '👨‍👧', ':family-man-girl:', 'family-man-girl'),
+(494, '👨‍👧‍👦', ':family-man-girl-boy:', 'family-man-girl-boy'),
+(495, '👨‍👧‍👧', ':family-man-girl-girl:', 'family-man-girl-girl'),
+(496, '👩‍👦', ':family-woman-boy:', 'family-woman-boy'),
+(497, '👩‍👦‍👦', ':family-woman-boy-boy:', 'family-woman-boy-boy'),
+(498, '👩‍👧', ':family-woman-girl:', 'family-woman-girl'),
+(499, '👩‍👧‍👦', ':family-woman-girl-boy:', 'family-woman-girl-boy'),
+(500, '👩‍👧‍👧', ':family-woman-girl-girl:', 'family-woman-girl-girl'),
+(501, '🗣️', ':speaking-head:', 'speaking-head'),
+(502, '👤', ':bust-in-silhouette:', 'bust-in-silhouette'),
+(503, '👥', ':busts-in-silhouette:', 'busts-in-silhouette'),
+(504, '🫂', ':people-hugging:', 'people-hugging'),
+(505, '👣', ':footprints:', 'footprints'),
+(506, '🦰', ':red-hair:', 'red-hair'),
+(507, '🦱', ':curly-hair:', 'curly-hair'),
+(508, '🦳', ':white-hair:', 'white-hair'),
+(509, '🦲', ':bald:', 'bald'),
+(510, '🐵', ':monkey-face:', 'monkey-face'),
+(511, '🐒', ':monkey:', 'monkey'),
+(512, '🦍', ':gorilla:', 'gorilla'),
+(513, '🦧', ':orangutan:', 'orangutan'),
+(514, '🐶', ':dog-face:', 'dog-face'),
+(515, '🐕', ':dog:', 'dog'),
+(516, '🦮', ':guide-dog:', 'guide-dog'),
+(517, '🐕‍🦺', ':service-dog:', 'service-dog'),
+(518, '🐩', ':poodle:', 'poodle'),
+(519, '🐺', ':wolf:', 'wolf'),
+(520, '🦊', ':fox:', 'fox'),
+(521, '🦝', ':raccoon:', 'raccoon'),
+(522, '🐱', ':cat-face:', 'cat-face'),
+(523, '🐈', ':cat:', 'cat'),
+(524, '🐈‍⬛', ':black-cat:', 'black-cat'),
+(525, '🦁', ':lion:', 'lion'),
+(526, '🐯', ':tiger-face:', 'tiger-face'),
+(527, '🐅', ':tiger:', 'tiger'),
+(528, '🐆', ':leopard:', 'leopard'),
+(529, '🐴', ':horse-face:', 'horse-face'),
+(530, '🐎', ':horse:', 'horse'),
+(531, '🦄', ':unicorn:', 'unicorn'),
+(532, '🦓', ':zebra:', 'zebra'),
+(533, '🦌', ':deer:', 'deer'),
+(534, '🦬', ':bison:', 'bison'),
+(535, '🐮', ':cow-face:', 'cow-face'),
+(536, '🐂', ':ox:', 'ox'),
+(537, '🐃', ':water-buffalo:', 'water-buffalo'),
+(538, '🐄', ':cow:', 'cow'),
+(539, '🐷', ':pig-face:', 'pig-face'),
+(540, '🐖', ':pig:', 'pig'),
+(541, '🐗', ':boar:', 'boar'),
+(542, '🐽', ':pig-nose:', 'pig-nose'),
+(543, '🐏', ':ram:', 'ram'),
+(544, '🐑', ':ewe:', 'ewe'),
+(545, '🐐', ':goat:', 'goat'),
+(546, '🐪', ':camel:', 'camel'),
+(547, '🐫', ':two-hump-camel:', 'two-hump-camel'),
+(548, '🦙', ':llama:', 'llama'),
+(549, '🦒', ':giraffe:', 'giraffe'),
+(550, '🐘', ':elephant:', 'elephant'),
+(551, '🦣', ':mammoth:', 'mammoth'),
+(552, '🦏', ':rhinoceros:', 'rhinoceros'),
+(553, '🦛', ':hippopotamus:', 'hippopotamus'),
+(554, '🐭', ':mouse-face:', 'mouse-face'),
+(555, '🐁', ':mouse:', 'mouse'),
+(556, '🐀', ':rat:', 'rat'),
+(557, '🐹', ':hamster:', 'hamster'),
+(558, '🐰', ':rabbit-face:', 'rabbit-face'),
+(559, '🐇', ':rabbit:', 'rabbit'),
+(560, '🐿️', ':chipmunk:', 'chipmunk'),
+(561, '🦫', ':beaver:', 'beaver'),
+(562, '🦔', ':hedgehog:', 'hedgehog'),
+(563, '🦇', ':bat:', 'bat'),
+(564, '🐻', ':bear:', 'bear'),
+(565, '🐻‍❄️', ':polar-bear:', 'polar-bear'),
+(566, '🐨', ':koala:', 'koala'),
+(567, '🐼', ':panda:', 'panda'),
+(568, '🦥', ':sloth:', 'sloth'),
+(569, '🦦', ':otter:', 'otter'),
+(570, '🦨', ':skunk:', 'skunk'),
+(571, '🦘', ':kangaroo:', 'kangaroo'),
+(572, '🦡', ':badger:', 'badger'),
+(573, '🐾', ':paw-prints:', 'paw-prints'),
+(574, '🦃', ':turkey:', 'turkey'),
+(575, '🐔', ':chicken:', 'chicken'),
+(576, '🐓', ':rooster:', 'rooster'),
+(577, '🐣', ':hatching-chick:', 'hatching-chick'),
+(578, '🐤', ':baby-chick:', 'baby-chick'),
+(579, '🐥', ':front-facing-baby-chick:', 'front-facing-baby-chick'),
+(580, '🐦', ':bird:', 'bird'),
+(581, '🐧', ':penguin:', 'penguin'),
+(582, '🕊️', ':dove:', 'dove'),
+(583, '🦅', ':eagle:', 'eagle'),
+(584, '🦆', ':duck:', 'duck'),
+(585, '🦢', ':swan:', 'swan'),
+(586, '🦉', ':owl:', 'owl'),
+(587, '🦤', ':dodo:', 'dodo'),
+(588, '🪶', ':feather:', 'feather'),
+(589, '🦩', ':flamingo:', 'flamingo'),
+(590, '🦚', ':peacock:', 'peacock'),
+(591, '🦜', ':parrot:', 'parrot'),
+(592, '🐸', ':frog:', 'frog'),
+(593, '🐊', ':crocodile:', 'crocodile'),
+(594, '🐢', ':turtle:', 'turtle'),
+(595, '🦎', ':lizard:', 'lizard'),
+(596, '🐍', ':snake:', 'snake'),
+(597, '🐲', ':dragon-face:', 'dragon-face'),
+(598, '🐉', ':dragon:', 'dragon'),
+(599, '🦕', ':sauropod:', 'sauropod'),
+(600, '🦖', ':t-rex:', 't-rex'),
+(601, '🐳', ':spouting-whale:', 'spouting-whale'),
+(602, '🐋', ':whale:', 'whale'),
+(603, '🐬', ':dolphin:', 'dolphin'),
+(604, '🦭', ':seal:', 'seal'),
+(605, '🐟', ':fish:', 'fish'),
+(606, '🐠', ':tropical-fish:', 'tropical-fish'),
+(607, '🐡', ':blowfish:', 'blowfish'),
+(608, '🦈', ':shark:', 'shark'),
+(609, '🐙', ':octopus:', 'octopus'),
+(610, '🐚', ':spiral-shell:', 'spiral-shell'),
+(611, '🐌', ':snail:', 'snail'),
+(612, '🦋', ':butterfly:', 'butterfly'),
+(613, '🐛', ':bug:', 'bug'),
+(614, '🐜', ':ant:', 'ant'),
+(615, '🐝', ':honeybee:', 'honeybee'),
+(616, '🪲', ':beetle:', 'beetle'),
+(617, '🐞', ':lady-beetle:', 'lady-beetle'),
+(618, '🦗', ':cricket:', 'cricket'),
+(619, '🪳', ':cockroach:', 'cockroach'),
+(620, '🕷️', ':spider:', 'spider'),
+(621, '🕸️', ':spider-web:', 'spider-web'),
+(622, '🦂', ':scorpion:', 'scorpion'),
+(623, '🦟', ':mosquito:', 'mosquito'),
+(624, '🪰', ':fly:', 'fly'),
+(625, '🪱', ':worm:', 'worm'),
+(626, '🦠', ':microbe:', 'microbe'),
+(627, '💐', ':bouquet:', 'bouquet'),
+(628, '🌸', ':cherry-blossom:', 'cherry-blossom'),
+(629, '💮', ':white-flower:', 'white-flower'),
+(630, '🏵️', ':rosette:', 'rosette'),
+(631, '🌹', ':rose:', 'rose'),
+(632, '🥀', ':wilted-flower:', 'wilted-flower'),
+(633, '🌺', ':hibiscus:', 'hibiscus'),
+(634, '🌻', ':sunflower:', 'sunflower'),
+(635, '🌼', ':blossom:', 'blossom'),
+(636, '🌷', ':tulip:', 'tulip'),
+(637, '🌱', ':seedling:', 'seedling'),
+(638, '🪴', ':potted-plant:', 'potted-plant'),
+(639, '🌲', ':evergreen-tree:', 'evergreen-tree'),
+(640, '🌳', ':deciduous-tree:', 'deciduous-tree'),
+(641, '🌴', ':palm-tree:', 'palm-tree'),
+(642, '🌵', ':cactus:', 'cactus'),
+(643, '🌾', ':sheaf-of-rice:', 'sheaf-of-rice'),
+(644, '🌿', ':herb:', 'herb'),
+(645, '☘️', ':shamrock:', 'shamrock'),
+(646, '🍀', ':four-leaf-clover:', 'four-leaf-clover'),
+(647, '🍁', ':maple-leaf:', 'maple-leaf'),
+(648, '🍂', ':fallen-leaf:', 'fallen-leaf'),
+(649, '🍃', ':leaf-fluttering-in-wind:', 'leaf-fluttering-in-wind'),
+(650, '🍇', ':grapes:', 'grapes'),
+(651, '🍈', ':melon:', 'melon'),
+(652, '🍉', ':watermelon:', 'watermelon'),
+(653, '🍊', ':tangerine:', 'tangerine'),
+(654, '🍋', ':lemon:', 'lemon'),
+(655, '🍌', ':banana:', 'banana'),
+(656, '🍍', ':pineapple:', 'pineapple'),
+(657, '🥭', ':mango:', 'mango'),
+(658, '🍎', ':red-apple:', 'red-apple'),
+(659, '🍏', ':green-apple:', 'green-apple'),
+(660, '🍐', ':pear:', 'pear'),
+(661, '🍑', ':peach:', 'peach'),
+(662, '🍒', ':cherries:', 'cherries'),
+(663, '🍓', ':strawberry:', 'strawberry'),
+(664, '🫐', ':blueberries:', 'blueberries'),
+(665, '🥝', ':kiwi-fruit:', 'kiwi-fruit'),
+(666, '🍅', ':tomato:', 'tomato'),
+(667, '🫒', ':olive:', 'olive'),
+(668, '🥥', ':coconut:', 'coconut'),
+(669, '🥑', ':avocado:', 'avocado'),
+(670, '🍆', ':eggplant:', 'eggplant'),
+(671, '🥔', ':potato:', 'potato'),
+(672, '🥕', ':carrot:', 'carrot'),
+(673, '🌽', ':ear-of-corn:', 'ear-of-corn'),
+(674, '🌶️', ':hot-pepper:', 'hot-pepper'),
+(675, '🫑', ':bell-pepper:', 'bell-pepper'),
+(676, '🥒', ':cucumber:', 'cucumber'),
+(677, '🥬', ':leafy-green:', 'leafy-green'),
+(678, '🥦', ':broccoli:', 'broccoli'),
+(679, '🧄', ':garlic:', 'garlic'),
+(680, '🧅', ':onion:', 'onion'),
+(681, '🍄', ':mushroom:', 'mushroom'),
+(682, '🥜', ':peanuts:', 'peanuts'),
+(683, '🌰', ':chestnut:', 'chestnut'),
+(684, '🍞', ':bread:', 'bread'),
+(685, '🥐', ':croissant:', 'croissant'),
+(686, '🥖', ':baguette-bread:', 'baguette-bread'),
+(687, '🫓', ':flatbread:', 'flatbread'),
+(688, '🥨', ':pretzel:', 'pretzel'),
+(689, '🥯', ':bagel:', 'bagel'),
+(690, '🥞', ':pancakes:', 'pancakes'),
+(691, '🧇', ':waffle:', 'waffle'),
+(692, '🧀', ':cheese-wedge:', 'cheese-wedge'),
+(693, '🍖', ':meat-on-bone:', 'meat-on-bone'),
+(694, '🍗', ':poultry-leg:', 'poultry-leg'),
+(695, '🥩', ':cut-of-meat:', 'cut-of-meat'),
+(696, '🥓', ':bacon:', 'bacon'),
+(697, '🍔', ':hamburger:', 'hamburger'),
+(698, '🍟', ':french-fries:', 'french-fries'),
+(699, '🍕', ':pizza:', 'pizza'),
+(700, '🌭', ':hot-dog:', 'hot-dog'),
+(701, '🥪', ':sandwich:', 'sandwich'),
+(702, '🌮', ':taco:', 'taco'),
+(703, '🌯', ':burrito:', 'burrito'),
+(704, '🫔', ':tamale:', 'tamale'),
+(705, '🥙', ':stuffed-flatbread:', 'stuffed-flatbread'),
+(706, '🧆', ':falafel:', 'falafel'),
+(707, '🥚', ':egg:', 'egg'),
+(708, '🍳', ':cooking:', 'cooking'),
+(709, '🥘', ':shallow-pan-of-food:', 'shallow-pan-of-food'),
+(710, '🍲', ':pot-of-food:', 'pot-of-food'),
+(711, '🫕', ':fondue:', 'fondue'),
+(712, '🥣', ':bowl-with-spoon:', 'bowl-with-spoon'),
+(713, '🥗', ':green-salad:', 'green-salad'),
+(714, '🍿', ':popcorn:', 'popcorn'),
+(715, '🧈', ':butter:', 'butter'),
+(716, '🧂', ':salt:', 'salt'),
+(717, '🥫', ':canned-food:', 'canned-food'),
+(718, '🍱', ':bento-box:', 'bento-box'),
+(719, '🍘', ':rice-cracker:', 'rice-cracker'),
+(720, '🍙', ':rice-ball:', 'rice-ball'),
+(721, '🍚', ':cooked-rice:', 'cooked-rice'),
+(722, '🍛', ':curry-rice:', 'curry-rice'),
+(723, '🍜', ':steaming-bowl:', 'steaming-bowl'),
+(724, '🍝', ':spaghetti:', 'spaghetti'),
+(725, '🍠', ':roasted-sweet-potato:', 'roasted-sweet-potato'),
+(726, '🍢', ':oden:', 'oden'),
+(727, '🍣', ':sushi:', 'sushi'),
+(728, '🍤', ':fried-shrimp:', 'fried-shrimp'),
+(729, '🍥', ':fish-cake-with-swirl:', 'fish-cake-with-swirl'),
+(730, '🥮', ':moon-cake:', 'moon-cake'),
+(731, '🍡', ':dango:', 'dango'),
+(732, '🥟', ':dumpling:', 'dumpling'),
+(733, '🥠', ':fortune-cookie:', 'fortune-cookie'),
+(734, '🥡', ':takeout-box:', 'takeout-box'),
+(735, '🦀', ':crab:', 'crab'),
+(736, '🦞', ':lobster:', 'lobster'),
+(737, '🦐', ':shrimp:', 'shrimp'),
+(738, '🦑', ':squid:', 'squid'),
+(739, '🦪', ':oyster:', 'oyster'),
+(740, '🍦', ':soft-ice-cream:', 'soft-ice-cream'),
+(741, '🍧', ':shaved-ice:', 'shaved-ice'),
+(742, '🍨', ':ice-cream:', 'ice-cream'),
+(743, '🍩', ':doughnut:', 'doughnut'),
+(744, '🍪', ':cookie:', 'cookie'),
+(745, '🎂', ':birthday-cake:', 'birthday-cake'),
+(746, '🍰', ':shortcake:', 'shortcake'),
+(747, '🧁', ':cupcake:', 'cupcake'),
+(748, '🥧', ':pie:', 'pie'),
+(749, '🍫', ':chocolate-bar:', 'chocolate-bar'),
+(750, '🍬', ':candy:', 'candy'),
+(751, '🍭', ':lollipop:', 'lollipop'),
+(752, '🍮', ':custard:', 'custard'),
+(753, '🍯', ':honey-pot:', 'honey-pot'),
+(754, '🍼', ':baby-bottle:', 'baby-bottle'),
+(755, '🥛', ':glass-of-milk:', 'glass-of-milk'),
+(756, '☕', ':hot-beverage:', 'hot-beverage'),
+(757, '🫖', ':teapot:', 'teapot'),
+(758, '🍵', ':teacup-without-handle:', 'teacup-without-handle'),
+(759, '🍶', ':sake:', 'sake'),
+(760, '🍾', ':bottle-with-popping-cork:', 'bottle-with-popping-cork'),
+(761, '🍷', ':wine-glass:', 'wine-glass'),
+(762, '🍸', ':cocktail-glass:', 'cocktail-glass'),
+(763, '🍹', ':tropical-drink:', 'tropical-drink'),
+(764, '🍺', ':beer-mug:', 'beer-mug'),
+(765, '🍻', ':clinking-beer-mugs:', 'clinking-beer-mugs'),
+(766, '🥂', ':clinking-glasses:', 'clinking-glasses'),
+(767, '🥃', ':tumbler-glass:', 'tumbler-glass'),
+(768, '🥤', ':cup-with-straw:', 'cup-with-straw'),
+(769, '🧋', ':bubble-tea:', 'bubble-tea'),
+(770, '🧃', ':beverage-box:', 'beverage-box'),
+(771, '🧉', ':mate:', 'mate'),
+(772, '🧊', ':ice:', 'ice'),
+(773, '🥢', ':chopsticks:', 'chopsticks'),
+(774, '🍽️', ':fork-and-knife-with-plate:', 'fork-and-knife-with-plate'),
+(775, '🍴', ':fork-and-knife:', 'fork-and-knife'),
+(776, '🥄', ':spoon:', 'spoon'),
+(777, '🔪', ':kitchen-knife:', 'kitchen-knife'),
+(778, '🏺', ':amphora:', 'amphora'),
+(779, '🌍', ':globe-showing-europe-africa:', 'globe-showing-europe-africa'),
+(780, '🌎', ':globe-showing-americas:', 'globe-showing-americas'),
+(781, '🌏', ':globe-showing-asia-australia:', 'globe-showing-asia-australia'),
+(782, '🌐', ':globe-with-meridians:', 'globe-with-meridians'),
+(783, '🗺️', ':world-map:', 'world-map'),
+(784, '🗾', ':map-of-japan:', 'map-of-japan'),
+(785, '🧭', ':compass:', 'compass'),
+(786, '🏔️', ':snow-capped-mountain:', 'snow-capped-mountain'),
+(787, '⛰️', ':mountain:', 'mountain'),
+(788, '🌋', ':volcano:', 'volcano'),
+(789, '🗻', ':mount-fuji:', 'mount-fuji'),
+(790, '🏕️', ':camping:', 'camping'),
+(791, '🏖️', ':beach-with-umbrella:', 'beach-with-umbrella'),
+(792, '🏜️', ':desert:', 'desert'),
+(793, '🏝️', ':desert-island:', 'desert-island'),
+(794, '🏞️', ':national-park:', 'national-park'),
+(795, '🏟️', ':stadium:', 'stadium'),
+(796, '🏛️', ':classical-building:', 'classical-building'),
+(797, '🏗️', ':building-construction:', 'building-construction'),
+(798, '🧱', ':brick:', 'brick'),
+(799, '🪨', ':rock:', 'rock'),
+(800, '🪵', ':wood:', 'wood'),
+(801, '🛖', ':hut:', 'hut'),
+(802, '🏘️', ':houses:', 'houses'),
+(803, '🏚️', ':derelict-house:', 'derelict-house'),
+(804, '🏠', ':house:', 'house'),
+(805, '🏡', ':house-with-garden:', 'house-with-garden'),
+(806, '🏢', ':office-building:', 'office-building'),
+(807, '🏣', ':japanese-post-office:', 'japanese-post-office'),
+(808, '🏤', ':post-office:', 'post-office'),
+(809, '🏥', ':hospital:', 'hospital'),
+(810, '🏦', ':bank:', 'bank'),
+(811, '🏨', ':hotel:', 'hotel'),
+(812, '🏩', ':love-hotel:', 'love-hotel'),
+(813, '🏪', ':convenience-store:', 'convenience-store'),
+(814, '🏫', ':school:', 'school'),
+(815, '🏬', ':department-store:', 'department-store'),
+(816, '🏭', ':factory:', 'factory'),
+(817, '🏯', ':japanese-castle:', 'japanese-castle'),
+(818, '🏰', ':castle:', 'castle'),
+(819, '💒', ':wedding:', 'wedding'),
+(820, '🗼', ':tokyo-tower:', 'tokyo-tower'),
+(821, '🗽', ':statue-of-liberty:', 'statue-of-liberty'),
+(822, '⛪', ':church:', 'church'),
+(823, '🕌', ':mosque:', 'mosque'),
+(824, '🛕', ':hindu-temple:', 'hindu-temple'),
+(825, '🕍', ':synagogue:', 'synagogue'),
+(826, '⛩️', ':shinto-shrine:', 'shinto-shrine'),
+(827, '🕋', ':kaaba:', 'kaaba'),
+(828, '⛲', ':fountain:', 'fountain'),
+(829, '⛺', ':tent:', 'tent'),
+(830, '🌁', ':foggy:', 'foggy'),
+(831, '🌃', ':night-with-stars:', 'night-with-stars'),
+(832, '🏙️', ':cityscape:', 'cityscape'),
+(833, '🌄', ':sunrise-over-mountains:', 'sunrise-over-mountains'),
+(834, '🌅', ':sunrise:', 'sunrise'),
+(835, '🌆', ':cityscape-at-dusk:', 'cityscape-at-dusk'),
+(836, '🌇', ':sunset:', 'sunset'),
+(837, '🌉', ':bridge-at-night:', 'bridge-at-night'),
+(838, '♨️', ':hot-springs:', 'hot-springs'),
+(839, '🎠', ':carousel-horse:', 'carousel-horse'),
+(840, '🎡', ':ferris-wheel:', 'ferris-wheel'),
+(841, '🎢', ':roller-coaster:', 'roller-coaster'),
+(842, '💈', ':barber-pole:', 'barber-pole'),
+(843, '🎪', ':circus-tent:', 'circus-tent'),
+(844, '🚂', ':locomotive:', 'locomotive'),
+(845, '🚃', ':railway-car:', 'railway-car'),
+(846, '🚄', ':high-speed-train:', 'high-speed-train'),
+(847, '🚅', ':bullet-train:', 'bullet-train'),
+(848, '🚆', ':train:', 'train'),
+(849, '🚇', ':metro:', 'metro'),
+(850, '🚈', ':light-rail:', 'light-rail'),
+(851, '🚉', ':station:', 'station'),
+(852, '🚊', ':tram:', 'tram'),
+(853, '🚝', ':monorail:', 'monorail'),
+(854, '🚞', ':mountain-railway:', 'mountain-railway'),
+(855, '🚋', ':tram-car:', 'tram-car'),
+(856, '🚌', ':bus:', 'bus'),
+(857, '🚍', ':oncoming-bus:', 'oncoming-bus'),
+(858, '🚎', ':trolleybus:', 'trolleybus'),
+(859, '🚐', ':minibus:', 'minibus'),
+(860, '🚑', ':ambulance:', 'ambulance'),
+(861, '🚒', ':fire-engine:', 'fire-engine'),
+(862, '🚓', ':police-car:', 'police-car'),
+(863, '🚔', ':oncoming-police-car:', 'oncoming-police-car'),
+(864, '🚕', ':taxi:', 'taxi'),
+(865, '🚖', ':oncoming-taxi:', 'oncoming-taxi'),
+(866, '🚗', ':automobile:', 'automobile'),
+(867, '🚘', ':oncoming-automobile:', 'oncoming-automobile'),
+(868, '🚙', ':sport-utility-vehicle:', 'sport-utility-vehicle'),
+(869, '🛻', ':pickup-truck:', 'pickup-truck'),
+(870, '🚚', ':delivery-truck:', 'delivery-truck'),
+(871, '🚛', ':articulated-lorry:', 'articulated-lorry'),
+(872, '🚜', ':tractor:', 'tractor'),
+(873, '🏎️', ':racing-car:', 'racing-car'),
+(874, '🏍️', ':motorcycle:', 'motorcycle'),
+(875, '🛵', ':motor-scooter:', 'motor-scooter'),
+(876, '🦽', ':manual-wheelchair:', 'manual-wheelchair'),
+(877, '🦼', ':motorized-wheelchair:', 'motorized-wheelchair'),
+(878, '🛺', ':auto-rickshaw:', 'auto-rickshaw'),
+(879, '🚲', ':bicycle:', 'bicycle'),
+(880, '🛴', ':kick-scooter:', 'kick-scooter'),
+(881, '🛹', ':skateboard:', 'skateboard'),
+(882, '🛼', ':roller-skate:', 'roller-skate'),
+(883, '🚏', ':bus-stop:', 'bus-stop'),
+(884, '🛣️', ':motorway:', 'motorway'),
+(885, '🛤️', ':railway-track:', 'railway-track'),
+(886, '🛢️', ':oil-drum:', 'oil-drum'),
+(887, '⛽', ':fuel-pump:', 'fuel-pump'),
+(888, '🚨', ':police-car-light:', 'police-car-light'),
+(889, '🚥', ':horizontal-traffic-light:', 'horizontal-traffic-light'),
+(890, '🚦', ':vertical-traffic-light:', 'vertical-traffic-light'),
+(891, '🛑', ':stop-sign:', 'stop-sign'),
+(892, '🚧', ':construction:', 'construction'),
+(893, '⚓', ':anchor:', 'anchor'),
+(894, '⛵', ':sailboat:', 'sailboat'),
+(895, '🛶', ':canoe:', 'canoe'),
+(896, '🚤', ':speedboat:', 'speedboat'),
+(897, '🛳️', ':passenger-ship:', 'passenger-ship'),
+(898, '⛴️', ':ferry:', 'ferry'),
+(899, '🛥️', ':motor-boat:', 'motor-boat'),
+(900, '🚢', ':ship:', 'ship'),
+(901, '✈️', ':airplane:', 'airplane'),
+(902, '🛩️', ':small-airplane:', 'small-airplane'),
+(903, '🛫', ':airplane-departure:', 'airplane-departure'),
+(904, '🛬', ':airplane-arrival:', 'airplane-arrival'),
+(905, '🪂', ':parachute:', 'parachute'),
+(906, '💺', ':seat:', 'seat'),
+(907, '🚁', ':helicopter:', 'helicopter'),
+(908, '🚟', ':suspension-railway:', 'suspension-railway'),
+(909, '🚠', ':mountain-cableway:', 'mountain-cableway'),
+(910, '🚡', ':aerial-tramway:', 'aerial-tramway'),
+(911, '🛰️', ':satellite:', 'satellite'),
+(912, '🚀', ':rocket:', 'rocket'),
+(913, '🛸', ':flying-saucer:', 'flying-saucer'),
+(914, '🛎️', ':bellhop-bell:', 'bellhop-bell'),
+(915, '🧳', ':luggage:', 'luggage'),
+(916, '⌛', ':hourglass-done:', 'hourglass-done'),
+(917, '⏳', ':hourglass-not-done:', 'hourglass-not-done'),
+(918, '⌚', ':watch:', 'watch'),
+(919, '⏰', ':alarm-clock:', 'alarm-clock'),
+(920, '⏱️', ':stopwatch:', 'stopwatch'),
+(921, '⏲️', ':timer-clock:', 'timer-clock'),
+(922, '🕰️', ':mantelpiece-clock:', 'mantelpiece-clock'),
+(923, '🕛', ':twelve-o-clock:', 'twelve-o-clock'),
+(924, '🕧', ':twelve-thirty:', 'twelve-thirty'),
+(925, '🕐', ':one-o-clock:', 'one-o-clock'),
+(926, '🕜', ':one-thirty:', 'one-thirty'),
+(927, '🕑', ':two-o-clock:', 'two-o-clock'),
+(928, '🕝', ':two-thirty:', 'two-thirty'),
+(929, '🕒', ':three-o-clock:', 'three-o-clock'),
+(930, '🕞', ':three-thirty:', 'three-thirty'),
+(931, '🕓', ':four-o-clock:', 'four-o-clock'),
+(932, '🕟', ':four-thirty:', 'four-thirty'),
+(933, '🕔', ':five-o-clock:', 'five-o-clock'),
+(934, '🕠', ':five-thirty:', 'five-thirty'),
+(935, '🕕', ':six-o-clock:', 'six-o-clock'),
+(936, '🕡', ':six-thirty:', 'six-thirty'),
+(937, '🕖', ':seven-o-clock:', 'seven-o-clock'),
+(938, '🕢', ':seven-thirty:', 'seven-thirty'),
+(939, '🕗', ':eight-o-clock:', 'eight-o-clock'),
+(940, '🕣', ':eight-thirty:', 'eight-thirty'),
+(941, '🕘', ':nine-o-clock:', 'nine-o-clock'),
+(942, '🕤', ':nine-thirty:', 'nine-thirty'),
+(943, '🕙', ':ten-o-clock:', 'ten-o-clock'),
+(944, '🕥', ':ten-thirty:', 'ten-thirty'),
+(945, '🕚', ':eleven-o-clock:', 'eleven-o-clock'),
+(946, '🕦', ':eleven-thirty:', 'eleven-thirty'),
+(947, '🌑', ':new-moon:', 'new-moon'),
+(948, '🌒', ':waxing-crescent-moon:', 'waxing-crescent-moon'),
+(949, '🌓', ':first-quarter-moon:', 'first-quarter-moon'),
+(950, '🌔', ':waxing-gibbous-moon:', 'waxing-gibbous-moon'),
+(951, '🌕', ':full-moon:', 'full-moon'),
+(952, '🌖', ':waning-gibbous-moon:', 'waning-gibbous-moon'),
+(953, '🌗', ':last-quarter-moon:', 'last-quarter-moon'),
+(954, '🌘', ':waning-crescent-moon:', 'waning-crescent-moon'),
+(955, '🌙', ':crescent-moon:', 'crescent-moon'),
+(956, '🌚', ':new-moon-face:', 'new-moon-face'),
+(957, '🌛', ':first-quarter-moon-face:', 'first-quarter-moon-face'),
+(958, '🌜', ':last-quarter-moon-face:', 'last-quarter-moon-face'),
+(959, '🌡️', ':thermometer:', 'thermometer'),
+(960, '☀️', ':sun:', 'sun'),
+(961, '🌝', ':full-moon-face:', 'full-moon-face'),
+(962, '🌞', ':sun-with-face:', 'sun-with-face'),
+(963, '🪐', ':ringed-planet:', 'ringed-planet'),
+(964, '⭐', ':star:', 'star'),
+(965, '🌟', ':glowing-star:', 'glowing-star'),
+(966, '🌠', ':shooting-star:', 'shooting-star'),
+(967, '🌌', ':milky-way:', 'milky-way'),
+(968, '☁️', ':cloud:', 'cloud'),
+(969, '⛅', ':sun-behind-cloud:', 'sun-behind-cloud'),
+(970, '⛈️', ':cloud-with-lightning-and-rain:', 'cloud-with-lightning-and-rain'),
+(971, '🌤️', ':sun-behind-small-cloud:', 'sun-behind-small-cloud'),
+(972, '🌥️', ':sun-behind-large-cloud:', 'sun-behind-large-cloud'),
+(973, '🌦️', ':sun-behind-rain-cloud:', 'sun-behind-rain-cloud'),
+(974, '🌧️', ':cloud-with-rain:', 'cloud-with-rain'),
+(975, '🌨️', ':cloud-with-snow:', 'cloud-with-snow'),
+(976, '🌩️', ':cloud-with-lightning:', 'cloud-with-lightning'),
+(977, '🌪️', ':tornado:', 'tornado'),
+(978, '🌫️', ':fog:', 'fog'),
+(979, '🌬️', ':wind-face:', 'wind-face'),
+(980, '🌀', ':cyclone:', 'cyclone'),
+(981, '🌈', ':rainbow:', 'rainbow'),
+(982, '🌂', ':closed-umbrella:', 'closed-umbrella'),
+(983, '☂️', ':umbrella:', 'umbrella'),
+(984, '☔', ':umbrella-with-rain-drops:', 'umbrella-with-rain-drops'),
+(985, '⛱️', ':umbrella-on-ground:', 'umbrella-on-ground'),
+(986, '⚡', ':high-voltage:', 'high-voltage'),
+(987, '❄️', ':snowflake:', 'snowflake'),
+(988, '☃️', ':snowman:', 'snowman'),
+(989, '⛄', ':snowman-without-snow:', 'snowman-without-snow'),
+(990, '☄️', ':comet:', 'comet'),
+(991, '🔥', ':fire:', 'fire'),
+(992, '💧', ':droplet:', 'droplet'),
+(993, '🌊', ':water-wave:', 'water-wave'),
+(994, '🎃', ':jack-o-lantern:', 'jack-o-lantern'),
+(995, '🎄', ':christmas-tree:', 'christmas-tree'),
+(996, '🎆', ':fireworks:', 'fireworks'),
+(997, '🎇', ':sparkler:', 'sparkler'),
+(998, '🧨', ':firecracker:', 'firecracker'),
+(999, '✨', ':sparkles:', 'sparkles'),
+(1000, '🎈', ':balloon:', 'balloon'),
+(1001, '🎉', ':party-popper:', 'party-popper'),
+(1002, '🎊', ':confetti-ball:', 'confetti-ball'),
+(1003, '🎋', ':tanabata-tree:', 'tanabata-tree'),
+(1004, '🎍', ':pine-decoration:', 'pine-decoration'),
+(1005, '🎎', ':japanese-dolls:', 'japanese-dolls'),
+(1006, '🎏', ':carp-streamer:', 'carp-streamer'),
+(1007, '🎐', ':wind-chime:', 'wind-chime'),
+(1008, '🎑', ':moon-viewing-ceremony:', 'moon-viewing-ceremony'),
+(1009, '🧧', ':red-envelope:', 'red-envelope'),
+(1010, '🎀', ':ribbon:', 'ribbon'),
+(1011, '🎁', ':wrapped-gift:', 'wrapped-gift'),
+(1012, '🎗️', ':reminder-ribbon:', 'reminder-ribbon'),
+(1013, '🎟️', ':admission-tickets:', 'admission-tickets'),
+(1014, '🎫', ':ticket:', 'ticket'),
+(1015, '🎖️', ':military-medal:', 'military-medal'),
+(1016, '🏆', ':trophy:', 'trophy'),
+(1017, '🏅', ':sports-medal:', 'sports-medal'),
+(1018, '🥇', ':1st-place-medal:', '1st-place-medal'),
+(1019, '🥈', ':2nd-place-medal:', '2nd-place-medal'),
+(1020, '🥉', ':3rd-place-medal:', '3rd-place-medal'),
+(1021, '⚽', ':soccer-ball:', 'soccer-ball'),
+(1022, '⚾', ':baseball:', 'baseball'),
+(1023, '🥎', ':softball:', 'softball'),
+(1024, '🏀', ':basketball:', 'basketball'),
+(1025, '🏐', ':volleyball:', 'volleyball'),
+(1026, '🏈', ':american-football:', 'american-football'),
+(1027, '🏉', ':rugby-football:', 'rugby-football'),
+(1028, '🎾', ':tennis:', 'tennis'),
+(1029, '🥏', ':flying-disc:', 'flying-disc'),
+(1030, '🎳', ':bowling:', 'bowling'),
+(1031, '🏏', ':cricket-game:', 'cricket-game'),
+(1032, '🏑', ':field-hockey:', 'field-hockey'),
+(1033, '🏒', ':ice-hockey:', 'ice-hockey'),
+(1034, '🥍', ':lacrosse:', 'lacrosse'),
+(1035, '🏓', ':ping-pong:', 'ping-pong'),
+(1036, '🏸', ':badminton:', 'badminton'),
+(1037, '🥊', ':boxing-glove:', 'boxing-glove'),
+(1038, '🥋', ':martial-arts-uniform:', 'martial-arts-uniform'),
+(1039, '🥅', ':goal-net:', 'goal-net'),
+(1040, '⛳', ':flag-in-hole:', 'flag-in-hole'),
+(1041, '⛸️', ':ice-skate:', 'ice-skate'),
+(1042, '🎣', ':fishing-pole:', 'fishing-pole'),
+(1043, '🤿', ':diving-mask:', 'diving-mask'),
+(1044, '🎽', ':running-shirt:', 'running-shirt'),
+(1045, '🎿', ':skis:', 'skis'),
+(1046, '🛷', ':sled:', 'sled'),
+(1047, '🥌', ':curling-stone:', 'curling-stone'),
+(1048, '🎯', ':bullseye:', 'bullseye'),
+(1049, '🪀', ':yo-yo:', 'yo-yo'),
+(1050, '🪁', ':kite:', 'kite'),
+(1051, '🎱', ':pool-8-ball:', 'pool-8-ball'),
+(1052, '🔮', ':crystal-ball:', 'crystal-ball'),
+(1053, '🪄', ':magic-wand:', 'magic-wand'),
+(1054, '🧿', ':nazar-amulet:', 'nazar-amulet'),
+(1055, '🎮', ':video-game:', 'video-game'),
+(1056, '🕹️', ':joystick:', 'joystick'),
+(1057, '🎰', ':slot-machine:', 'slot-machine'),
+(1058, '🎲', ':game-die:', 'game-die'),
+(1059, '🧩', ':puzzle-piece:', 'puzzle-piece'),
+(1060, '🧸', ':teddy-bear:', 'teddy-bear'),
+(1062, '🪆', ':nesting-dolls:', 'nesting-dolls'),
+(1063, '♠️', ':spade-suit:', 'spade-suit'),
+(1064, '♥️', ':heart-suit:', 'heart-suit'),
+(1065, '♦️', ':diamond-suit:', 'diamond-suit'),
+(1066, '♣️', ':club-suit:', 'club-suit'),
+(1067, '♟️', ':chess-pawn:', 'chess-pawn'),
+(1068, '🃏', ':joker:', 'joker'),
+(1069, '🀄', ':mahjong-red-dragon:', 'mahjong-red-dragon'),
+(1070, '🎴', ':flower-playing-cards:', 'flower-playing-cards'),
+(1071, '🎭', ':performing-arts:', 'performing-arts'),
+(1072, '🖼️', ':framed-picture:', 'framed-picture'),
+(1073, '🎨', ':artist-palette:', 'artist-palette'),
+(1074, '🧵', ':thread:', 'thread'),
+(1075, '🪡', ':sewing-needle:', 'sewing-needle'),
+(1076, '🧶', ':yarn:', 'yarn'),
+(1077, '🪢', ':knot:', 'knot'),
+(1078, '👓', ':glasses:', 'glasses'),
+(1079, '🕶️', ':sunglasses:', 'sunglasses'),
+(1080, '🥽', ':goggles:', 'goggles'),
+(1081, '🥼', ':lab-coat:', 'lab-coat'),
+(1082, '🦺', ':safety-vest:', 'safety-vest'),
+(1083, '👔', ':necktie:', 'necktie'),
+(1084, '👕', ':t-shirt:', 't-shirt'),
+(1085, '👖', ':jeans:', 'jeans'),
+(1086, '🧣', ':scarf:', 'scarf'),
+(1087, '🧤', ':gloves:', 'gloves'),
+(1088, '🧥', ':coat:', 'coat'),
+(1089, '🧦', ':socks:', 'socks'),
+(1090, '👗', ':dress:', 'dress'),
+(1091, '👘', ':kimono:', 'kimono'),
+(1092, '🥻', ':sari:', 'sari'),
+(1093, '🩱', ':one-piece-swimsuit:', 'one-piece-swimsuit'),
+(1094, '🩲', ':briefs:', 'briefs'),
+(1095, '🩳', ':shorts:', 'shorts'),
+(1096, '👙', ':bikini:', 'bikini'),
+(1097, '👚', ':woman-s-clothes:', 'woman-s-clothes'),
+(1098, '👛', ':purse:', 'purse'),
+(1099, '👜', ':handbag:', 'handbag'),
+(1100, '👝', ':clutch-bag:', 'clutch-bag'),
+(1101, '🛍️', ':shopping-bags:', 'shopping-bags'),
+(1102, '🎒', ':backpack:', 'backpack'),
+(1103, '🩴', ':thong-sandal:', 'thong-sandal'),
+(1104, '👞', ':man-s-shoe:', 'man-s-shoe'),
+(1105, '👟', ':running-shoe:', 'running-shoe'),
+(1106, '🥾', ':hiking-boot:', 'hiking-boot'),
+(1107, '🥿', ':flat-shoe:', 'flat-shoe'),
+(1108, '👠', ':high-heeled-shoe:', 'high-heeled-shoe'),
+(1109, '👡', ':woman-s-sandal:', 'woman-s-sandal'),
+(1110, '🩰', ':ballet-shoes:', 'ballet-shoes'),
+(1111, '👢', ':woman-s-boot:', 'woman-s-boot'),
+(1112, '👑', ':crown:', 'crown'),
+(1113, '👒', ':woman-s-hat:', 'woman-s-hat'),
+(1114, '🎩', ':top-hat:', 'top-hat'),
+(1115, '🎓', ':graduation-cap:', 'graduation-cap'),
+(1116, '🧢', ':billed-cap:', 'billed-cap'),
+(1117, '🪖', ':military-helmet:', 'military-helmet'),
+(1118, '⛑️', ':rescue-worker-s-helmet:', 'rescue-worker-s-helmet'),
+(1119, '📿', ':prayer-beads:', 'prayer-beads'),
+(1120, '💄', ':lipstick:', 'lipstick'),
+(1121, '💍', ':ring:', 'ring'),
+(1122, '💎', ':gem-stone:', 'gem-stone'),
+(1123, '🔇', ':muted-speaker:', 'muted-speaker'),
+(1124, '🔈', ':speaker-low-volume:', 'speaker-low-volume'),
+(1125, '🔉', ':speaker-medium-volume:', 'speaker-medium-volume'),
+(1126, '🔊', ':speaker-high-volume:', 'speaker-high-volume'),
+(1127, '📢', ':loudspeaker:', 'loudspeaker'),
+(1128, '📣', ':megaphone:', 'megaphone'),
+(1129, '📯', ':postal-horn:', 'postal-horn'),
+(1130, '🔔', ':bell:', 'bell'),
+(1131, '🔕', ':bell-with-slash:', 'bell-with-slash'),
+(1132, '🎼', ':musical-score:', 'musical-score'),
+(1133, '🎵', ':musical-note:', 'musical-note'),
+(1134, '🎶', ':musical-notes:', 'musical-notes'),
+(1135, '🎙️', ':studio-microphone:', 'studio-microphone'),
+(1136, '🎚️', ':level-slider:', 'level-slider'),
+(1137, '🎛️', ':control-knobs:', 'control-knobs'),
+(1138, '🎤', ':microphone:', 'microphone'),
+(1139, '🎧', ':headphone:', 'headphone'),
+(1140, '📻', ':radio:', 'radio'),
+(1141, '🎷', ':saxophone:', 'saxophone'),
+(1142, '🪗', ':accordion:', 'accordion'),
+(1143, '🎸', ':guitar:', 'guitar'),
+(1144, '🎹', ':musical-keyboard:', 'musical-keyboard'),
+(1145, '🎺', ':trumpet:', 'trumpet'),
+(1146, '🎻', ':violin:', 'violin'),
+(1147, '🪕', ':banjo:', 'banjo'),
+(1148, '🥁', ':drum:', 'drum'),
+(1149, '🪘', ':long-drum:', 'long-drum'),
+(1150, '📱', ':mobile-phone:', 'mobile-phone'),
+(1151, '📲', ':mobile-phone-with-arrow:', 'mobile-phone-with-arrow'),
+(1152, '☎️', ':telephone:', 'telephone'),
+(1153, '📞', ':telephone-receiver:', 'telephone-receiver'),
+(1154, '📟', ':pager:', 'pager'),
+(1155, '📠', ':fax-machine:', 'fax-machine'),
+(1156, '🔋', ':battery:', 'battery'),
+(1157, '🔌', ':electric-plug:', 'electric-plug'),
+(1158, '💻', ':laptop:', 'laptop'),
+(1159, '🖥️', ':desktop-computer:', 'desktop-computer'),
+(1160, '🖨️', ':printer:', 'printer'),
+(1161, '⌨️', ':keyboard:', 'keyboard'),
+(1162, '🖱️', ':computer-mouse:', 'computer-mouse'),
+(1163, '🖲️', ':trackball:', 'trackball'),
+(1164, '💽', ':computer-disk:', 'computer-disk'),
+(1165, '💾', ':floppy-disk:', 'floppy-disk'),
+(1166, '💿', ':optical-disk:', 'optical-disk'),
+(1167, '📀', ':dvd:', 'dvd'),
+(1168, '🧮', ':abacus:', 'abacus'),
+(1169, '🎥', ':movie-camera:', 'movie-camera'),
+(1170, '🎞️', ':film-frames:', 'film-frames'),
+(1171, '📽️', ':film-projector:', 'film-projector'),
+(1172, '🎬', ':clapper-board:', 'clapper-board'),
+(1173, '📺', ':television:', 'television'),
+(1174, '📷', ':camera:', 'camera'),
+(1175, '📸', ':camera-with-flash:', 'camera-with-flash'),
+(1176, '📹', ':video-camera:', 'video-camera'),
+(1177, '📼', ':videocassette:', 'videocassette'),
+(1178, '🔍', ':magnifying-glass-tilted-left:', 'magnifying-glass-tilted-left'),
+(1179, '🔎', ':magnifying-glass-tilted-right:', 'magnifying-glass-tilted-right'),
+(1180, '🕯️', ':candle:', 'candle'),
+(1181, '💡', ':light-bulb:', 'light-bulb'),
+(1182, '🔦', ':flashlight:', 'flashlight'),
+(1183, '🏮', ':red-paper-lantern:', 'red-paper-lantern'),
+(1184, '🪔', ':diya-lamp:', 'diya-lamp'),
+(1185, '📔', ':notebook-with-decorative-cover:', 'notebook-with-decorative-cover'),
+(1186, '📕', ':closed-book:', 'closed-book'),
+(1187, '📖', ':open-book:', 'open-book'),
+(1188, '📗', ':green-book:', 'green-book'),
+(1189, '📘', ':blue-book:', 'blue-book'),
+(1190, '📙', ':orange-book:', 'orange-book'),
+(1191, '📚', ':books:', 'books'),
+(1192, '📓', ':notebook:', 'notebook'),
+(1193, '📒', ':ledger:', 'ledger'),
+(1194, '📃', ':page-with-curl:', 'page-with-curl'),
+(1195, '📜', ':scroll:', 'scroll'),
+(1196, '📄', ':page-facing-up:', 'page-facing-up'),
+(1197, '📰', ':newspaper:', 'newspaper'),
+(1198, '🗞️', ':rolled-up-newspaper:', 'rolled-up-newspaper'),
+(1199, '📑', ':bookmark-tabs:', 'bookmark-tabs'),
+(1200, '🔖', ':bookmark:', 'bookmark'),
+(1201, '🏷️', ':label:', 'label'),
+(1202, '💰', ':money-bag:', 'money-bag'),
+(1203, '🪙', ':coin:', 'coin'),
+(1204, '💴', ':yen-banknote:', 'yen-banknote'),
+(1205, '💵', ':dollar-banknote:', 'dollar-banknote'),
+(1206, '💶', ':euro-banknote:', 'euro-banknote'),
+(1207, '💷', ':pound-banknote:', 'pound-banknote'),
+(1208, '💸', ':money-with-wings:', 'money-with-wings'),
+(1209, '💳', ':credit-card:', 'credit-card'),
+(1210, '🧾', ':receipt:', 'receipt'),
+(1211, '💹', ':chart-increasing-with-yen:', 'chart-increasing-with-yen'),
+(1212, '✉️', ':envelope:', 'envelope'),
+(1213, '📧', ':e-mail:', 'e-mail'),
+(1214, '📨', ':incoming-envelope:', 'incoming-envelope'),
+(1215, '📩', ':envelope-with-arrow:', 'envelope-with-arrow'),
+(1216, '📤', ':outbox-tray:', 'outbox-tray'),
+(1217, '📥', ':inbox-tray:', 'inbox-tray'),
+(1218, '📦', ':package:', 'package'),
+(1219, '📫', ':closed-mailbox-with-raised-flag:', 'closed-mailbox-with-raised-flag'),
+(1220, '📪', ':closed-mailbox-with-lowered-flag:', 'closed-mailbox-with-lowered-flag'),
+(1221, '📬', ':open-mailbox-with-raised-flag:', 'open-mailbox-with-raised-flag'),
+(1222, '📭', ':open-mailbox-with-lowered-flag:', 'open-mailbox-with-lowered-flag'),
+(1223, '📮', ':postbox:', 'postbox'),
+(1224, '🗳️', ':ballot-box-with-ballot:', 'ballot-box-with-ballot'),
+(1225, '✏️', ':pencil:', 'pencil'),
+(1226, '✒️', ':black-nib:', 'black-nib'),
+(1227, '🖋️', ':fountain-pen:', 'fountain-pen'),
+(1228, '🖊️', ':pen:', 'pen'),
+(1229, '🖌️', ':paintbrush:', 'paintbrush'),
+(1230, '🖍️', ':crayon:', 'crayon'),
+(1231, '📝', ':memo:', 'memo'),
+(1232, '💼', ':briefcase:', 'briefcase'),
+(1233, '📁', ':file-folder:', 'file-folder'),
+(1234, '📂', ':open-file-folder:', 'open-file-folder'),
+(1235, '🗂️', ':card-index-dividers:', 'card-index-dividers'),
+(1236, '📅', ':calendar:', 'calendar'),
+(1237, '📆', ':tear-off-calendar:', 'tear-off-calendar'),
+(1238, '🗒️', ':spiral-notepad:', 'spiral-notepad'),
+(1239, '🗓️', ':spiral-calendar:', 'spiral-calendar'),
+(1240, '📇', ':card-index:', 'card-index'),
+(1241, '📈', ':chart-increasing:', 'chart-increasing'),
+(1242, '📉', ':chart-decreasing:', 'chart-decreasing'),
+(1243, '📊', ':bar-chart:', 'bar-chart'),
+(1244, '📋', ':clipboard:', 'clipboard'),
+(1245, '📌', ':pushpin:', 'pushpin'),
+(1246, '📍', ':round-pushpin:', 'round-pushpin'),
+(1247, '📎', ':paperclip:', 'paperclip'),
+(1248, '🖇️', ':linked-paperclips:', 'linked-paperclips'),
+(1249, '📏', ':straight-ruler:', 'straight-ruler'),
+(1250, '📐', ':triangular-ruler:', 'triangular-ruler'),
+(1251, '✂️', ':scissors:', 'scissors'),
+(1252, '🗃️', ':card-file-box:', 'card-file-box'),
+(1253, '🗄️', ':file-cabinet:', 'file-cabinet'),
+(1254, '🗑️', ':wastebasket:', 'wastebasket'),
+(1255, '🔒', ':locked:', 'locked'),
+(1256, '🔓', ':unlocked:', 'unlocked'),
+(1257, '🔏', ':locked-with-pen:', 'locked-with-pen'),
+(1258, '🔐', ':locked-with-key:', 'locked-with-key'),
+(1259, '🔑', ':key:', 'key'),
+(1260, '🗝️', ':old-key:', 'old-key'),
+(1261, '🔨', ':hammer:', 'hammer'),
+(1262, '🪓', ':axe:', 'axe'),
+(1263, '⛏️', ':pick:', 'pick'),
+(1264, '⚒️', ':hammer-and-pick:', 'hammer-and-pick'),
+(1265, '🛠️', ':hammer-and-wrench:', 'hammer-and-wrench'),
+(1266, '🗡️', ':dagger:', 'dagger'),
+(1267, '⚔️', ':crossed-swords:', 'crossed-swords'),
+(1268, '🔫', ':water-pistol:', 'water-pistol'),
+(1269, '🪃', ':boomerang:', 'boomerang'),
+(1270, '🏹', ':bow-and-arrow:', 'bow-and-arrow'),
+(1271, '🛡️', ':shield:', 'shield'),
+(1272, '🪚', ':carpentry-saw:', 'carpentry-saw'),
+(1273, '🔧', ':wrench:', 'wrench'),
+(1274, '🪛', ':screwdriver:', 'screwdriver'),
+(1275, '🔩', ':nut-and-bolt:', 'nut-and-bolt'),
+(1276, '⚙️', ':gear:', 'gear'),
+(1277, '🗜️', ':clamp:', 'clamp'),
+(1278, '⚖️', ':balance-scale:', 'balance-scale'),
+(1279, '🦯', ':white-cane:', 'white-cane'),
+(1280, '🔗', ':link:', 'link'),
+(1281, '⛓️', ':chains:', 'chains'),
+(1282, '🪝', ':hook:', 'hook'),
+(1283, '🧰', ':toolbox:', 'toolbox'),
+(1284, '🧲', ':magnet:', 'magnet'),
+(1285, '🪜', ':ladder:', 'ladder'),
+(1286, '⚗️', ':alembic:', 'alembic'),
+(1287, '🧪', ':test-tube:', 'test-tube'),
+(1288, '🧫', ':petri-dish:', 'petri-dish'),
+(1289, '🧬', ':dna:', 'dna'),
+(1290, '🔬', ':microscope:', 'microscope'),
+(1291, '🔭', ':telescope:', 'telescope'),
+(1292, '📡', ':satellite-antenna:', 'satellite-antenna'),
+(1293, '💉', ':syringe:', 'syringe'),
+(1294, '🩸', ':drop-of-blood:', 'drop-of-blood'),
+(1295, '💊', ':pill:', 'pill'),
+(1296, '🩹', ':adhesive-bandage:', 'adhesive-bandage'),
+(1297, '🩺', ':stethoscope:', 'stethoscope'),
+(1298, '🚪', ':door:', 'door'),
+(1299, '🛗', ':elevator:', 'elevator'),
+(1300, '🪞', ':mirror:', 'mirror'),
+(1301, '🪟', ':window:', 'window'),
+(1302, '🛏️', ':bed:', 'bed'),
+(1303, '🛋️', ':couch-and-lamp:', 'couch-and-lamp'),
+(1304, '🪑', ':chair:', 'chair'),
+(1305, '🚽', ':toilet:', 'toilet'),
+(1306, '🪠', ':plunger:', 'plunger'),
+(1307, '🚿', ':shower:', 'shower'),
+(1308, '🛁', ':bathtub:', 'bathtub'),
+(1309, '🪤', ':mouse-trap:', 'mouse-trap'),
+(1310, '🪒', ':razor:', 'razor'),
+(1311, '🧴', ':lotion-bottle:', 'lotion-bottle'),
+(1312, '🧷', ':safety-pin:', 'safety-pin'),
+(1313, '🧹', ':broom:', 'broom'),
+(1314, '🧺', ':basket:', 'basket'),
+(1315, '🧻', ':roll-of-paper:', 'roll-of-paper'),
+(1316, '🪣', ':bucket:', 'bucket'),
+(1317, '🧼', ':soap:', 'soap'),
+(1318, '🪥', ':toothbrush:', 'toothbrush'),
+(1319, '🧽', ':sponge:', 'sponge'),
+(1320, '🧯', ':fire-extinguisher:', 'fire-extinguisher'),
+(1321, '🛒', ':shopping-cart:', 'shopping-cart'),
+(1322, '🚬', ':cigarette:', 'cigarette'),
+(1323, '⚰️', ':coffin:', 'coffin'),
+(1324, '🪦', ':headstone:', 'headstone'),
+(1325, '⚱️', ':funeral-urn:', 'funeral-urn'),
+(1326, '🗿', ':moai:', 'moai'),
+(1327, '🪧', ':placard:', 'placard'),
+(1328, '🏧', ':atm-sign:', 'atm-sign'),
+(1329, '🚮', ':litter-in-bin-sign:', 'litter-in-bin-sign'),
+(1330, '🚰', ':potable-water:', 'potable-water'),
+(1331, '♿', ':wheelchair-symbol:', 'wheelchair-symbol'),
+(1332, '🚹', ':men-s-room:', 'men-s-room'),
+(1333, '🚺', ':women-s-room:', 'women-s-room'),
+(1334, '🚻', ':restroom:', 'restroom'),
+(1335, '🚼', ':baby-symbol:', 'baby-symbol'),
+(1336, '🚾', ':water-closet:', 'water-closet'),
+(1337, '🛂', ':passport-control:', 'passport-control'),
+(1338, '🛃', ':customs:', 'customs'),
+(1339, '🛄', ':baggage-claim:', 'baggage-claim'),
+(1340, '🛅', ':left-luggage:', 'left-luggage'),
+(1341, '⚠️', ':warning:', 'warning'),
+(1342, '🚸', ':children-crossing:', 'children-crossing'),
+(1343, '⛔', ':no-entry:', 'no-entry'),
+(1344, '🚫', ':prohibited:', 'prohibited'),
+(1345, '🚳', ':no-bicycles:', 'no-bicycles'),
+(1346, '🚭', ':no-smoking:', 'no-smoking'),
+(1347, '🚯', ':no-littering:', 'no-littering'),
+(1348, '🚱', ':non-potable-water:', 'non-potable-water'),
+(1349, '🚷', ':no-pedestrians:', 'no-pedestrians'),
+(1350, '📵', ':no-mobile-phones:', 'no-mobile-phones'),
+(1351, '🔞', ':no-one-under-eighteen:', 'no-one-under-eighteen'),
+(1352, '☢️', ':radioactive:', 'radioactive'),
+(1353, '☣️', ':biohazard:', 'biohazard'),
+(1354, '⬆️', ':up-arrow:', 'up-arrow'),
+(1355, '↗️', ':up-right-arrow:', 'up-right-arrow'),
+(1356, '➡️', ':right-arrow:', 'right-arrow'),
+(1357, '↘️', ':down-right-arrow:', 'down-right-arrow'),
+(1358, '⬇️', ':down-arrow:', 'down-arrow'),
+(1359, '↙️', ':down-left-arrow:', 'down-left-arrow'),
+(1360, '⬅️', ':left-arrow:', 'left-arrow'),
+(1361, '↖️', ':up-left-arrow:', 'up-left-arrow'),
+(1362, '↕️', ':up-down-arrow:', 'up-down-arrow'),
+(1363, '↔️', ':left-right-arrow:', 'left-right-arrow'),
+(1364, '↩️', ':right-arrow-curving-left:', 'right-arrow-curving-left'),
+(1365, '↪️', ':left-arrow-curving-right:', 'left-arrow-curving-right'),
+(1366, '⤴️', ':right-arrow-curving-up:', 'right-arrow-curving-up'),
+(1367, '⤵️', ':right-arrow-curving-down:', 'right-arrow-curving-down'),
+(1368, '🔃', ':clockwise-vertical-arrows:', 'clockwise-vertical-arrows'),
+(1369, '🔄', ':counterclockwise-arrows-button:', 'counterclockwise-arrows-button'),
+(1370, '🔙', ':back-arrow:', 'back-arrow'),
+(1371, '🔚', ':end-arrow:', 'end-arrow'),
+(1372, '🔛', ':on-arrow:', 'on-arrow'),
+(1373, '🔜', ':soon-arrow:', 'soon-arrow'),
+(1374, '🔝', ':top-arrow:', 'top-arrow'),
+(1375, '🛐', ':place-of-worship:', 'place-of-worship'),
+(1376, '⚛️', ':atom-symbol:', 'atom-symbol'),
+(1377, '🕉️', ':om:', 'om'),
+(1378, '✡️', ':star-of-david:', 'star-of-david'),
+(1379, '☸️', ':wheel-of-dharma:', 'wheel-of-dharma'),
+(1380, '☯️', ':yin-yang:', 'yin-yang'),
+(1381, '✝️', ':latin-cross:', 'latin-cross'),
+(1382, '☦️', ':orthodox-cross:', 'orthodox-cross'),
+(1383, '☪️', ':star-and-crescent:', 'star-and-crescent'),
+(1384, '☮️', ':peace-symbol:', 'peace-symbol'),
+(1385, '🕎', ':menorah:', 'menorah'),
+(1386, '🔯', ':dotted-six-pointed-star:', 'dotted-six-pointed-star'),
+(1387, '♈', ':aries:', 'aries'),
+(1388, '♉', ':taurus:', 'taurus'),
+(1389, '♊', ':gemini:', 'gemini'),
+(1390, '♋', ':cancer:', 'cancer'),
+(1391, '♌', ':leo:', 'leo'),
+(1392, '♍', ':virgo:', 'virgo'),
+(1393, '♎', ':libra:', 'libra'),
+(1394, '♏', ':scorpio:', 'scorpio'),
+(1395, '♐', ':sagittarius:', 'sagittarius'),
+(1396, '♑', ':capricorn:', 'capricorn'),
+(1397, '♒', ':aquarius:', 'aquarius'),
+(1398, '♓', ':pisces:', 'pisces'),
+(1399, '⛎', ':ophiuchus:', 'ophiuchus'),
+(1400, '🔀', ':shuffle-tracks-button:', 'shuffle-tracks-button'),
+(1401, '🔁', ':repeat-button:', 'repeat-button'),
+(1402, '🔂', ':repeat-single-button:', 'repeat-single-button'),
+(1403, '▶️', ':play-button:', 'play-button'),
+(1404, '⏩', ':fast-forward-button:', 'fast-forward-button'),
+(1405, '⏭️', ':next-track-button:', 'next-track-button'),
+(1406, '⏯️', ':play-or-pause-button:', 'play-or-pause-button'),
+(1407, '◀️', ':reverse-button:', 'reverse-button'),
+(1408, '⏪', ':fast-reverse-button:', 'fast-reverse-button'),
+(1409, '⏮️', ':last-track-button:', 'last-track-button'),
+(1410, '🔼', ':upwards-button:', 'upwards-button'),
+(1411, '⏫', ':fast-up-button:', 'fast-up-button'),
+(1412, '🔽', ':downwards-button:', 'downwards-button'),
+(1413, '⏬', ':fast-down-button:', 'fast-down-button'),
+(1414, '⏸️', ':pause-button:', 'pause-button'),
+(1415, '⏹️', ':stop-button:', 'stop-button'),
+(1416, '⏺️', ':record-button:', 'record-button'),
+(1417, '⏏️', ':eject-button:', 'eject-button'),
+(1418, '🎦', ':cinema:', 'cinema'),
+(1419, '🔅', ':dim-button:', 'dim-button'),
+(1420, '🔆', ':bright-button:', 'bright-button'),
+(1421, '📶', ':antenna-bars:', 'antenna-bars'),
+(1422, '📳', ':vibration-mode:', 'vibration-mode'),
+(1423, '📴', ':mobile-phone-off:', 'mobile-phone-off'),
+(1424, '♀️', ':female-sign:', 'female-sign'),
+(1425, '♂️', ':male-sign:', 'male-sign'),
+(1426, '⚧️', ':transgender-symbol:', 'transgender-symbol'),
+(1427, '✖️', ':multiply:', 'multiply'),
+(1428, '➕', ':plus:', 'plus'),
+(1429, '➖', ':minus:', 'minus'),
+(1430, '➗', ':divide:', 'divide'),
+(1431, '♾️', ':infinity:', 'infinity'),
+(1432, '‼️', ':double-exclamation-mark:', 'double-exclamation-mark'),
+(1433, '⁉️', ':exclamation-question-mark:', 'exclamation-question-mark'),
+(1434, '❓', ':red-question-mark:', 'red-question-mark'),
+(1435, '❔', ':white-question-mark:', 'white-question-mark'),
+(1436, '❕', ':white-exclamation-mark:', 'white-exclamation-mark'),
+(1437, '❗', ':red-exclamation-mark:', 'red-exclamation-mark'),
+(1438, '〰️', ':wavy-dash:', 'wavy-dash'),
+(1439, '💱', ':currency-exchange:', 'currency-exchange'),
+(1440, '💲', ':heavy-dollar-sign:', 'heavy-dollar-sign'),
+(1441, '⚕️', ':medical-symbol:', 'medical-symbol'),
+(1442, '♻️', ':recycling-symbol:', 'recycling-symbol'),
+(1443, '⚜️', ':fleur-de-lis:', 'fleur-de-lis'),
+(1444, '🔱', ':trident-emblem:', 'trident-emblem'),
+(1445, '📛', ':name-badge:', 'name-badge'),
+(1446, '🔰', ':japanese-symbol-for-beginner:', 'japanese-symbol-for-beginner'),
+(1447, '⭕', ':hollow-red-circle:', 'hollow-red-circle'),
+(1448, '✅', ':check-mark-button:', 'check-mark-button'),
+(1449, '☑️', ':check-box-with-check:', 'check-box-with-check'),
+(1450, '✔️', ':check-mark:', 'check-mark'),
+(1451, '❌', ':cross-mark:', 'cross-mark'),
+(1452, '❎', ':cross-mark-button:', 'cross-mark-button'),
+(1453, '➰', ':curly-loop:', 'curly-loop'),
+(1454, '➿', ':double-curly-loop:', 'double-curly-loop'),
+(1455, '〽️', ':part-alternation-mark:', 'part-alternation-mark'),
+(1456, '✳️', ':eight-spoked-asterisk:', 'eight-spoked-asterisk'),
+(1457, '✴️', ':eight-pointed-star:', 'eight-pointed-star'),
+(1458, '❇️', ':sparkle:', 'sparkle'),
+(1459, '©️', ':copyright:', 'copyright'),
+(1460, '®️', ':registered:', 'registered'),
+(1461, '™️', ':trade-mark:', 'trade-mark'),
+(1462, '0️⃣', ':keycap-0:', 'keycap-0'),
+(1463, '1️⃣', ':keycap-1:', 'keycap-1'),
+(1464, '2️⃣', ':keycap-2:', 'keycap-2'),
+(1465, '3️⃣', ':keycap-3:', 'keycap-3'),
+(1466, '4️⃣', ':keycap-4:', 'keycap-4'),
+(1467, '5️⃣', ':keycap-5:', 'keycap-5'),
+(1468, '6️⃣', ':keycap-6:', 'keycap-6'),
+(1469, '7️⃣', ':keycap-7:', 'keycap-7'),
+(1470, '8️⃣', ':keycap-8:', 'keycap-8'),
+(1471, '9️⃣', ':keycap-9:', 'keycap-9'),
+(1472, '🔟', ':keycap-10:', 'keycap-10'),
+(1473, '🔠', ':input-latin-uppercase:', 'input-latin-uppercase'),
+(1474, '🔡', ':input-latin-lowercase:', 'input-latin-lowercase'),
+(1475, '🔢', ':input-numbers:', 'input-numbers'),
+(1476, '🔣', ':input-symbols:', 'input-symbols'),
+(1477, '🔤', ':input-latin-letters:', 'input-latin-letters'),
+(1478, '🅰️', ':a-button-blood-type:', 'a-button-blood-type'),
+(1479, '🆎', ':ab-button-blood-type:', 'ab-button-blood-type'),
+(1480, '🅱️', ':b-button-blood-type:', 'b-button-blood-type'),
+(1481, '🆑', ':cl-button:', 'cl-button'),
+(1482, '🆒', ':cool-button:', 'cool-button'),
+(1483, '🆓', ':free-button:', 'free-button'),
+(1484, 'ℹ️', ':information:', 'information'),
+(1485, '🆔', ':id-button:', 'id-button'),
+(1486, 'Ⓜ️', ':circled-m:', 'circled-m'),
+(1487, '🆕', ':new-button:', 'new-button'),
+(1488, '🆖', ':ng-button:', 'ng-button'),
+(1489, '🅾️', ':o-button-blood-type:', 'o-button-blood-type'),
+(1490, '🆗', ':ok-button:', 'ok-button'),
+(1491, '🅿️', ':p-button:', 'p-button'),
+(1492, '🆘', ':sos-button:', 'sos-button'),
+(1493, '🆙', ':up-button:', 'up-button'),
+(1494, '🆚', ':vs-button:', 'vs-button'),
+(1495, '🈁', ':japanese-here-button:', 'japanese-here-button'),
+(1496, '🈂️', ':japanese-service-charge-button:', 'japanese-service-charge-button'),
+(1497, '🈷️', ':japanese-monthly-amount-button:', 'japanese-monthly-amount-button'),
+(1498, '🈶', ':japanese-not-free-of-charge-button:', 'japanese-not-free-of-charge-button'),
+(1499, '🈯', ':japanese-reserved-button:', 'japanese-reserved-button'),
+(1500, '🉐', ':japanese-bargain-button:', 'japanese-bargain-button'),
+(1501, '🈹', ':japanese-discount-button:', 'japanese-discount-button'),
+(1502, '🈚', ':japanese-free-of-charge-button:', 'japanese-free-of-charge-button'),
+(1503, '🈲', ':japanese-prohibited-button:', 'japanese-prohibited-button'),
+(1504, '🉑', ':japanese-acceptable-button:', 'japanese-acceptable-button'),
+(1505, '🈸', ':japanese-application-button:', 'japanese-application-button'),
+(1506, '🈴', ':japanese-passing-grade-button:', 'japanese-passing-grade-button'),
+(1507, '🈳', ':japanese-vacancy-button:', 'japanese-vacancy-button'),
+(1508, '㊗️', ':japanese-congratulations-button:', 'japanese-congratulations-button'),
+(1509, '㊙️', ':japanese-secret-button:', 'japanese-secret-button'),
+(1510, '🈺', ':japanese-open-for-business-button:', 'japanese-open-for-business-button'),
+(1511, '🈵', ':japanese-no-vacancy-button:', 'japanese-no-vacancy-button'),
+(1512, '🔴', ':red-circle:', 'red-circle'),
+(1513, '🟠', ':orange-circle:', 'orange-circle'),
+(1514, '🟡', ':yellow-circle:', 'yellow-circle'),
+(1515, '🟢', ':green-circle:', 'green-circle'),
+(1516, '🔵', ':blue-circle:', 'blue-circle'),
+(1517, '🟣', ':purple-circle:', 'purple-circle'),
+(1518, '🟤', ':brown-circle:', 'brown-circle'),
+(1519, '⚫', ':black-circle:', 'black-circle'),
+(1520, '⚪', ':white-circle:', 'white-circle'),
+(1521, '🟥', ':red-square:', 'red-square'),
+(1522, '🟧', ':orange-square:', 'orange-square'),
+(1523, '🟨', ':yellow-square:', 'yellow-square'),
+(1524, '🟩', ':green-square:', 'green-square'),
+(1525, '🟦', ':blue-square:', 'blue-square'),
+(1526, '🟪', ':purple-square:', 'purple-square'),
+(1527, '🟫', ':brown-square:', 'brown-square'),
+(1528, '⬛', ':black-large-square:', 'black-large-square'),
+(1529, '⬜', ':white-large-square:', 'white-large-square'),
+(1530, '◼️', ':black-medium-square:', 'black-medium-square'),
+(1531, '◻️', ':white-medium-square:', 'white-medium-square'),
+(1532, '◾', ':black-medium-small-square:', 'black-medium-small-square'),
+(1533, '◽', ':white-medium-small-square:', 'white-medium-small-square'),
+(1534, '▪️', ':black-small-square:', 'black-small-square'),
+(1535, '▫️', ':white-small-square:', 'white-small-square'),
+(1536, '🔶', ':large-orange-diamond:', 'large-orange-diamond'),
+(1537, '🔷', ':large-blue-diamond:', 'large-blue-diamond'),
+(1538, '🔸', ':small-orange-diamond:', 'small-orange-diamond'),
+(1539, '🔹', ':small-blue-diamond:', 'small-blue-diamond'),
+(1540, '🔺', ':red-triangle-pointed-up:', 'red-triangle-pointed-up'),
+(1541, '🔻', ':red-triangle-pointed-down:', 'red-triangle-pointed-down'),
+(1542, '💠', ':diamond-with-a-dot:', 'diamond-with-a-dot'),
+(1543, '🔘', ':radio-button:', 'radio-button'),
+(1544, '🔳', ':white-square-button:', 'white-square-button'),
+(1545, '🔲', ':black-square-button:', 'black-square-button'),
+(1546, '🏁', ':chequered-flag:', 'chequered-flag'),
+(1547, '🚩', ':triangular-flag:', 'triangular-flag'),
+(1548, '🎌', ':crossed-flags:', 'crossed-flags'),
+(1549, '🏴', ':black-flag:', 'black-flag'),
+(1550, '🏳️', ':white-flag:', 'white-flag'),
+(1551, '🏳️‍🌈', ':rainbow-flag:', 'rainbow-flag'),
+(1552, '🏳️‍⚧️', ':transgender-flag:', 'transgender-flag'),
+(1553, '🏴‍☠️', ':pirate-flag:', 'pirate-flag'),
+(1554, '🇦🇨', ':flag-ascension-island:', 'flag-ascension-island'),
+(1555, '🇦🇩', ':flag-andorra:', 'flag-andorra'),
+(1556, '🇦🇪', ':flag-united-arab-emirates:', 'flag-united-arab-emirates'),
+(1557, '🇦🇫', ':flag-afghanistan:', 'flag-afghanistan'),
+(1558, '🇦🇬', ':flag-antigua-barbuda:', 'flag-antigua-barbuda'),
+(1559, '🇦🇮', ':flag-anguilla:', 'flag-anguilla'),
+(1560, '🇦🇱', ':flag-albania:', 'flag-albania'),
+(1561, '🇦🇲', ':flag-armenia:', 'flag-armenia'),
+(1562, '🇦🇴', ':flag-angola:', 'flag-angola'),
+(1563, '🇦🇶', ':flag-antarctica:', 'flag-antarctica'),
+(1564, '🇦🇷', ':flag-argentina:', 'flag-argentina'),
+(1565, '🇦🇸', ':flag-american-samoa:', 'flag-american-samoa'),
+(1566, '🇦🇹', ':flag-austria:', 'flag-austria'),
+(1567, '🇦🇺', ':flag-australia:', 'flag-australia'),
+(1568, '🇦🇼', ':flag-aruba:', 'flag-aruba'),
+(1569, '🇦🇿', ':flag-azerbaijan:', 'flag-azerbaijan'),
+(1570, '🇧🇦', ':flag-bosnia-herzegovina:', 'flag-bosnia-herzegovina'),
+(1571, '🇧🇧', ':flag-barbados:', 'flag-barbados'),
+(1572, '🇧🇩', ':flag-bangladesh:', 'flag-bangladesh'),
+(1573, '🇧🇪', ':flag-belgium:', 'flag-belgium'),
+(1574, '🇧🇫', ':flag-burkina-faso:', 'flag-burkina-faso'),
+(1575, '🇧🇬', ':flag-bulgaria:', 'flag-bulgaria'),
+(1576, '🇧🇭', ':flag-bahrain:', 'flag-bahrain'),
+(1577, '🇧🇮', ':flag-burundi:', 'flag-burundi'),
+(1578, '🇧🇯', ':flag-benin:', 'flag-benin'),
+(1579, '🇧🇲', ':flag-bermuda:', 'flag-bermuda'),
+(1580, '🇧🇳', ':flag-brunei:', 'flag-brunei'),
+(1581, '🇧🇴', ':flag-bolivia:', 'flag-bolivia'),
+(1582, '🇧🇶', ':flag-caribbean-netherlands:', 'flag-caribbean-netherlands'),
+(1583, '🇧🇷', ':flag-brazil:', 'flag-brazil'),
+(1584, '🇧🇸', ':flag-bahamas:', 'flag-bahamas'),
+(1585, '🇧🇹', ':flag-bhutan:', 'flag-bhutan'),
+(1586, '🇧🇻', ':flag-bouvet-island:', 'flag-bouvet-island'),
+(1587, '🇧🇼', ':flag-botswana:', 'flag-botswana'),
+(1588, '🇧🇾', ':flag-belarus:', 'flag-belarus'),
+(1589, '🇧🇿', ':flag-belize:', 'flag-belize'),
+(1590, '🇨🇦', ':flag-canada:', 'flag-canada'),
+(1591, '🇨🇨', ':flag-cocos-keeling-islands:', 'flag-cocos-keeling-islands'),
+(1592, '🇨🇩', ':flag-congo-kinshasa:', 'flag-congo-kinshasa'),
+(1593, '🇨🇫', ':flag-central-african-republic:', 'flag-central-african-republic'),
+(1594, '🇨🇬', ':flag-congo-brazzaville:', 'flag-congo-brazzaville'),
+(1595, '🇨🇭', ':flag-switzerland:', 'flag-switzerland'),
+(1596, '🇨🇰', ':flag-cook-islands:', 'flag-cook-islands'),
+(1597, '🇨🇱', ':flag-chile:', 'flag-chile'),
+(1598, '🇨🇲', ':flag-cameroon:', 'flag-cameroon'),
+(1599, '🇨🇳', ':flag-china:', 'flag-china'),
+(1600, '🇨🇴', ':flag-colombia:', 'flag-colombia'),
+(1601, '🇨🇵', ':flag-clipperton-island:', 'flag-clipperton-island'),
+(1602, '🇨🇷', ':flag-costa-rica:', 'flag-costa-rica'),
+(1603, '🇨🇺', ':flag-cuba:', 'flag-cuba'),
+(1604, '🇨🇻', ':flag-cape-verde:', 'flag-cape-verde'),
+(1605, '🇨🇽', ':flag-christmas-island:', 'flag-christmas-island'),
+(1606, '🇨🇾', ':flag-cyprus:', 'flag-cyprus'),
+(1607, '🇨🇿', ':flag-czechia:', 'flag-czechia'),
+(1608, '🇩🇪', ':flag-germany:', 'flag-germany'),
+(1609, '🇩🇬', ':flag-diego-garcia:', 'flag-diego-garcia'),
+(1610, '🇩🇯', ':flag-djibouti:', 'flag-djibouti'),
+(1611, '🇩🇰', ':flag-denmark:', 'flag-denmark'),
+(1612, '🇩🇲', ':flag-dominica:', 'flag-dominica'),
+(1613, '🇩🇴', ':flag-dominican-republic:', 'flag-dominican-republic'),
+(1614, '🇩🇿', ':flag-algeria:', 'flag-algeria'),
+(1615, '🇪🇦', ':flag-ceuta-melilla:', 'flag-ceuta-melilla'),
+(1616, '🇪🇨', ':flag-ecuador:', 'flag-ecuador'),
+(1617, '🇪🇪', ':flag-estonia:', 'flag-estonia'),
+(1618, '🇪🇬', ':flag-egypt:', 'flag-egypt'),
+(1619, '🇪🇭', ':flag-western-sahara:', 'flag-western-sahara'),
+(1620, '🇪🇷', ':flag-eritrea:', 'flag-eritrea'),
+(1621, '🇪🇸', ':flag-spain:', 'flag-spain'),
+(1622, '🇪🇹', ':flag-ethiopia:', 'flag-ethiopia'),
+(1623, '🇪🇺', ':flag-european-union:', 'flag-european-union'),
+(1624, '🇫🇮', ':flag-finland:', 'flag-finland'),
+(1625, '🇫🇯', ':flag-fiji:', 'flag-fiji'),
+(1626, '🇫🇰', ':flag-falkland-islands:', 'flag-falkland-islands'),
+(1627, '🇫🇲', ':flag-micronesia:', 'flag-micronesia'),
+(1628, '🇫🇴', ':flag-faroe-islands:', 'flag-faroe-islands'),
+(1629, '🇫🇷', ':flag-france:', 'flag-france'),
+(1630, '🇬🇦', ':flag-gabon:', 'flag-gabon'),
+(1631, '🇬🇧', ':flag-united-kingdom:', 'flag-united-kingdom'),
+(1632, '🇬🇩', ':flag-grenada:', 'flag-grenada'),
+(1633, '🇬🇪', ':flag-georgia:', 'flag-georgia'),
+(1634, '🇬🇫', ':flag-french-guiana:', 'flag-french-guiana'),
+(1635, '🇬🇬', ':flag-guernsey:', 'flag-guernsey'),
+(1636, '🇬🇭', ':flag-ghana:', 'flag-ghana'),
+(1637, '🇬🇮', ':flag-gibraltar:', 'flag-gibraltar'),
+(1638, '🇬🇱', ':flag-greenland:', 'flag-greenland'),
+(1639, '🇬🇲', ':flag-gambia:', 'flag-gambia'),
+(1640, '🇬🇳', ':flag-guinea:', 'flag-guinea'),
+(1641, '🇬🇵', ':flag-guadeloupe:', 'flag-guadeloupe'),
+(1642, '🇬🇶', ':flag-equatorial-guinea:', 'flag-equatorial-guinea'),
+(1643, '🇬🇷', ':flag-greece:', 'flag-greece'),
+(1644, '🇬🇸', ':flag-south-georgia-south-sandwich-islands:', 'flag-south-georgia-south-sandwich-islands'),
+(1645, '🇬🇹', ':flag-guatemala:', 'flag-guatemala'),
+(1646, '🇬🇺', ':flag-guam:', 'flag-guam'),
+(1647, '🇬🇼', ':flag-guinea-bissau:', 'flag-guinea-bissau'),
+(1648, '🇬🇾', ':flag-guyana:', 'flag-guyana'),
+(1649, '🇭🇰', ':flag-hong-kong-sar-china:', 'flag-hong-kong-sar-china'),
+(1650, '🇭🇲', ':flag-heard-mcdonald-islands:', 'flag-heard-mcdonald-islands'),
+(1651, '🇭🇳', ':flag-honduras:', 'flag-honduras'),
+(1652, '🇭🇷', ':flag-croatia:', 'flag-croatia'),
+(1653, '🇭🇹', ':flag-haiti:', 'flag-haiti'),
+(1654, '🇭🇺', ':flag-hungary:', 'flag-hungary'),
+(1655, '🇮🇨', ':flag-canary-islands:', 'flag-canary-islands'),
+(1656, '🇮🇩', ':flag-indonesia:', 'flag-indonesia'),
+(1657, '🇮🇪', ':flag-ireland:', 'flag-ireland'),
+(1658, '🇮🇱', ':flag-israel:', 'flag-israel'),
+(1659, '🇮🇲', ':flag-isle-of-man:', 'flag-isle-of-man'),
+(1660, '🇮🇳', ':flag-india:', 'flag-india'),
+(1661, '🇮🇴', ':flag-british-indian-ocean-territory:', 'flag-british-indian-ocean-territory'),
+(1662, '🇮🇶', ':flag-iraq:', 'flag-iraq'),
+(1663, '🇮🇷', ':flag-iran:', 'flag-iran'),
+(1664, '🇮🇸', ':flag-iceland:', 'flag-iceland'),
+(1665, '🇮🇹', ':flag-italy:', 'flag-italy'),
+(1666, '🇯🇪', ':flag-jersey:', 'flag-jersey'),
+(1667, '🇯🇲', ':flag-jamaica:', 'flag-jamaica'),
+(1668, '🇯🇴', ':flag-jordan:', 'flag-jordan'),
+(1669, '🇯🇵', ':flag-japan:', 'flag-japan'),
+(1670, '🇰🇪', ':flag-kenya:', 'flag-kenya'),
+(1671, '🇰🇬', ':flag-kyrgyzstan:', 'flag-kyrgyzstan'),
+(1672, '🇰🇭', ':flag-cambodia:', 'flag-cambodia'),
+(1673, '🇰🇮', ':flag-kiribati:', 'flag-kiribati'),
+(1674, '🇰🇲', ':flag-comoros:', 'flag-comoros'),
+(1675, '🇰🇵', ':flag-north-korea:', 'flag-north-korea'),
+(1676, '🇰🇷', ':flag-south-korea:', 'flag-south-korea'),
+(1677, '🇰🇼', ':flag-kuwait:', 'flag-kuwait'),
+(1678, '🇰🇾', ':flag-cayman-islands:', 'flag-cayman-islands'),
+(1679, '🇰🇿', ':flag-kazakhstan:', 'flag-kazakhstan'),
+(1680, '🇱🇦', ':flag-laos:', 'flag-laos'),
+(1681, '🇱🇧', ':flag-lebanon:', 'flag-lebanon'),
+(1682, '🇱🇮', ':flag-liechtenstein:', 'flag-liechtenstein'),
+(1683, '🇱🇰', ':flag-sri-lanka:', 'flag-sri-lanka'),
+(1684, '🇱🇷', ':flag-liberia:', 'flag-liberia'),
+(1685, '🇱🇸', ':flag-lesotho:', 'flag-lesotho'),
+(1686, '🇱🇹', ':flag-lithuania:', 'flag-lithuania'),
+(1687, '🇱🇺', ':flag-luxembourg:', 'flag-luxembourg'),
+(1688, '🇱🇻', ':flag-latvia:', 'flag-latvia'),
+(1689, '🇱🇾', ':flag-libya:', 'flag-libya'),
+(1690, '🇲🇦', ':flag-morocco:', 'flag-morocco'),
+(1691, '🇲🇨', ':flag-monaco:', 'flag-monaco'),
+(1692, '🇲🇩', ':flag-moldova:', 'flag-moldova'),
+(1693, '🇲🇪', ':flag-montenegro:', 'flag-montenegro'),
+(1694, '🇲🇬', ':flag-madagascar:', 'flag-madagascar'),
+(1695, '🇲🇭', ':flag-marshall-islands:', 'flag-marshall-islands'),
+(1696, '🇲🇰', ':flag-north-macedonia:', 'flag-north-macedonia'),
+(1697, '🇲🇱', ':flag-mali:', 'flag-mali'),
+(1698, '🇲🇲', ':flag-myanmar-burma:', 'flag-myanmar-burma'),
+(1699, '🇲🇳', ':flag-mongolia:', 'flag-mongolia'),
+(1700, '🇲🇴', ':flag-macao-sar-china:', 'flag-macao-sar-china'),
+(1701, '🇲🇵', ':flag-northern-mariana-islands:', 'flag-northern-mariana-islands'),
+(1702, '🇲🇶', ':flag-martinique:', 'flag-martinique'),
+(1703, '🇲🇷', ':flag-mauritania:', 'flag-mauritania'),
+(1704, '🇲🇸', ':flag-montserrat:', 'flag-montserrat'),
+(1705, '🇲🇹', ':flag-malta:', 'flag-malta'),
+(1706, '🇲🇺', ':flag-mauritius:', 'flag-mauritius'),
+(1707, '🇲🇻', ':flag-maldives:', 'flag-maldives'),
+(1708, '🇲🇼', ':flag-malawi:', 'flag-malawi'),
+(1709, '🇲🇽', ':flag-mexico:', 'flag-mexico'),
+(1710, '🇲🇾', ':flag-malaysia:', 'flag-malaysia'),
+(1711, '🇲🇿', ':flag-mozambique:', 'flag-mozambique'),
+(1712, '🇳🇦', ':flag-namibia:', 'flag-namibia'),
+(1713, '🇳🇨', ':flag-new-caledonia:', 'flag-new-caledonia'),
+(1714, '🇳🇪', ':flag-niger:', 'flag-niger'),
+(1715, '🇳🇫', ':flag-norfolk-island:', 'flag-norfolk-island'),
+(1716, '🇳🇬', ':flag-nigeria:', 'flag-nigeria'),
+(1717, '🇳🇮', ':flag-nicaragua:', 'flag-nicaragua'),
+(1718, '🇳🇱', ':flag-netherlands:', 'flag-netherlands'),
+(1719, '🇳🇴', ':flag-norway:', 'flag-norway'),
+(1720, '🇳🇵', ':flag-nepal:', 'flag-nepal'),
+(1721, '🇳🇷', ':flag-nauru:', 'flag-nauru'),
+(1722, '🇳🇺', ':flag-niue:', 'flag-niue'),
+(1723, '🇳🇿', ':flag-new-zealand:', 'flag-new-zealand'),
+(1724, '🇴🇲', ':flag-oman:', 'flag-oman'),
+(1725, '🇵🇦', ':flag-panama:', 'flag-panama'),
+(1726, '🇵🇪', ':flag-peru:', 'flag-peru'),
+(1727, '🇵🇫', ':flag-french-polynesia:', 'flag-french-polynesia'),
+(1728, '🇵🇬', ':flag-papua-new-guinea:', 'flag-papua-new-guinea'),
+(1729, '🇵🇭', ':flag-philippines:', 'flag-philippines'),
+(1730, '🇵🇰', ':flag-pakistan:', 'flag-pakistan'),
+(1731, '🇵🇱', ':flag-poland:', 'flag-poland'),
+(1732, '🇵🇳', ':flag-pitcairn-islands:', 'flag-pitcairn-islands'),
+(1733, '🇵🇷', ':flag-puerto-rico:', 'flag-puerto-rico'),
+(1734, '🇵🇸', ':flag-palestinian-territories:', 'flag-palestinian-territories'),
+(1735, '🇵🇹', ':flag-portugal:', 'flag-portugal'),
+(1736, '🇵🇼', ':flag-palau:', 'flag-palau'),
+(1737, '🇵🇾', ':flag-paraguay:', 'flag-paraguay'),
+(1738, '🇶🇦', ':flag-qatar:', 'flag-qatar'),
+(1739, '🇷🇴', ':flag-romania:', 'flag-romania'),
+(1740, '🇷🇸', ':flag-serbia:', 'flag-serbia'),
+(1741, '🇷🇺', ':flag-russia:', 'flag-russia'),
+(1742, '🇷🇼', ':flag-rwanda:', 'flag-rwanda'),
+(1743, '🇸🇦', ':flag-saudi-arabia:', 'flag-saudi-arabia'),
+(1744, '🇸🇧', ':flag-solomon-islands:', 'flag-solomon-islands'),
+(1745, '🇸🇨', ':flag-seychelles:', 'flag-seychelles'),
+(1746, '🇸🇩', ':flag-sudan:', 'flag-sudan'),
+(1747, '🇸🇪', ':flag-sweden:', 'flag-sweden'),
+(1748, '🇸🇬', ':flag-singapore:', 'flag-singapore'),
+(1749, '🇸🇮', ':flag-slovenia:', 'flag-slovenia'),
+(1750, '🇸🇯', ':flag-svalbard-jan-mayen:', 'flag-svalbard-jan-mayen'),
+(1751, '🇸🇰', ':flag-slovakia:', 'flag-slovakia'),
+(1752, '🇸🇱', ':flag-sierra-leone:', 'flag-sierra-leone'),
+(1753, '🇸🇲', ':flag-san-marino:', 'flag-san-marino'),
+(1754, '🇸🇳', ':flag-senegal:', 'flag-senegal'),
+(1755, '🇸🇴', ':flag-somalia:', 'flag-somalia'),
+(1756, '🇸🇷', ':flag-suriname:', 'flag-suriname'),
+(1757, '🇸🇸', ':flag-south-sudan:', 'flag-south-sudan'),
+(1758, '🇸🇻', ':flag-el-salvador:', 'flag-el-salvador'),
+(1759, '🇸🇽', ':flag-sint-maarten:', 'flag-sint-maarten'),
+(1760, '🇸🇾', ':flag-syria:', 'flag-syria'),
+(1761, '🇸🇿', ':flag-eswatini:', 'flag-eswatini'),
+(1762, '🇹🇦', ':flag-tristan-da-cunha:', 'flag-tristan-da-cunha'),
+(1763, '🇹🇨', ':flag-turks-caicos-islands:', 'flag-turks-caicos-islands'),
+(1764, '🇹🇩', ':flag-chad:', 'flag-chad'),
+(1765, '🇹🇫', ':flag-french-southern-territories:', 'flag-french-southern-territories'),
+(1766, '🇹🇬', ':flag-togo:', 'flag-togo'),
+(1767, '🇹🇭', ':flag-thailand:', 'flag-thailand'),
+(1768, '🇹🇯', ':flag-tajikistan:', 'flag-tajikistan'),
+(1769, '🇹🇰', ':flag-tokelau:', 'flag-tokelau'),
+(1770, '🇹🇱', ':flag-timor-leste:', 'flag-timor-leste'),
+(1771, '🇹🇲', ':flag-turkmenistan:', 'flag-turkmenistan'),
+(1772, '🇹🇳', ':flag-tunisia:', 'flag-tunisia'),
+(1773, '🇹🇴', ':flag-tonga:', 'flag-tonga'),
+(1774, '🇹🇷', ':flag-turkey:', 'flag-turkey'),
+(1775, '🇹🇹', ':flag-trinidad-tobago:', 'flag-trinidad-tobago'),
+(1776, '🇹🇻', ':flag-tuvalu:', 'flag-tuvalu'),
+(1777, '🇹🇼', ':flag-taiwan:', 'flag-taiwan'),
+(1778, '🇹🇿', ':flag-tanzania:', 'flag-tanzania'),
+(1779, '🇺🇦', ':flag-ukraine:', 'flag-ukraine'),
+(1780, '🇺🇬', ':flag-uganda:', 'flag-uganda'),
+(1782, '🇺🇳', ':flag-united-nations:', 'flag-united-nations'),
+(1783, '🇺🇸', ':flag-united-states:', 'flag-united-states'),
+(1784, '🇺🇾', ':flag-uruguay:', 'flag-uruguay'),
+(1785, '🇺🇿', ':flag-uzbekistan:', 'flag-uzbekistan'),
+(1786, '🇻🇦', ':flag-vatican-city:', 'flag-vatican-city'),
+(1787, '🇻🇪', ':flag-venezuela:', 'flag-venezuela'),
+(1788, '🇻🇬', ':flag-british-virgin-islands:', 'flag-british-virgin-islands'),
+(1790, '🇻🇳', ':flag-vietnam:', 'flag-vietnam'),
+(1791, '🇻🇺', ':flag-vanuatu:', 'flag-vanuatu'),
+(1792, '🇼🇫', ':flag-wallis-futuna:', 'flag-wallis-futuna'),
+(1793, '🇼🇸', ':flag-samoa:', 'flag-samoa'),
+(1794, '🇽🇰', ':flag-kosovo:', 'flag-kosovo'),
+(1795, '🇾🇪', ':flag-yemen:', 'flag-yemen'),
+(1796, '🇾🇹', ':flag-mayotte:', 'flag-mayotte'),
+(1797, '🇿🇦', ':flag-south-africa:', 'flag-south-africa'),
+(1798, '🇿🇲', ':flag-zambia:', 'flag-zambia'),
+(1799, '🇿🇼', ':flag-zimbabwe:', 'flag-zimbabwe'),
+(1800, '🏴󠁧󠁢󠁥󠁮󠁧󠁿', ':flag-england:', 'flag-england'),
+(1801, '🏴󠁧󠁢󠁳󠁣󠁴󠁿', ':flag-scotland:', 'flag-scotland'),
+(1802, '🏴󠁧󠁢󠁷󠁬󠁳󠁿', ':flag-wales:', 'flag-wales');
+
+	";
+  $db->multi_query($structure) or _error("Error", $db->error);
+
+
+  // flush multi_queries
+  do {
+  } while (mysqli_more_results($db) && mysqli_next_result($db));
+
+
+  // update tables collections
+  $get_db_tbls = $db->query("show tables") or _error("Error", $db->error);
+  while ($db_tbl = $get_db_tbls->fetch_array()) {
+    foreach ($db_tbl as $key => $value) {
+      $db->query("ALTER TABLE $value CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+    }
+  }
+
+
+  // insert new system_options values
+  $db->query("INSERT INTO system_options (option_name, option_value) VALUES
+        ('special_characters_enabled', '1'),
+        ('backblaze_enabled', '0'),
+        ('backblaze_region', 'us-west-004'),
+        ('backblaze_bucket', ''),
+        ('backblaze_key', ''),
+        ('backblaze_secret', ''),
+        ('ffmpeg_enabled', '0'),
+        ('ffmpeg_path', ''),
+        ('ffmpeg_speed', 'medium'),
+        ('reserved_usernames_enabled', ''),
+        ('reserved_usernames', '[{&quot;value&quot;:&quot;install&quot;},{&quot;value&quot;:&quot;static&quot;},{&quot;value&quot;:&quot;contact&quot;},{&quot;value&quot;:&quot;contacts&quot;},{&quot;value&quot;:&quot;sign&quot;},{&quot;value&quot;:&quot;signin&quot;},{&quot;value&quot;:&quot;login&quot;},{&quot;value&quot;:&quot;signup&quot;},{&quot;value&quot;:&quot;register&quot;},{&quot;value&quot;:&quot;signout&quot;},{&quot;value&quot;:&quot;logout&quot;},{&quot;value&quot;:&quot;reset&quot;},{&quot;value&quot;:&quot;activation&quot;},{&quot;value&quot;:&quot;connect&quot;},{&quot;value&quot;:&quot;revoke&quot;},{&quot;value&quot;:&quot;packages&quot;},{&quot;value&quot;:&quot;started&quot;},{&quot;value&quot;:&quot;search&quot;},{&quot;value&quot;:&quot;friends&quot;},{&quot;value&quot;:&quot;messages&quot;},{&quot;value&quot;:&quot;message&quot;},{&quot;value&quot;:&quot;notifications&quot;},{&quot;value&quot;:&quot;notification&quot;},{&quot;value&quot;:&quot;settings&quot;},{&quot;value&quot;:&quot;setting&quot;},{&quot;value&quot;:&quot;posts&quot;},{&quot;value&quot;:&quot;post&quot;},{&quot;value&quot;:&quot;photos&quot;},{&quot;value&quot;:&quot;photo&quot;},{&quot;value&quot;:&quot;create&quot;},{&quot;value&quot;:&quot;pages&quot;},{&quot;value&quot;:&quot;page&quot;},{&quot;value&quot;:&quot;groups&quot;},{&quot;value&quot;:&quot;group&quot;},{&quot;value&quot;:&quot;events&quot;},{&quot;value&quot;:&quot;event&quot;},{&quot;value&quot;:&quot;games&quot;},{&quot;value&quot;:&quot;game&quot;},{&quot;value&quot;:&quot;saved&quot;},{&quot;value&quot;:&quot;forums&quot;},{&quot;value&quot;:&quot;forum&quot;},{&quot;value&quot;:&quot;blogs&quot;},{&quot;value&quot;:&quot;blog&quot;},{&quot;value&quot;:&quot;articles&quot;},{&quot;value&quot;:&quot;article&quot;},{&quot;value&quot;:&quot;directory&quot;},{&quot;value&quot;:&quot;products&quot;},{&quot;value&quot;:&quot;product&quot;},{&quot;value&quot;:&quot;market&quot;},{&quot;value&quot;:&quot;admincp&quot;},{&quot;value&quot;:&quot;admin&quot;},{&quot;value&quot;:&quot;admins&quot;},{&quot;value&quot;:&quot;modcp&quot;},{&quot;value&quot;:&quot;moderator&quot;},{&quot;value&quot;:&quot;moderators&quot;},{&quot;value&quot;:&quot;moderatorcp&quot;},{&quot;value&quot;:&quot;chat&quot;},{&quot;value&quot;:&quot;ads&quot;},{&quot;value&quot;:&quot;wallet&quot;},{&quot;value&quot;:&quot;boosted&quot;},{&quot;value&quot;:&quot;people&quot;},{&quot;value&quot;:&quot;popular&quot;},{&quot;value&quot;:&quot;movies&quot;},{&quot;value&quot;:&quot;movie&quot;},{&quot;value&quot;:&quot;api&quot;},{&quot;value&quot;:&quot;apis&quot;},{&quot;value&quot;:&quot;oauth&quot;},{&quot;value&quot;:&quot;authorize&quot;},{&quot;value&quot;:&quot;anonymous&quot;},{&quot;value&quot;:&quot;jobs&quot;},{&quot;value&quot;:&quot;job&quot;}]'),
+        ('getting_started_profile_image_required', '0'),
+        ('getting_started_location_required', '0'),
+        ('getting_started_education_required', '0'),
+        ('getting_started_work_required', '0'),
+        ('posts_views_enabled', '0'),
+        ('points_per_post_view', '0.001'),
+        ('newsfeed_location_filter_enabled', '0')") or _error("Error", $db->error);
+
+
+  // update system settings
+  update_system_options([
+    'session_hash' => secure($session_hash)
+  ], false);
+
+
+  // create config file
+  $config_string = '<?php  
+	define("DB_NAME", \'' . DB_NAME . '\');
+	define("DB_USER", \'' . DB_USER . '\');
+	define("DB_PASSWORD", \'' . DB_PASSWORD . '\');
+	define("DB_HOST", \'' . DB_HOST . '\');
+	define("DB_PORT", \'' . DB_PORT . '\');
+	define("SYS_URL", \'' . SYS_URL . '\');
+	define("DEBUGGING", false);
+	define("DEFAULT_LOCALE", \'en_us\');
+	define("LICENCE_KEY", \'' . $licence_key . '\');
+	?>';
+
+  $config_file = 'includes/config.php';
+  $handle = fopen($config_file, 'w') or _error("System Error", "Cannot create the config file");
+  fwrite($handle, $config_string);
+  fclose($handle);
+
+
+  // Done
+  _error("System Updated", "Delus has been updated to " . SYS_VER);
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Delus &rsaquo; Update (v<?php echo SYS_VER ?>)</title>
+  <link rel="shortcut icon" href="includes/assets/js/core/installer/favicon.png" />
+  <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+  <link rel="stylesheet" href="includes/assets/js/core/installer/wizard.css">
+</head>
+
+<body>
+  <main class="my-5">
+    <div class="container">
+      <form id="wizard" method="post" class="position-relative">
+        <!-- Step 1 -->
+        <h3>
+          <div class="media">
+            <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
+            <div class="media-body">
+              <div class="bd-wizard-step-title">Update</div>
+              <div class="bd-wizard-step-subtitle">Delus (v<?php echo SYS_VER ?>)</div>
+            </div>
+          </div>
+        </h3>
+        <section>
+          <div class="content-wrapper">
+            <h3 class="section-heading">Welcome!</h3>
+            <p>
+              Welcome to <strong>Delus</strong> updating process! Just fill in the information below.
+            </p>
+            <div class="row mt-4">
+              <div class="form-group col-12">
+                <label for="purchase_code">Your Purchase Code</label>
+                <input type="text" name="purchase_code" id="purchase_code" class="form-control" placeholder="xxx-xx-xxxx">
+                <div class="invalid-feedback">
+                  This field can't be empty
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- Step 1 -->
+        <!-- Submit -->
+        <div style="display: none;">
+          <button class="btn btn-primary" name="submit" type="submit" id="wizard-submittion">Submit</button>
+        </div>
+        <!-- Submit -->
+        <!-- Loader -->
+        <div id="loader" style="display: none;">
+          <div class="wizard-loader">
+            Updating<span class="spinner-grow spinner-grow-sm ml-3"></span>
+          </div>
+        </div>
+        <!-- Loader -->
+      </form>
+    </div>
+  </main>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+  <script src="includes/assets/js/core/installer/jquery.steps.min.js"></script>
+  <script type="text/javascript">
+    // handle wizard
+    var wizard = $("#wizard");
+    wizard.steps({
+      headerTag: "h3",
+      bodyTag: "section",
+      transitionEffect: "none",
+      titleTemplate: '#title#',
+      onFinished: function(event, currentIndex) {
+        /* check details */
+        if ($('input[type="text"]').val() == "") {
+          $('input[type="text"]').addClass("is-invalid");
+          return false;
+        }
+        $("#loader").slideDown();
+        $("#wizard-submittion").click();
+        return true;
+      },
+      labels: {
+        finish: "Update",
+      }
+    });
+
+    // handle inputs
+    $('input[type="text"]').on('change', function() {
+      if ($(this).val() == "") {
+        $(this).addClass("is-invalid");
+      } else {
+        $(this).removeClass("is-invalid");
+      }
+    });
+  </script>
+</body>
+
+</html>

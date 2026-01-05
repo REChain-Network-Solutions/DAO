@@ -23,7 +23,7 @@ struct WebView: UIViewRepresentable {
         webView.configuration.allowsInlineMediaPlayback = true
 
         // Set a custom User-Agent for WebView
-        webView.customUserAgent = "Delus"
+        webView.customUserAgent = "DelusIOS"
 
         // Add refresh control to the WKWebView's scroll view
         let refreshControl = UIRefreshControl()

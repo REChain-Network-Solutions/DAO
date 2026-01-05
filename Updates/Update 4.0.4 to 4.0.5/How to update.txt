@@ -1,0 +1,41 @@
+============================================================
+== If you running Delus v 4.0.4 you can upgrade to 4.0.5 ==
+============================================================
+
+!!! IMPORTANT !!!
+==============================================================================================================
+== Backup your database and your website files just in case something wrong happened                        ==
+== Uninstall any Delus plugin(s) from your Delus both files and any database changes made by this plugin  ==
+== If you can't do it ask the plugin author(s) for support and help                                         ==
+==============================================================================================================
+
+You can check our video tutorial from here: https://www.youtube.com/watch?v=Jch1GaWuBbE
+
+Note: Make sure you are running on the default Delus theme 
+
+1- Shutdown your system from the admin panel
+
+2- Upload all files located in the "Update_4.0.5" folder to your live server and replace all files/folders inside this folder
+
+3- Empty this folder "content/themes/default/templates_compiled"
+
+=========================================================
+== After Update ==
+=========================================================
+
+1- Remove any browser cache and cookies ( Check this to learn how: https://bit.ly/DelusClearCache )
+
+2- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
+
+3- Go to your admin panel (http://yourdomain.com/path_to_script/admincp) and make site live again
+
+And That's it, Have Fun :)
+
+=======================================================================================================
+
+Don't forget to check Delus blog for a lot of tutorials:
+https://blog.Delus.com/
+
+If you need help/support:
+Open support ticket here and our team will help you: https://www.Sorokin Dmitry Olegovich.com/support
+** Kindly make sure you don't have expired support **

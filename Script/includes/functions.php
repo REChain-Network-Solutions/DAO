@@ -7176,7 +7176,7 @@ function mercadopago($handle, $price, $id = null)
       [
         'title' => "Payment for $handle",
         'quantity' => 1,
-        'unit_price' => intval(($total)),
+        'unit_price' => (float)$total,
         'currency_id' => $system['system_currency'],
       ]
     ],
@@ -7222,6 +7222,9 @@ function mercadopago($handle, $price, $id = null)
 function mercadopago_check($payment_id)
 {
   global $system;
+  if (isset($_SESSION['mercadopago_payments']) && in_array($payment_id, $_SESSION['mercadopago_payments'])) {
+    return false;
+  }
   $headers = [
     'Authorization: Bearer ' . $system['mercadopago_access_token'],
     'Content-Type: application/json',
@@ -7238,6 +7241,7 @@ function mercadopago_check($payment_id)
   curl_close($ch);
   $responseJson = json_decode($response, true);
   if ($httpCode == 200 && $responseJson['status'] == 'approved') {
+    $_SESSION['mercadopago_payments'][] = $payment_id;
     return $responseJson;
   }
   return false;

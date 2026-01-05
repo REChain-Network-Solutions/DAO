@@ -1,0 +1,33 @@
+============================================================
+== If you running Delus v 2.5.7 you can upgrade to 2.5.8 ==
+============================================================
+
+!!! IMPORTANT !!!
+==============================================================================================================
+== Backup your database and your website files just in case something wrong happened                        ==
+== Uninstall any Delus plugin(s) from your Delus both files and any database changes made by this plugin  ==
+== If you can't do it ask the plugin author(s) for support and help                                         ==
+==============================================================================================================
+
+You can check our video tutorial from here: https://www.youtube.com/watch?v=Jch1GaWuBbE
+
+1- Shutdown your system from the admin panel
+2- Upload all files located in the "Script" folder and replace all files and folders
+3- Copy "update.php" file from "Update 2.5.7 to 2.5.8" folder to your Script folder
+4- Run the "update.php" file (http://yourdomain.com/path_to_script/update.php)
+5- Empty this folder "content/themes/default/templates_compiled"
+6- Remove any browser cache and cookies (Check this to learn how: https://goo.gl/oE7BoR)
+7- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
+8- Go to your admin panel (http://yourdomain.com/path_to_script/admincp) and make site live again
+9- Delete "update.php" from your script folder after updating
+
+And That's it, Have Fun :)
+
+=======================================================================================================
+
+Don't forget to check Delus blog for a lot of tutorials:
+https://blog.Delus.com/
+
+If you need help/support:
+Open support ticket here and our team will help you: https://www.Sorokin Dmitry Olegovich.com/support
+** Kindly make sure you don't have expired support **

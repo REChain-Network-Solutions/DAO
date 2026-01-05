@@ -26,7 +26,7 @@ trait SupportTrait
     if ($this->_is_admin) {
       /* get stats of all tickets */
       $stats['total'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets")->fetch_assoc()['count'];
-      $stats['unassigned'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets WHERE agent_id IS NULL")->fetch_assoc()['count'];
+      $stats['unassigned'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets WHERE agent_id IS NULL OR agent_id = 0")->fetch_assoc()['count'];
       $stats['in_progress'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets WHERE status = 'in_progress'")->fetch_assoc()['count'];
       $stats['opened'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets WHERE status = 'opened'")->fetch_assoc()['count'];
       $stats['pending'] = $db->query("SELECT COUNT(*) AS count FROM support_tickets WHERE status = 'pending'")->fetch_assoc()['count'];
@@ -206,8 +206,10 @@ trait SupportTrait
     /* update ticket */
     $db->query(sprintf("UPDATE support_tickets SET status = 'in_progress', replies = replies + 1, updated_at = %s WHERE ticket_id = %s", secure($date), secure($ticket_id, 'int')));
     /* send notification to requester and agent */
-    $to_user_id = ($this->_data['user_id'] != $ticket['user_id']) ? $ticket['user_id'] : $ticket['agent_id'];
-    $this->post_notification(['to_user_id' => $to_user_id, 'action' => 'support_ticket_replied', 'node_url' => $ticket['ticket_id']]);
+    $to_user_id = ($this->_data['user_id'] == $ticket['user_id']) ? $ticket['agent_id'] : $ticket['user_id'];
+    if ($to_user_id) {
+      $this->post_notification(['to_user_id' => $to_user_id, 'action' => 'support_ticket_replied', 'node_url' => $ticket['ticket_id']]);
+    }
   }
 
 
@@ -249,7 +251,7 @@ trait SupportTrait
     $unassigned = !isset($args['unassigned']) ? null : $args['unassigned'];
     if ($unassigned) {
       if ($where_query) $where_query .= " AND ";
-      $where_query .= "support_tickets.agent_id IS NULL";
+      $where_query .= "support_tickets.agent_id IS NULL OR support_tickets.agent_id = 0";
       if ($url_query) $url_query .= "&";
       $url_query .= "unassigned=true";
     }
@@ -397,10 +399,14 @@ trait SupportTrait
           $reply['user_picture'] = get_picture($reply['user_picture'], $reply['user_gender']);
           $reply['user_fullname'] = $system['show_usernames_enabled'] ? $reply['user_name'] : $reply['user_firstname'] . ' ' . $reply['user_lastname'];
         } else {
-          $reply['user_picture'] = get_picture("", "system");
-          $reply['user_fullname'] = __("Support Agent");
+          if ($this->_data['user_id'] == $reply['user_id']) {
+            $reply['user_picture'] = get_picture($reply['user_picture'], $reply['user_gender']);
+            $reply['user_fullname'] = $system['show_usernames_enabled'] ? $reply['user_name'] : $reply['user_firstname'] . ' ' . $reply['user_lastname'];
+          } else {
+            $reply['user_picture'] = get_picture("", "system");
+            $reply['user_fullname'] = __("Support Agent");
+          }
         }
-
         $reply['parsed_text'] = htmlspecialchars_decode($reply['text']);
         $ticket['replies'][] = $reply;
       }

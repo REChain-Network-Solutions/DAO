@@ -653,7 +653,7 @@ trait PublisherTrait
     /* check if the url is banned */
     $host = get_base_domain($url);
     if ($system['censored_domains_enabled']) {
-      $banned_domains = explode(',', trim($system['censored_domains']));
+      $banned_domains =  array_map('trim', explode(',', trim($system['censored_domains'])));
       if ($banned_domains && in_array($host, $banned_domains)) {
         return false;
       }

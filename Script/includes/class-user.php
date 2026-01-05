@@ -1457,7 +1457,9 @@ class User
           throw new AuthorizationException(__("You have already blocked this user before!"));
         }
         /* remove any friendship */
-        $this->connect('friend-remove', $id);
+        if ($system['friends_enabled']) {
+          $this->connect('friend-remove', $id);
+        }
         /* delete the target from viewer's followings */
         $this->connect('unfollow', $id);
         /* delete the viewer from target's followings */

@@ -708,7 +708,7 @@
     {if $_post['post_type'] == "live" && $_post['live']}
       {if $system['save_live_enabled'] && $_post['live']['live_ended'] && $_post['live']['live_recorded']}
         <div>
-          <video class="js_video-plyr" id="video-{$_post['live']['live_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $_post['live']['video_thumbnail']}poster="{$system['system_uploads']}/{$_post['live']['video_thumbnail']}" {/if} playsinline controls preload="auto">
+          <video class="js_video-plyr" id="video-{$_post['live']['live_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $_post['live']['video_thumbnail']}poster="{$system['system_uploads']}/{$_post['live']['video_thumbnail']}" {/if} playsinline controls preload="auto" style="max-width: 100%; width: 100%; height: auto;">
             <source src="{$system['system_agora_uploads']}/{$_post['live']['agora_file']}" type="application/x-mpegURL">
           </video>
         </div>
@@ -1185,7 +1185,7 @@
 
     {if $_post['post_type'] == "reel" && $_post['reel']}
       <div class="{if $_post['post_type'] == "combo"}mt10{/if}">
-        <video class="js_video-plyr" id="reel-{$_post['reel']['reel_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $user->_logged_in}onplay="update_media_views('reel', {$_post['reel']['reel_id']})" {/if} {if $_post['reel']['thumbnail']}data-poster="{$system['system_uploads']}/{$_post['reel']['thumbnail']}" {/if} playsinline controls preload="auto">
+        <video class="js_video-plyr" id="reel-{$_post['reel']['reel_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $user->_logged_in}onplay="update_media_views('reel', {$_post['reel']['reel_id']})" {/if} {if $_post['reel']['thumbnail']}data-poster="{$system['system_uploads']}/{$_post['reel']['thumbnail']}" {/if} playsinline controls preload="auto" style="max-width: 100%; width: 100%; height: auto;">
           {if empty($_post['reel']['source_240p']) && empty($_post['reel']['source_360p']) && empty($_post['reel']['source_480p']) && empty($_post['reel']['source_720p']) && empty($_post['reel']['source_1080p']) && empty($_post['reel']['source_1440p']) && empty($_post['reel']['source_2160p'])}
             <source src="{$system['system_uploads']}/{$_post['reel']['source']}" type="video/mp4">
           {/if}
@@ -1216,7 +1216,7 @@
 
     {if ($_post['post_type'] == "video" || $_post['post_type'] == "combo") && $_post['video']}
       <div class="{if $_post['post_type'] == "combo"}mt10{/if}">
-        <video class="js_video-plyr" id="video-{$_post['video']['video_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $user->_logged_in}onplay="update_media_views('video', {$_post['video']['video_id']})" {/if} {if $_post['video']['thumbnail']}data-poster="{$system['system_uploads']}/{$_post['video']['thumbnail']}" {/if} playsinline controls preload="auto">
+        <video class="js_video-plyr" id="video-{$_post['video']['video_id']}{if $pinned || $boosted}-{$_post['post_id']}{/if}" {if $user->_logged_in}onplay="update_media_views('video', {$_post['video']['video_id']})" {/if} {if $_post['video']['thumbnail']}data-poster="{$system['system_uploads']}/{$_post['video']['thumbnail']}" {/if} playsinline controls preload="auto" style="max-width: 100%; width: 100%; height: auto;">
           {if empty($_post['video']['source_240p']) && empty($_post['video']['source_360p']) && empty($_post['video']['source_480p']) && empty($_post['video']['source_720p']) && empty($_post['video']['source_1080p']) && empty($_post['video']['source_1440p']) && empty($_post['video']['source_2160p'])}
             <source src="{$system['system_uploads']}/{$_post['video']['source']}" type="video/mp4">
           {/if}

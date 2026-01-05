@@ -14,6 +14,14 @@
     </div>
 
     <!-- Changelog -->
+    <h3>Version <span class="badge bg-warning rounded-pill">4.2.1</span></h3>
+    <blockquote>Release Date: 30th December 2025</blockquote>
+    <ul class="change-log-list mb20">
+      <li>[Fixed] Minor Bugs</li>
+    </ul>
+
+    <div class="divider"></div>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.2</span></h3>
     <blockquote>Release Date: 20th December 2025</blockquote>
     <ul class="change-log-list mb20">

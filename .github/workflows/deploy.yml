@@ -1,0 +1,199 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, build, docker]
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.28.0'
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name rechain-dao-staging
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Apply namespace and configurations
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/configmaps/
+        kubectl apply -f k8s/secrets/
+        
+        # Deploy application
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+        kubectl apply -f k8s/ingress.yaml
+        
+        # Wait for deployment
+        kubectl rollout status deployment/rechain-dao-app -n rechain-dao-staging --timeout=300s
+        
+        # Update image tag
+        kubectl set image deployment/rechain-dao-app rechain-dao-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n rechain-dao-staging
+
+    - name: Run database migrations
+      run: |
+        kubectl run migration-job --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --restart=Never --namespace=rechain-dao-staging \
+          --env="DB_HOST=${{ secrets.DB_HOST_STAGING }}" \
+          --env="DB_NAME=${{ secrets.DB_NAME_STAGING }}" \
+          --env="DB_USER=${{ secrets.DB_USER_STAGING }}" \
+          --env="DB_PASSWORD=${{ secrets.DB_PASSWORD_STAGING }}" \
+          --command -- php artisan migrate --force
+
+    - name: Health check
+      run: |
+        sleep 30
+        kubectl get pods -n rechain-dao-staging
+        curl -f https://staging.rechain-dao.com/health || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, build, docker]
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: us-east-1
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.28.0'
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name rechain-dao-production
+
+    - name: Create backup
+      run: |
+        # Create database backup before deployment
+        kubectl run backup-job --image=mysql:8.0 \
+          --restart=Never --namespace=rechain-dao-production \
+          --env="DB_HOST=${{ secrets.DB_HOST_PROD }}" \
+          --env="DB_NAME=${{ secrets.DB_NAME_PROD }}" \
+          --env="DB_USER=${{ secrets.DB_USER_PROD }}" \
+          --env="DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }}" \
+          --command -- sh -c "mysqldump -h$DB_HOST -u$DB_USER -p$DB_PASSWORD $DB_NAME > /backup/backup-$(date +%Y%m%d-%H%M%S).sql"
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Apply namespace and configurations
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/configmaps/
+        kubectl apply -f k8s/secrets/
+        
+        # Deploy application with rolling update
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+        kubectl apply -f k8s/ingress.yaml
+        
+        # Wait for deployment
+        kubectl rollout status deployment/rechain-dao-app -n rechain-dao-production --timeout=600s
+        
+        # Update image tag
+        kubectl set image deployment/rechain-dao-app rechain-dao-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n rechain-dao-production
+
+    - name: Run database migrations
+      run: |
+        kubectl run migration-job --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --restart=Never --namespace=rechain-dao-production \
+          --env="DB_HOST=${{ secrets.DB_HOST_PROD }}" \
+          --env="DB_NAME=${{ secrets.DB_NAME_PROD }}" \
+          --env="DB_USER=${{ secrets.DB_USER_PROD }}" \
+          --env="DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }}" \
+          --command -- php artisan migrate --force
+
+    - name: Health check
+      run: |
+        sleep 60
+        kubectl get pods -n rechain-dao-production
+        curl -f https://rechain-dao.com/health || exit 1
+
+    - name: Notify Slack
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: deploy-production
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: us-east-1
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.28.0'
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name rechain-dao-production
+
+    - name: Rollback deployment
+      run: |
+        kubectl rollout undo deployment/rechain-dao-app -n rechain-dao-production
+        kubectl rollout status deployment/rechain-dao-app -n rechain-dao-production --timeout=300s
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: 'failure'
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        text: '🚨 Production deployment rolled back due to failure'

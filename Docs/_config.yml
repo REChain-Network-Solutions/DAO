@@ -1,0 +1,175 @@
+# Site settings
+title: REChain DAO Platform Documentation
+description: Comprehensive documentation for the REChain DAO Platform
+baseurl: "/DAO"
+url: "https://REChain-Network-Solutions.github.io"
+repository: REChain-Network-Solutions/DAO
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-github-metadata
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-default-layout
+  - jekyll-titles-from-headings
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .gitignore
+  - .git
+  - README.md
+  - LICENSE
+  - CNAME
+  - .github
+
+# Include specific files
+include:
+  - _pages
+  - _posts
+  - _data
+
+# Collections
+collections:
+  api:
+    output: true
+    permalink: /:collection/:name/
+  guides:
+    output: true
+    permalink: /:collection/:name/
+  tutorials:
+    output: true
+    permalink: /:collection/:name/
+
+# Default values
+defaults:
+  - scope:
+      path: ""
+      type: "api"
+    values:
+      layout: "api"
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "guide"
+  - scope:
+      path: ""
+      type: "tutorials"
+    values:
+      layout: "tutorial"
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+
+# SEO and metadata
+logo: "/assets/images/logo.png"
+twitter:
+  username: REChainDAO
+  card: summary
+social:
+  name: REChain DAO
+  links:
+    - https://github.com/REChain-Network-Solutions/DAO
+    - https://twitter.com/REChainDAO
+    - https://discord.gg/rechain
+
+# Analytics
+google_analytics: UA-XXXXXXXXX-X
+
+# Navigation
+navigation:
+  - title: Getting Started
+    subnav:
+      - title: Installation
+        url: /installation/
+      - title: Quick Start
+        url: /quickstart/
+      - title: Configuration
+        url: /configuration/
+  - title: API Reference
+    subnav:
+      - title: Overview
+        url: /api/overview/
+      - title: Authentication
+        url: /api/authentication/
+      - title: Endpoints
+        url: /api/endpoints/
+      - title: Webhooks
+        url: /api/webhooks/
+  - title: Guides
+    subnav:
+      - title: Development
+        url: /guides/development/
+      - title: Deployment
+        url: /guides/deployment/
+      - title: Security
+        url: /guides/security/
+      - title: Blockchain
+        url: /guides/blockchain/
+  - title: Tutorials
+    subnav:
+      - title: Basic Setup
+        url: /tutorials/basic-setup/
+      - title: Smart Contracts
+        url: /tutorials/smart-contracts/
+      - title: API Integration
+        url: /tutorials/api-integration/
+
+# Footer links
+footer_links:
+  - title: GitHub
+    url: https://github.com/REChain-Network-Solutions/DAO
+  - title: Discord
+    url: https://discord.gg/rechain
+  - title: Twitter
+    url: https://twitter.com/REChainDAO
+  - title: Website
+    url: https://rechain-dao.com
+
+# Version
+version: 2.1.0
+
+# Theme settings
+minima:
+  skin: auto
+
+# Syntax highlighting
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Sass configuration
+sass:
+  style: compressed
+  sass_dir: _sass
+
+# Pagination
+paginate: 10
+paginate_path: "/blog/page:num/"
+
+# Timezone
+timezone: UTC
+
+# Encoding
+encoding: utf-8
+
+# Liquid settings
+liquid:
+  error_mode: warn
+  strict_filters: false
+  strict_variables: false

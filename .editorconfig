@@ -1,0 +1,335 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# PHP files
+[*.php]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+
+# JavaScript/TypeScript files
+[*.{js,jsx,ts,tsx,mjs,cjs}]
+indent_size = 2
+indent_style = space
+max_line_length = 100
+
+# JSON files
+[*.json]
+indent_size = 2
+indent_style = space
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+indent_style = space
+
+# Markdown files
+[*.md]
+indent_size = 2
+indent_style = space
+trim_trailing_whitespace = false
+
+# Docker files
+[Dockerfile*]
+indent_size = 2
+indent_style = space
+
+# Shell scripts
+[*.{sh,bash,zsh,fish}]
+indent_size = 2
+indent_style = space
+
+# Python files
+[*.py]
+indent_size = 4
+indent_style = space
+max_line_length = 88
+
+# Ruby files
+[*.rb]
+indent_size = 2
+indent_style = space
+
+# Go files
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Rust files
+[*.rs]
+indent_size = 4
+indent_style = space
+max_line_length = 100
+
+# C/C++ files
+[*.{c,cpp,h,hpp}]
+indent_size = 4
+indent_style = space
+
+# Java files
+[*.java]
+indent_size = 4
+indent_style = space
+
+# C# files
+[*.cs]
+indent_size = 4
+indent_style = space
+
+# HTML files
+[*.html]
+indent_size = 2
+indent_style = space
+
+# CSS files
+[*.css]
+indent_size = 2
+indent_style = space
+
+# SCSS/Sass files
+[*.{scss,sass}]
+indent_size = 2
+indent_style = space
+
+# LESS files
+[*.less]
+indent_size = 2
+indent_style = space
+
+# Vue files
+[*.vue]
+indent_size = 2
+indent_style = space
+
+# XML files
+[*.xml]
+indent_size = 4
+indent_style = space
+
+# SQL files
+[*.sql]
+indent_size = 2
+indent_style = space
+
+# TOML files
+[*.toml]
+indent_size = 2
+indent_style = space
+
+# INI files
+[*.ini]
+indent_size = 2
+indent_style = space
+
+# Configuration files
+[*.{conf,config}]
+indent_size = 2
+indent_style = space
+
+# Makefiles
+[Makefile]
+indent_style = tab
+indent_size = 4
+
+[*.mk]
+indent_style = tab
+indent_size = 4
+
+# CMake files
+[CMakeLists.txt]
+indent_size = 2
+indent_style = space
+
+[*.cmake]
+indent_size = 2
+indent_style = space
+
+# Gradle files
+[*.gradle]
+indent_size = 4
+indent_style = space
+
+# Maven files
+[pom.xml]
+indent_size = 4
+indent_style = space
+
+# Terraform files
+[*.tf]
+indent_size = 2
+indent_style = space
+
+[*.tfvars]
+indent_size = 2
+indent_style = space
+
+# Kubernetes YAML files
+[*k8s*.yml]
+indent_size = 2
+indent_style = space
+
+[*k8s*.yaml]
+indent_size = 2
+indent_style = space
+
+# Helm templates
+[templates/*.yaml]
+indent_size = 2
+indent_style = space
+
+[templates/*.yml]
+indent_size = 2
+indent_style = space
+
+# Ansible files
+[*.ansible]
+indent_size = 2
+indent_style = space
+
+# Chef files
+[*.rb]
+indent_size = 2
+indent_style = space
+
+# Puppet files
+[*.pp]
+indent_size = 2
+indent_style = space
+
+# Vagrant files
+[Vagrantfile]
+indent_size = 2
+indent_style = space
+
+# Webpack files
+[webpack.config.js]
+indent_size = 2
+indent_style = space
+
+# Babel files
+[.babelrc]
+indent_size = 2
+indent_style = space
+
+[babel.config.js]
+indent_size = 2
+indent_style = space
+
+# ESLint files
+[.eslintrc.js]
+indent_size = 2
+indent_style = space
+
+[.eslintrc.json]
+indent_size = 2
+indent_style = space
+
+# Prettier files
+[.prettierrc]
+indent_size = 2
+indent_style = space
+
+[.prettierrc.json]
+indent_size = 2
+indent_style = space
+
+# TypeScript config
+[tsconfig.json]
+indent_size = 2
+indent_style = space
+
+# Package files
+[package.json]
+indent_size = 2
+indent_style = space
+
+[package-lock.json]
+indent_size = 2
+indent_style = space
+
+# Composer files
+[composer.json]
+indent_size = 4
+indent_style = space
+
+# Lock files
+[*.{lock,lockfile}]
+indent_size = 2
+indent_style = space
+
+# Log files
+[*.log]
+insert_final_newline = false
+
+# Environment files
+[.env*]
+indent_size = 2
+indent_style = space
+
+# Test files
+[*.{test,spec}.{js,ts,jsx,tsx,py,rb,php}]
+indent_size = 2
+indent_style = space
+
+# Documentation files
+[*.{rst,txt}]
+indent_size = 3
+indent_style = space
+
+# Solidity files
+[*.sol]
+indent_size = 4
+indent_style = space
+
+# Vyper files
+[*.vy]
+indent_size = 4
+indent_style = space
+
+# Blockchain specific files
+[*.abi]
+indent_size = 2
+indent_style = space
+
+# Generated files
+[generated/**]
+indent_style = ignore
+
+# Vendor files
+[vendor/**]
+indent_style = ignore
+
+[node_modules/**]
+indent_style = ignore
+
+# Build files
+[build/**]
+indent_style = ignore
+
+[dist/**]
+indent_style = ignore
+
+# Temporary files
+[tmp/**]
+indent_style = ignore
+
+[temp/**]
+indent_style = ignore
+
+# OS specific files
+[*.DS_Store]
+indent_style = ignore
+
+[Thumbs.db]
+indent_style = ignore

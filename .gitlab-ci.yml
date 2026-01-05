@@ -1,40 +1,68 @@
 stages:
+  - validate
   - test
-  - build
   - security
+  - build
   - deploy
+  - pages
 
 variables:
+  PHP_VERSION: "8.1"
   NODE_VERSION: "18"
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: "/certs"
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
 
 cache:
+  key: "$CI_COMMIT_REF_SLUG"
   paths:
+    - vendor/
     - node_modules/
+    - .composer/
     - .npm/
 
-unit-tests:
-  stage: test
-  image: node:18-alpine
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Validation stage
+validate:code-style:
+  stage: validate
+  image: php:8.1-cli
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq git unzip
+    - curl -sS https://getcomposer.org/installer | php
+    - php composer.phar install --prefer-dist --no-progress --no-interaction
   script:
-    - npm ci
-    - npm run lint
-    - npm run type-check
-    - npm run test:unit
-  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+    - vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
   artifacts:
     reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
+      junit: reports/php-cs-fixer.xml
     paths:
-      - coverage/
+      - reports/
     expire_in: 1 week
 
-integration-tests:
+validate:php-lint:
+  stage: validate
+  image: php:8.1-cli
+  script:
+    - find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \;
+
+validate:composer:
+  stage: validate
+  image: php:8.1-cli
+  script:
+    - composer validate --strict
+
+# Test stage
+test:unit:
   stage: test
-  image: node:18-alpine
+  image: php:8.1-cli
   services:
     - name: mysql:8.0
       alias: mysql
@@ -43,10 +71,6 @@ integration-tests:
         MYSQL_DATABASE: rechain_dao_test
     - name: redis:7-alpine
       alias: redis
-  script:
-    - npm ci
-    - npm run db:migrate
-    - npm run test:integration
   variables:
     DB_HOST: mysql
     DB_PORT: 3306
@@ -55,13 +79,84 @@ integration-tests:
     DB_PASSWORD: root
     REDIS_HOST: redis
     REDIS_PORT: 6379
-
-e2e-tests:
-  stage: test
-  image: cypress/included:12.0.0
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq git unzip libzip-dev zip libpng-dev libonig-dev
+    - docker-php-ext-install pdo_mysql zip gd bcmath
+    - pecl install redis
+    - docker-php-ext-enable redis
+    - curl -sS https://getcomposer.org/installer | php
+    - php composer.phar install --prefer-dist --no-progress --no-interaction
   script:
+    - vendor/bin/phpunit --testsuite=Unit --coverage-clover=coverage/unit.xml --log-junit=reports/unit.xml
+  coverage: '/^\s*Lines:\s*\d+.\d+\%/'
+  artifacts:
+    reports:
+      junit: reports/unit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/unit.xml
+    paths:
+      - coverage/
+      - reports/
+    expire_in: 1 week
+
+test:integration:
+  stage: test
+  image: php:8.1-cli
+  services:
+    - name: mysql:8.0
+      alias: mysql
+      variables:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: rechain_dao_test
+    - name: redis:7-alpine
+      alias: redis
+  variables:
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_NAME: rechain_dao_test
+    DB_USER: root
+    DB_PASSWORD: root
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq git unzip libzip-dev zip libpng-dev libonig-dev
+    - docker-php-ext-install pdo_mysql zip gd bcmath
+    - pecl install redis
+    - docker-php-ext-enable redis
+    - curl -sS https://getcomposer.org/installer | php
+    - php composer.phar install --prefer-dist --no-progress --no-interaction
+  script:
+    - php artisan migrate --force
+    - vendor/bin/phpunit --testsuite=Integration --log-junit=reports/integration.xml
+  artifacts:
+    reports:
+      junit: reports/integration.xml
+    paths:
+      - reports/
+    expire_in: 1 week
+
+test:feature:
+  stage: test
+  image: node:18-alpine
+  services:
+    - name: mysql:8.0
+      alias: mysql
+      variables:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: rechain_dao_test
+  variables:
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_NAME: rechain_dao_test
+    DB_USER: root
+    DB_PASSWORD: root
+  before_script:
     - npm ci
     - npm run build
+  script:
     - npm start &
     - sleep 30
     - npm run test:e2e
@@ -70,24 +165,72 @@ e2e-tests:
     paths:
       - cypress/screenshots/
       - cypress/videos/
+      - test-results/
     expire_in: 1 week
 
-build:
-  stage: build
-  image: node:18-alpine
+# Security stage
+security:composer-audit:
+  stage: security
+  image: php:8.1-cli
+  before_script:
+    - curl -sS https://getcomposer.org/installer | php
   script:
-    - npm ci
-    - npm run build
+    - php composer.phar audit --format=plain
+  allow_failure: true
+
+security:sast:
+  stage: security
+  image: semgrep/semgrep
+  script:
+    - semgrep --config=auto --json --output=reports/sast.json .
   artifacts:
     paths:
-      - dist/
+      - reports/
+    expire_in: 1 week
+  allow_failure: true
+
+security:dependency-scan:
+  stage: security
+  image: node:18-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm audit --audit-level moderate
+  allow_failure: true
+
+security:container-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --format json --output reports/container-scan.json $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  artifacts:
+    paths:
+      - reports/
+    expire_in: 1 week
+  allow_failure: true
+
+# Build stage
+build:composer:
+  stage: build
+  image: php:8.1-cli
+  before_script:
+    - curl -sS https://getcomposer.org/installer | php
+  script:
+    - php composer.phar install --prefer-dist --no-progress --no-interaction --no-dev
+    - php composer.phar dump-autoload --optimize
+  artifacts:
+    paths:
+      - vendor/
+      - composer.lock
     expire_in: 1 week
 
-docker-build:
+build:docker:
   stage: build
   image: docker:20.10.16
   services:
     - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
@@ -96,41 +239,95 @@ docker-build:
   only:
     - main
     - develop
+    - tags
 
-security-scan:
-  stage: security
-  image: node:18-alpine
+build:package:
+  stage: build
+  image: alpine:latest
   script:
-    - npm ci
-    - npm audit --audit-level moderate
-    - npm run security:scan
-  allow_failure: true
+    - mkdir -p package
+    - cp -r src/ package/
+    - cp -r templates/ package/
+    - cp -r public/ package/
+    - cp composer.json package/
+    - cp composer.lock package/
+    - tar -czf rechain-dao-$CI_COMMIT_TAG.tar.gz package/
+  artifacts:
+    paths:
+      - rechain-dao-*.tar.gz
+    expire_in: 1 month
+  only:
+    - tags
 
-deploy-staging:
+# Deploy stage
+deploy:staging:
   stage: deploy
   image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context staging
-    - kubectl apply -f k8s/
-    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao
   environment:
     name: staging
     url: https://staging.rechain-dao.com
+  before_script:
+    - kubectl config use-context $KUBE_CONTEXT_STAGING
+  script:
+    - kubectl apply -f k8s/
+    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -n rechain-dao-staging
+    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao-staging --timeout=300s
   only:
     - develop
+  when: manual
 
-deploy-production:
+deploy:production:
   stage: deploy
   image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context production
-    - kubectl apply -f k8s/
-    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao
   environment:
     name: production
     url: https://rechain-dao.com
+  before_script:
+    - kubectl config use-context $KUBE_CONTEXT_PRODUCTION
+  script:
+    - kubectl apply -f k8s/
+    - kubectl set image deployment/rechain-dao-app rechain-dao-app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -n rechain-dao-production
+    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao-production --timeout=600s
+  only:
+    - main
+    - tags
+  when: manual
+
+deploy:rollback:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+  before_script:
+    - kubectl config use-context $KUBE_CONTEXT_PRODUCTION
+  script:
+    - kubectl rollout undo deployment/rechain-dao-app -n rechain-dao-production
+    - kubectl rollout status deployment/rechain-dao-app -n rechain-dao-production --timeout=300s
   only:
     - main
   when: manual
+
+# GitLab Pages
+pages:
+  stage: pages
+  image: ruby:3.1
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq build-essential
+    - gem install bundler
+    - bundle config set --local deployment 'true'
+    - bundle config set --local path 'vendor/bundle'
+  script:
+    - cd docs
+    - bundle install
+    - bundle exec jekyll build -d ../public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+    - develop
+  cache:
+    key: "$CI_COMMIT_REF_SLUG-pages"
+    paths:
+      - docs/vendor/bundle/

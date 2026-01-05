@@ -3,10 +3,17 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Production builds
 dist/
 build/
+out/
+.next/
+.nuxt/
+.gatsby/
+.vuepress/dist/
 
 # Environment variables
 .env
@@ -14,6 +21,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
 # Logs
 logs/
@@ -21,6 +29,8 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
 
 # Runtime data
 pids/
@@ -31,19 +41,24 @@ pids/
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
-
-# nyc test coverage
-.nyc_output
+.nyc_output/
+junit.xml
+test-results/
 
 # Dependency directories
 node_modules/
 jspm_packages/
+.pnp
+.pnp.js
 
 # Optional npm cache directory
 .npm
 
 # Optional eslint cache
 .eslintcache
+
+# Optional stylelint cache
+.stylelintcache
 
 # Microbundle cache
 .rpt2_cache/
@@ -60,24 +75,9 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-.env.test
-
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
 
 # Storybook build outputs
 .out
@@ -86,13 +86,19 @@ public
 # Temporary folders
 tmp/
 temp/
+.tmp/
 
 # Editor directories and files
 .vscode/
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 *~
+.vscode/tasks.json
+.vscode/*.code-snippets
 
 # OS generated files
 .DS_Store
@@ -105,62 +111,83 @@ Thumbs.db
 
 # Database
 *.sqlite
+*.sqlite3
 *.db
+*.sql
 
 # Uploads
 uploads/
 public/uploads/
+storage/uploads/
+user-content/
 
 # SSL certificates
 ssl/
 *.pem
 *.key
 *.crt
+*.csr
 
 # Docker
 .dockerignore
+docker-compose.override.yml
 
 # Kubernetes
 k8s/secrets/
 k8s/configmaps/
+*.kubeconfig
 
 # Terraform
 *.tfstate
 *.tfstate.*
 .terraform/
+*.tfvars
+*.auto.tfvars
+.terraform.lock.hcl
 
 # Monitoring
 prometheus_data/
 grafana_data/
+elasticsearch_data/
 
 # Backup files
 *.backup
 *.bak
+*.old
+*.orig
 
 # Test files
 test-results/
 cypress/videos/
 cypress/screenshots/
+playwright-report/
+test-results.xml
 
 # Documentation build
 docs/_site/
 docs/.vuepress/dist/
+docs/build/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
 # PHP-specific ignores
 /vendor/
 composer.lock
 composer.phar
 .phpunit.result.cache
 .php-cs-fixer.cache
+
+# Laravel specific
+/storage/*.key
+.env
+.env.backup
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
 
 # Logs and cache
 /storage/logs/
@@ -169,33 +196,53 @@ composer.phar
 /storage/framework/views/
 /bootstrap/cache/
 
-# Environment files
-.env
-.env.local
-.env.production
-.env.staging
-
-# Uploads and user content
-/public/uploads/
-/uploads/
-/tmp/
-/var/
-
 # IDE
 .idea/
 .phpstorm.meta.php
 _ide_helper.php
 _ide_helper_models.php
-*.swp
-*.swo
 
 # PHPUnit
 /phpunit.xml
 .phpunit.result.cache
 
-# Composer
-/composer.lock
-
 # Deployment
 /deploy/
 /build/
+
+# Blockchain/Web3
+*.json.gpg
+artifacts/
+cache/
+typechain/
+typechain-types/
+hardhat/
+.openzeppelin/
+deployments/
+
+# Security
+*.p12
+*.pfx
+keystore/
+wallet/
+private-keys/
+
+# Analytics
+google-services.json
+GoogleService-Info.plist
+
+# Local configuration
+config.local.js
+config.local.json
+
+# Build artifacts
+*.tgz
+*.tar.gz
+*.zip
+
+# Lock files (keep package-lock.json but ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Husky
+.husky/_/

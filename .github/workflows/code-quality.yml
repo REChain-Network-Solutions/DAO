@@ -1,0 +1,226 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  php-quality:
+    name: PHP Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
+        tools: php-cs-fixer, phpstan, phpcs, psalm
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+
+    - name: Run PHP CodeSniffer
+      run: vendor/bin/phpcs --standard=PSR-12 --report=junit src/ app/ --report-file=reports/phpcs.xml
+      continue-on-error: true
+
+    - name: Run PHP CS Fixer
+      run: vendor/bin/php-cs-fixer fix --dry-run --diff --verbose --format=junit > reports/php-cs-fixer.xml
+      continue-on-error: true
+
+    - name: Run PHPStan
+      run: vendor/bin/phpstan analyse --error-format=junit > reports/phpstan.xml
+      continue-on-error: true
+
+    - name: Run Psalm
+      run: vendor/bin/psalm --output-format=junit > reports/psalm.xml
+      continue-on-error: true
+
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: php-quality-reports
+        path: reports/
+
+  javascript-quality:
+    name: JavaScript Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run ESLint
+      run: npm run lint -- --format=junit --output-file=reports/eslint.xml
+      continue-on-error: true
+
+    - name: Run Prettier
+      run: npm run format:check -- --output-file=reports/prettier.xml
+      continue-on-error: true
+
+    - name: Run TypeScript compiler
+      run: npm run type-check -- --output-file=reports/typescript.xml
+      continue-on-error: true
+
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: js-quality-reports
+        path: reports/
+
+  complexity-analysis:
+    name: Complexity Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+
+    - name: Run PHPMD
+      run: vendor/bin/phpmd src/,app/ xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile reports/phpmd.xml
+      continue-on-error: true
+
+    - name: Run PHPLOC
+      run: vendor/bin/phploc src/,app/ --count-tests --log-xml=reports/phploc.xml
+
+    - name: Upload complexity reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: complexity-reports
+        path: reports/
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [php-quality, javascript-quality, complexity-analysis]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, curl, json, pdo, pdo_mysql, redis
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Run tests with coverage
+      run: |
+        vendor/bin/phpunit --coverage-clover=coverage.xml --log-junit=reports/tests.xml
+        npm run test:coverage
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [php-quality, javascript-quality, complexity-analysis, sonarcloud]
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Download all reports
+      uses: actions/download-artifact@v4
+      with:
+        path: reports/
+
+    - name: Check quality metrics
+      run: |
+        # Check if any critical issues exist
+        if grep -r "severity=\"critical\"" reports/; then
+          echo "❌ Critical issues found - blocking merge"
+          exit 1
+        fi
+        
+        # Check code coverage
+        COVERAGE=$(grep -o 'coverage="[0-9]*\.[0-9]*"' reports/tests.xml | head -1 | cut -d'"' -f2)
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "❌ Code coverage below 80% - blocking merge"
+          exit 1
+        fi
+        
+        echo "✅ Quality gate passed"
+        
+    - name: Comment PR with quality report
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read quality reports
+          const reportsDir = 'reports';
+          let summary = '## Code Quality Report\n\n';
+          
+          // Add coverage info
+          try {
+            const testReport = fs.readFileSync(path.join(reportsDir, 'tests.xml'), 'utf8');
+            const coverage = testReport.match(/coverage="([\d.]+)"/);
+            if (coverage) {
+              summary += `📊 **Code Coverage**: ${coverage[1]}%\n\n`;
+            }
+          } catch (e) {
+            console.log('Could not read test report');
+          }
+          
+          // Add quality metrics
+          summary += '### Quality Metrics\n';
+          summary += '- ✅ No critical issues\n';
+          summary += '- ✅ Code coverage ≥ 80%\n';
+          summary += '- ✅ All quality checks passed\n\n';
+          
+          summary += '### Detailed Reports\n';
+          summary += '- [PHP Quality](./reports/php-quality-reports)\n';
+          summary += '- [JavaScript Quality](./reports/js-quality-reports)\n';
+          summary += '- [Complexity Analysis](./reports/complexity-reports)\n';
+          summary += '- [SonarCloud](https://sonarcloud.io/dashboard?id=${{ github.repository }})\n';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });

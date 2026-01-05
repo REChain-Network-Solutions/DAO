@@ -1,0 +1,63 @@
+# This file controls who has default approval rights in pull requests.
+
+# Global owners - can approve any PR
+* @admin @maintainers
+
+# Core team - can approve any PR in the project
+* @core-team
+
+# Documentation team - can approve documentation changes
+/docs/ @documentation-team
+*.md @documentation-team
+
+# Security team - can approve security-related changes
+/security/ @security-team
+.github/workflows/security.yml @security-team
+
+# Infrastructure team - can approve infrastructure changes
+/k8s/ @infrastructure-team
+/terraform/ @infrastructure-team
+/helm/ @infrastructure-team
+docker-compose*.yml @infrastructure-team
+Dockerfile @infrastructure-team
+
+# Backend team - can approve backend changes
+/src/ @backend-team
+/app/ @backend-team
+/config/ @backend-team
+/database/ @backend-team
+*.php @backend-team
+
+# Frontend team - can approve frontend changes
+/public/ @frontend-team
+/resources/ @frontend-team
+/assets/ @frontend-team
+*.js @frontend-team
+*.css @frontend-team
+*.scss @frontend-team
+*.vue @frontend-team
+*.ts @frontend-team
+
+# Testing team - can approve test changes
+/tests/ @testing-team
+cypress/ @testing-team
+*.test.js @testing-team
+*.spec.php @testing-team
+
+# API team - can approve API changes
+/api/ @api-team
+/routes/api.php @api-team
+
+# Smart contracts team - can approve blockchain changes
+/blockchain/ @blockchain-team
+/contracts/ @blockchain-team
+/solidity/ @blockchain-team
+*.sol @blockchain-team
+
+# No automatic owners for sensitive files
+.env*
+*.key
+*.pem
+*.p12
+keystore/
+private-keys/

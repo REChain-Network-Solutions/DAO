@@ -1,0 +1,379 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.php text
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.json text
+*.yml text
+*.yaml text
+*.md text
+*.txt text
+*.html text
+*.css text
+*.scss text
+*.less text
+*.xml text
+*.sql text
+*.sh text
+*.bash text
+*.py text
+*.rb text
+*.go text
+*.java text
+*.c text
+*.cpp text
+*.h text
+*.hpp text
+*.rs text
+*.swift text
+*.kt text
+*.scala text
+
+# The above will handle all files NOT found below
+# These files are text and should be normalized (Convert crlf -> lf)
+*.gitattributes text
+*.gitignore text
+*.gitmodules text
+*.editorconfig text
+*.eslintrc* text
+*.prettierrc* text
+*.babelrc* text
+*.dockerignore text
+*.dockerfile text
+Dockerfile* text
+Makefile text
+*.mk text
+*.cmake text
+*.gradle text
+*.properties text
+*.ini text
+*.conf text
+*.config text
+*.toml text
+*.lock text
+*.log text
+*.out text
+*.env* text
+*.example text
+*.template text
+*.sample text
+*.dist text
+
+# These files are binary and should be left untouched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.tar.gz binary
+*.tgz binary
+*.rar binary
+*.7z binary
+*.exe binary
+*.msi binary
+*.deb binary
+*.rpm binary
+*.dmg binary
+*.pkg binary
+*.bin binary
+*.dat binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.pem binary
+*.key binary
+*.crt binary
+*.csr binary
+*.p12 binary
+*.pfx binary
+*.jks binary
+*.keystore binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.mov binary
+*.mp4 binary
+*.avi binary
+*.mp3 binary
+*.wav binary
+*.flac binary
+
+# Large files - use Git LFS
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.ai filter=lfs diff=lfs merge=lfs -text
+*.sketch filter=lfs diff=lfs merge=lfs -text
+*.fig filter=lfs diff=lfs merge=lfs -text
+*.xd filter=lfs diff=lfs merge=lfs -text
+
+# Blockchain/Web3 specific files
+*.sol text diff=solidity
+*.json.gpg binary
+artifacts/ filter=lfs diff=lfs merge=lfs -text
+cache/ filter=lfs diff=lfs merge=lfs -text
+typechain/ filter=lfs diff=lfs merge=lfs -text
+deployments/ filter=lfs diff=lfs merge=lfs -text
+coverage/ filter=lfs diff=lfs merge=lfs -text
+*.abi text
+*.bin binary
+
+# Language specific settings
+
+# PHP
+*.php text diff=php
+composer.lock text
+composer.json text
+
+# JavaScript/TypeScript
+package.json text
+package-lock.json text
+yarn.lock text
+pnpm-lock.yaml text
+tsconfig.json text
+jsconfig.json text
+*.d.ts text
+
+# Python
+requirements.txt text
+setup.py text
+Pipfile text
+Pipfile.lock text
+pyproject.toml text
+
+# Ruby
+Gemfile text
+Gemfile.lock text
+*.gemspec text
+
+# Java
+pom.xml text
+build.gradle text
+gradle.properties text
+
+# Go
+go.mod text
+go.sum text
+Gopkg.toml text
+Gopkg.lock text
+
+# Rust
+Cargo.toml text
+Cargo.lock text
+
+# .NET
+*.csproj text
+*.vbproj text
+*.fsproj text
+*.sln text
+packages.config text
+
+# Documentation
+docs/** text
+*.md text diff=markdown
+*.rst text
+*.txt text
+*.1 text
+*.2 text
+*.3 text
+*.4 text
+*.5 text
+*.6 text
+*.7 text
+*.8 text
+
+# Configuration files
+*.yml text diff=yaml
+*.yaml text diff=yaml
+*.toml text diff=toml
+*.ini text
+*.cfg text
+*.conf text
+*.config text
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
+Makefile text eol=lf
+*.mk text eol=lf
+
+# Windows specific
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# Git LFS patterns
+# These files are large and should be handled by Git LFS
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.gz filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.tgz filter=lfs diff=lfs merge=lfs -text
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.jar filter=lfs diff=lfs merge=lfs -text
+*.war filter=lfs diff=lfs merge=lfs -text
+*.ear filter=lfs diff=lfs merge=lfs -text
+*.dmg filter=lfs diff=lfs merge=lfs -text
+*.iso filter=lfs diff=lfs merge=lfs -text
+*.img filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.avi filter=lfs diff=lfs merge=lfs -text
+*.mkv filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+*.flv filter=lfs diff=lfs merge=lfs -text
+
+# Test files
+test/** text
+tests/** text
+spec/** text
+*_test.* text
+*.test.* text
+*_spec.* text
+*.spec.* text
+
+# Vendor dependencies
+vendor/** -text
+node_modules/** -text
+
+# Generated files
+dist/** -text
+build/** -text
+out/** -text
+target/** -text
+bin/** -text
+*.min.js -text
+*.min.css -text
+
+# Temporary files
+tmp/** -text
+temp/** -text
+*.tmp -text
+*.temp -text
+*.swp -text
+*.swo -text
+*~ -text
+
+# OS specific files
+.DS_Store -text
+.DS_Store? -text
+._* -text
+.Spotlight-V100 -text
+.Trashes -text
+ehthumbs.db -text
+Thumbs.db -text
+
+# IDE files
+.vscode/ -text
+.idea/ -text
+*.swp -text
+*.swo -text
+*~ -text
+.project -text
+.classpath -text
+.c9/ -text
+.nbproject/ -text
+*.sublime-* -text
+
+# Logs
+logs/** -text
+*.log -text
+
+# Database files
+*.sqlite -text
+*.sqlite3 -text
+*.db -text
+*.sql -text
+
+# Certificate files
+*.pem -text
+*.key -text
+*.crt -text
+*.csr -text
+*.p12 -text
+*.pfx -text
+
+# Backup files
+*.backup -text
+*.bak -text
+*.old -text
+*.orig -text
+
+# Export/sync settings for GitHub
+# These settings help GitHub understand how to handle different file types
+*. linguist-language=PHP
+*.js linguist-language=JavaScript
+*.ts linguist-language=TypeScript
+*.jsx linguist-language=JavaScript
+*.tsx linguist-language=TypeScript
+*.vue linguist-language=Vue
+*.py linguist-language=Python
+*.rb linguist-language=Ruby
+*.go linguist-language=Go
+*.rs linguist-language=Rust
+*.java linguist-language=Java
+*.kt linguist-language=Kotlin
+*.scala linguist-language=Scala
+*.swift linguist-language=Swift
+*.c linguist-language=C
+*.cpp linguist-language=C++
+*.h linguist-language=C
+*.hpp linguist-language=C++
+*.cs linguist-language=C#
+*.php linguist-language=PHP
+*.html linguist-language=HTML
+*.css linguist-language=CSS
+*.scss linguist-language=SCSS
+*.sass linguist-language=Sass
+*.less linguist-language=Less
+*.json linguist-language=JSON
+*.xml linguist-language=XML
+*.yaml linguist-language=YAML
+*.yml linguist-language=YAML
+*.toml linguist-language=TOML
+*.sql linguist-language=SQL
+*.sh linguist-language=Shell
+*.dockerfile linguist-language=Dockerfile
+Dockerfile* linguist-language=Dockerfile
+*.sol linguist-language=Solidity
+*.md linguist-language=Markdown
+*.rst linguist-language=reStructuredText
+
+# Vendor and generated files are excluded from language statistics
+vendor/** linguist-vendored
+node_modules/** linguist-vendored
+dist/** linguist-generated
+build/** linguist-generated
+out/** linguist-generated
+target/** linguist-generated
+bin/** linguist-generated
+*.min.js linguist-generated
+*.min.css linguist-generated
+
+# Documentation files are counted as docs
+docs/** linguist-documentation
+*.md linguist-documentation
+*.rst linguist-documentation
+*.txt linguist-documentation
+
+# Test files are counted as tests
+test/** linguist-test
+tests/** linguist-test
+spec/** linguist-test
+*_test.* linguist-test
+*.test.* linguist-test
+*_spec.* linguist-test
+*.spec.* linguist-test

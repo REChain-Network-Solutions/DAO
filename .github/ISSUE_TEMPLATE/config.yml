@@ -1,0 +1,17 @@
+blank_issues_enabled: true
+contact_links:
+  - name: REChain DAO Community Discord
+    url: https://discord.gg/rechain
+    about: Please ask and answer questions in our Discord community.
+  - name: REChain DAO Documentation
+    url: https://docs.rechain-dao.com
+    about: Check our documentation for common questions and setup guides.
+  - name: Security Vulnerability
+    url: mailto:security@rechain-dao.com
+    about: Please report security vulnerabilities privately via email.
+  - name: Feature Request Discussion
+    url: https://github.com/REChain-Network-Solutions/DAO/discussions/categories/ideas
+    about: Discuss feature ideas with the community before creating an issue.
+  - name: Questions & Support
+    url: https://github.com/REChain-Network-Solutions/DAO/discussions/categories/q-a
+    about: Get help from the community in our Q&A discussions.

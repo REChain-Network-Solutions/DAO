@@ -1,13 +1,20 @@
-# DAO Platform
+# REChain DAO Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://php.net/)
 [![MySQL Version](https://img.shields.io/badge/MySQL-8.0%2B-blue.svg)](https://mysql.com/)
+[![Node.js Version](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-blue.svg)](https://kubernetes.io/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/REChain-Network-Solutions/DAO/actions)
+[![Security](https://img.shields.io/badge/Security-OWASP-green.svg)](https://owasp.org/)
+[![Blockchain](https://img.shields.io/badge/Blockchain-Ethereum%2B-purple.svg)](https://ethereum.org/)
 
-A comprehensive Decentralized Autonomous Organization (DAO) platform built with PHP, enabling community governance, social networking, and decentralized decision-making.
+A comprehensive **Decentralized Autonomous Organization (DAO)** platform built with PHP, enabling community governance, social networking, and decentralized decision-making on the blockchain.
 
 ## 🌟 Features
 
+### Core Platform
 - **Social Networking**: User profiles, posts, groups, and events
 - **Decentralized Governance**: Community voting and proposal system
 - **Real-time Communication**: WebSocket-based chat and notifications
@@ -18,6 +25,24 @@ A comprehensive Decentralized Autonomous Organization (DAO) platform built with 
 - **Admin Dashboard**: Comprehensive management interface
 - **Monetization**: Payment integration and subscription models
 - **Analytics**: Built-in analytics and reporting
+
+### Blockchain Integration
+- **Smart Contracts**: Ethereum-compatible smart contract deployment
+- **Token Management**: Native token creation and management
+- **DeFi Integration**: Decentralized finance protocols
+- **NFT Support**: Non-fungible token creation and marketplace
+- **Web3 Wallets**: MetaMask and other wallet integrations
+- **Chain Governance**: On-chain voting and proposal execution
+- **Cross-chain**: Multi-chain compatibility (Ethereum, Polygon, BSC)
+
+### Infrastructure
+- **Docker Support**: Full containerization with Docker Compose
+- **Kubernetes**: Production-ready K8s deployments
+- **CI/CD Pipeline**: Automated testing, building, and deployment
+- **Monitoring**: Prometheus, Grafana, and ELK stack
+- **Security Scanning**: Automated vulnerability detection
+- **Load Balancing**: High availability and scalability
+- **CDN Integration**: Global content delivery
 
 ## 🚀 Quick Start
 

@@ -1,6 +1,6 @@
-# Contributing to DAO Platform
+# Contributing to REChain DAO
 
-Thank you for your interest in contributing to the DAO Platform! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to REChain DAO! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -12,6 +12,8 @@ Thank you for your interest in contributing to the DAO Platform! This document p
 - [Testing](#testing)
 - [Documentation](#documentation)
 - [Issue Reporting](#issue-reporting)
+- [Security](#security)
+- [Community](#community)
 
 ## Code of Conduct
 
@@ -26,8 +28,9 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 - Redis 6.0+
 - Composer
 - Git
-- Node.js (for frontend assets)
+- Node.js 18+ (for frontend assets)
 - Docker (optional)
+- Web3 wallet (for blockchain features)
 
 ### Setting Up Development Environment
 
@@ -37,13 +40,13 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/your-username/dao-platform.git
-   cd dao-platform
+   git clone https://github.com/your-username/REChain-DAO.git
+   cd REChain-DAO
    ```
 
 3. **Add upstream remote**
    ```bash
-   git remote add upstream https://github.com/original-username/dao-platform.git
+   git remote add upstream https://github.com/REChain-Network-Solutions/REChain-DAO.git
    ```
 
 4. **Install PHP dependencies**
@@ -60,6 +63,7 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
    ```bash
    cp .env.example .env
    # Edit .env with your database and configuration settings
+   php artisan key:generate
    ```
 
 7. **Set up database**
@@ -78,6 +82,13 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
    php artisan serve
    ```
 
+10. **Set up blockchain (optional)**
+    ```bash
+    # Install Hardhat for smart contract development
+    npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+    npx hardhat compile
+    ```
+
 ## Development Process
 
 ### Branch Naming Convention
@@ -89,6 +100,7 @@ Use descriptive branch names:
 - `docs/description` - Documentation updates
 - `refactor/description` - Code refactoring
 - `test/description` - Test improvements
+- `security/description` - Security fixes
 
 ### Commit Message Convention
 
@@ -110,12 +122,14 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) specific
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks
+- `security`: Security-related changes
 
 **Examples:**
 ```
 feat(auth): add OAuth2 integration
 fix(api): resolve CORS issues
 docs(readme): update installation instructions
+security(wallet): implement input validation
 ```
 
 ## Pull Request Process
@@ -136,6 +150,7 @@ docs(readme): update installation instructions
    - Follow coding standards
    - Add tests for new functionality
    - Update documentation
+   - Consider security implications
 
 4. **Test your changes**
    ```bash
@@ -145,8 +160,14 @@ docs(readme): update installation instructions
    # Run linting
    composer lint
    
+   # Run security checks
+   composer audit
+   
    # Build frontend assets
    npm run build
+   
+   # Run E2E tests
+   npm run test:e2e
    ```
 
 5. **Commit your changes**
@@ -171,6 +192,7 @@ docs(readme): update installation instructions
    - Provide a clear description
    - Link related issues
    - Add screenshots if applicable
+   - Document breaking changes
 
 3. **Request review**
    - Assign appropriate reviewers
@@ -183,6 +205,8 @@ docs(readme): update installation instructions
    - All tests must pass
    - Code coverage must not decrease
    - Linting must pass
+   - Security scans must pass
+   - Quality gates must pass
 
 2. **Code review**
    - At least one approval required
@@ -203,6 +227,7 @@ docs(readme): update installation instructions
 - Write meaningful variable and function names
 - Add docblocks for classes and methods
 - Use modern PHP features (PHP 8.1+)
+- Implement proper error handling
 
 ```php
 /**
@@ -215,8 +240,42 @@ docs(readme): update installation instructions
  */
 public function createProposal(array $proposalData, int $userId): Proposal
 {
-    // Implementation
+    // Validate input
+    $this->validateProposalData($proposalData);
+    
+    // Create proposal
+    $proposal = new Proposal($proposalData);
+    $proposal->user_id = $userId;
+    $proposal->save();
+    
+    return $proposal;
 }
+```
+
+### JavaScript/TypeScript Standards
+
+- Use TypeScript for type safety
+- Follow ESLint configuration
+- Use modern ES6+ features
+- Write functional components where applicable
+- Add proper error boundaries
+
+```typescript
+interface ProposalData {
+  title: string;
+  description: string;
+  type: ProposalType;
+  amount?: number;
+}
+
+const createProposal = async (data: ProposalData): Promise<Proposal> => {
+  try {
+    const response = await api.post('/proposals', data);
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to create proposal: ${error.message}`);
+  }
+};
 ```
 
 ### Database Standards
@@ -225,6 +284,7 @@ public function createProposal(array $proposalData, int $userId): Proposal
 - Follow naming conventions
 - Add indexes for performance
 - Use transactions for complex operations
+- Implement proper foreign key constraints
 
 ### API Design
 
@@ -233,6 +293,15 @@ public function createProposal(array $proposalData, int $userId): Proposal
 - Implement proper error handling
 - Add input validation
 - Document endpoints with OpenAPI
+- Implement rate limiting
+
+### Smart Contract Standards
+
+- Follow Solidity style guide
+- Use OpenZeppelin contracts where possible
+- Implement proper access controls
+- Add comprehensive tests
+- Document gas costs
 
 ## Testing
 
@@ -240,18 +309,21 @@ public function createProposal(array $proposalData, int $userId): Proposal
 
 1. **Unit Tests**
    - Test individual functions and classes
-   - Use PHPUnit
-   - Aim for high coverage
+   - Use PHPUnit for PHP
+   - Use Jest for JavaScript
+   - Aim for 80%+ coverage
 
 2. **Integration Tests**
    - Test API endpoints
    - Test database interactions
    - Test external service integrations
+   - Test smart contract interactions
 
 3. **End-to-End Tests**
    - Test complete user workflows
-   - Use browser testing tools
+   - Use Cypress or Playwright
    - Test critical user paths
+   - Test blockchain interactions
 
 ### Writing Tests
 
@@ -269,6 +341,26 @@ public function testCreateProposalWithValidData(): void
     
     $this->assertNotNull($proposal);
     $this->assertEquals('Test Proposal', $proposal->title);
+    $this->assertEquals(123, $proposal->user_id);
+}
+
+// Integration test example
+public function testCreateProposalViaAPI(): void
+{
+    $response = $this->postJson('/api/proposals', [
+        'title' => 'Test Proposal',
+        'description' => 'Test Description',
+        'type' => 'governance'
+    ]);
+    
+    $response->assertStatus(201)
+            ->assertJsonStructure([
+                'id',
+                'title',
+                'description',
+                'type',
+                'created_at'
+            ]);
 }
 ```
 
@@ -286,6 +378,12 @@ vendor/bin/phpunit tests/ProposalServiceTest.php
 
 # Run linting
 composer lint
+
+# Run security audit
+composer audit
+
+# Run E2E tests
+npm run test:e2e
 ```
 
 ## Documentation
@@ -303,6 +401,13 @@ composer lint
 - Provide examples for all endpoints
 - Document request/response schemas
 - Include error responses
+
+### Smart Contract Documentation
+
+- Document function purposes
+- Explain gas costs
+- Provide usage examples
+- Document security considerations
 
 ### User Documentation
 
@@ -323,6 +428,7 @@ When reporting bugs, include:
 4. **Environment details** (OS, PHP version, database version)
 5. **Screenshots** if applicable
 6. **Error logs** if available
+7. **Browser/Node version** for frontend issues
 
 ### Feature Requests
 
@@ -334,22 +440,94 @@ When requesting features, include:
 4. **Alternatives** considered
 5. **Additional context** or examples
 
+### Security Issues
+
+**IMPORTANT: DO NOT REPORT SECURITY VULNERABILITIES PUBLICLY**
+
+For security vulnerabilities, email: security@rechain-dao.com
+
 ### Issue Labels
 
 - `bug` - Something isn't working
 - `enhancement` - New feature or request
 - `documentation` - Improvements to documentation
+- `security` - Security-related issues
+- `performance` - Performance issues
 - `good first issue` - Good for newcomers
 - `help wanted` - Extra attention is needed
+- `priority: critical` - Critical priority
 - `priority: high` - High priority
 - `priority: medium` - Medium priority
 - `priority: low` - Low priority
 
-## Getting Help
+## Security
+
+### Security Guidelines
+
+- Never commit secrets or API keys
+- Use environment variables for sensitive data
+- Implement proper input validation
+- Follow OWASP security guidelines
+- Regular security audits
+
+### Security Testing
+
+- Run security scans on all PRs
+- Test for common vulnerabilities
+- Review dependencies for known issues
+- Implement proper authentication and authorization
+
+### Reporting Security Issues
+
+For security vulnerabilities:
+- Email: security@rechain-dao.com
+- PGP key available on request
+- Response time: 48 hours
+
+## Community
+
+### Communication Channels
 
 - **GitHub Discussions** - General questions and discussions
 - **GitHub Issues** - Bug reports and feature requests
-- **Email** - support@dao-platform.com
+- **Discord** - Real-time community chat
+- **Email** - info@rechain-dao.com
+
+### Contribution Recognition
+
+Contributors will be recognized in:
+
+- CONTRIBUTORS.md file
+- Release notes
+- Project documentation
+- Community acknowledgments
+- Contributor badges
+
+### Ways to Contribute
+
+- Code contributions
+- Documentation improvements
+- Bug reports and testing
+- Feature suggestions
+- Community support
+- Security research
+- Translation efforts
+
+## Getting Help
+
+### Resources
+
+- [Documentation](docs/)
+- [API Reference](docs/api.md)
+- [Security Policy](.github/SECURITY.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+
+### Support
+
+- **New contributors**: Look for `good first issue` labels
+- **Questions**: Use GitHub Discussions
+- **Bugs**: Create an issue with detailed information
+- **Security**: Email security@rechain-dao.com
 
 ## Recognition
 
@@ -359,10 +537,11 @@ Contributors will be recognized in:
 - Release notes
 - Project documentation
 - Community acknowledgments
+- Annual contributor awards
 
 ## Thank You
 
-Thank you for contributing to the DAO Platform! Your contributions help make decentralized governance more accessible and effective for communities worldwide.
+Thank you for contributing to REChain DAO! Your contributions help make decentralized governance more accessible and effective for communities worldwide.
 
 ---
 

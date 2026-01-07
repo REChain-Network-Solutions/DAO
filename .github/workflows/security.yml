@@ -161,7 +161,7 @@ jobs:
         docker-compose -f docker-compose.test.yml down
 
     - name: Upload ZAP results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: zap-report

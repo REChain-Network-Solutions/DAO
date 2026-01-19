@@ -1,7 +1,7 @@
 {
  "dependencies": {
   "@benmajor/jquery-touch-events": "^2.0.3",
-  "@yaireo/tagify": "^4.33.2",
+  "@yaireo/tagify": "^4.36.0",
   "autosize": "^6.0.1",
   "bootstrap": "^5.3.3",
   "easytimer.js": "^4.6.0",
@@ -17,8 +17,8 @@
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
   "theia-sticky-sidebar": "^2.0.0",
-  "tinymce": "^8.3.1",
-  "tinymce-i18n": "^25.2.3",
+  "tinymce": "^8.3.2",
+  "tinymce-i18n": "^26.1.12",
   "triggeredautocomplete": "github:Sorokin Dmitry Olegovichtech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",
   "zuck.js": "^2.1.1"

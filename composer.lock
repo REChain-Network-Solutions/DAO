@@ -209,16 +209,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.369.15",
+            "version": "3.369.19",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "7c62f41fb0460c3e5d5c1f70e93e726f1daa75f5"
+                "reference": "32fee3a25290186724ede9ca177d5090f7c5a837"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/7c62f41fb0460c3e5d5c1f70e93e726f1daa75f5",
-                "reference": "7c62f41fb0460c3e5d5c1f70e93e726f1daa75f5",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/32fee3a25290186724ede9ca177d5090f7c5a837",
+                "reference": "32fee3a25290186724ede9ca177d5090f7c5a837",
                 "shasum": ""
             },
             "require": {
@@ -300,9 +300,9 @@
             "support": {
                 "forum": "https://github.com/aws/aws-sdk-php/discussions",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.369.15"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.369.19"
             },
-            "time": "2026-01-16T19:18:57+00:00"
+            "time": "2026-01-23T19:05:51+00:00"
         },
         {
             "name": "brick/math",
@@ -1104,16 +1104,16 @@
         },
         {
             "name": "google/cloud-core",
-            "version": "v1.71.0",
+            "version": "v1.71.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/google-cloud-php-core.git",
-                "reference": "e1696b2e27390078d78bd335d6cc6b7b2c32a7dd"
+                "reference": "b170c5d2095f05def125a1f7452f7fcca0a9ffaf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/google-cloud-php-core/zipball/e1696b2e27390078d78bd335d6cc6b7b2c32a7dd",
-                "reference": "e1696b2e27390078d78bd335d6cc6b7b2c32a7dd",
+                "url": "https://api.github.com/repos/googleapis/google-cloud-php-core/zipball/b170c5d2095f05def125a1f7452f7fcca0a9ffaf",
+                "reference": "b170c5d2095f05def125a1f7452f7fcca0a9ffaf",
                 "shasum": ""
             },
             "require": {
@@ -1165,22 +1165,22 @@
             ],
             "description": "Google Cloud PHP shared dependency, providing functionality useful to all components.",
             "support": {
-                "source": "https://github.com/googleapis/google-cloud-php-core/tree/v1.71.0"
+                "source": "https://github.com/googleapis/google-cloud-php-core/tree/v1.71.1"
             },
-            "time": "2026-01-16T19:46:18+00:00"
+            "time": "2026-01-23T22:57:13+00:00"
         },
         {
             "name": "google/cloud-storage",
-            "version": "v1.49.1",
+            "version": "v1.49.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/google-cloud-php-storage.git",
-                "reference": "67b430f2ef164276e841ebfff8e3aa174576bd7f"
+                "reference": "1cab44377fc65c7feba1f706970f3abf5ccba392"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/google-cloud-php-storage/zipball/67b430f2ef164276e841ebfff8e3aa174576bd7f",
-                "reference": "67b430f2ef164276e841ebfff8e3aa174576bd7f",
+                "url": "https://api.github.com/repos/googleapis/google-cloud-php-storage/zipball/1cab44377fc65c7feba1f706970f3abf5ccba392",
+                "reference": "1cab44377fc65c7feba1f706970f3abf5ccba392",
                 "shasum": ""
             },
             "require": {
@@ -1222,9 +1222,9 @@
             ],
             "description": "Cloud Storage Client for PHP",
             "support": {
-                "source": "https://github.com/googleapis/google-cloud-php-storage/tree/v1.49.1"
+                "source": "https://github.com/googleapis/google-cloud-php-storage/tree/v1.49.2"
             },
-            "time": "2026-01-16T19:46:18+00:00"
+            "time": "2026-01-23T22:57:13+00:00"
         },
         {
             "name": "google/common-protos",
@@ -1287,16 +1287,16 @@
         },
         {
             "name": "google/gax",
-            "version": "v1.40.1",
+            "version": "v1.42.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/gax-php.git",
-                "reference": "80527b9779c3277c31c74d2fb7ff1ca990239163"
+                "reference": "7ad13e5b9ca201a5f60e7b3342842d1217bc23a6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/gax-php/zipball/80527b9779c3277c31c74d2fb7ff1ca990239163",
-                "reference": "80527b9779c3277c31c74d2fb7ff1ca990239163",
+                "url": "https://api.github.com/repos/googleapis/gax-php/zipball/7ad13e5b9ca201a5f60e7b3342842d1217bc23a6",
+                "reference": "7ad13e5b9ca201a5f60e7b3342842d1217bc23a6",
                 "shasum": ""
             },
             "require": {
@@ -1338,9 +1338,9 @@
             ],
             "support": {
                 "issues": "https://github.com/googleapis/gax-php/issues",
-                "source": "https://github.com/googleapis/gax-php/tree/v1.40.1"
+                "source": "https://github.com/googleapis/gax-php/tree/v1.42.0"
             },
-            "time": "2026-01-16T19:54:08+00:00"
+            "time": "2026-01-22T20:31:50+00:00"
         },
         {
             "name": "google/grpc-gcp",

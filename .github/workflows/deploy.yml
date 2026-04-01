@@ -38,7 +38,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
+      uses: azure/setup-kubectl@v5
       with:
         version: 'v1.28.0'
 
@@ -98,7 +98,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
+      uses: azure/setup-kubectl@v5
       with:
         version: 'v1.28.0'
 
@@ -178,7 +178,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
+      uses: azure/setup-kubectl@v5
       with:
         version: 'v1.28.0'
 

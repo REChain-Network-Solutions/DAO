@@ -11,7 +11,7 @@
   "twilio/sdk": "^8.7",
   "taylanunutmaz/agora-token-builder": "^1.1",
   "claviska/simpleimage": "^4.2",
-  "stripe/stripe-php": "^19.1",
+  "stripe/stripe-php": "^20.0",
   "aws/aws-sdk-php": "^3.356",
   "nicolab/php-ftp-client": "^2.0",
   "google/cloud-storage": "^1.48",

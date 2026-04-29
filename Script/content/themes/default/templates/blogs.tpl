@@ -201,15 +201,13 @@
           <!-- right panel -->
           <div class="col-md-4">
             <!-- create new blog -->
-            {if $user->_logged_in && $user->_data['can_write_blogs']}
-              <div class="mb10 d-none d-sm-block">
-                <div class="d-grid">
-                  <a href="{$system['system_url']}/blogs/new" class="btn btn-success">
-                    <i class="fa fa-edit mr5"></i>{__("Create New Blog")}
-                  </a>
-                </div>
+            <div class="mb10 d-none d-sm-block">
+              <div class="d-grid">
+                <a href="{$system['system_url']}/blogs/new" class="btn btn-success">
+                  <i class="fa fa-edit mr5"></i>{__("Create New Blog")}
+                </a>
               </div>
-            {/if}
+            </div>
             <!-- create new blog -->
 
             {include file='_ads.tpl'}
@@ -319,13 +317,13 @@
             {if $blog['needs_payment']}
               <div class="blog-wrapper no-footer">
                 <div class="ptb20 plr20">
-                  {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price'] paid_text=$blog['paid_text']}
+                  {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price'] discounted_price=$blog['post_price_discounted'] paid_text=$blog['paid_text']}
                 </div>
               </div>
             {elseif $blog['needs_subscription']}
               <div class="blog-wrapper no-footer">
                 <div class="ptb20 plr20">
-                  {include file='_need_subscription.tpl' node_type=$blog['needs_subscription_type'] node_id=$blog['needs_subscription_id'] price=$blog['needs_subscription_price']}
+                  {include file='_need_subscription.tpl' node_type=$blog['needs_subscription_type'] node_id=$blog['needs_subscription_id'] price=$blog['needs_subscription_price'] discount_enabled=$blog['needs_subscription_discount_enabled'] discount_percent=$blog['needs_subscription_discount_percent']}
                 </div>
               </div>
             {elseif $blog['needs_pro_package']}
@@ -417,6 +415,21 @@
                       </div>
                     </div>
                   </div>
+                  {if $blog['is_collaborative']}
+                    <div class="collaborative-users">
+                      <div class="collaborative-users__label">{__("Collaborated with")}</div>
+                      <span class="collaborative-users__list">
+                        {foreach $blog['collaborative_users'] as $user}
+                          <span class="js_user-popover collaborative-users__tag" data-type="user" data-uid="{$user['user_id']}">
+                            <a class="collaborative-users__link" href="{$system['system_url']}/{$user['user_name']}">
+                              <img class="collaborative-users__avatar" src="{$user['user_picture']}" width="24" height="24" alt="{$user['user_fullname']|escape:'html'}">
+                              <span class="collaborative-users__name">{$user['user_fullname']}</span>
+                            </a>
+                          </span>
+                        {/foreach}
+                      </span>
+                    </div>
+                  {/if}
                   <!-- blog meta -->
 
                   <!-- blog cover -->
@@ -490,6 +503,27 @@
                     </div>
                   {/if}
                   <!-- blog tags -->
+
+                  <!-- blog references -->
+                  {if $blog['blog']['references']}
+                    <section class="blog-references-section" aria-labelledby="blog-references-title">
+                      <h3 id="blog-references-title" class="blog-references-heading">
+                        <i class="fas fa-book-open" aria-hidden="true"></i>
+                        {__("References")}
+                      </h3>
+                      <ol class="blog-references-list">
+                        {foreach $blog['blog']['references'] as $reference}
+                          <li class="blog-references-item">
+                            <a href="{$reference['link']}" class="blog-references-link" target="_blank" rel="noopener noreferrer">
+                              {$reference['title']}
+                              <span class="blog-references-external" title="{__('Open link')}"><i class="fas fa-external-link-alt" aria-hidden="true"></i></span>
+                            </a>
+                          </li>
+                        {/foreach}
+                      </ol>
+                    </section>
+                  {/if}
+                  <!-- blog references -->
 
                   <!-- post stats -->
                   <div class="post-stats clearfix">
@@ -604,15 +638,13 @@
           <!-- right panel -->
           <div class="col-md-4">
             <!-- create new blog -->
-            {if $user->_logged_in && $user->_data['can_write_blogs']}
-              <div class="mb10 d-none d-sm-block">
-                <div class="d-grid">
-                  <a href="{$system['system_url']}/blogs/new" class="btn btn-success">
-                    <i class="fa fa-edit mr5"></i>{__("Create New Blog")}
-                  </a>
-                </div>
+            <div class="mb10 d-none d-sm-block">
+              <div class="d-grid">
+                <a href="{$system['system_url']}/blogs/new" class="btn btn-success">
+                  <i class="fa fa-edit mr5"></i>{__("Create New Blog")}
+                </a>
               </div>
-            {/if}
+            </div>
             <!-- create new blog -->
 
             <!-- search -->
@@ -822,6 +854,33 @@
                 </div>
               </div>
 
+              <!-- references -->
+              <div id="blog-references-list">
+                {foreach $blog['blog']['references'] as $key => $reference}
+                  <div class="auto-connect-node">
+                    <div class="row form-group">
+                      <label class="col-md-2 form-label">
+                        {__("Reference")}
+                      </label>
+                      <div class="col-md-10">
+                        <input type="text" class="form-control mb10" name="references[{$key}][title]" placeholder="{__('Title')}" value="{$reference['title']}">
+                        <input type="text" class="form-control mb10" name="references[{$key}][link]" placeholder="{__('Link')}" value="{$reference['link']}">
+                        <div class="form-text">
+                          {__("Add a reference title and link to cite your source")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {/foreach}
+              </div>
+              <!-- references -->
+
+              <!-- add reference -->
+              <div class="add-auto-connect-node js_add-blog-reference">
+                <i class="fas fa-plus-circle mr5"></i>{__("Add reference")}
+              </div>
+              <!-- add reference -->
+
               {if ($user->_data['can_receive_tip'] && $blog['user_type'] != "page") || $user->_data['can_monetize_content']}
                 <div class="divider"></div>
               {/if}
@@ -914,6 +973,15 @@
           <div class="card-header with-icon">
             {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
             {__("Create New Blog")}
+
+            {if $system['ai_posts_enabled']}
+              <div class="float-end">
+                <button type="button" class="btn btn-md btn-light" data-toggle="modal" data-size="large" data-url="ai/modal.php?handle=blog">
+                  {include file='__svg_icons.tpl' icon="ai" class="main-icon mr5" width="18px" height="18px"}
+                  <span class="text-gradient">{__("Generate with AI")}</span>
+                </button>
+              </div>
+            {/if}
           </div>
 
           <!-- Schema.org structured data for blog creation page -->
@@ -1073,7 +1141,7 @@
                   {__("Title")}
                 </label>
                 <div class="col-md-10">
-                  <input class="form-control" name="title">
+                  <input class="form-control js_blog-title" name="title">
                 </div>
               </div>
 
@@ -1082,7 +1150,7 @@
                   {__("Content")}
                 </label>
                 <div class="col-md-10">
-                  <textarea name="text" class="form-control js_wysiwyg"></textarea>
+                  <textarea name="text" class="form-control js_wysiwyg" id="blog-editor"></textarea>
                 </div>
               </div>
 
@@ -1131,6 +1199,16 @@
                   </div>
                 </div>
               </div>
+
+              <!-- references -->
+              <div id="blog-references-list"></div>
+              <!-- references -->
+
+              <!-- add reference -->
+              <div class="add-auto-connect-node js_add-blog-reference">
+                <i class="fas fa-plus-circle mr5"></i>{__("Add reference")}
+              </div>
+              <!-- add reference -->
 
               {if $user->_data['can_receive_tip'] || $user->_data['can_monetize_content']}
                 <div class="divider"></div>
@@ -1197,6 +1275,35 @@
               {/if}
               <!-- paid post -->
 
+              <!-- collaborative post -->
+              {if $user->_data['can_add_collaborative_posts']}
+                <div class="form-table-row mb10" id="collaborative-toggle-wrapper">
+                  <div>
+                    <div class="form-label mb0">{__("Collaborative Post")}</div>
+                    <div class="form-text d-none d-sm-block mt0">{__("Share your post with others")}</div>
+                  </div>
+                  <div class="text-end">
+                    <label class="switch" for="collaborative_post">
+                      <input type="checkbox" name="collaborative_post" id="collaborative_post" class="js_publisher-collaborative-toggle">
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group x-hidden" id="collaborative-users-wrapper">
+                  <input type="text" class="js_tagify-ajax x-hidden" data-handle="collaborative_users" name="collaborative_users">
+                  <div class="form-text">
+                    {__("Enter the users to collaborate with")}
+                  </div>
+                </div>
+                <div class="form-group x-hidden" id="collaborative-percent-wrapper">
+                  <input type="number" min="0" max="100" class="form-control" name="collaborative_percent">
+                  <div class="form-text">
+                    {__("Enter the % of the revenue that you want to give to the collaborators (only for paid posts)")}
+                  </div>
+                </div>
+              {/if}
+              <!-- collaborative post -->
+
               <!-- error -->
               <div class="alert alert-danger mt15 mb0 x-hidden"></div>
               <!-- error -->
@@ -1227,6 +1334,7 @@
         $('#js_publish-to-event').hide();
         $('#js_tips-enabled').fadeIn();
         $('#subscribers-toggle-wrapper').show();
+        $('#collaborative-toggle-wrapper').show();
         break;
       case 'page':
         $('#js_publish-to-page').fadeIn();
@@ -1234,6 +1342,7 @@
         $('#js_publish-to-event').hide();
         $('#js_tips-enabled').hide();
         $('#subscribers-toggle-wrapper').show();
+        $('#collaborative-toggle-wrapper').hide();
         break;
       case 'group':
         $('#js_publish-to-page').hide();
@@ -1241,6 +1350,7 @@
         $('#js_publish-to-event').hide();
         $('#js_tips-enabled').fadeIn();
         $('#subscribers-toggle-wrapper').show();
+        $('#collaborative-toggle-wrapper').show();
         break;
       case 'event':
         $('#js_publish-to-page').hide();
@@ -1248,6 +1358,7 @@
         $('#js_publish-to-event').fadeIn();
         $('#js_tips-enabled').fadeIn();
         $('#subscribers-toggle-wrapper').hide();
+        $('#collaborative-toggle-wrapper').show();
         break;
     }
   });

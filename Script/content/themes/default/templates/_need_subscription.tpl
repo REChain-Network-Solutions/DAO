@@ -14,7 +14,7 @@
     {if isset($price)}
       <div class="d-grid">
         <button class="btn btn-info rounded rounded-pill mt20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$node_id}&node_type={$node_type}" data-size="large">
-          <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($price)})
+          <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE FOR")} {if $discount_enabled}{print_money($price * (1 - $discount_percent / 100))}{/if}{if $discount_enabled}<span style="text-decoration: line-through;" class="ml5">{/if}{print_money($price)}{if $discount_enabled}</span>{/if}
         </button>
       </div>
     {/if}

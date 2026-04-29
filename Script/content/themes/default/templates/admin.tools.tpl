@@ -858,7 +858,7 @@
             <li class="mt10">
               Run the following command
               <div class="mt10">
-                <code>0 0 * * * php -f PATH_TO_Delus/cronjob.php?hash={if $user->_data['user_demo']}DEMO RESTRICTED{else}{$system['cronjob_hash']}{/if} > /dev/null 2>&1</code>
+                <code>0 0 * * * php -f PATH_TO_SNGINE/cronjob.php?hash={if $user->_data['user_demo']}DEMO RESTRICTED{else}{$system['cronjob_hash']}{/if} > /dev/null 2>&1</code>
               </div>
             </li>
             <li class="mt10">

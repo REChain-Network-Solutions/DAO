@@ -3,8 +3,8 @@
 /**
  * class -> user
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 /* 
@@ -23515,9 +23515,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
     }
     /* check if user connected or not */
@@ -23604,9 +23604,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
 
       default:

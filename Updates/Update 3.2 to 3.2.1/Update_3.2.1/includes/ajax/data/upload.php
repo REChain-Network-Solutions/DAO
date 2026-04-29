@@ -2,8 +2,8 @@
 /**
  * ajax -> data -> upload
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time

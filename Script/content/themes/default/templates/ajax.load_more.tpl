@@ -73,7 +73,7 @@
   {/foreach}
 
 
-{elseif $get == 'blogs'}
+{elseif $get == 'blogs' || $get == 'blogs_profile' || $get == 'blogs_page' || $get == 'blogs_group' || $get == 'blogs_event'}
   {foreach $data as $blog}
     {include file='__feeds_blog.tpl' _tpl="featured"}
   {/foreach}
@@ -328,5 +328,10 @@
     {include file='__feeds_review.tpl' _darker=true}
   {/foreach}
 
+
+{elseif $get == 'coupon_users'}
+  {foreach $data as $_user}
+    {include file='__feeds_user.tpl' _tpl="list" _connection=$_user["connection"]}
+  {/foreach}
 
 {/if}

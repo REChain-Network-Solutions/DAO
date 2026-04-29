@@ -3,8 +3,8 @@
 /**
  * trait -> notifications
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait NotificationsTrait
@@ -219,6 +219,12 @@ trait NotificationsTrait
             $notification['icon'] = "fa fa-comment";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("posted on your wall");
+            break;
+
+          case 'collaborative_post':
+            $notification['icon'] = "fa fa-comment";
+            $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
+            $notification['message'] = __("collaborated with you on a post");
             break;
 
           case 'page_invitation':
@@ -1033,6 +1039,11 @@ trait NotificationsTrait
           $notification['message'] = __("posted on your wall");
           break;
 
+        case 'collaborative_post':
+          $notification['url'] = $system['system_url'] . '/posts/' . $node_url;
+          $notification['message'] = __("collaborated with you on a post");
+          break;
+
         case 'page_invitation':
           $notification['url'] = $system['system_url'] . '/pages/' . $node_url;
           $notification['message'] = __("invite you to like a page") . " '" . html_entity_decode($node_type, ENT_QUOTES) . "'";
@@ -1592,6 +1603,14 @@ trait NotificationsTrait
           $notification['message'] = __("posted on your wall");
           break;
 
+        case 'collaborative_post':
+          if (!$system['email_collaborative_posts'] || !$receiver['email_collaborative_posts']) {
+            return;
+          }
+          $notification['url'] = $system['system_url'] . '/posts/' . $node_url;
+          $notification['message'] = __("collaborated with you on a post");
+          break;
+
         case 'verification_request':
           if (!$system['email_admin_verifications'] || !$receiver['email_admin_verifications']) {
             return;
@@ -1763,6 +1782,21 @@ trait NotificationsTrait
     global $db;
     /* delete notification */
     $db->query(sprintf("DELETE FROM notifications WHERE to_user_id = %s AND notification_id = %s", secure($this->_data['user_id'], 'int'), secure($notification_id, 'int')));
+  }
+
+
+  /**
+   * delete_all_notifications
+   * 
+   * @return void
+   */
+  public function delete_all_notifications()
+  {
+    global $db;
+    /* delete all notifications */
+    $db->query(sprintf("DELETE FROM notifications WHERE to_user_id = %s", secure($this->_data['user_id'], 'int')));
+    /* update notifications counter to 0 */
+    $db->query(sprintf("UPDATE users SET user_live_notifications_counter = 0 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
   }
 
 

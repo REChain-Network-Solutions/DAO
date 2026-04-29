@@ -1,8 +1,8 @@
 /**
  * user js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -24,7 +24,7 @@ api['users/location'] = ajax_path + "users/location.php";
 api['users/push_notifications'] = ajax_path + "users/push_notifications.php";
 api['users/notifications'] = ajax_path + "users/notifications.php";
 api['users/popover'] = ajax_path + "users/popover.php";
-api['users/mention'] = ajax_path + "users/mention.php";
+api['users/mentions'] = ajax_path + "users/mentions.php";
 api['users/settings'] = ajax_path + "users/settings.php";
 api['users/autocomplete'] = ajax_path + "users/autocomplete.php";
 api['users/tagify'] = ajax_path + "users/tagify.php";
@@ -86,10 +86,12 @@ function initialize_modal() {
   // run tagify
   if ($(".js_tagify").length > 0) {
     $('.js_tagify').each(function () {
-      new Tagify(this, {
-        duplicates: false,
-        addTagOnBlur: false
-      });
+      if (!$(this).hasClass('tagify')) {
+        new Tagify(this, {
+          duplicates: false,
+          addTagOnBlur: false
+        });
+      }
     });
   }
   tagify_ajax('.js_tagify-ajax');
@@ -214,6 +216,7 @@ function data_heartbeat() {
     data['last_post'] = posts_stream_staging.find("li:first .post").data('id') || posts_stream.find("li:first .post").data('id') || 0;
     data['get'] = posts_stream.data('get');
     data['filter'] = posts_stream.data('filter');
+    data['category'] = posts_stream.data('category');
     data['country'] = posts_stream.data('country');
     data['id'] = posts_stream.data('id');
     data['query'] = posts_stream.data('query');
@@ -915,11 +918,11 @@ $(function () {
   });
 
 
-  // run @mention
-  $('body').on('focus', '.js_mention', function () {
+  // run @mentions
+  $('body').on('focus', '.js_mentions', function () {
     $(this).triggeredAutocomplete({
       hidden: '#hidden_inputbox',
-      source: api['users/mention'],
+      source: api['users/mentions'],
       trigger: "@",
       maxLength: 20
     });
@@ -1884,6 +1887,22 @@ $(function () {
         });
     });
   });
+  /* delete all notifications */
+  $('body').on('click', '.js_delete-all-notifications', function () {
+    confirm(__['Delete All'], __['Are you sure you want to do this?'], function () {
+      $.post(api['users/notifications'], { 'handle': 'delete-all' }, function (response) {
+        /* check the response */
+        if (response.callback) {
+          eval(response.callback);
+        }
+        /* reload the page */
+        window.location.reload();
+      }, 'json')
+        .fail(function () {
+          show_error_modal();
+        });
+    });
+  });
 
 
   // handle connection
@@ -2654,7 +2673,7 @@ $(function () {
   $('body').on('click', '.js_monetization-deleter', function () {
     var id = $(this).data('id');
     confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
-      $.getJSON(api['monetization/controller'], { 'do': "delete", 'id': id }, function (response) {
+      $.getJSON(api['monetization/controller'], { 'do': "delete_plan", 'id': id }, function (response) {
         /* check the response */
         if (response.callback) {
           eval(response.callback);
@@ -2680,6 +2699,20 @@ $(function () {
         });
     });
     return false;
+  });
+  /* delete a monetization coupon */
+  $('body').on('click', '.js_monetization-coupon-deleter', function () {
+    var id = $(this).data('id');
+    confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
+      $.getJSON(api['monetization/controller'], { 'do': "delete_coupon", 'id': id }, function (response) {
+        /* check the response */
+        if (response.callback) {
+          eval(response.callback);
+        } else {
+          window.location.reload();
+        }
+      });
+    });
   });
 
 
@@ -2918,14 +2951,19 @@ $(function () {
     }
   });
   /* adblocker detector */
-  if (window.canRunAds === undefined) {
+  if (adblock_detector) {
+    $(window).on('load', function () {
+      $.get('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', function () {
+      }).fail(function () {
     if ($(".adblock-warning-message").length > 0) {
       $(".adblock-warning-message").slideDown();
       return;
     }
-    if (adblock_detector) {
+        if (typeof adblock_detector !== 'undefined' && adblock_detector) {
       $(render_template("#adblock-detector")).appendTo('body').show();
     }
+      });
+    });
   }
 
 
@@ -2998,6 +3036,13 @@ $(function () {
           show_error_modal();
         });
     });
+  });
+
+
+  // handle games
+  /* full screen game */
+  $('body').on('click', '.js_game-fullscreen', function () {
+    $('#game-area')[0].requestFullscreen();
   });
 
 });

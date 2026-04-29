@@ -1,4 +1,4 @@
-package Delus.app.webview;
+package sngine.app.webview;
 
 import android.content.Context;
 import android.net.ConnectivityManager;

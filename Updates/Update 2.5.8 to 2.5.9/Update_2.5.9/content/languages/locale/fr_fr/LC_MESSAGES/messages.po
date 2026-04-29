@@ -1542,7 +1542,7 @@ msgid "Class"
 msgstr "Classe"
 
 #: content/themes/default/templates/admin.emojis.tpl:66 content/themes/default/templates/admin.emojis.tpl:110
-msgid "Delus uses Twemoji Awesome and you can check"
+msgid "Sngine uses Twemoji Awesome and you can check"
 msgstr ""
 
 #: content/themes/default/templates/admin.emojis.tpl:66 content/themes/default/templates/admin.emojis.tpl:110
@@ -2326,8 +2326,8 @@ msgid "Website Keywords"
 msgstr "Mots-clés du site Web"
 
 #: content/themes/default/templates/admin.settings.tpl:105
-msgid "Example: social, Delus, social site"
-msgstr "Exemple : social, Delus, site social"
+msgid "Example: social, sngine, social site"
+msgstr "Exemple : social, sngine, site social"
 
 #: content/themes/default/templates/admin.settings.tpl:112
 msgid "Website Email"
@@ -2545,7 +2545,7 @@ msgstr ""
 #: content/themes/default/templates/settings.tpl:1069 content/themes/default/templates/settings.tpl:1091 content/themes/default/templates/settings.tpl:1110
 #: content/themes/default/templates/settings.tpl:1132 content/themes/default/templates/settings.tpl:2105 content/themes/default/templates/_publisher.tpl:245
 #: content/themes/default/templates/_publisher.tpl:258 content/themes/default/templates/__feeds_post.body.tpl:324
-#: content/themes/default/templates/__feeds_user.tpl:40 content/themes/default/templates/__feeds_user.tpl:135 includes/assets/js/Delus/user.js:1227
+#: content/themes/default/templates/__feeds_user.tpl:40 content/themes/default/templates/__feeds_user.tpl:135 includes/assets/js/sngine/user.js:1227
 msgid "Friends"
 msgstr "Amis"
 
@@ -3580,7 +3580,7 @@ msgid "Reach"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:588
-msgid "Delus"
+msgid "Sngine"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:604
@@ -7846,7 +7846,7 @@ msgid "Your phone already verified"
 msgstr ""
 
 #: includes/functions.php:218
-msgid "Your session hash has been broken, Please contact Delus's support!"
+msgid "Your session hash has been broken, Please contact Sngine's support!"
 msgstr ""
 
 #: includes/functions.php:493

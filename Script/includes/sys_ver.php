@@ -1,10 +1,10 @@
 <?php
 
 // set system name
-define('SYS_NAME', 'Delus');
+define('SYS_NAME', 'Sngine');
 
 // set system version
-define('SYS_VER', '4.2.1');
+define('SYS_VER', '4.3');
 
 // set api version
 define('API_VER', '1.0');

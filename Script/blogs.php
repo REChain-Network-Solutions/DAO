@@ -3,8 +3,8 @@
 /**
  * blogs
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -108,6 +108,9 @@ try {
 
       // check blogs permission
       if (!$user->_data['can_write_blogs']) {
+        if (!$user->check_module_package_permission("blogs_permission")) {
+          redirect("/packages?highlight=true");
+        }
         _error(404);
       }
 
@@ -132,6 +135,9 @@ try {
 
       // check blogs permission
       if (!$user->_data['can_write_blogs']) {
+        if (!$user->check_module_package_permission("blogs_permission")) {
+          redirect("/packages?highlight=true");
+        }
         _error(404);
       }
 

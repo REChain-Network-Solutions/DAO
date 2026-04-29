@@ -1,12 +1,44 @@
-﻿#== v4.2.1 == ( 30-12-2025 )
+﻿#== v4.3 == ( 08-04-2026 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
+
+- [Added] AI System and Integration with OpenAI and Replicate
+- [Added] AI Posts Generator
+- [Added] AI Blogs Generator
+- [Added] AI Images Generator
+- [Added] AI Credit System
+- [Added] Publisher Rich Text Editor
+- [Added] Publisher #Hashtags Autocomplete
+- [Added] Monetization Discounts
+- [Added] Monetization Coupons
+- [Added] Collaborative Posts
+- [Added] Revamp Watch Module
+- [Added] Blogs References
+- [Added] Blogs Co-Authors
+- [Added] Blogs Section To Profiles
+- [Added] Blogs Section To Pages
+- [Added] Blogs Section To Groups
+- [Added] Blogs Section To Events
+- [Added] Smart YouTube Player For Movies
+- [Added] Disable YouTube Player For Movies
+- [Added] Fullscreen For Games
+- [Added] Delete All Notifications
+
+- [Fixed] Minor Bugs
+- [Fixed] Links in Posts Open in Same Window
+
+#== v4.2.1 == ( 30-12-2025 )
 - [Fixed] Minor Bugs
 
 #== v4.2 == ( 20-12-2025 )
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Packages Payments History For User Settings
 - [Added] Boosted Groups System
@@ -46,8 +78,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Socket.io Support
 - [Added] New Sound for Notifications, Chat Messages & Calls
@@ -83,11 +115,11 @@
 - [Fixed] Minor Bugs
 
 #== v4.0.5 == ( 27-05-2025 )
-- [Fixed] User IP When Running Delus with Docker
+- [Fixed] User IP When Running Sngine with Docker
 - [Fixed] Watch Module When Newsfeed Caching Enabled
 - [Fixed] User Access Checks When Approval System Enabled
 - [Fixed] LiveStreaming Recording Issue
-- [Fixed] Messages with Special Characters in Delus Messaging Apps
+- [Fixed] Messages with Special Characters in Sngine Messaging Apps
 - [Fixed] Minor Bugs
 
 #== v4.0.4 == ( 18-05-2025 )
@@ -123,8 +155,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] PWA
 - [Added] Admin Ability To Turn PWA On/Off
@@ -233,8 +265,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Reels Module
 - [Added] Disable Friends System
@@ -342,8 +374,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Selling Digital Products
 - [Added] Groups Reviews
@@ -411,8 +443,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] PayPal Recurring Payments
 - [Added] Stripe Recurring Payments
@@ -468,13 +500,13 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Market Purchase Module
 - [Added] Tips To Blogs
 - [Added] Admin ability to turn Switch Accounts On/Off [Admin Panel]
-- [Added] Delus Login as Social Login
+- [Added] Sngine Login as Social Login
 - [Added] Enable/Disable Reactions [Admin Panel]
 - [Added] SMS Limit/Hour
 - [Added] Wallet Transfer Maximum [Admin Panel]
@@ -538,8 +570,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Migrate to Bootstrap v5+
 - [Added] New Default Theme
@@ -580,8 +612,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] New Landing Page Design
 - [Added] Watch Module
@@ -626,8 +658,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
 - [Added] Content Monetization for [Profiles|Pages|Groups]
 - [Added] Manage Reactions [Admin Panel]
@@ -672,7 +704,7 @@
 - [Fixed] Minor Bugs
 
 #== v3.6.2 == ( 20-09-2022 )
-- [Updated] Delus Default Theme Colors
+- [Updated] Sngine Default Theme Colors
 - [Added] New Post Reactions Images
 - [Fixed] Minor Bugs
 
@@ -689,10 +721,10 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus PHP Dependencies
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
 
-- [Added] Move Delus JS Dependencies to NPM
+- [Added] Move Sngine JS Dependencies to NPM
 - [Added] FFMPEG Support
 - [Added] Admin ability to turn FFMPEG On/Off [Admin Panel]
 - [Added] All Comments Sorting in Comments
@@ -739,8 +771,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs
-- [Updated] Delus JS Dependencies
+- [Updated] Sngine Libs
+- [Updated] Sngine JS Dependencies
 
 - [Added] Move libs to Composer
 - [Added] Razorpay Payment Method
@@ -786,8 +818,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|HTMLPurifier|PHPMailer|SimpleImage|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [tagify]
+- [Updated] Sngine Libs [AWS|HTMLPurifier|PHPMailer|SimpleImage|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [tagify]
 
 - [Added] Wasabi Cloud Storage
 - [Added] Free Trial Pro Packages
@@ -850,8 +882,8 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|GettextTranslator|PHPMailer|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [easytimer|tagify|tinymce]
+- [Updated] Sngine Libs [AWS|GettextTranslator|PHPMailer|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [easytimer|tagify|tinymce]
 
 - [Added] View X New Posts in Newsfeed
 - [Added] Multi-Level Affiliates System
@@ -902,9 +934,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [Agora|AWS|Embed|FtpClient|GettextTranslator|GoogleAuthenticator|PHPMailer|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [jQuery|Agora|autosize|bootstrap.colorpicker|codemirror|easytimer|tagify|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [Agora|AWS|Embed|FtpClient|GettextTranslator|GoogleAuthenticator|PHPMailer|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [jQuery|Agora|autosize|bootstrap.colorpicker|codemirror|easytimer|tagify|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] UI Enhancements
 - [Added] Invitations System
@@ -953,9 +985,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|GettextTranslator|HybridAuth|MobileDetect|PHPMailer|SimpleImage|Smarty|Spaces|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [autosize|bootstrap.colorpicker|codemirror|easytimer|mustache|tagify|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|GettextTranslator|HybridAuth|MobileDetect|PHPMailer|SimpleImage|Smarty|Spaces|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [autosize|bootstrap.colorpicker|codemirror|easytimer|mustache|tagify|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Add Button in Header
 - [Added] Funding System
@@ -992,9 +1024,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|Faker|FTP|HybridAuth|MobileDetect|PHPMailer|SimpleImage|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [bootstrap.datetimepicker|codemirror|easytimer|moment|mustache|tinymce]
-- [Updated] Delus CSS Dependencies [Bootstrap|Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|Faker|FTP|HybridAuth|MobileDetect|PHPMailer|SimpleImage|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [bootstrap.datetimepicker|codemirror|easytimer|moment|mustache|tinymce]
+- [Updated] Sngine CSS Dependencies [Bootstrap|Font-Awesome]
 
 - [Added] Changed DB from MYISAM to INNODB
 - [Added] Background Thread for time-consuming tasks like send newsletter, garbage collector ...etc
@@ -1037,9 +1069,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HTMLPurifier|HybridAuth|PHPMailer|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [bootstrap.select|codemirror|dataTables|easytimer|fluidplayer|moment|tinymce]
-- [Updated] Delus CSS Dependencies [Bootstrap|Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|HTMLPurifier|HybridAuth|PHPMailer|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [bootstrap.select|codemirror|dataTables|easytimer|fluidplayer|moment|tinymce]
+- [Updated] Sngine CSS Dependencies [Bootstrap|Font-Awesome]
 
 - [Added] New Install/Update Wizard
 - [Added] Live Stream Module
@@ -1065,9 +1097,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|FTP|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio|2Checkout]
-- [Updated] Delus JS Dependencies [jQuery|bootstrap.select|codemirror|easytimer|jquery.form|moment|mustache|tinymce]
-- [Updated] Delus CSS Dependencies [Bootstrap|Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|FTP|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio|2Checkout]
+- [Updated] Sngine JS Dependencies [jQuery|bootstrap.select|codemirror|easytimer|jquery.form|moment|mustache|tinymce]
+- [Updated] Sngine CSS Dependencies [Bootstrap|Font-Awesome]
 
 - [Added] Enhance the Design
 - [Added] Convert All PNG Icons to SVG
@@ -1131,9 +1163,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Faker|HybridAuth|PHPMailer|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [bootstrap.colorpicker|codemirror|easytimer|mustache|tinymce]
-- [Updated] Delus CSS Dependencies [Bootstrap|Font-Awesome]
+- [Updated] Sngine Libs [AWS|Faker|HybridAuth|PHPMailer|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [bootstrap.colorpicker|codemirror|easytimer|mustache|tinymce]
+- [Updated] Sngine CSS Dependencies [Bootstrap|Font-Awesome]
 
 - [Added] Adult Images Detection System
 - [Added] Banned Usernames
@@ -1168,9 +1200,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|Faker|PHPMailer|reCAPTCHA|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [bootstrap.select|codemirror|datatables|easytimer|mustache|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|Faker|PHPMailer|reCAPTCHA|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [bootstrap.select|codemirror|datatables|easytimer|mustache|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Support for MySQL v8+
 - [Added] Unusual Login Detection
@@ -1239,9 +1271,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [codemirror|mustache|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [codemirror|mustache|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Video Calls
 - [Added] Admin ability to turn Video Calls On/Off [Admin Panel]
@@ -1290,16 +1322,16 @@
 - [Fixed] Change/Remove the default theme without mark other theme as default
 - [Fixed] Minor Bugs
 
-- [Removed] Intl PHP extension as requirement for Delus
+- [Removed] Intl PHP extension as requirement for Sngine
 
 #== v2.5.10 == ( 21-06-2019 )
 - [Updated] Android App
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|HybridAuth v3|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [jQuery|bootstrap.colorpicker|bootstrap.select|codemirror|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|HybridAuth v3|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [jQuery|bootstrap.colorpicker|bootstrap.select|codemirror|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Post Reactions (like, love, haha ...etc)
 - [Added] Reactions and Share Options to Blog
@@ -1368,11 +1400,11 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [bootstrap|mustache|jquery-ui|datatables|bootstrap.colorpicker|bootstrap.datetimepicker|bootstrap.select|codemirror|moment|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [bootstrap|mustache|jquery-ui|datatables|bootstrap.colorpicker|bootstrap.datetimepicker|bootstrap.select|codemirror|moment|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
-- [Added] Delus Default Theme v2.0 with Bootsrap 4+
+- [Added] Sngine Default Theme v2.0 with Bootsrap 4+
 - [Added] Night Mode On/Off
 - [Added] Chat Message Sound On/Off ability
 - [Added] Update @Mention functionality
@@ -1398,9 +1430,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [mustache|bootstrap.select|codemirror|metismenu|moment|readmore|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [mustache|bootstrap.select|codemirror|metismenu|moment|readmore|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Delete Uploaded (Photos, Video, Audio, File) after deleting posts
 - [Added] Fake User Generator
@@ -1465,9 +1497,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [autosize|bootstrap.colorpicker|codemirror|datatables|mediaelement|metismenu|moment|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [autosize|bootstrap.colorpicker|codemirror|datatables|mediaelement|metismenu|moment|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome]
 
 - [Added] Secured Cookies [GDPR]
 - [Added] Cookies Consent Notification [GDPR]
@@ -1517,9 +1549,9 @@
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [jQuery|dataTables|mediaelement|metisMenu|moment|noty|tinymce]
-- [Updated] Delus CSS Dependencies [Font-Awesome|Flag-Icon]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [jQuery|dataTables|mediaelement|metisMenu|moment|noty|tinymce]
+- [Updated] Sngine CSS Dependencies [Font-Awesome|Flag-Icon]
 
 - [Added] Advanced ADS system for users
 - [Added] User Wallet System
@@ -1567,8 +1599,8 @@
 #== v2.5.2 == ( 01-03-2018 )
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [Twilio]
-- [Updated] Delus CSS Dependencies [Font-Awesome(v5)]
+- [Updated] Sngine Libs [Twilio]
+- [Updated] Sngine CSS Dependencies [Font-Awesome(v5)]
 
 - [Added] Forums
 - [Added] Mass Notifications from Admin Panel
@@ -1600,11 +1632,11 @@
 #== v2.5 == ( 9-11-2017 )
 - [Updated] System Security
 - [Updated] System Optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [jQuery|jquery.form|jquery.inview|jquery.geocomplete|autosize|moment|mediaelementplayer|bootstrap.select|bootstrap.datetimepicker|bootstrap.colorpicker|metisMenu|dataTables]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [jQuery|jquery.form|jquery.inview|jquery.geocomplete|autosize|moment|mediaelementplayer|bootstrap.select|bootstrap.datetimepicker|bootstrap.colorpicker|metisMenu|dataTables]
 - [Updated] Installer Wizard & Pre-Installation Check
-- [Updated] Delus GTmetrix Optimization
-- [Updated] Delus Google PageSpeed Optimization
+- [Updated] Sngine GTmetrix Optimization
+- [Updated] Sngine Google PageSpeed Optimization
 
 - [Added] Romanian Language
 - [Added] Events
@@ -1671,7 +1703,7 @@
 
 #== v2.4.2 == ( 21-03-2017 )
 - [Updated] System optimization
-- [Updated] Delus JS Dependencies [mediaelementplayer]
+- [Updated] Sngine JS Dependencies [mediaelementplayer]
 - [Added] Stripe Receipt Email
 - [Fixed] Page Verification Request
 - [Fixed] Minor CSS bugs
@@ -1689,9 +1721,9 @@
 #== v2.4 == ( 06-03-2017 )
 - [Updated] System Security
 - [Updated] System optimization
-- [Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|reCAPTCHA|Smarty|Stripe|Twilio]
-- [Updated] Delus JS Dependencies [jQuery|Bootstrap|Mustache|html5shiv|slimscroll|autosize|readmore|moment|datetimepicker|DataTables]
-- [Updated] Delus CSS Dependencies [Font-Awesome|Twemoji-Awesome|Flag-Icon]
+- [Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|reCAPTCHA|Smarty|Stripe|Twilio]
+- [Updated] Sngine JS Dependencies [jQuery|Bootstrap|Mustache|html5shiv|slimscroll|autosize|readmore|moment|datetimepicker|DataTables]
+- [Updated] Sngine CSS Dependencies [Font-Awesome|Twemoji-Awesome|Flag-Icon]
 - [Updated] Installer Wizard & Pre-Installation Check
 
 - [Added] New Mobile UI Enhancement
@@ -1773,10 +1805,10 @@
 - [Fixed] Minor bugs
 
 #== v2.3.1 == ( 22-01-2017 ) [Script security update]
-- [Updated] Delus Libs [PHPMailer]
+- [Updated] Sngine Libs [PHPMailer]
 
 #== v2.3 == ( 03-09-2016 )
-- [Updated] Delus Dependencies [Bootstrap|Font-Awesome|Flag-Icon|Twemoji-Awesome]
+- [Updated] Sngine Dependencies [Bootstrap|Font-Awesome|Flag-Icon|Twemoji-Awesome]
 - [Updated] Cache system to speed up your website (97/100 on Google PageSpeed)
 - [Updated] System Security
 - [Updated] Improve Search to include wall posts and group posts
@@ -1826,7 +1858,7 @@
 
 
 #== v2.2.3 == ( 26-07-2016 )
-- [Updated] Delus Dependencies [Smarty|HybridAuth|Google reCAPTCHA]
+- [Updated] Sngine Dependencies [Smarty|HybridAuth|Google reCAPTCHA]
 
 
 #== v2.2.2 == ( 23-07-2016 )
@@ -1867,7 +1899,7 @@
 - [Added] [Admin] Offline after | The amount of time to be considered online since the last user's activity (in seconds)
 - [Added] [Admin] Custom Design
 - [Added] [Admin] Build Version in admin panel main menu
-- [Added] Update all Delus Dependencies to latest version
+- [Added] Update all Sngine Dependencies to latest version
 - [Added] Uploads folder now arranged with years/months and file types like WordPress
 - [Added] Getting started page
 - [Added] User now can upload and share audio file
@@ -1886,8 +1918,8 @@
 
 
 #== v2.1 == ( 16-02-2016 )
-- [Added] Delus 2.1 Structure for better caching and performance
-- [Added] Delus APIs v1.0
+- [Added] Sngine 2.1 Structure for better caching and performance
+- [Added] Sngine APIs v1.0
 - [Added] Transfer Awesome features from Material theme to default theme
 - [Added] New Social Logins [Linkedin & Vkontakte]
 - [Added] New Link Scraper

@@ -3,7 +3,7 @@
     "description": "Server-side SDK for LiveKit.",
     "type": "library",
     "license": "MIT",
-    "version": "1.3.4",
+    "version": "1.3.5",
     "authors": [
         {
             "name": "Agence 10-4",
@@ -12,7 +12,7 @@
     ],
     "require": {
         "php": "^8.1",
-        "firebase/php-jwt": "^6.8",
+        "firebase/php-jwt": "^7.0.0",
         "twirp/twirp": "^0.9.1|^0.14.0",
         "google/protobuf": "^3.23|^4.0",
         "guzzlehttp/guzzle": "^6.3|^7.0",

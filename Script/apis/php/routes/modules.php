@@ -3,8 +3,8 @@
 /**
  * APIs -> routes -> modules
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 require('modules/app/router.php');

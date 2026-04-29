@@ -186,7 +186,7 @@
             <small>(<a target="_blank" href="{$system['system_url']}/content/themes/{$system['theme']}/images/elengine_landing.png">{__("preview")}</a>)</small>
           </div>
           <div class="form-text">
-            {__("Note: You can get the whole Elengine theme from")} <a target="_blank" href="https://bit.ly/DelusElengineTheme">{__("Here")}</a>
+            {__("Note: You can get the whole Elengine theme from")} <a target="_blank" href="https://bit.ly/SngineElengineTheme">{__("Here")}</a>
           </div>
         </div>
       </div>

@@ -294,6 +294,8 @@
                                 {__("Paid Jobs")}
                               {elseif $transaction['node_type'] == "courses_module_payment"}
                                 {__("Paid Courses")}
+                              {elseif $transaction['node_type'] == "ai_credits_payment"}
+                                {__("AI Credits Payment")}
                               {/if}
                             </td>
                             <td><span class="js_moment" data-time="{$transaction['date']}">{$transaction['date']}</span></td>

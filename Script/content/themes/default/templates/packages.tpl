@@ -80,15 +80,15 @@
                         {else}
                           {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
                         {/if}
-                        {__("Verified badge")}
+                        {__("Verified Badge")}
                       </li>
 
                       <!-- Free Points -->
                       <li class="list-group-item">
                         {if $package['free_points'] > 0}
-                          {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{$package['free_points']} {__("Free points")}
+                          {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{$package['free_points']} {__("Free Points")}
                         {else}
-                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Free points")}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Free Points")}
                         {/if}
                       </li>
                       <!-- Free Points -->
@@ -96,28 +96,28 @@
                       <!-- Boosts -->
                       <li class="list-group-item">
                         {if !$package['boost_posts_enabled']}
-                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Posts promotion")}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Posts Promotion")}
                         {else}
                           {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_posts']} {__("Posts")}
                         {/if}
                       </li>
                       <li class="list-group-item">
                         {if !$package['boost_pages_enabled']}
-                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Pages promotion")}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Pages Promotion")}
                         {else}
                           {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_pages']} {__("Pages")}
                         {/if}
                       </li>
                       <li class="list-group-item">
                         {if !$package['boost_groups_enabled']}
-                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Groups promotion")}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Groups Promotion")}
                         {else}
                           {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_groups']} {__("Groups")}
                         {/if}
                       </li>
                       <li class="list-group-item">
                         {if !$package['boost_events_enabled']}
-                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Events promotion")}
+                          {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}{__("Events Promotion")}
                         {else}
                           {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}{__("Boost up to")} {$package['boost_events']} {__("Events")}
                         {/if}
@@ -337,6 +337,28 @@
                           </li>
                         {/if}
 
+                        {if $system['anonymous_mode']}
+                          <li class="list-group-item">
+                            {if $package['anonymous_posts_permission']}
+                              {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}
+                            {else}
+                              {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
+                            {/if}
+                            {__("Add Anonymous Posts")}
+                          </li>
+                        {/if}
+
+                        {if $system['collaborative_posts_enabled']}
+                          <li class="list-group-item">
+                            {if $package['collaborative_posts_permission']}
+                              {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}
+                            {else}
+                              {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
+                            {/if}
+                            {__("Add Collaborative Posts")}
+                          </li>
+                        {/if}
+
                         {if $system['colored_posts_enabled']}
                           <li class="list-group-item">
                             {if $package['colored_posts_permission']}
@@ -392,25 +414,36 @@
                           </li>
                         {/if}
 
-                        {if $system['anonymous_mode']}
+                        {if $system['ai_posts_enabled']}
                           <li class="list-group-item">
-                            {if $package['anonymous_posts_permission']}
+                            {if $package['ai_posts_permission']}
                               {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}
                             {else}
                               {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
                             {/if}
-                            {__("Add Anonymous Posts")}
+                            {__("Generate AI Posts")}
                           </li>
                         {/if}
 
-                        {if $system['invitation_enabled']}
+                        {if $system['ai_blogs_enabled']}
                           <li class="list-group-item">
-                            {if $package['invitation_permission']}
+                            {if $package['ai_blogs_permission']}
                               {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}
                             {else}
                               {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
                             {/if}
-                            {__("Generate Invitation Codes")}
+                            {__("Generate AI Blogs")}
+                          </li>
+                        {/if}
+
+                        {if $system['ai_images_enabled']}
+                          <li class="list-group-item">
+                            {if $package['ai_images_permission']}
+                              {include file='__svg_icons.tpl' icon="checked" class="mr10" width="24px" height="24px"}
+                            {else}
+                              {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
+                            {/if}
+                            {__("Generate AI Images")}
                           </li>
                         {/if}
 
@@ -498,7 +531,7 @@
                             {else}
                               {include file='__svg_icons.tpl' icon="cross" class="mr10" width="24px" height="24px"}
                             {/if}
-                            {__("Raise funding")}
+                            {__("Raise Funding")}
                           </li>
                         {/if}
 

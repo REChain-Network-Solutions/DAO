@@ -3,8 +3,8 @@
 /**
  * ajax -> users -> notifications
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -30,8 +30,13 @@ try {
         _error(400);
       }
 
-      // delete session
+      // delete notification
       $user->delete_notification_by_id($_POST['id']);
+      break;
+
+    case 'delete-all':
+      // delete all notifications
+      $user->delete_all_notifications();
       break;
 
     default:

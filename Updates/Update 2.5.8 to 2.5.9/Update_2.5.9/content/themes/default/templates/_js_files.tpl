@@ -220,15 +220,15 @@
 {/if}
 <!-- Dependencies Plugins -->
 
-<!-- Delus [JS] -->
-<script src="{$system['system_url']}/includes/assets/js/Delus/core.js" {if !$user->_logged_in}defer{/if}></script>
+<!-- Sngine [JS] -->
+<script src="{$system['system_url']}/includes/assets/js/sngine/core.js" {if !$user->_logged_in}defer{/if}></script>
 {if $user->_logged_in}
-    <script src="{$system['system_url']}/includes/assets/js/Delus/user.js"></script>
-    <script src="{$system['system_url']}/includes/assets/js/Delus/post.js"></script>
-    <script src="{$system['system_url']}/includes/assets/js/Delus/chat.js"></script>
-    <script src="{$system['system_url']}/includes/assets/js/Delus/showads.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/sngine/user.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/sngine/post.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/sngine/chat.js"></script>
+    <script src="{$system['system_url']}/includes/assets/js/sngine/showads.js"></script>
 {/if}
-<!-- Delus [JS] -->
+<!-- Sngine [JS] -->
 
 {if $page == "admin"}
     <!-- Dependencies Plugins -->
@@ -248,9 +248,9 @@
     <link rel="stylesheet" type='text/css' href="{$system['system_url']}/includes/assets/js/plugins/codemirror/lib/codemirror.css">
     <!-- Dependencies Plugins [JS] -->
 
-    <!-- Delus [JS] -->
-    <script src="{$system['system_url']}/includes/assets/js/Delus/admin.js"></script>
-    <!-- Delus [JS] -->
+    <!-- Sngine [JS] -->
+    <script src="{$system['system_url']}/includes/assets/js/sngine/admin.js"></script>
+    <!-- Sngine [JS] -->
 
     <!-- Admin Charts -->
     <script src="https://code.highcharts.com/highcharts.js"></script>

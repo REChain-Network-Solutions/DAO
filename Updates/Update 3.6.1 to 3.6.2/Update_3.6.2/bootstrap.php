@@ -3,11 +3,11 @@
 /**
  * bootstrap
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
-// require Delus dependencies
+// require Sngine dependencies
 require __DIR__ . '/vendor/autoload.php';
 
 // set system version

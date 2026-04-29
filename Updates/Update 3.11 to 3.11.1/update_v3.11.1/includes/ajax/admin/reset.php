@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> delete
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -204,12 +204,12 @@ try {
     'wordpress_login_enabled' => secure('0'),
     'wordpress_appid' => secure(''),
     'wordpress_secret' => secure(''),
-    'Delus_login_enabled' => secure('0'),
-    'Delus_appid' => secure(''),
-    'Delus_secret' => secure(''),
-    'Delus_app_domain' => secure(''),
-    'Delus_app_name' => secure(''),
-    'Delus_app_icon' => secure(''),
+    'sngine_login_enabled' => secure('0'),
+    'sngine_appid' => secure(''),
+    'sngine_secret' => secure(''),
+    'sngine_app_domain' => secure(''),
+    'sngine_app_name' => secure(''),
+    'sngine_app_icon' => secure(''),
     'genders_disabled' => secure('0'),
     'show_usernames_enabled' => secure('0'),
     'email_smtp_enabled' => secure('0'),

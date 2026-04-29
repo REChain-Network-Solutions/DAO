@@ -3,8 +3,8 @@
 /**
  * trait -> wallet
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait WalletTrait
@@ -450,9 +450,10 @@ trait WalletTrait
    * wallet_monetization_payment
    * 
    * @param integer $plan_id
+   * @param string $promo_code
    * @return void
    */
-  public function wallet_monetization_payment($plan_id)
+  public function wallet_monetization_payment($plan_id, $promo_code)
   {
     global $db, $system;
     /* check if wallet enabled */
@@ -463,7 +464,7 @@ trait WalletTrait
     if (!$system['monetization_enabled'] || !$system['monetization_wallet_payment_enabled']) {
       throw new Exception(__("The monetization system has been disabled by the admin"));
     }
-    // get monetization plan
+    /* get monetization plan */
     $monetization_plan = $this->get_monetization_plan($plan_id, true);
     if (!$monetization_plan) {
       throw new Exception(__("This monetization plan is not available"));
@@ -471,6 +472,17 @@ trait WalletTrait
     /* check if the viewer is subscribed to this node */
     if ($this->is_subscribed($monetization_plan['node_id'], $monetization_plan['node_type'])) {
       modal("SUCCESS", __("Subscribed"), __("You already subscribed to this") . " " . __($monetization_plan['node_type']));
+    }
+    /* check if discount is enabled */
+    if ($monetization_plan['discounted_price']) {
+      $monetization_plan['price'] = $monetization_plan['discounted_price'];
+    }
+    /* check if promo code is valid */
+    if ($promo_code) {
+      $coupon = $this->check_monetization_coupon($promo_code);
+      if ($coupon) {
+        $monetization_plan['price'] = $monetization_plan['price'] * (1 - $coupon['discount_percent'] / 100);
+      }
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $monetization_plan['price']) {
@@ -480,6 +492,10 @@ trait WalletTrait
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($monetization_plan['price'], 'float'), secure($this->_data['user_id'], 'int')));
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'subscribe_' . $monetization_plan['node_type'], $monetization_plan['node_id'], $monetization_plan['price'], 'out');
+    if ($promo_code) {
+      /* update coupon usage */
+      $this->update_monetization_coupon($promo_code, $this->_data['user_id']);
+    }
     /* subscribe to node */
     $this->subscribe($plan_id);
     $_SESSION['wallet_monetization_payment_amount'] = $monetization_plan['price'];
@@ -490,9 +506,10 @@ trait WalletTrait
    * wallet_paid_post
    * 
    * @param integer $post_id
+   * @param string $promo_code
    * @return void
    */
-  public function wallet_paid_post($post_id)
+  public function wallet_paid_post($post_id, $promo_code)
   {
     global $db, $system;
     /* check if wallet enabled */
@@ -503,13 +520,24 @@ trait WalletTrait
     if (!$system['monetization_enabled'] || !$system['monetization_wallet_payment_enabled']) {
       throw new Exception(__("The monetization system has been disabled by the admin"));
     }
-    // get post
+    /* get post */
     $post = $this->get_post($post_id, false, false, true);
     if (!$post) {
       throw new Exception(__("This post is not available"));
     }
     if (!$post['needs_payment']) {
       throw new Exception(__("This post doesn't need payment"));
+    }
+    /* check if discount is enabled */
+    if ($post['post_price_discounted']) {
+      $post['post_price'] = $post['post_price_discounted'];
+    }
+    /* check if promo code is valid */
+    if ($promo_code) {
+      $coupon = $this->check_monetization_coupon($promo_code);
+      if ($coupon) {
+        $post['post_price'] = $post['post_price'] * (1 - $coupon['discount_percent'] / 100);
+      }
     }
     /* check viewer balance */
     if ($this->_data['user_wallet_balance'] < $post['post_price']) {
@@ -519,6 +547,10 @@ trait WalletTrait
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($post['post_price'], 'float'), secure($this->_data['user_id'], 'int')));
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'paid_post', $post_id, $post['post_price'], 'out');
+    if ($promo_code) {
+      /* update coupon usage */
+      $this->update_monetization_coupon($promo_code, $this->_data['user_id']);
+    }
     /* unlock paid post */
     $this->unlock_paid_post($post_id);
     $_SESSION['wallet_paid_post_amount'] = $post['post_price'];
@@ -695,6 +727,39 @@ trait WalletTrait
     $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($module_price, 'float'), secure($this->_data['user_id'], 'int')));
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], $module . '_module_payment', 0, $module_price, 'out');
+  }
+
+
+  /**
+   * wallet_ai_credits_payment
+   * 
+   * @param float $amount
+   * @return void
+   */
+  public function wallet_ai_credits_payment($amount)
+  {
+    global $db, $system;
+    /* check if wallet enabled */
+    if (!$system['wallet_enabled']) {
+      throw new ValidationException(__("The wallet system has been disabled by the admin"));
+    }
+    /* validate amount */
+    if (is_empty($amount) || !is_numeric($amount) || $amount <= 0) {
+      throw new ValidationException(__("You must enter valid amount of credits"));
+    }
+    /* prepare cost */
+    $credits_cost = intval((1 / $system['ai_credit_cost']) * $amount);
+    /* check user wallet balance */
+    if ($this->_data['user_wallet_balance'] < $credits_cost) {
+      throw new ValidationException(__("This amount of credits will cost you") . " " . print_money($credits_cost) . " " . __("and you have") . " " . print_money($this->_data['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+    }
+    /* decrease user wallet balance */
+    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($credits_cost, 'float'), secure($this->_data['user_id'], 'int')));
+    /* log this transaction */
+    $this->wallet_set_transaction($this->_data['user_id'], 'ai_credits_payment', null, $credits_cost, 'out');
+    /* increase user ai credits balance */
+    $this->_data['user_ai_credits_balance'] += $amount;
+    $db->query(sprintf('UPDATE users SET user_ai_credits_balance = user_ai_credits_balance + %s WHERE user_id = %s', secure($amount, 'int'), secure($this->_data['user_id'], 'int')));
   }
 
 

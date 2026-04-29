@@ -41,6 +41,11 @@
                         <i class="fa fa-comment-alt fa-lg fa-fw mr10"></i>{__("Posts Settings")}
                       </a>
                     </li>
+                    <li {if $view == "settings" && $sub_view == "ai"}class="active" {/if}>
+                      <a href="{$system['system_url']}/{$control_panel['url']}/settings/ai">
+                        <i class="fa-brands fa-openai fa-lg fa-fw mr10"></i>{__("AI Settings")}
+                      </a>
+                    </li>
                     <li {if $view == "settings" && $sub_view == "registration"}class="active" {/if}>
                       <a href="{$system['system_url']}/{$control_panel['url']}/settings/registration">
                         <i class="fa fa-sign-in-alt fa-lg fa-fw mr10"></i>{__("Registration Settings")}

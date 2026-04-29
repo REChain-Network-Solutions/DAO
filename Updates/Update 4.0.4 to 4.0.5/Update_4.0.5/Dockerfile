@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
 # set working directory
-WORKDIR /var/www/html/Delus
+WORKDIR /var/www/html/sngine
 
 # copy project files
 COPY . .

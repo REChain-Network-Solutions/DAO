@@ -8,9 +8,15 @@
       </span>
     </div>
     <div class="d-grid">
-      <button class="btn btn-info rounded rounded-pill mt20 {if !$user->_logged_in}js_login{/if}" {if $user->_logged_in}data-toggle="modal" data-url="#payment" data-options='{ "handle": "paid_post", "paid_post": "true", "id": {$post_id}, "price": {$price}, "vat": "{get_payment_vat_value($price)}", "fees": "{get_payment_fees_value($price)}", "total": "{get_payment_total_value($price)}", "total_printed": "{get_payment_total_value($price, true)}" }' {/if}>
-        <i class="fa fa-money-check-alt mr5"></i>{__("PAY TO UNLOCK")} ({print_money($price)})
-      </button>
+      {if $discounted_price}
+        <button class="btn btn-info rounded rounded-pill mt20 {if !$user->_logged_in}js_login{/if}" {if $user->_logged_in}data-toggle="modal" data-url="#payment" data-options='{ "handle": "paid_post", "paid_post": "true", "id": {$post_id}, "price": {$discounted_price}, "vat": "{get_payment_vat_value($discounted_price)}", "fees": "{get_payment_fees_value($discounted_price)}", "total": "{get_payment_total_value($discounted_price)}", "total_printed": "{get_payment_total_value($discounted_price, true)}" }' {/if}>
+          <i class="fa fa-money-check-alt mr5"></i>{__("PAY TO UNLOCK")} {print_money($discounted_price)}<span style="text-decoration: line-through;" class="ml5">{print_money($price)}</span>
+        </button>
+      {else}
+        <button class="btn btn-info rounded rounded-pill mt20 {if !$user->_logged_in}js_login{/if}" {if $user->_logged_in}data-toggle="modal" data-url="#payment" data-options='{ "handle": "paid_post", "paid_post": "true", "id": {$post_id}, "price": {$price}, "vat": "{get_payment_vat_value($price)}", "fees": "{get_payment_fees_value($price)}", "total": "{get_payment_total_value($price)}", "total_printed": "{get_payment_total_value($price, true)}" }' {/if}>
+          <i class="fa fa-money-check-alt mr5"></i>{__("PAY TO UNLOCK")} {print_money($price)}
+        </button>
+      {/if}
       {if $paid_text}
         <div class="post-paid-description rounded" {if $paid_image} style="background: transparent; color: #fff;" {/if}>
           {$paid_text}

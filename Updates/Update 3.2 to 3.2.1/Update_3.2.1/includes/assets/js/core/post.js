@@ -1,8 +1,8 @@
 /**
  * post js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -289,7 +289,7 @@ $(function() {
     // run stories
     if($("#stories").length > 0) {
         var stories = new Zuck('stories', {
-            skin: 'Delus',
+            skin: 'Sngine',
             avatars: true,
             list: false,
             backNative: true,

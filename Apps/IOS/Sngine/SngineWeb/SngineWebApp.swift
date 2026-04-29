@@ -2,7 +2,7 @@ import SwiftUI
 import OneSignalFramework
 
 @main
-struct DelusWebApp: App {
+struct SngineWebApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {

@@ -1,0 +1,72 @@
+services:
+ # ----------------------
+ # Nginx
+ # ----------------------
+ nginx:
+  image: nginx:stable
+  restart: always
+  ports:
+   - 80:80 # 👈 Change to your HTTP port
+   - 443:443 # 👈 Change to your SSL port
+  volumes:
+   - ../.:/var/www/html
+   - ./nginx/conf.d:/etc/nginx/conf.d
+   - ../../.my-certs:/etc/nginx/certs # 👈 Change SSL certificates path
+  depends_on:
+   - php
+
+ # ----------------------
+ # PHP-FPM
+ # ----------------------
+ php:
+  restart: always
+  build:
+   context: .
+   dockerfile: php/dockerfile
+  volumes:
+   - ../.:/var/www/html
+  depends_on:
+   - mysql
+   - redis
+
+ # ----------------------
+ # MySQL
+ # ----------------------
+ mysql:
+  image: mysql:8.0
+  restart: always
+  environment:
+   MYSQL_ROOT_PASSWORD: root
+  ports:
+   - 3306:3306 # 👈 Change to your MySQL port
+  volumes:
+   - sngine_db_data:/var/lib/mysql # 👈 Change to your MySQL data volume
+
+ # ----------------------
+ # phpMyAdmin
+ # ----------------------
+ phpmyadmin:
+  image: phpmyadmin:latest
+  restart: always
+  ports:
+   - 8080:80 # 👈 Change to your phpMyAdmin port
+  environment:
+   - PMA_HOST=mysql
+   - PMA_PORT=3306
+   - PMA_USER=root
+   - PMA_PASSWORD=root
+  depends_on:
+   - mysql
+
+ # ----------------------
+ # Redis
+ # ----------------------
+ redis:
+  image: redis:latest
+  restart: always
+  ports:
+   - 6379:6379 # 👈 Change to your Redis port
+
+volumes:
+ sngine_db_data: # 👈 Change to your MySQL data volume
+  external: true

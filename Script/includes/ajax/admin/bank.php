@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> bank
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -79,14 +79,16 @@ try {
           /* subscribe to node */
           $user->subscribe($transfer_request['plan_id'], $transfer_request['user_id']);
           /* log payment */
-          $user->log_payment($transfer_request['user_id'], $transfer_request['price'], 'bank', 'subscribe');
+          $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+          $user->log_payment($transfer_request['user_id'], $price, 'bank', 'subscribe');
           break;
 
         case 'paid_post':
           /* unlock paid post */
           $user->unlock_paid_post($transfer_request['post_id'], $transfer_request['user_id']);
           /* log payment */
-          $user->log_payment($transfer_request['user_id'], $transfer_request['price'], 'bank', 'paid_post');
+          $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
+          $user->log_payment($transfer_request['user_id'], $price, 'bank', 'paid_post');
           break;
 
         case 'movies':

@@ -121,7 +121,7 @@ trait GapicClientTrait
         $this->middlewareCallables[] = $middlewareCallable;
     }
 
-     /**
+    /**
      * Prepend a middleware to the call stack by providing a callable which will be
      * invoked at the end of each call, and will return an instance of
      * {@see MiddlewareInterface} when invoked.
@@ -261,7 +261,7 @@ trait GapicClientTrait
         if (isset($options['serviceAddress'])) {
             $options['apiEndpoint'] = $this->pluck('serviceAddress', $options, false);
         }
-        $this->validateNotNull($options, [
+        self::validateNotNull($options, [
             'apiEndpoint',
             'serviceName',
             'descriptorsConfigPath',
@@ -270,7 +270,7 @@ trait GapicClientTrait
             'credentialsConfig',
             'transportConfig',
         ]);
-        $this->traitValidate($options, [
+        self::traitValidate($options, [
             'credentials',
             'transport',
             'gapicVersion',

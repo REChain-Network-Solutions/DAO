@@ -1,17 +1,17 @@
 ==========================================================
-== If you running Delus v 4.2 you can upgrade to 4.2.1 ==
+== If you running Sngine v 4.2 you can upgrade to 4.2.1 ==
 ==========================================================
 
 !!! IMPORTANT !!!
 ==============================================================================================================
 == Backup your database and your website files just in case something wrong happened                        ==
-== Uninstall any Delus plugin(s) from your Delus both files and any database changes made by this plugin  ==
+== Uninstall any Sngine plugin(s) from your Sngine both files and any database changes made by this plugin  ==
 == If you can't do it ask the plugin author(s) for support and help                                         ==
 ==============================================================================================================
 
 You can check our video tutorial from here: https://www.youtube.com/watch?v=Jch1GaWuBbE
 
-Note: Make sure you are running on the default Delus theme 
+Note: Make sure you are running on the default Sngine theme 
 
 1- Shutdown your system from the admin panel
 
@@ -23,7 +23,7 @@ Note: Make sure you are running on the default Delus theme
 == After Update ==
 =========================================================
 
-1- Remove any browser cache and cookies ( Check this to learn how: https://bit.ly/DelusClearCache )
+1- Remove any browser cache and cookies ( Check this to learn how: https://bit.ly/SngineClearCache )
 
 2- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
 
@@ -33,9 +33,9 @@ And That's it, Have Fun :)
 
 =======================================================================================================
 
-Don't forget to check Delus blog for a lot of tutorials:
-https://blog.Delus.com/
+Don't forget to check Sngine blog for a lot of tutorials:
+https://blog.sngine.com/
 
 If you need help/support:
-Open support ticket here and our team will help you: https://www.Sorokin Dmitry Olegovich.com/support
+Open support ticket here and our team will help you: https://www.zamblek.com/support
 ** Kindly make sure you don't have expired support **

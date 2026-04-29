@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> payments -> 2checkout
+ * ajax -> payments -> 2Checkout [Pre-Payment Integration]
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -23,20 +23,26 @@ if (!$system['2checkout_enabled']) {
 
 try {
 
+  // check 2checkout token
+  if (!isset($_POST['token'])) {
+    _error(400);
+  }
+
   switch ($_POST['handle']) {
     case 'packages':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
 
-      // check package
+      // get package
       $package = $user->get_package($_POST['id']);
       if (!$package) {
         _error(400);
+      }
+      /* check if user already subscribed to this package */
+      if ($user->_data['user_subscribed'] && $user->_data['user_package'] == $package['package_id']) {
+        modal("SUCCESS", __("Subscribed"), __("You already subscribed to this package, Please select different package"));
       }
 
       // process
@@ -47,7 +53,7 @@ try {
         /* log payment */
         $user->log_payment($user->_data['user_id'], $package['price'], '2checkout', 'packages');
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return
@@ -56,9 +62,6 @@ try {
 
     case 'wallet':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
       if (!isset($_POST['price']) || !is_numeric($_POST['price'])) {
         _error(400);
       }
@@ -74,7 +77,7 @@ try {
         /* log payment */
         $user->log_payment($user->_data['user_id'], $_SESSION['wallet_replenish_amount'], '2checkout', 'wallet');
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return
@@ -83,13 +86,16 @@ try {
 
     case 'donate':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
       if (!isset($_POST['price']) || !is_numeric($_POST['price'])) {
+        _error(400);
+      }
+
+      // get post
+      $post = $user->get_post($_POST['id']);
+      if (!$post) {
         _error(400);
       }
 
@@ -101,7 +107,7 @@ try {
         /* log payment */
         $user->log_payment($user->_data['user_id'], $_POST['price'], '2checkout', 'donate');
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return
@@ -110,28 +116,43 @@ try {
 
     case 'subscribe':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
-      if (!isset($_POST['plan_id']) || !is_numeric($_POST['plan_id'])) {
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
 
       // get monetization plan
-      $monetization_plan = $user->get_monetization_plan($_POST['plan_id'], true);
+      $monetization_plan = $user->get_monetization_plan($_POST['id'], true);
       if (!$monetization_plan) {
         _error(400);
+      }
+      /* check if user already subscribed to this node */
+      if ($user->is_subscribed($monetization_plan['node_id'], $monetization_plan['node_type'])) {
+        modal("SUCCESS", __("Subscribed"), __("You already subscribed to this") . " " . __($monetization_plan['node_type']));
+      }
+
+      // check if discount is enabled
+      if ($monetization_plan['discounted_price']) {
+        $monetization_plan['price'] = $monetization_plan['discounted_price'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $monetization_plan['price'] = $monetization_plan['price'] * (1 - $coupon['discount_percent'] / 100);
+        }
       }
 
       // process
       $payment = twocheckout_check($monetization_plan['price']);
       if ($payment) {
         /* subscribe to node */
-        $node_link = $user->subscribe($_POST['plan_id']);
+        $node_link = $user->subscribe($_POST['id']);
         /* log payment */
         $user->log_payment($user->_data['user_id'], $monetization_plan['price'], '2checkout', 'subscribe');
+        /* update coupon usage */
+        $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return
@@ -140,28 +161,42 @@ try {
 
     case 'paid_post':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
-      if (!isset($_POST['post_id']) || !is_numeric($_POST['post_id'])) {
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
 
       // get post
-      $post = $user->get_post($_POST['post_id'], false, false, true);
+      $post = $user->get_post($_POST['id'], false, false, true);
       if (!$post) {
         _error(400);
+      }
+      if (!$post['needs_payment']) {
+        throw new Exception(__("This post doesn't need payment"));
+      }
+
+      // check if discount is enabled
+      if ($post['post_price_discounted']) {
+        $post['post_price'] = $post['post_price_discounted'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $post['post_price'] = $post['post_price'] * (1 - $coupon['discount_percent'] / 100);
+        }
       }
 
       // process
       $payment = twocheckout_check($post['post_price']);
       if ($payment) {
         /* unlock paid post */
-        $post_link = $user->unlock_paid_post($_POST['post_id']);
+        $post_link = $user->unlock_paid_post($_POST['id']);
         /* log payment */
         $user->log_payment($user->_data['user_id'], $post['post_price'], '2checkout', 'paid_post');
+        /* update coupon usage */
+        $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return
@@ -170,17 +205,18 @@ try {
 
     case 'movies':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
-      if (!isset($_POST['movie_id']) || !is_numeric($_POST['movie_id'])) {
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
 
       // get movie
-      $movie = $user->get_movie($_POST['movie_id']);
+      $movie = $user->get_movie($_POST['id']);
       if (!$movie) {
         _error(400);
+      }
+      /* check if user already paid to this movie */
+      if ($movie['can_watch']) {
+        modal("SUCCESS", __("Paid"), __("You already paid to this movie"));
       }
 
       // process
@@ -200,17 +236,18 @@ try {
 
     case 'marketplace':
       // valid inputs
-      if (!isset($_POST['token'])) {
-        _error(400);
-      }
-      if (!isset($_POST['orders_collection_id'])) {
+      if (!isset($_POST['id'])) {
         _error(400);
       }
 
       // get orders collection
-      $orders_collection = $user->get_orders_collection($_POST['orders_collection_id']);
+      $orders_collection = $user->get_orders_collection($_POST['id']);
       if (!$orders_collection) {
         _error(400);
+      }
+      /* check if user already paid to this order collection */
+      if ($orders_collection['paid']) {
+        modal("SUCCESS", __("Paid"), __("You already paid to this order"));
       }
 
       // process
@@ -221,7 +258,7 @@ try {
         /* log payment */
         $user->log_payment($user->_data['user_id'], $orders_collection['total'], '2checkout', 'marketplace');
       } else {
-        return_json(['error' => true, 'message' => __("Payment Declined: Please verify your information and try again, or try another payment method")]);
+        throw new Exception(__("Payment Declined: Please verify your information and try again, or try another payment method"));
       }
 
       // return

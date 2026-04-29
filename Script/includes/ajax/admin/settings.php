@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> settings
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -85,6 +85,7 @@ try {
         'system_description_pages' => secure($_POST['system_description_pages']),
         'system_description_groups' => secure($_POST['system_description_groups']),
         'system_description_events' => secure($_POST['system_description_events']),
+        'system_description_watch' => secure($_POST['system_description_watch']),
         'system_description_blogs' => secure($_POST['system_description_blogs']),
         'system_description_marketplace' => secure($_POST['system_description_marketplace']),
         'system_description_funding' => secure($_POST['system_description_funding']),
@@ -133,13 +134,16 @@ try {
       $_POST['pages_reviews_enabled'] = (isset($_POST['pages_reviews_enabled'])) ? '1' : '0';
       $_POST['pages_reviews_replacement_enabled'] = (isset($_POST['pages_reviews_replacement_enabled'])) ? '1' : '0';
       $_POST['pages_pbid_enabled'] = (isset($_POST['pages_pbid_enabled'])) ? '1' : '0';
+      $_POST['pages_location_filter_enabled'] = (isset($_POST['pages_location_filter_enabled'])) ? '1' : '0';
       $_POST['groups_enabled'] = (isset($_POST['groups_enabled'])) ? '1' : '0';
       $_POST['groups_reviews_enabled'] = (isset($_POST['groups_reviews_enabled'])) ? '1' : '0';
       $_POST['groups_reviews_replacement_enabled'] = (isset($_POST['groups_reviews_replacement_enabled'])) ? '1' : '0';
+      $_POST['groups_location_filter_enabled'] = (isset($_POST['groups_location_filter_enabled'])) ? '1' : '0';
       $_POST['events_enabled'] = (isset($_POST['events_enabled'])) ? '1' : '0';
       $_POST['pages_events_enabled'] = (isset($_POST['pages_events_enabled'])) ? '1' : '0';
       $_POST['events_reviews_enabled'] = (isset($_POST['events_reviews_enabled'])) ? '1' : '0';
       $_POST['events_reviews_replacement_enabled'] = (isset($_POST['events_reviews_replacement_enabled'])) ? '1' : '0';
+      $_POST['events_location_filter_enabled'] = (isset($_POST['events_location_filter_enabled'])) ? '1' : '0';
       $_POST['blogs_enabled'] = (isset($_POST['blogs_enabled'])) ? '1' : '0';
       $_POST['blogs_widget_enabled'] = (isset($_POST['blogs_widget_enabled'])) ? '1' : '0';
       $_POST['reels_enabled'] = (isset($_POST['reels_enabled'])) ? '1' : '0';
@@ -158,13 +162,16 @@ try {
         'pages_reviews_enabled' => secure($_POST['pages_reviews_enabled']),
         'pages_reviews_replacement_enabled' => secure($_POST['pages_reviews_replacement_enabled']),
         'pages_pbid_enabled' => secure($_POST['pages_pbid_enabled']),
+        'pages_location_filter_enabled' => secure($_POST['pages_location_filter_enabled']),
         'groups_enabled' => secure($_POST['groups_enabled']),
         'groups_reviews_enabled' => secure($_POST['groups_reviews_enabled']),
         'groups_reviews_replacement_enabled' => secure($_POST['groups_reviews_replacement_enabled']),
+        'groups_location_filter_enabled' => secure($_POST['groups_location_filter_enabled']),
         'events_enabled' => secure($_POST['events_enabled']),
         'pages_events_enabled' => secure($_POST['pages_events_enabled']),
         'events_reviews_enabled' => secure($_POST['events_reviews_enabled']),
         'events_reviews_replacement_enabled' => secure($_POST['events_reviews_replacement_enabled']),
+        'events_location_filter_enabled' => secure($_POST['events_location_filter_enabled']),
         'blogs_enabled' => secure($_POST['blogs_enabled']),
         'blogs_widget_enabled' => secure($_POST['blogs_widget_enabled']),
         'reels_enabled' => secure($_POST['reels_enabled']),
@@ -183,16 +190,19 @@ try {
     case 'posts':
       /* prepare */
       $_POST['stories_enabled'] = (isset($_POST['stories_enabled'])) ? '1' : '0';
-      $_POST['posts_schedule_enabled'] = (isset($_POST['posts_schedule_enabled'])) ? '1' : '0';
-      $_POST['posts_approval_enabled'] = (isset($_POST['posts_approval_enabled'])) ? '1' : '0';
       $_POST['newsfeed_merge_enabled'] = (isset($_POST['newsfeed_merge_enabled'])) ? '1' : '0';
       $_POST['newsfeed_caching_enabled'] = (isset($_POST['newsfeed_caching_enabled'])) ? '1' : '0';
       $_POST['smooth_infinite_scroll'] = (isset($_POST['smooth_infinite_scroll'])) ? '1' : '0';
       $_POST['newsfeed_location_filter_enabled'] = (isset($_POST['newsfeed_location_filter_enabled'])) ? '1' : '0';
+      $_POST['posts_approval_enabled'] = (isset($_POST['posts_approval_enabled'])) ? '1' : '0';
       $_POST['popular_posts_enabled'] = (isset($_POST['popular_posts_enabled'])) ? '1' : '0';
       $_POST['discover_posts_enabled'] = (isset($_POST['discover_posts_enabled'])) ? '1' : '0';
       $_POST['memories_enabled'] = (isset($_POST['memories_enabled'])) ? '1' : '0';
       $_POST['wall_posts_enabled'] = (isset($_POST['wall_posts_enabled'])) ? '1' : '0';
+      $_POST['posts_schedule_enabled'] = (isset($_POST['posts_schedule_enabled'])) ? '1' : '0';
+      $_POST['anonymous_mode'] = (isset($_POST['anonymous_mode'])) ? '1' : '0';
+      $_POST['adult_mode'] = (isset($_POST['adult_mode'])) ? '1' : '0';
+      $_POST['collaborative_posts_enabled'] = (isset($_POST['collaborative_posts_enabled'])) ? '1' : '0';
       $_POST['colored_posts_enabled'] = (isset($_POST['colored_posts_enabled'])) ? '1' : '0';
       $_POST['activity_posts_enabled'] = (isset($_POST['activity_posts_enabled'])) ? '1' : '0';
       $_POST['voice_notes_posts_enabled'] = (isset($_POST['voice_notes_posts_enabled'])) ? '1' : '0';
@@ -205,8 +215,6 @@ try {
       $_POST['smart_yt_player'] = (isset($_POST['smart_yt_player'])) ? '1' : '0';
       $_POST['disable_yt_player'] = (isset($_POST['disable_yt_player'])) ? '1' : '0';
       $_POST['social_share_enabled'] = (isset($_POST['social_share_enabled'])) ? '1' : '0';
-      $_POST['anonymous_mode'] = (isset($_POST['anonymous_mode'])) ? '1' : '0';
-      $_POST['adult_mode'] = (isset($_POST['adult_mode'])) ? '1' : '0';
       $_POST['posts_online_status'] = (isset($_POST['posts_online_status'])) ? '1' : '0';
       $_POST['desktop_infinite_scroll'] = (isset($_POST['desktop_infinite_scroll'])) ? '1' : '0';
       $_POST['mobile_infinite_scroll'] = (isset($_POST['mobile_infinite_scroll'])) ? '1' : '0';
@@ -222,9 +230,6 @@ try {
       update_system_options([
         'stories_enabled' => secure($_POST['stories_enabled']),
         'stories_duration' => secure($_POST['stories_duration']),
-        'posts_schedule_enabled' => secure($_POST['posts_schedule_enabled']),
-        'posts_approval_enabled' => secure($_POST['posts_approval_enabled']),
-        'posts_approval_limit' => secure($_POST['posts_approval_limit']),
         'newsfeed_source' => secure($_POST['newsfeed_source']),
         'newsfeed_merge_enabled' => secure($_POST['newsfeed_merge_enabled']),
         'merge_recent_results' => secure($_POST['merge_recent_results']),
@@ -233,11 +238,17 @@ try {
         'newsfeed_caching_enabled' => secure($_POST['newsfeed_caching_enabled']),
         'smooth_infinite_scroll' => secure($_POST['smooth_infinite_scroll']),
         'newsfeed_location_filter_enabled' => secure($_POST['newsfeed_location_filter_enabled']),
+        'posts_approval_enabled' => secure($_POST['posts_approval_enabled']),
+        'posts_approval_limit' => secure($_POST['posts_approval_limit']),
         'popular_posts_enabled' => secure($_POST['popular_posts_enabled']),
         'popular_posts_interval' => secure($_POST['popular_posts_interval']),
         'discover_posts_enabled' => secure($_POST['discover_posts_enabled']),
         'memories_enabled' => secure($_POST['memories_enabled']),
         'wall_posts_enabled' => secure($_POST['wall_posts_enabled']),
+        'posts_schedule_enabled' => secure($_POST['posts_schedule_enabled']),
+        'anonymous_mode' => secure($_POST['anonymous_mode']),
+        'adult_mode' => secure($_POST['adult_mode']),
+        'collaborative_posts_enabled' => secure($_POST['collaborative_posts_enabled']),
         'colored_posts_enabled' => secure($_POST['colored_posts_enabled']),
         'activity_posts_enabled' => secure($_POST['activity_posts_enabled']),
         'voice_notes_posts_enabled' => secure($_POST['voice_notes_posts_enabled']),
@@ -261,8 +272,6 @@ try {
         'max_posts_hour' => secure($_POST['max_posts_hour'], 'int'),
         'max_comments_hour' => secure($_POST['max_comments_hour'], 'int'),
         'default_privacy' => secure($_POST['default_privacy']),
-        'anonymous_mode' => secure($_POST['anonymous_mode']),
-        'adult_mode' => secure($_POST['adult_mode']),
         'posts_online_status' => secure($_POST['posts_online_status']),
         'desktop_infinite_scroll' => secure($_POST['desktop_infinite_scroll']),
         'mobile_infinite_scroll' => secure($_POST['mobile_infinite_scroll']),
@@ -280,6 +289,55 @@ try {
       ]);
       /* clear posts_cache if newsfeed caching disabled */
       $db->query("DELETE FROM posts_cache");
+      break;
+
+    case 'ai_settings':
+      /* prepare */
+      $_POST['ai_posts_enabled'] = (isset($_POST['ai_posts_enabled'])) ? '1' : '0';
+      $_POST['ai_blogs_enabled'] = (isset($_POST['ai_blogs_enabled'])) ? '1' : '0';
+      $_POST['ai_images_enabled'] = (isset($_POST['ai_images_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'ai_mode' => secure($_POST['ai_mode']),
+        'ai_posts_enabled' => secure($_POST['ai_posts_enabled']),
+        'ai_posts_provider' => secure($_POST['ai_posts_provider']),
+        'ai_blogs_enabled' => secure($_POST['ai_blogs_enabled']),
+        'ai_blogs_provider' => secure($_POST['ai_blogs_provider']),
+        'ai_images_enabled' => secure($_POST['ai_images_enabled']),
+        'ai_images_provider' => secure($_POST['ai_images_provider']),
+      ]);
+      break;
+
+    case 'ai_apis':
+      /* update */
+      update_system_options([
+        'openai_api_key' => secure($_POST['openai_api_key']),
+        'openai_text_model' => secure($_POST['openai_text_model']),
+        'openai_image_model' => secure($_POST['openai_image_model']),
+        'replicate_api_token' => secure($_POST['replicate_api_token']),
+        'replicate_model' => secure($_POST['replicate_model']),
+        'replicate_denoising_steps' => secure($_POST['replicate_denoising_steps']),
+        'replicate_guidance_scale' => secure($_POST['replicate_guidance_scale']),
+        'replicate_seed' => secure($_POST['replicate_seed']),
+      ]);
+      break;
+
+    case 'ai_credit':
+      /* prepare */
+      $_POST['ai_text_credit_enabled'] = (isset($_POST['ai_text_credit_enabled'])) ? '1' : '0';
+      $_POST['ai_image_credit_enabled'] = (isset($_POST['ai_image_credit_enabled'])) ? '1' : '0';
+      /* check if wallet disabled */
+      if (($_POST['ai_text_credit_enabled'] || $_POST['ai_image_credit_enabled']) && !$system['wallet_enabled']) {
+        throw new Exception(__("You can not enable AI Text or Image Credit system as long as wallet disabled, Enable it first"));
+      }
+      /* update */
+      update_system_options([
+        'ai_credit_cost' => secure($_POST['ai_credit_cost']),
+        'ai_text_credit_enabled' => secure($_POST['ai_text_credit_enabled']),
+        'ai_generated_word_cost' => secure($_POST['ai_generated_word_cost']),
+        'ai_image_credit_enabled' => secure($_POST['ai_image_credit_enabled']),
+        'ai_generated_image_cost' => secure($_POST['ai_generated_image_cost']),
+      ]);
       break;
 
     case 'registration':
@@ -342,7 +400,7 @@ try {
       $_POST['linkedin_login_enabled'] = (isset($_POST['linkedin_login_enabled'])) ? '1' : '0';
       $_POST['vkontakte_login_enabled'] = (isset($_POST['vkontakte_login_enabled'])) ? '1' : '0';
       $_POST['wordpress_login_enabled'] = (isset($_POST['wordpress_login_enabled'])) ? '1' : '0';
-      $_POST['Delus_login_enabled'] = (isset($_POST['Delus_login_enabled'])) ? '1' : '0';
+      $_POST['sngine_login_enabled'] = (isset($_POST['sngine_login_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'social_login_enabled' => secure($_POST['social_login_enabled']),
@@ -364,15 +422,15 @@ try {
         'wordpress_login_enabled' => secure($_POST['wordpress_login_enabled']),
         'wordpress_appid' => secure($_POST['wordpress_appid']),
         'wordpress_secret' => secure($_POST['wordpress_secret']),
-        'Delus_login_enabled' => secure($_POST['Delus_login_enabled']),
-        'Delus_appid' => secure($_POST['Delus_appid']),
-        'Delus_secret' => secure($_POST['Delus_secret']),
-        'Delus_app_domain' => secure($_POST['Delus_app_domain']),
-        'Delus_app_name' => secure($_POST['Delus_app_name']),
-        'Delus_app_icon' => secure($_POST['Delus_app_icon'])
+        'sngine_login_enabled' => secure($_POST['sngine_login_enabled']),
+        'sngine_appid' => secure($_POST['sngine_appid']),
+        'sngine_secret' => secure($_POST['sngine_secret']),
+        'sngine_app_domain' => secure($_POST['sngine_app_domain']),
+        'sngine_app_name' => secure($_POST['sngine_app_name']),
+        'sngine_app_icon' => secure($_POST['sngine_app_icon'])
       ]);
       /* remove pending uploads */
-      remove_pending_uploads([$_POST['Delus_app_icon']]);
+      remove_pending_uploads([$_POST['sngine_app_icon']]);
       break;
 
     case 'accounts':
@@ -445,7 +503,7 @@ try {
       /* prepare */
       $privacy = ['me', 'friends', 'public'];
       /* check if valid privacy */
-      if (!in_array($_POST['user_privacy_chat'], $privacy) || !in_array($_POST['user_privacy_poke'], $privacy) || !in_array($_POST['user_privacy_gifts'], $privacy) || !in_array($_POST['user_privacy_wall'], $privacy) || !in_array($_POST['user_privacy_gender'], $privacy) || !in_array($_POST['user_privacy_relationship'], $privacy) || !in_array($_POST['user_privacy_birthdate'], $privacy) || !in_array($_POST['user_privacy_basic'], $privacy) || !in_array($_POST['user_privacy_work'], $privacy) || !in_array($_POST['user_privacy_location'], $privacy) || !in_array($_POST['user_privacy_education'], $privacy) || !in_array($_POST['user_privacy_other'], $privacy) || !in_array($_POST['user_privacy_friends'], $privacy) || !in_array($_POST['user_privacy_followers'], $privacy) || !in_array($_POST['user_privacy_subscriptions'], $privacy) || !in_array($_POST['user_privacy_photos'], $privacy) || !in_array($_POST['user_privacy_pages'], $privacy) || !in_array($_POST['user_privacy_groups'], $privacy) || !in_array($_POST['user_privacy_events'], $privacy)) {
+      if (!in_array($_POST['user_privacy_chat'], $privacy) || !in_array($_POST['user_privacy_poke'], $privacy) || !in_array($_POST['user_privacy_gifts'], $privacy) || !in_array($_POST['user_privacy_wall'], $privacy) || !in_array($_POST['user_privacy_collaborative'], $privacy) || !in_array($_POST['user_privacy_gender'], $privacy) || !in_array($_POST['user_privacy_relationship'], $privacy) || !in_array($_POST['user_privacy_birthdate'], $privacy) || !in_array($_POST['user_privacy_basic'], $privacy) || !in_array($_POST['user_privacy_work'], $privacy) || !in_array($_POST['user_privacy_location'], $privacy) || !in_array($_POST['user_privacy_education'], $privacy) || !in_array($_POST['user_privacy_other'], $privacy) || !in_array($_POST['user_privacy_friends'], $privacy) || !in_array($_POST['user_privacy_followers'], $privacy) || !in_array($_POST['user_privacy_subscriptions'], $privacy) || !in_array($_POST['user_privacy_photos'], $privacy) || !in_array($_POST['user_privacy_pages'], $privacy) || !in_array($_POST['user_privacy_groups'], $privacy) || !in_array($_POST['user_privacy_events'], $privacy)) {
         _error(400);
       }
       /* update */
@@ -454,6 +512,7 @@ try {
         'user_privacy_poke' => secure($_POST['user_privacy_poke']),
         'user_privacy_gifts' => secure($_POST['user_privacy_gifts']),
         'user_privacy_wall' => secure($_POST['user_privacy_wall']),
+        'user_privacy_collaborative' => secure($_POST['user_privacy_collaborative']),
         'user_privacy_gender' => secure($_POST['user_privacy_gender']),
         'user_privacy_relationship' => secure($_POST['user_privacy_relationship']),
         'user_privacy_birthdate' => secure($_POST['user_privacy_birthdate']),
@@ -1007,21 +1066,19 @@ try {
       $_POST['alipay_enabled'] = (isset($_POST['alipay_enabled'])) ? '1' : '0';
       $_POST['stripe_payment_element_enabled'] = (isset($_POST['stripe_payment_element_enabled'])) ? '1' : '0';
       $_POST['paystack_enabled'] = (isset($_POST['paystack_enabled'])) ? '1' : '0';
-      $_POST['coinpayments_enabled'] = (isset($_POST['coinpayments_enabled'])) ? '1' : '0';
       $_POST['2checkout_enabled'] = (isset($_POST['2checkout_enabled'])) ? '1' : '0';
       $_POST['authorize_net_enabled'] = (isset($_POST['authorize_net_enabled'])) ? '1' : '0';
       $_POST['razorpay_enabled'] = (isset($_POST['razorpay_enabled'])) ? '1' : '0';
       $_POST['cashfree_enabled'] = (isset($_POST['cashfree_enabled'])) ? '1' : '0';
-      $_POST['coinbase_enabled'] = (isset($_POST['coinbase_enabled'])) ? '1' : '0';
       $_POST['shift4_enabled'] = (isset($_POST['shift4_enabled'])) ? '1' : '0';
-      $_POST['moneypoolscash_enabled'] = (isset($_POST['moneypoolscash_enabled'])) ? '1' : '0';
-      $_POST['moneypoolscash_payouts_enabled'] = (isset($_POST['moneypoolscash_payouts_enabled'])) ? '1' : '0';
       $_POST['myfatoorah_enabled'] = (isset($_POST['myfatoorah_enabled'])) ? '1' : '0';
       $_POST['epayco_enabled'] = (isset($_POST['epayco_enabled'])) ? '1' : '0';
       $_POST['flutterwave_enabled'] = (isset($_POST['flutterwave_enabled'])) ? '1' : '0';
       $_POST['verotel_enabled'] = (isset($_POST['verotel_enabled'])) ? '1' : '0';
       $_POST['mercadopago_enabled'] = (isset($_POST['mercadopago_enabled'])) ? '1' : '0';
       $_POST['plisio_enabled'] = (isset($_POST['plisio_enabled'])) ? '1' : '0';
+      $_POST['coinpayments_enabled'] = (isset($_POST['coinpayments_enabled'])) ? '1' : '0';
+      $_POST['coinbase_enabled'] = (isset($_POST['coinbase_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'paypal_enabled' => secure($_POST['paypal_enabled']),
@@ -1041,9 +1098,6 @@ try {
         'stripe_webhook' => secure($_POST['stripe_webhook']),
         'paystack_enabled' => secure($_POST['paystack_enabled']),
         'paystack_secret' => secure($_POST['paystack_secret']),
-        'coinpayments_enabled' => secure($_POST['coinpayments_enabled']),
-        'coinpayments_merchant_id' => secure($_POST['coinpayments_merchant_id']),
-        'coinpayments_ipn_secret' => secure($_POST['coinpayments_ipn_secret']),
         '2checkout_enabled' => secure($_POST['2checkout_enabled']),
         '2checkout_mode' => secure($_POST['2checkout_mode']),
         '2checkout_merchant_code' => secure($_POST['2checkout_merchant_code']),
@@ -1060,16 +1114,9 @@ try {
         'cashfree_mode' => secure($_POST['cashfree_mode']),
         'cashfree_client_id' => secure($_POST['cashfree_client_id']),
         'cashfree_client_secret' => secure($_POST['cashfree_client_secret']),
-        'coinbase_enabled' => secure($_POST['coinbase_enabled']),
-        'coinbase_api_key' => secure($_POST['coinbase_api_key']),
         'shift4_enabled' => secure($_POST['shift4_enabled']),
         'shift4_api_key' => secure($_POST['shift4_api_key']),
         'shift4_api_secret' => secure($_POST['shift4_api_secret']),
-        'moneypoolscash_enabled' => secure($_POST['moneypoolscash_enabled']),
-        'moneypoolscash_payouts_enabled' => secure($_POST['moneypoolscash_payouts_enabled']),
-        'moneypoolscash_api_key' => secure($_POST['moneypoolscash_api_key']),
-        'moneypoolscash_merchant_email' => secure($_POST['moneypoolscash_merchant_email']),
-        'moneypoolscash_merchant_password' => secure($_POST['moneypoolscash_merchant_password']),
         'myfatoorah_enabled' => secure($_POST['myfatoorah_enabled']),
         'myfatoorah_mode' => secure($_POST['myfatoorah_mode']),
         'myfatoorah_test_token' => secure($_POST['myfatoorah_test_token']),
@@ -1092,6 +1139,11 @@ try {
         'mercadopago_access_token' => secure($_POST['mercadopago_access_token']),
         'plisio_enabled' => secure($_POST['plisio_enabled']),
         'plisio_secret_key' => secure($_POST['plisio_secret_key']),
+        'coinpayments_enabled' => secure($_POST['coinpayments_enabled']),
+        'coinpayments_merchant_id' => secure($_POST['coinpayments_merchant_id']),
+        'coinpayments_ipn_secret' => secure($_POST['coinpayments_ipn_secret']),
+        'coinbase_enabled' => secure($_POST['coinbase_enabled']),
+        'coinbase_api_key' => secure($_POST['coinbase_api_key']),
       ]);
       break;
 
@@ -1187,8 +1239,13 @@ try {
       $_POST['wallet_enabled'] = (isset($_POST['wallet_enabled'])) ? '1' : '0';
       $_POST['wallet_transfer_enabled'] = (isset($_POST['wallet_transfer_enabled'])) ? '1' : '0';
       $_POST['wallet_withdrawal_enabled'] = (isset($_POST['wallet_withdrawal_enabled'])) ? '1' : '0';
+      /* check if ads enabled */
       if ($system['ads_enabled'] && !$_POST['wallet_enabled']) {
         throw new Exception(__("You can not disable wallet as long as Ads system enabled, Disable it first"));
+      }
+      /* check if ai credit enabled */
+      if (($system['ai_text_credit_enabled'] || $system['ai_image_credit_enabled']) && !$_POST['wallet_enabled']) {
+        throw new Exception(__("You can not disable wallet as long as AI Credit system enabled, Disable it first"));
       }
       $wallet_payment_methods = [];
       if (isset($_POST['method_paypal'])) {

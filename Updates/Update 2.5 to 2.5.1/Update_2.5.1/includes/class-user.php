@@ -2,8 +2,8 @@
 /**
  * class -> user
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 class User {
@@ -2859,7 +2859,7 @@ class User {
             require_once(ABSPATH.'includes/libs/Embed/v1/autoloader.php');
             $config = [
                 'image' => [
-                    'class' => 'Embed\\ImageInfo\\Delus'
+                    'class' => 'Embed\\ImageInfo\\Sngine'
                 ]
             ];
             $embed = Embed\Embed::create($url, $config);

@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> user -> orders
+ * ajax -> users -> orders
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap

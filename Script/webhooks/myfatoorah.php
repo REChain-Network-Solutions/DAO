@@ -3,8 +3,8 @@
 /**
  * webhooks -> myfatoorah
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -107,7 +107,8 @@ try {
         /* subscribe to node */
         $node_link = $user->subscribe($_GET['plan_id']);
         /* log payment */
-        $user->log_payment($user->_data['user_id'], $monetization_plan['price'], 'myfatoorah', 'subscribe');
+        $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+        $user->log_payment($user->_data['user_id'], $price, 'myfatoorah', 'subscribe');
         /* redirect */
         redirect($node_link);
       }
@@ -134,7 +135,8 @@ try {
         /* unlock paid post */
         $post_link = $user->unlock_paid_post($_GET['post_id']);
         /* log payment */
-        $user->log_payment($user->_data['user_id'], $post['paid_price'], 'myfatoorah', 'paid_post');
+        $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
+        $user->log_payment($user->_data['user_id'], $price, 'myfatoorah', 'paid_post');
         /* redirect */
         redirect($post_link);
       }

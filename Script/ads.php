@@ -3,8 +3,8 @@
 /**
  * ads
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -17,6 +17,14 @@ if (!$system['ads_enabled']) {
 
 // user access
 user_access();
+
+// check ads permission
+if (!$user->_data['can_create_ads']) {
+  if (!$user->check_module_package_permission("ads_permission")) {
+    redirect("/packages?highlight=true");
+  }
+  _error(404);
+}
 
 try {
 

@@ -6,7 +6,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Delus">
+    <meta name="generator" content="Sngine">
     <meta name="version" content="{$system['system_version']}">
 
     <!-- Title -->

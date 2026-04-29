@@ -38,20 +38,20 @@
         {/if}
       </li>
 
-      {if $user->_data['can_write_blogs'] || $user->_data['can_sell_products'] || $user->_data['can_raise_funding'] || $user->_data['can_create_offers'] || $user->_data['can_create_jobs'] || $user->_data['can_create_courses']}
+      {if $system['blogs_enabled'] || $system['market_enabled'] || $system['funding_enabled'] || $system['offers_enabled'] || $system['jobs_enabled'] || $system['courses_enabled']}
         <a href="#mine" data-bs-toggle="collapse" {if $page == "index" && in_array($view, ['blogs', 'products', 'funding', 'offers', 'jobs', 'courses'])}aria-expanded="true" {/if}>
           {include file='__svg_icons.tpl' icon="my-box" class="main-icon mr10" width="24px" height="24px"}{__("Mine")}
         </a>
         <div class='collapse {if $page == "index" && in_array($view, ['blogs', 'products', 'funding', 'offers', 'jobs', 'courses'])}show{/if}' id="mine">
           <ul>
-            {if $user->_data['can_write_blogs']}
+            {if $system['blogs_enabled']}
               <li {if $page == "index" && $view == "blogs"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/blogs">
                   {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr10" width="24px" height="24px"}{__("My Blogs")}
                 </a>
               </li>
             {/if}
-            {if $user->_data['can_sell_products']}
+            {if $system['market_enabled']}
               <li {if $page == "index" && $view == "products"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/products">
                   {include file='__svg_icons.tpl' icon="products" class="main-icon mr10" width="24px" height="24px"}{__("My Products")}
@@ -59,7 +59,7 @@
               </li>
             {/if}
 
-            {if $user->_data['can_raise_funding']}
+            {if $system['funding_enabled']}
               <li {if $page == "index" && $view == "funding"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/funding">
                   {include file='__svg_icons.tpl' icon="money-bag" class="main-icon mr10" width="24px" height="24px"}{__("My Funding")}
@@ -67,7 +67,7 @@
               </li>
             {/if}
 
-            {if $user->_data['can_create_offers']}
+            {if $system['offers_enabled']}
               <li {if $page == "index" && $view == "offers"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/offers">
                   {include file='__svg_icons.tpl' icon="offers" class="main-icon mr10" width="24px" height="24px"}{__("My Offers")}
@@ -75,7 +75,7 @@
               </li>
             {/if}
 
-            {if $user->_data['can_create_jobs']}
+            {if $system['jobs_enabled']}
               <li {if $page == "index" && $view == "jobs"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/jobs">
                   {include file='__svg_icons.tpl' icon="jobs" class="main-icon mr10" width="24px" height="24px"}{__("My Jobs")}
@@ -83,7 +83,7 @@
               </li>
             {/if}
 
-            {if $user->_data['can_create_courses']}
+            {if $system['courses_enabled']}
               <li {if $page == "index" && $view == "courses"}class="active" {/if}>
                 <a href="{$system['system_url']}/my/courses">
                   {include file='__svg_icons.tpl' icon="courses" class="main-icon mr10" width="24px" height="24px"}{__("My Courses")}
@@ -123,12 +123,12 @@
 
       <!-- advertising -->
       {if $user->_logged_in}
-        {if $user->_data['can_create_ads'] || $system['wallet_enabled'] || $user->_data['can_boost_posts'] || $user->_data['can_boost_pages']}
+        {if $system['ads_enabled'] || $system['wallet_enabled'] || $user->_data['can_boost_posts'] || $user->_data['can_boost_pages']}
           <li class="ptb5">
             <small class="text-muted">{__("Advertising")|upper}</small>
           </li>
 
-          {if $user->_data['can_create_ads']}
+          {if $system['ads_enabled']}
             <li {if $page == "ads"}class="active" {/if}>
               <a href="{$system['system_url']}/ads">
                 {include file='__svg_icons.tpl' icon="ads" class="main-icon mr10" width="24px" height="24px"}{__("Ads Manager")}

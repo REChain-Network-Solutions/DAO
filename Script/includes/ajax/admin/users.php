@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> users
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -267,6 +267,8 @@ try {
       $_POST['user_privacy_gifts'] = (isset($_POST['user_privacy_gifts'])) ? $_POST['user_privacy_gifts'] : 'public';
       /* check if wall posts enabled */
       $_POST['user_privacy_wall'] = (isset($_POST['user_privacy_wall'])) ? $_POST['user_privacy_wall'] : 'public';
+      /* check if collaborative posts enabled */
+      $_POST['user_privacy_collaborative'] = (isset($_POST['user_privacy_collaborative'])) ? $_POST['user_privacy_collaborative'] : 'public';
       /* check if genders enabled */
       $_POST['user_privacy_gender'] = (isset($_POST['user_privacy_gender'])) ? $_POST['user_privacy_gender'] : 'public';
       /* check if relationship info enabled */
@@ -286,7 +288,7 @@ try {
       /* check if events enabled */
       $_POST['user_privacy_events'] = (isset($_POST['user_privacy_events'])) ? $_POST['user_privacy_events'] : 'public';
       /* check if valid privacy */
-      if (!in_array($_POST['user_privacy_poke'], $privacy) || !in_array($_POST['user_privacy_gifts'], $privacy) || !in_array($_POST['user_privacy_wall'], $privacy) || !in_array($_POST['user_privacy_gender'], $privacy) || !in_array($_POST['user_privacy_relationship'], $privacy) || !in_array($_POST['user_privacy_birthdate'], $privacy) || !in_array($_POST['user_privacy_basic'], $privacy) || !in_array($_POST['user_privacy_work'], $privacy) || !in_array($_POST['user_privacy_location'], $privacy) || !in_array($_POST['user_privacy_education'], $privacy) || !in_array($_POST['user_privacy_other'], $privacy) || !in_array($_POST['user_privacy_friends'], $privacy) || !in_array($_POST['user_privacy_followers'], $privacy) || !in_array($_POST['user_privacy_subscriptions'], $privacy) || !in_array($_POST['user_privacy_photos'], $privacy) || !in_array($_POST['user_privacy_pages'], $privacy) || !in_array($_POST['user_privacy_groups'], $privacy) || !in_array($_POST['user_privacy_events'], $privacy)) {
+      if (!in_array($_POST['user_privacy_poke'], $privacy) || !in_array($_POST['user_privacy_gifts'], $privacy) || !in_array($_POST['user_privacy_wall'], $privacy) || !in_array($_POST['user_privacy_collaborative'], $privacy) || !in_array($_POST['user_privacy_gender'], $privacy) || !in_array($_POST['user_privacy_relationship'], $privacy) || !in_array($_POST['user_privacy_birthdate'], $privacy) || !in_array($_POST['user_privacy_basic'], $privacy) || !in_array($_POST['user_privacy_work'], $privacy) || !in_array($_POST['user_privacy_location'], $privacy) || !in_array($_POST['user_privacy_education'], $privacy) || !in_array($_POST['user_privacy_other'], $privacy) || !in_array($_POST['user_privacy_friends'], $privacy) || !in_array($_POST['user_privacy_followers'], $privacy) || !in_array($_POST['user_privacy_subscriptions'], $privacy) || !in_array($_POST['user_privacy_photos'], $privacy) || !in_array($_POST['user_privacy_pages'], $privacy) || !in_array($_POST['user_privacy_groups'], $privacy) || !in_array($_POST['user_privacy_events'], $privacy)) {
         _error(400);
       }
       /* update user */
@@ -300,6 +302,7 @@ try {
                 user_privacy_poke = %s,
                 user_privacy_gifts = %s,
                 user_privacy_wall = %s,
+                user_privacy_collaborative = %s,
                 user_privacy_gender = %s, 
                 user_privacy_relationship = %s,
                 user_privacy_birthdate = %s, 
@@ -324,6 +327,7 @@ try {
         secure($_POST['user_privacy_poke']),
         secure($_POST['user_privacy_gifts']),
         secure($_POST['user_privacy_wall']),
+        secure($_POST['user_privacy_collaborative']),
         secure($_POST['user_privacy_gender']),
         secure($_POST['user_privacy_relationship']),
         secure($_POST['user_privacy_birthdate']),

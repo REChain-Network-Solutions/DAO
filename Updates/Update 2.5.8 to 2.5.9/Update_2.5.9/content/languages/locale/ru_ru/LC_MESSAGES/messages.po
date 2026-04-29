@@ -2111,7 +2111,7 @@ msgstr "Кафедра, группа, класс"
 
 #: content/themes/default/templates/admin.emojis.tpl:66
 #: content/themes/default/templates/admin.emojis.tpl:110
-msgid "Delus uses Twemoji Awesome and you can check"
+msgid "Sngine uses Twemoji Awesome and you can check"
 msgstr ""
 
 #: content/themes/default/templates/admin.emojis.tpl:66
@@ -3084,8 +3084,8 @@ msgid "Website Keywords"
 msgstr "Поле meta-keywords"
 
 #: content/themes/default/templates/admin.settings.tpl:105
-msgid "Example: social, Delus, social site"
-msgstr "Пример: социальная сеть, Delus, сайт социальной сети"
+msgid "Example: social, sngine, social site"
+msgstr "Пример: социальная сеть, sngine, сайт социальной сети"
 
 #: content/themes/default/templates/admin.settings.tpl:112
 msgid "Website Email"
@@ -3335,7 +3335,7 @@ msgstr ""
 #: content/themes/default/templates/__feeds_post.body.tpl:324
 #: content/themes/default/templates/__feeds_user.tpl:40
 #: content/themes/default/templates/__feeds_user.tpl:135
-#: includes/assets/js/Delus/user.js:1227
+#: includes/assets/js/sngine/user.js:1227
 msgid "Friends"
 msgstr "Друзья"
 
@@ -4451,7 +4451,7 @@ msgid "Reach"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:588
-msgid "Delus"
+msgid "Sngine"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:604
@@ -9420,7 +9420,7 @@ msgid "Your phone already verified"
 msgstr ""
 
 #: includes/functions.php:218
-msgid "Your session hash has been broken, Please contact Delus's support!"
+msgid "Your session hash has been broken, Please contact Sngine's support!"
 msgstr "Ваша сессии прервана, пожалуйста, обратитесь в службу поддержки!"
 
 #: includes/functions.php:493

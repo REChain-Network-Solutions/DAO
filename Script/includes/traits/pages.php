@@ -3,8 +3,8 @@
 /**
  * trait -> pages
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait PagesTrait
@@ -40,7 +40,7 @@ trait PagesTrait
     $pages = [];
     $offset *= $results;
     /* prepare country statement */
-    if ($country && $system['newsfeed_location_filter_enabled'] && $country != "all") {
+    if ($country && $system['pages_location_filter_enabled'] && $country != "all") {
       $country_statement = sprintf(" AND page_country = %s ", secure($country, 'int'));
     }
     /* prepare language statement */
@@ -381,8 +381,26 @@ trait PagesTrait
       case 'monetization':
         /* prepare */
         $args['page_monetization_enabled'] = (isset($args['page_monetization_enabled'])) ? '1' : '0';
+        $args['page_monetization_discount_enabled'] = (isset($args['page_monetization_discount_enabled'])) ? '1' : '0';
+        /* validate discount percent */
+        if (!is_numeric($args['page_monetization_discount_percent']) || $args['page_monetization_discount_percent'] < 1 || $args['page_monetization_discount_percent'] > 99) {
+          throw new Exception(__("Please enter a valid discount percent (min 1, max 99)"));
+        }
         /* update page */
-        $db->query(sprintf("UPDATE pages SET page_monetization_enabled = %s WHERE page_id = %s", secure($args['page_monetization_enabled']), secure($page_id, 'int')));
+        $db->query(
+          sprintf(
+            "UPDATE pages 
+              SET 
+                page_monetization_enabled = %s, 
+                page_monetization_discount_enabled = %s, 
+                page_monetization_discount_percent = %s 
+              WHERE page_id = %s",
+            secure($args['page_monetization_enabled']),
+            secure($args['page_monetization_discount_enabled']),
+            secure($args['page_monetization_discount_percent'], 'float'),
+            secure($page_id, 'int')
+          )
+        );
         /* update monetization plans */
         $this->update_monetization_plans($page_id, 'page');
         break;

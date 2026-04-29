@@ -3,8 +3,8 @@
 /**
  * update wizard
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -16,7 +16,7 @@ define('SYS_VER', '3.7');
 
 
 // set system name
-define('SYS_NAME', 'Delus');
+define('SYS_NAME', 'Sngine');
 
 
 // set ABSPATH & BASEPATH
@@ -215,7 +215,7 @@ if (isset($_POST['submit'])) {
 
 
   // finished!
-  _error("System Updated", "Delus has been updated to " . SYS_VER);
+  _error("System Updated", "Sngine has been updated to " . SYS_VER);
 }
 
 ?>
@@ -245,7 +245,7 @@ if (isset($_POST['submit'])) {
             <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
             <div class="media-body">
               <div class="bd-wizard-step-title">Update</div>
-              <div class="bd-wizard-step-subtitle">Delus (v<?php echo SYS_VER ?>)</div>
+              <div class="bd-wizard-step-subtitle">Sngine (v<?php echo SYS_VER ?>)</div>
             </div>
           </div>
         </h3>

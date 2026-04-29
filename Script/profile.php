@@ -3,8 +3,8 @@
 /**
  * profile
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -94,6 +94,8 @@ try {
   if ($system['videos_enabled']) {
     $profile['videos_count'] = $user->get_videos_count($profile['user_id'], 'user');
   }
+  /* check if can write blogs */
+  $profile['can_write_blogs'] = $system['blogs_enabled'] && $user->check_user_permission($profile['user_id'], 'blogs_permission');
   /* check if can sell products */
   $profile['can_sell_products'] = $system['market_enabled'] && $user->check_user_permission($profile['user_id'], 'market_permission');
   /* check if can receivce tips */
@@ -385,6 +387,16 @@ try {
       if (!$profile['needs_subscription']) {
         /* get reels */
         $profile['reels'] = $user->get_reels($profile['user_id']);
+      }
+      break;
+
+    case 'blogs':
+      /* get content */
+      if (!$profile['needs_subscription']) {
+        /* get posts (blogs) */
+        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $profile['user_id'], 'filter' => 'article']);
+        /* assign variables */
+        $smarty->assign('posts', $posts);
       }
       break;
 

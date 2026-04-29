@@ -20,8 +20,8 @@
           <strong>{__("Ranking")}</strong>
         </div>
         <div class="card-body">
-          <form method="get" class="row row-cols-lg-auto g-3 align-items-center">
-            <div class="col-12">
+          <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-md-2">
               <select class="form-select" name="category" id="category">
                 <option value="all">{__("All")}</option>
                 {foreach $merits_categories as $category}
@@ -29,7 +29,7 @@
                 {/foreach}
               </select>
             </div>
-            <div class="col-12">
+            <div class="col-12 col-md-4">
               <!-- start date picker -->
               <div class="input-group">
                 <span class="input-group-text">{__("From")}</span>
@@ -37,7 +37,7 @@
               </div>
               <!-- start date picker -->
             </div>
-            <div class="col-12">
+            <div class="col-12 col-md-4">
               <!-- end date picker -->
               <div class="input-group">
                 <span class="input-group-text">{__("To")}</span>
@@ -45,8 +45,8 @@
               </div>
               <!-- end date picker -->
             </div>
-            <div class="col-12">
-              <button type="submit" class="btn btn-md btn-primary">{__("Filter")}</button>
+            <div class="col-12 col-md-2 d-grid">
+              <button type="submit" class="btn btn-primary">{__("Filter")}</button>
             </div>
           </form>
           {if $merits_ranking_users}

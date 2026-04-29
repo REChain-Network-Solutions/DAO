@@ -3,8 +3,8 @@
 /**
  * ajax -> posts -> post
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -251,6 +251,29 @@ try {
     }
     if ($_POST['paid_image']) {
       $inputs['paid_image'] = $_POST['paid_image'];
+    }
+  }
+  /* check is_collaborative */
+  $inputs['is_collaborative'] = ($_POST['is_collaborative'] == "true") ? '1' : '0';
+  if ($inputs['is_collaborative']) {
+    /* check if anonymous post */
+    if ($inputs['is_anonymous']) {
+      throw new ValidationException(__("You can not collaborate with anonymous post"));
+    }
+    /* check if for_subscriptions post */
+    if ($inputs['for_subscriptions']) {
+      throw new ValidationException(__("You can not collaborate with for subscriptions post"));
+    }
+    /* validate collaborative users */
+    $inputs['collaborative_users'] = $_POST['collaborative_users'];
+    $inputs['collaborative_users_ids'] = $user->validate_collaborative_users($inputs['collaborative_users']);
+    /* check if paid post */
+    if ($inputs['is_paid']) {
+      /* check if collaborative percent is valid */
+      $inputs['collaborative_percent'] = $_POST['collaborative_percent'];
+      if (!is_numeric($inputs['collaborative_percent']) || $inputs['collaborative_percent'] < 0 || $inputs['collaborative_percent'] > 100) {
+        throw new ValidationException(__("Please enter a valid percentage"));
+      }
     }
   }
   /* prepare inputs */

@@ -4483,23 +4483,23 @@ body.night-mode .add-story .add {
     background: #212121;
 }
 
-.stories.Delus .story > a {
+.stories.sngine .story > a {
 	text-decoration:none;
 }
-.stories.Delus .story > a > .img {
+.stories.sngine .story > a > .img {
 	border-radius:50%;
 	padding:2px;
 	background: #d6249f;
 	background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%);
 }
-.stories.Delus .story > a > .img > * {
+.stories.sngine .story > a > .img > * {
 	border-radius: 50%; 
 	border:3px solid #fff;
 }
-.stories.Delus .story.seen{
+.stories.sngine .story.seen{
 	opacity:.5;
 }
-.stories.Delus .story.seen > a > .img {
+.stories.sngine .story.seen > a > .img {
 	background:#999;
 }
 /* -- */

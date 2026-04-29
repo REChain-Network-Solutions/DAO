@@ -3,8 +3,8 @@
 /**
  * update wizard
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -191,9 +191,9 @@ if (isset($_POST['submit'])) {
       ADD COLUMN `user_newsletter_enabled` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1'  COMMENT '' AFTER `user_chat_enabled`,
       ADD COLUMN `user_tips_enabled` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1'  COMMENT '' AFTER `user_newsletter_enabled`,
       MODIFY COLUMN `user_privacy_poke` ENUM('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public'  COMMENT '' AFTER `user_tips_enabled`,
-      ADD COLUMN `Delus_connected` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'  COMMENT '' AFTER `wordpress_id`,
-      ADD COLUMN `Delus_id` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `Delus_connected`,
-      MODIFY COLUMN `user_referrer_id` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `Delus_id`,
+      ADD COLUMN `sngine_connected` ENUM('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'  COMMENT '' AFTER `wordpress_id`,
+      ADD COLUMN `sngine_id` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL  COMMENT '' AFTER `sngine_connected`,
+      MODIFY COLUMN `user_referrer_id` INT(10) NULL DEFAULT NULL  COMMENT '' AFTER `sngine_id`,
       ADD COLUMN `user_market_balance` FLOAT NOT NULL DEFAULT 0  COMMENT '' AFTER `user_affiliate_balance`,
       MODIFY COLUMN `user_funding_balance` FLOAT NOT NULL DEFAULT 0  COMMENT '' AFTER `user_market_balance`,
       DROP COLUMN `user_privacy_newsletter`,
@@ -240,11 +240,11 @@ if (isset($_POST['submit'])) {
 
   // insert new system options
   $db->query("INSERT INTO system_options (option_name, option_value) VALUES
-        ('Delus_login_enabled', '0'),
-        ('Delus_appid', ''),
-        ('Delus_secret', ''),
-        ('Delus_app_name', ''),
-        ('Delus_app_icon', ''),
+        ('sngine_login_enabled', '0'),
+        ('sngine_appid', ''),
+        ('sngine_secret', ''),
+        ('sngine_app_name', ''),
+        ('sngine_app_icon', ''),
         ('market_money_withdraw_enabled', '0'),
         ('market_payment_method', ''),
         ('market_payment_method_custom', ''),
@@ -283,7 +283,7 @@ if (isset($_POST['submit'])) {
 
 
   // finished!
-  _error("System Updated", "Delus has been updated to " . SYS_UPDATE_VER);
+  _error("System Updated", "Sngine has been updated to " . SYS_UPDATE_VER);
 }
 
 ?>
@@ -313,7 +313,7 @@ if (isset($_POST['submit'])) {
             <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
             <div class="media-body">
               <div class="bd-wizard-step-title">Update</div>
-              <div class="bd-wizard-step-subtitle">Delus (v<?php echo SYS_UPDATE_VER ?>)</div>
+              <div class="bd-wizard-step-subtitle">Sngine (v<?php echo SYS_UPDATE_VER ?>)</div>
             </div>
           </div>
         </h3>

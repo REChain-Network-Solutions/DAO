@@ -70,20 +70,20 @@
                       <td class="thick-line"></td>
                       <td class="thick-line"></td>
                       <td class="thick-line text-center"><strong>{if $order['seller_id'] == $user->_data['user_id']}{__("Subtotal")}{else}{__("Total")}{/if}</strong></td>
-                      <td class="thick-line text-right">{print_money(number_format($order['sub_total'], 2))}</td>
+                      <td class="thick-line text-right">{print_money($order['sub_total'])}</td>
                     </tr>
                     {if $order['seller_id'] == $user->_data['user_id']}
                       <tr>
                         <td class="no-line"></td>
                         <td class="no-line"></td>
                         <td class="no-line text-center"><strong>{__("Commission")}</strong></td>
-                        <td class="no-line text-right">- {print_money(number_format($order['total_commission'], 2))}</td>
+                        <td class="no-line text-right">- {print_money($order['total_commission'])}</td>
                       </tr>
                       <tr>
                         <td class="no-line"></td>
                         <td class="no-line"></td>
                         <td class="no-line text-center"><strong>{__("Total")}</strong></td>
-                        <td class="no-line text-right">{print_money(number_format($order['final_price'], 2))}</td>
+                        <td class="no-line text-right">{print_money($order['final_price'])}</td>
                       </tr>
                     {/if}
                   </tbody>

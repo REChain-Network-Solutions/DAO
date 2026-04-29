@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> ads
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -32,6 +32,10 @@ try {
       $_POST['ads_enabled'] = (isset($_POST['ads_enabled'])) ? '1' : '0';
       $_POST['ads_approval_enabled'] = (isset($_POST['ads_approval_enabled'])) ? '1' : '0';
       $_POST['ads_author_view_enabled'] = (isset($_POST['ads_author_view_enabled'])) ? '1' : '0';
+      /* check if wallet disabled */
+      if ($_POST['ads_enabled'] && !$system['wallet_enabled']) {
+        throw new Exception(__("You can not enable Ads system as long as wallet disabled, Enable it first"));
+      }
       /* update */
       update_system_options([
         'ads_enabled' => secure($_POST['ads_enabled']),

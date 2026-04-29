@@ -1,4 +1,4 @@
-package Delus.app.webview;
+package sngine.app.webview;
 
 import android.Manifest;
 import android.annotation.SuppressLint;

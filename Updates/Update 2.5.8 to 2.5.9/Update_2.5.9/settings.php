@@ -2,8 +2,8 @@
 /**
  * settings
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 if(isset($_GET['view']) && $_GET['view'] == "download") {

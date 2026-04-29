@@ -3,8 +3,8 @@
 /**
  * ajax -> core -> activation phone resend
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap

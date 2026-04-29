@@ -5928,23 +5928,23 @@ body.night-mode .add-story .add {
   background: #212121;
 }
 
-.stories.Delus.carousel .story {
+.stories.sngine.carousel .story {
   width: 12vw;
   max-width: 60px;
 }
 
-.stories.Delus.carousel .story>.item-link>.item-preview {
+.stories.sngine.carousel .story>.item-link>.item-preview {
   max-height: 60px;
   height: 12vw;
 }
 
-.stories.Delus .story>a>.item-preview>img {
+.stories.sngine .story>a>.item-preview>img {
   border-radius: 50%;
   padding: 2px;
   border: 2px solid var(--header-bg-color);
 }
 
-.stories.Delus .story.seen {
+.stories.sngine .story.seen {
   opacity: 0.5;
 }
 

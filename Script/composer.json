@@ -25,7 +25,8 @@
   "agence104/livekit-server-sdk": "^1.3",
   "workerman/phpsocket.io": "^2.2",
   "shift4/shift4-php": "^4.0",
-  "cashfree/cashfree-pg": "4.3.10"
+  "cashfree/cashfree-pg": "4.3.10",
+  "openai-php/client": "^0.19.1"
  },
  "config": {
   "allow-plugins": {

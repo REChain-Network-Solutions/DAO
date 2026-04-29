@@ -3,8 +3,8 @@
 /**
  * trait -> categories
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait CategoriesTrait

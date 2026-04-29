@@ -1,0 +1,15 @@
+FROM php:8.3-fpm
+
+# Install required PHP Extensions: GD, ImageMagick, ZIP, mysqli, pcntl
+RUN apt-get update && apt-get install -y \
+    libwebp-dev libxpm-dev zlib1g-dev \
+    libfreetype6-dev libjpeg-dev libpng-dev \
+    libzip-dev unzip \
+    libmagickwand-dev imagemagick \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd zip mysqli pcntl \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick
+
+# Copy PHP.ini custom settings
+COPY ./php/custom.ini /usr/local/etc/php/conf.d/custom.ini

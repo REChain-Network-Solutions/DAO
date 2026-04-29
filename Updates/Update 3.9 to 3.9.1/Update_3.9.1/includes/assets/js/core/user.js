@@ -1,8 +1,8 @@
 /**
  * user js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -38,7 +38,7 @@ api['developers/app'] = ajax_path + "developers/app.php";
 
 // initialize the modal plugins
 function initialize_modal() {
-  // run Delus scroll
+  // run Sngine scroll
   $('.js_scroller').each(function () {
     var _this = $(this);
     var ini_height = _this.attr('data-slimScroll-height') || '280px';

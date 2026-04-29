@@ -1,8 +1,8 @@
 /**
  * core js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -15,16 +15,17 @@ api['data/search'] = ajax_path + "data/search.php";
 /* posts */
 api['posts/lightbox'] = ajax_path + "posts/lightbox.php";
 /* payments */
+api['payments/coupon'] = ajax_path + "payments/coupon.php";
 api['payments/paypal'] = ajax_path + "payments/paypal.php";
 api['payments/paystack'] = ajax_path + "payments/paystack.php";
 api['payments/stripe'] = ajax_path + "payments/stripe.php";
 api['payments/coinpayments'] = ajax_path + "payments/coinpayments.php";
 api['payments/2checkout'] = ajax_path + "payments/2checkout.php";
+api['payments/authorize'] = ajax_path + "payments/authorize.php";
 api['payments/razorpay'] = ajax_path + "payments/razorpay.php";
 api['payments/cashfree'] = ajax_path + "payments/cashfree.php";
 api['payments/coinbase'] = ajax_path + "payments/coinbase.php";
 api['payments/shift4'] = ajax_path + "payments/shift4.php";
-api['payments/moneypoolscash'] = ajax_path + "payments/moneypoolscash.php";
 api['payments/myfatoorah'] = ajax_path + "payments/myfatoorah.php";
 api['payments/epayco'] = ajax_path + "payments/epayco.php";
 api['payments/flutterwave'] = ajax_path + "payments/flutterwave.php";
@@ -32,6 +33,7 @@ api['payments/verotel'] = ajax_path + "payments/verotel.php";
 api['payments/mercadopago'] = ajax_path + "payments/mercadopago.php";
 api['payments/plisio'] = ajax_path + "payments/plisio.php";
 api['payments/wallet'] = ajax_path + "payments/wallet.php";
+api['payments/bank'] = ajax_path + "payments/bank.php";
 api['payments/cash_on_delivery'] = ajax_path + "payments/cash_on_delivery.php";
 api['payments/trial'] = ajax_path + "payments/trial.php";
 /* ads */
@@ -70,11 +72,7 @@ function htmlEntities(str) {
 
 // is empty
 function is_empty(value) {
-  if (value.match(/\S/) == null) {
-    return true;
-  } else {
-    return false;
-  }
+  return value == null || String(value).trim() === '';
 }
 
 
@@ -174,7 +172,7 @@ function initialize() {
         controls: (_is_reel) ? ['play-large', 'mute'] : controls,
         settings: ['captions', 'quality', 'speed', 'loop'],
         hideControls: (_is_reel) ? false : true,
-        muted: false,
+        muted: (_is_reel) ? true : false,
         storage: (_is_reel) ? false : true,
         i18n: {
           play: __['Play'],
@@ -459,6 +457,9 @@ function load_more(element) {
   data['get'] = _this.data('get');
   if (_this.data('filter') !== undefined) {
     data['filter'] = _this.data('filter');
+  }
+  if (_this.data('category') !== undefined) {
+    data['category'] = _this.data('category');
   }
   if (_this.data('country') !== undefined) {
     data['country'] = _this.data('country');
@@ -773,6 +774,20 @@ function getCookie(cname) {
     }
   }
   return "";
+}
+
+
+// images
+function base64ToFile(base64, filename) {
+  var arr = base64.split(',');
+  var mime = arr[0].match(/:(.*?);/)[1];
+  var bstr = atob(arr[1]);
+  var n = bstr.length;
+  var u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
 }
 
 
@@ -1239,19 +1254,26 @@ $(function () {
   $('body').on('submit', '.js_search-form', function (e) {
     e.preventDefault();
     var query = (this.query && this.query.value) ? this.query.value : '';
-    var location = (this.location && this.location.value) ? '?location=' + this.location.value : '';
     var handle = $(this).data('handle');
     var filter = ($(this).data('filter')) ? '/' + $(this).data('filter') : '';
+    /* prepare query params */
+    var query_params = [];
+    if (this.location && this.location.value) {
+      query_params.push('location=' + this.location.value);
+    }
+    if ($(this).data('type')) {
+      query_params.push('type=' + $(this).data('type'));
+    }
     if (!is_empty(query)) {
       if (handle !== undefined) {
-        window.location = site_path + '/' + handle + '/search/' + query + filter + location;
+        window.location = site_path + '/' + handle + '/search/' + query + filter + '?' + query_params.join('&');
       } else {
         var hashtags = query.match(/#(\w+)/ig);
         if (hashtags !== null && hashtags.length > 0) {
           var query = hashtags[0].replace("#", "");
           window.location = site_path + '/search/hashtag/' + query;
         } else {
-          window.location = site_path + '/search/' + query + filter + location;
+          window.location = site_path + '/search/' + query + filter + '?' + query_params.join('&');
         }
       }
     }
@@ -1265,7 +1287,7 @@ $(function () {
       $(this).replaceWith('<div class="plyr__video-embed js_video-plyr-youtube" data-plyr-provider="youtube" data-plyr-embed-id="' + $(this).data('id') + '"></div>');
       initialize();
     } else {
-      $(this).html('<iframe src="https://www.youtube.com/embed/' + $(this).data('id') + '?autoplay=1" frameborder="0" allowfullscreen="1"></iframe>');
+      $(this).html('<iframe src="https://www.youtube.com/embed/' + $(this).data('id') + '?autoplay=1" frameborder="0" allowfullscreen="1" referrerpolicy="strict-origin-when-cross-origin"></iframe>');
     }
   });
 
@@ -1278,11 +1300,108 @@ $(function () {
     /* show payment-methods */
     $('#payment-methods').fadeIn();
   });
+  /* Apply Coupon */
+  $('body').on('click', '.js_payment-apply-coupon', function () {
+    var _this = $(this);
+    var error = $('#payment-coupon-error');
+    var success = $('#payment-coupon-success');
+    var promo_code = $('#payment-promo-code').val();
+    var price = $('#payment-promo-code').data('price');
+    var handle = $('#payment-promo-code').data('handle');
+    /* validate inputs */
+    if (is_empty(handle) || is_empty(price) || is_empty(promo_code)) {
+      return;
+    }
+    /* button loading */
+    button_status(_this, "loading");
+    /* post the request */
+    $.post(api['payments/coupon'], { 'handle': handle, 'price': price, 'promo_code': promo_code }, function (response) {
+      /* button reset */
+      button_status(_this, "reset");
+      /* check the response */
+      if (response.callback) {
+        eval(response.callback);
+      } else if (response.error) {
+        error.html(response.message).slideDown();
+      } else if (response.success) {
+        /* show success message */
+        success.html(response.message).slideDown();
+        /* hide error message */
+        error.hide();
+        /* add is-valid class to payment-promo-code */
+        $('#payment-promo-code').addClass('is-valid');
+        _this.addClass('x-hidden');
+        _this.siblings('.js_payment-clear-coupon').removeClass('x-hidden');
+        /* update payment summary */
+        $('#payment-vat').text(response.vat);
+        $('#payment-fees').text(response.fees);
+        $('#payment-discount-percentage').text(response.discount_percentage);
+        $('#payment-discount-value').text(response.discount);
+        $('#payment-total').text(response.total_printed);
+        /* update (price|total|promo_code) to modal buttons */
+        $('.btn-payment[data-toggle="modal"]').each(function () {
+          var btn = $(this);
+          var options = btn.data('options') || {};
+          if (typeof options === 'string') {
+            options = JSON.parse(options);
+          }
+          options.initial_price = options.price;
+          options.price = response.price;
+          options.initial_total = options.total;
+          options.total = response.total;
+          options.promo_code = promo_code;
+          btn.data('options', options).attr('data-options', JSON.stringify(options));
+        });
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(_this, "reset");
+        /* handle error */
+        show_error_modal();
+      });
+  });
+  /* Clear Coupon */
+  $('body').on('click', '.js_payment-clear-coupon', function () {
+    var _this = $(this);
+    /* hide clear button */
+    _this.addClass('x-hidden');
+    /* show apply button */
+    _this.siblings('.js_payment-apply-coupon').removeClass('x-hidden');
+    /* reset payment summary */
+    $('#payment-vat').text($('#payment-vat').data('initial-value'));
+    $('#payment-fees').text($('#payment-fees').data('initial-value'));
+    $('#payment-discount-percentage').text(0);
+    $('#payment-discount-value').text(0);
+    $('#payment-total').text($('#payment-total').data('initial-value'));
+    /* remove is-valid class from payment-promo-code */
+    $('#payment-promo-code').removeClass('is-valid');
+    /* reset payment-promo-code */
+    $('#payment-promo-code').val('');
+    /* hide success message */
+    $('#payment-coupon-success').hide();
+    /* reset (price|total|promo_code) to modal buttons */
+    $('.btn-payment[data-toggle="modal"]').each(function () {
+      var btn = $(this);
+      var options = btn.data('options') || {};
+      if (typeof options === 'string') {
+        options = JSON.parse(options);
+      }
+      options.price = options.initial_price;
+      options.total = options.initial_total;
+      delete options.promo_code;
+      btn.data('options', options).attr('data-options', JSON.stringify(options));
+    });
+  });
   /* PayPal */
   $('body').on('click', '.js_payment-paypal', function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1331,6 +1450,10 @@ $(function () {
     var data = {};
     data['handle'] = _this.data('handle');
     data['method'] = _this.data('method');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1429,6 +1552,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1476,6 +1603,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1585,6 +1716,36 @@ $(function () {
       error.html(data.errorMsg).slideDown();
     }
   };
+  /* Authorize.net */
+  $('body').on('submit', '#authorizenet_form', function (e) {
+    e.preventDefault();
+    var form = $("#authorizenet_form");
+    var submit = form.find('button[type="submit"]');
+    var error = form.find('.alert.alert-danger');
+    button_status(submit, "loading");
+    if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
+      /* get ajax response */
+      $.post(api['payments/authorize'], form.serialize(), function (response) {
+        /* button reset */
+        button_status(submit, "reset");
+        /* handle response */
+        if (response.error) {
+          error.html(response.message).slideDown();
+        } else {
+          eval(response.callback);
+        }
+      }, "json")
+        .fail(function () {
+          /* button reset */
+          button_status(submit, "reset");
+          /* handle error */
+          error.html(__['There is something that went wrong!']).slideDown();
+        });
+    } else {
+      button_status(submit, "reset");
+      error.html(__['You must fill in all of the fields']).slideDown();
+    }
+  });
   /* Razorpay */
   $('body').on('submit', '#razorpay_form', function (e) {
     e.preventDefault();
@@ -1594,6 +1755,10 @@ $(function () {
     button_status(submit, "loading");
     if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
       var data = {};
+      var promo_code = form.find('input[name="promo_code"]').val();
+      if (!is_empty(promo_code)) {
+        data['promo_code'] = promo_code;
+      }
       data['handle'] = form.find('input[name="handle"]').val();
       if (data['handle'] == "packages") {
         data['package_id'] = form.find('input[name="id"]').val();
@@ -1664,6 +1829,10 @@ $(function () {
     button_status(submit, "loading");
     if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
       var data = {};
+      var promo_code = form.find('input[name="promo_code"]').val();
+      if (!is_empty(promo_code)) {
+        data['promo_code'] = promo_code;
+      }
       data['handle'] = form.find('input[name="handle"]').val();
       if (data['handle'] == "packages") {
         data['package_id'] = form.find('input[name="id"]').val();
@@ -1730,6 +1899,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1778,6 +1951,10 @@ $(function () {
     var data = {};
     data['do'] = 'token';
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1848,58 +2025,15 @@ $(function () {
         show_error_modal();
       });
   });
-  /* MoneyPoolsCash */
-  $('body').on('click', '.js_payment-moneypoolscash', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/moneypoolscash'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
   /* MyFatoorah */
   $('body').on('click', '.js_payment-myfatoorah', function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -1975,6 +2109,10 @@ $(function () {
     if (handle == "marketplace") {
       callback += "handle=marketplace&orders_collection_id=" + _this.data('id');
     }
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      callback += "&promo_code=" + payment_promo_code;
+    }
     /* button loading */
     button_status(_this, "loading");
     /* hide current modal */
@@ -2001,17 +2139,20 @@ $(function () {
     };
     ePaycoHandler.open(ePaycoObject);
     /* handle if user clicked close of ePayco */
-    ePaycoHandler.on('close', function () {
+    ePaycoHandler.onClosed(function () {
       /* reload the page */
       location.reload();
     });
-
   });
   /* Flutterwave */
   $('body').on('click', '.js_payment-flutterwave', function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -2059,6 +2200,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -2106,6 +2251,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -2153,6 +2302,10 @@ $(function () {
     var _this = $(this);
     var data = {};
     data['handle'] = _this.data('handle');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     if (data['handle'] == "packages") {
       data['package_id'] = _this.data('id');
     }
@@ -2198,10 +2351,17 @@ $(function () {
   /* Wallet */
   $('body').on('click', '.js_payment-wallet-package', function () {
     var _this = $(this);
+    var data = {};
+    data['do'] = 'wallet_package_payment';
+    data['package_id'] = _this.data('id');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/wallet'], { 'do': 'wallet_package_payment', 'package_id': _this.data('id') }, function (response) {
+    $.post(api['payments/wallet'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -2220,10 +2380,17 @@ $(function () {
   });
   $('body').on('click', '.js_payment-wallet-monetization', function () {
     var _this = $(this);
+    var data = {};
+    data['do'] = 'wallet_monetization_payment';
+    data['plan_id'] = _this.data('id');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/wallet'], { 'do': 'wallet_monetization_payment', 'plan_id': _this.data('id') }, function (response) {
+    $.post(api['payments/wallet'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -2242,10 +2409,17 @@ $(function () {
   });
   $('body').on('click', '.js_payment-wallet-paid-post', function () {
     var _this = $(this);
+    var data = {};
+    data['do'] = 'wallet_paid_post';
+    data['post_id'] = _this.data('id');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/wallet'], { 'do': 'wallet_paid_post', 'post_id': _this.data('id') }, function (response) {
+    $.post(api['payments/wallet'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -2264,10 +2438,19 @@ $(function () {
   });
   $('body').on('click', '.js_payment-wallet-donate', function () {
     var _this = $(this);
+    var data = {};
+    data['do'] = 'wallet_donate';
+    data['post_id'] = _this.data('id');
+    data['amount'] = _this.data('price');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
+    var payment_promo_code = $('#payment-promo-code').val();
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/wallet'], { 'do': 'wallet_donate', 'post_id': _this.data('id'), 'amount': _this.data('price') }, function (response) {
+    $.post(api['payments/wallet'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -2286,10 +2469,18 @@ $(function () {
   });
   $('body').on('click', '.js_payment-wallet-marketplace', function () {
     var _this = $(this);
+    var data = {};
+    data['do'] = 'wallet_marketplace';
+    data['orders_collection_id'] = _this.data('id');
+    var payment_promo_code = $('#payment-promo-code').val();
+    if (!is_empty(payment_promo_code)) {
+      data['promo_code'] = payment_promo_code;
+    }
+    var payment_promo_code = $('#payment-promo-code').val();
     /* button loading */
     button_status(_this, "loading");
     /* post the request */
-    $.post(api['payments/wallet'], { 'do': 'wallet_marketplace', 'orders_collection_id': _this.data('id') }, function (response) {
+    $.post(api['payments/wallet'], data, function (response) {
       /* button reset */
       button_status(_this, "reset");
       /* check the response */
@@ -2304,6 +2495,31 @@ $(function () {
         button_status(_this, "reset");
         /* handle error */
         show_error_modal();
+      });
+  });
+  /* Bank Transfer */
+  $('body').on('submit', '#banktransfer_form', function (e) {
+    e.preventDefault();
+    var form = $("#banktransfer_form");
+    var submit = form.find('button[type="submit"]');
+    var error = form.find('.alert.alert-danger');
+    button_status(submit, "loading");
+    /* get ajax response */
+    $.post(api['payments/bank'], form.serialize(), function (response) {
+      /* button reset */
+      button_status(submit, "reset");
+      /* handle response */
+      if (response.error) {
+        error.html(response.message).slideDown();
+      } else {
+        eval(response.callback);
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(submit, "reset");
+        /* handle error */
+        error.html(__['There is something that went wrong!']).slideDown();
       });
   });
   /* Cash On Delivery */

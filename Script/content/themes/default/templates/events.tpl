@@ -162,7 +162,7 @@
           <!-- type filter (in person or online) -->
 
           <!-- location filter -->
-          {if $system['newsfeed_location_filter_enabled']}
+          {if $system['events_location_filter_enabled']}
             <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
               <i class="fa fa-globe fa-fw"></i>
               {if $selected_country}

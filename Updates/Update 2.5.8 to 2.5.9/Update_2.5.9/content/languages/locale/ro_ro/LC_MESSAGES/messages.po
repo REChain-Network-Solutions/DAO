@@ -1612,7 +1612,7 @@ msgid "Class"
 msgstr "Clasa"
 
 #: content/themes/default/templates/admin.emojis.tpl:66 content/themes/default/templates/admin.emojis.tpl:110
-msgid "Delus uses Twemoji Awesome and you can check"
+msgid "Sngine uses Twemoji Awesome and you can check"
 msgstr ""
 
 #: content/themes/default/templates/admin.emojis.tpl:66 content/themes/default/templates/admin.emojis.tpl:110
@@ -2416,7 +2416,7 @@ msgid "Website Keywords"
 msgstr "Cuvinte cheie pentru site"
 
 #: content/themes/default/templates/admin.settings.tpl:105
-msgid "Example: social, Delus, social site"
+msgid "Example: social, sngine, social site"
 msgstr "Exemplu: social, site, site social"
 
 #: content/themes/default/templates/admin.settings.tpl:112
@@ -2640,7 +2640,7 @@ msgstr ""
 #: content/themes/default/templates/settings.tpl:2105 content/themes/default/templates/_publisher.tpl:245
 #: content/themes/default/templates/_publisher.tpl:258 content/themes/default/templates/__feeds_post.body.tpl:324
 #: content/themes/default/templates/__feeds_user.tpl:40 content/themes/default/templates/__feeds_user.tpl:135
-#: includes/assets/js/Delus/user.js:1227
+#: includes/assets/js/sngine/user.js:1227
 msgid "Friends"
 msgstr "Prieteni"
 
@@ -3679,7 +3679,7 @@ msgid "Reach"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:588
-msgid "Delus"
+msgid "Sngine"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:604
@@ -8050,8 +8050,8 @@ msgid "Your phone already verified"
 msgstr ""
 
 #: includes/functions.php:218
-msgid "Your session hash has been broken, Please contact Delus's support!"
-msgstr "Ședința dvs. hash a fost întreruptă, vă rugăm să contactați asistența lui Delus!"
+msgid "Your session hash has been broken, Please contact Sngine's support!"
+msgstr "Ședința dvs. hash a fost întreruptă, vă rugăm să contactați asistența lui Sngine!"
 
 #: includes/functions.php:493
 msgid "Database Error"

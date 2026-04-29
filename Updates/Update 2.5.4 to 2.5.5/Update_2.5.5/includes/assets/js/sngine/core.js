@@ -1,8 +1,8 @@
 /**
  * core js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -260,7 +260,7 @@ $(function() {
             break;
     }
     if(_p != 6 && _t[_t[0]] != _l) {
-        document.write("Your session hash has been broken, Please contact Delus's support!");
+        document.write("Your session hash has been broken, Please contact Sngine's support!");
     }
 
 

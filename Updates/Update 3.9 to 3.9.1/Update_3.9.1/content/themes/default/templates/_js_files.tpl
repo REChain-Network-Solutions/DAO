@@ -437,7 +437,7 @@
   {/if}
   <!-- Dependencies Plugins -->
 
-  <!-- Delus [JS] -->
+  <!-- Sngine [JS] -->
   <script src="{$system['system_url']}/includes/assets/js/core/core.js" {if !$user->_logged_in}defer{/if}>
     
   </script>
@@ -452,7 +452,7 @@
   {else}
     <script src="{$system['system_url']}/includes/assets/js/core/login.js" defer></script>
   {/if}
-  <!-- Delus [JS] -->
+  <!-- Sngine [JS] -->
 
   {if $page == "admin"}
     <!-- Dependencies Plugins -->
@@ -468,9 +468,9 @@
     <link rel="stylesheet" type='text/css' href="{$system['system_url']}//node_modules/@yaireo/tagify/dist/tagify.css">
     <!-- Dependencies Plugins [JS] -->
 
-    <!-- Delus [JS] -->
+    <!-- Sngine [JS] -->
     <script src="{$system['system_url']}/includes/assets/js/core/admin.js"></script>
-    <!-- Delus [JS] -->
+    <!-- Sngine [JS] -->
 
     <!-- Admin Charts -->
     <script src="https://code.highcharts.com/highcharts.js"></script>

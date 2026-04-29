@@ -3,8 +3,8 @@
 /**
  * webhooks -> paypal subscriptions webhook
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -42,7 +42,8 @@ try {
       // update user package
       $user->update_user_package($package, $recurring_payment['user_id']);
       // log payment
-      $user->log_payment($recurring_payment['user_id'], $package['price'], 'paypal', 'packages');
+      $price = (isset($package['discounted_price']) && $package['discounted_price'] > 0) ? $package['discounted_price'] : $package['price'];
+      $user->log_payment($recurring_payment['user_id'], $price, 'paypal', 'packages');
       break;
 
     case 'subscribe':
@@ -54,7 +55,8 @@ try {
       // subscribe
       $user->subscribe($recurring_payment['handle_id'], $recurring_payment['user_id'], true);
       // log payment
-      $user->log_payment($recurring_payment['user_id'], $monetization_plan['price'], 'paypal', 'subscribe');
+      $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+      $user->log_payment($recurring_payment['user_id'], $price, 'paypal', 'subscribe');
       break;
   }
 } catch (Exception $e) {

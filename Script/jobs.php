@@ -3,8 +3,8 @@
 /**
  * jobs
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -147,7 +147,7 @@ try {
       break;
   }
 
-  // prepare country 
+  // prepare country
   if ($system['newsfeed_location_filter_enabled'] && isset($_GET['country']) && $_GET['country'] != "all") {
     /* get selected country */
     $selected_country = $user->get_country_by_name($_GET['country']);

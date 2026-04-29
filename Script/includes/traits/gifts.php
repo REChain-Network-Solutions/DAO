@@ -3,8 +3,8 @@
 /**
  * trait -> gifts
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait GiftsTrait
@@ -60,7 +60,7 @@ trait GiftsTrait
     global $system, $db;
     $transactions = [];
     $offset *= $system['max_results'];
-    $get_transactions = $db->query(sprintf("SELECT users_gifts.*, gifts.*, users.user_name, users.user_firstname, users.user_lastname FROM users_gifts INNER JOIN gifts ON users_gifts.gift_id = gifts.gift_id INNER JOIN users ON users_gifts.from_user_id = users.user_id WHERE users_gifts.to_user_id = %s ORDER BY users_gifts.id DESC LIMIT %s, %s", secure($user_id, 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    $get_transactions = $db->query(sprintf("SELECT users_gifts.*, gifts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, users.user_gender FROM users_gifts INNER JOIN gifts ON users_gifts.gift_id = gifts.gift_id INNER JOIN users ON users_gifts.from_user_id = users.user_id WHERE users_gifts.to_user_id = %s ORDER BY users_gifts.id DESC LIMIT %s, %s", secure($user_id, 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
     if ($get_transactions->num_rows > 0) {
       while ($transaction = $get_transactions->fetch_assoc()) {
         $transaction['image'] = $system['system_uploads'] . '/' . $transaction['image'];

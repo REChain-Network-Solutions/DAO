@@ -22,23 +22,33 @@
           <div class="card">
             <div class="card-header with-icon">
               {include file='__svg_icons.tpl' icon="notifications" class="main-icon mr10" width="20px" height="20px"}{__("Your Notifications")}
+              {if $user->_data['notifications']}
+                <button class="btn btn-md btn-danger float-end js_delete-all-notifications">
+                  {__("Delete All")}
+                </button>
+              {/if}
             </div>
             <div class="card-body">
-              <ul>
-                {foreach $user->_data['notifications'] as $notification}
-                  {include file='__feeds_notification.tpl' _tpl="with-action"}
-                {/foreach}
-              </ul>
+              {if $user->_data['notifications']}
+                <ul>
+                  {foreach $user->_data['notifications'] as $notification}
+                    {include file='__feeds_notification.tpl' _tpl="with-action"}
+                  {/foreach}
+                </ul>
 
-              {if count($user->_data['notifications']) >= $system['max_results']}
-                <!-- see-more -->
-                <div class="alert alert-post see-more js_see-more" data-get="notifications">
-                  <span>{__("See More")}</span>
-                  <div class="loader loader_small x-hidden"></div>
-                </div>
-                <!-- see-more -->
+                {if count($user->_data['notifications']) >= $system['max_results']}
+                  <!-- see-more -->
+                  <div class="alert alert-post see-more js_see-more" data-get="notifications">
+                    <span>{__("See More")}</span>
+                    <div class="loader loader_small x-hidden"></div>
+                  </div>
+                  <!-- see-more -->
+                {/if}
+              {else}
+                <p class="text-center text-muted mt10">
+                  {__("No notifications")}
+                </p>
               {/if}
-
             </div>
           </div>
           <!-- notifications -->

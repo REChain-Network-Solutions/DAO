@@ -34,10 +34,10 @@ abstract class TollfreeVerificationOptions
      * @param string $businessContactEmail The email address of the contact for the business or organization using the Tollfree number.
      * @param string $businessContactPhone The E.164 formatted phone number of the contact for the business or organization using the Tollfree number.
      * @param string $externalReferenceId An optional external reference ID supplied by customer and echoed back on status retrieval.
-     * @param string $businessRegistrationNumber A legally recognized business registration number
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
-     * @param string $businessRegistrationCountry Country business is registered in
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessRegistrationNumber A legally recognized business registration number. Required for all business types except SOLE_PROPRIETOR.
+     * @param string $businessRegistrationAuthority
+     * @param string $businessRegistrationCountry The country where the business is registered. Required for all business types except SOLE_PROPRIETOR.
+     * @param string $businessType
      * @param string $businessRegistrationPhoneNumber The E.164 formatted number associated with the business.
      * @param string $doingBusinessAs Trade name, sub entity, or downstream business name of business being submitted for verification
      * @param string $optInConfirmationMessage The confirmation message sent to users when they opt in to receive messages.
@@ -46,6 +46,8 @@ abstract class TollfreeVerificationOptions
      * @param string $termsAndConditionsUrl The URL to the terms and conditions for the business or organization.
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
+     * @param string $vettingProvider
+     * @param string $vettingId The unique ID of the vetting
      * @return CreateTollfreeVerificationOptions Options builder
      */
     public static function create(
@@ -74,7 +76,9 @@ abstract class TollfreeVerificationOptions
         string $privacyPolicyUrl = Values::NONE,
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
-        array $optInKeywords = Values::ARRAY_NONE
+        array $optInKeywords = Values::ARRAY_NONE,
+        string $vettingProvider = Values::NONE,
+        string $vettingId = Values::NONE
 
     ): CreateTollfreeVerificationOptions
     {
@@ -103,7 +107,9 @@ abstract class TollfreeVerificationOptions
             $privacyPolicyUrl,
             $termsAndConditionsUrl,
             $ageGatedContent,
-            $optInKeywords
+            $optInKeywords,
+            $vettingProvider,
+            $vettingId
         );
     }
 
@@ -140,7 +146,7 @@ abstract class TollfreeVerificationOptions
      * @param string $businessName The name of the business or organization using the Tollfree number.
      * @param string $businessWebsite The website of the business or organization using the Tollfree number.
      * @param string $notificationEmail The email address to receive the notification about the verification result. .
-     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many are applicable..
+     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many as are applicable.
      * @param string $useCaseSummary Use this to further explain how messaging is used by the business or organization.
      * @param string $productionMessageSample An example of message content, i.e. a sample message.
      * @param string[] $optInImageUrls Link to an image that shows the opt-in workflow. Multiple images allowed and must be a publicly hosted URL.
@@ -158,10 +164,10 @@ abstract class TollfreeVerificationOptions
      * @param string $businessContactEmail The email address of the contact for the business or organization using the Tollfree number.
      * @param string $businessContactPhone The E.164 formatted phone number of the contact for the business or organization using the Tollfree number.
      * @param string $editReason Describe why the verification is being edited. If the verification was rejected because of a technical issue, such as the website being down, and the issue has been resolved this parameter should be set to something similar to 'Website fixed'.
-     * @param string $businessRegistrationNumber A legaly recognized business registration number
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
+     * @param string $businessRegistrationNumber A legally recognized business registration number
+     * @param string $businessRegistrationAuthority
      * @param string $businessRegistrationCountry Country business is registered in
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessType
      * @param string $businessRegistrationPhoneNumber The E.164 formatted number associated with the business.
      * @param string $doingBusinessAs Trade name, sub entity, or downstream business name of business being submitted for verification
      * @param string $optInConfirmationMessage The confirmation message sent to users when they opt in to receive messages.
@@ -170,6 +176,8 @@ abstract class TollfreeVerificationOptions
      * @param string $termsAndConditionsUrl The URL to the terms and conditions for the business or organization.
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
+     * @param string $vettingProvider
+     * @param string $vettingId The unique ID of the vetting
      * @return UpdateTollfreeVerificationOptions Options builder
      */
     public static function update(
@@ -206,7 +214,9 @@ abstract class TollfreeVerificationOptions
         string $privacyPolicyUrl = Values::NONE,
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
-        array $optInKeywords = Values::ARRAY_NONE
+        array $optInKeywords = Values::ARRAY_NONE,
+        string $vettingProvider = Values::NONE,
+        string $vettingId = Values::NONE
 
     ): UpdateTollfreeVerificationOptions
     {
@@ -243,7 +253,9 @@ abstract class TollfreeVerificationOptions
             $privacyPolicyUrl,
             $termsAndConditionsUrl,
             $ageGatedContent,
-            $optInKeywords
+            $optInKeywords,
+            $vettingProvider,
+            $vettingId
         );
     }
 
@@ -265,10 +277,10 @@ class CreateTollfreeVerificationOptions extends Options
      * @param string $businessContactEmail The email address of the contact for the business or organization using the Tollfree number.
      * @param string $businessContactPhone The E.164 formatted phone number of the contact for the business or organization using the Tollfree number.
      * @param string $externalReferenceId An optional external reference ID supplied by customer and echoed back on status retrieval.
-     * @param string $businessRegistrationNumber A legally recognized business registration number
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
-     * @param string $businessRegistrationCountry Country business is registered in
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessRegistrationNumber A legally recognized business registration number. Required for all business types except SOLE_PROPRIETOR.
+     * @param string $businessRegistrationAuthority
+     * @param string $businessRegistrationCountry The country where the business is registered. Required for all business types except SOLE_PROPRIETOR.
+     * @param string $businessType
      * @param string $businessRegistrationPhoneNumber The E.164 formatted number associated with the business.
      * @param string $doingBusinessAs Trade name, sub entity, or downstream business name of business being submitted for verification
      * @param string $optInConfirmationMessage The confirmation message sent to users when they opt in to receive messages.
@@ -277,6 +289,8 @@ class CreateTollfreeVerificationOptions extends Options
      * @param string $termsAndConditionsUrl The URL to the terms and conditions for the business or organization.
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
+     * @param string $vettingProvider
+     * @param string $vettingId The unique ID of the vetting
      */
     public function __construct(
         
@@ -304,7 +318,9 @@ class CreateTollfreeVerificationOptions extends Options
         string $privacyPolicyUrl = Values::NONE,
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
-        array $optInKeywords = Values::ARRAY_NONE
+        array $optInKeywords = Values::ARRAY_NONE,
+        string $vettingProvider = Values::NONE,
+        string $vettingId = Values::NONE
 
     ) {
         $this->options['customerProfileSid'] = $customerProfileSid;
@@ -332,6 +348,8 @@ class CreateTollfreeVerificationOptions extends Options
         $this->options['termsAndConditionsUrl'] = $termsAndConditionsUrl;
         $this->options['ageGatedContent'] = $ageGatedContent;
         $this->options['optInKeywords'] = $optInKeywords;
+        $this->options['vettingProvider'] = $vettingProvider;
+        $this->options['vettingId'] = $vettingId;
     }
 
     /**
@@ -491,9 +509,9 @@ class CreateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * A legally recognized business registration number
+     * A legally recognized business registration number. Required for all business types except SOLE_PROPRIETOR.
      *
-     * @param string $businessRegistrationNumber A legally recognized business registration number
+     * @param string $businessRegistrationNumber A legally recognized business registration number. Required for all business types except SOLE_PROPRIETOR.
      * @return $this Fluent Builder
      */
     public function setBusinessRegistrationNumber(string $businessRegistrationNumber): self
@@ -503,9 +521,7 @@ class CreateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * The organizational authority for business registrations
-     *
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
+     * @param string $businessRegistrationAuthority
      * @return $this Fluent Builder
      */
     public function setBusinessRegistrationAuthority(string $businessRegistrationAuthority): self
@@ -515,9 +531,9 @@ class CreateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * Country business is registered in
+     * The country where the business is registered. Required for all business types except SOLE_PROPRIETOR.
      *
-     * @param string $businessRegistrationCountry Country business is registered in
+     * @param string $businessRegistrationCountry The country where the business is registered. Required for all business types except SOLE_PROPRIETOR.
      * @return $this Fluent Builder
      */
     public function setBusinessRegistrationCountry(string $businessRegistrationCountry): self
@@ -527,9 +543,7 @@ class CreateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
-     *
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessType
      * @return $this Fluent Builder
      */
     public function setBusinessType(string $businessType): self
@@ -631,6 +645,28 @@ class CreateTollfreeVerificationOptions extends Options
     public function setOptInKeywords(array $optInKeywords): self
     {
         $this->options['optInKeywords'] = $optInKeywords;
+        return $this;
+    }
+
+    /**
+     * @param string $vettingProvider
+     * @return $this Fluent Builder
+     */
+    public function setVettingProvider(string $vettingProvider): self
+    {
+        $this->options['vettingProvider'] = $vettingProvider;
+        return $this;
+    }
+
+    /**
+     * The unique ID of the vetting
+     *
+     * @param string $vettingId The unique ID of the vetting
+     * @return $this Fluent Builder
+     */
+    public function setVettingId(string $vettingId): self
+    {
+        $this->options['vettingId'] = $vettingId;
         return $this;
     }
 
@@ -751,7 +787,7 @@ class UpdateTollfreeVerificationOptions extends Options
      * @param string $businessName The name of the business or organization using the Tollfree number.
      * @param string $businessWebsite The website of the business or organization using the Tollfree number.
      * @param string $notificationEmail The email address to receive the notification about the verification result. .
-     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many are applicable..
+     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many as are applicable.
      * @param string $useCaseSummary Use this to further explain how messaging is used by the business or organization.
      * @param string $productionMessageSample An example of message content, i.e. a sample message.
      * @param string[] $optInImageUrls Link to an image that shows the opt-in workflow. Multiple images allowed and must be a publicly hosted URL.
@@ -769,10 +805,10 @@ class UpdateTollfreeVerificationOptions extends Options
      * @param string $businessContactEmail The email address of the contact for the business or organization using the Tollfree number.
      * @param string $businessContactPhone The E.164 formatted phone number of the contact for the business or organization using the Tollfree number.
      * @param string $editReason Describe why the verification is being edited. If the verification was rejected because of a technical issue, such as the website being down, and the issue has been resolved this parameter should be set to something similar to 'Website fixed'.
-     * @param string $businessRegistrationNumber A legaly recognized business registration number
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
+     * @param string $businessRegistrationNumber A legally recognized business registration number
+     * @param string $businessRegistrationAuthority
      * @param string $businessRegistrationCountry Country business is registered in
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessType
      * @param string $businessRegistrationPhoneNumber The E.164 formatted number associated with the business.
      * @param string $doingBusinessAs Trade name, sub entity, or downstream business name of business being submitted for verification
      * @param string $optInConfirmationMessage The confirmation message sent to users when they opt in to receive messages.
@@ -781,6 +817,8 @@ class UpdateTollfreeVerificationOptions extends Options
      * @param string $termsAndConditionsUrl The URL to the terms and conditions for the business or organization.
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
+     * @param string $vettingProvider
+     * @param string $vettingId The unique ID of the vetting
      */
     public function __construct(
         
@@ -816,7 +854,9 @@ class UpdateTollfreeVerificationOptions extends Options
         string $privacyPolicyUrl = Values::NONE,
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
-        array $optInKeywords = Values::ARRAY_NONE
+        array $optInKeywords = Values::ARRAY_NONE,
+        string $vettingProvider = Values::NONE,
+        string $vettingId = Values::NONE
 
     ) {
         $this->options['businessName'] = $businessName;
@@ -852,6 +892,8 @@ class UpdateTollfreeVerificationOptions extends Options
         $this->options['termsAndConditionsUrl'] = $termsAndConditionsUrl;
         $this->options['ageGatedContent'] = $ageGatedContent;
         $this->options['optInKeywords'] = $optInKeywords;
+        $this->options['vettingProvider'] = $vettingProvider;
+        $this->options['vettingId'] = $vettingId;
     }
 
     /**
@@ -891,9 +933,9 @@ class UpdateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * The category of the use case for the Tollfree Number. List as many are applicable..
+     * The category of the use case for the Tollfree Number. List as many as are applicable.
      *
-     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many are applicable..
+     * @param string[] $useCaseCategories The category of the use case for the Tollfree Number. List as many as are applicable.
      * @return $this Fluent Builder
      */
     public function setUseCaseCategories(array $useCaseCategories): self
@@ -1105,9 +1147,9 @@ class UpdateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * A legaly recognized business registration number
+     * A legally recognized business registration number
      *
-     * @param string $businessRegistrationNumber A legaly recognized business registration number
+     * @param string $businessRegistrationNumber A legally recognized business registration number
      * @return $this Fluent Builder
      */
     public function setBusinessRegistrationNumber(string $businessRegistrationNumber): self
@@ -1117,9 +1159,7 @@ class UpdateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * The organizational authority for business registrations
-     *
-     * @param string $businessRegistrationAuthority The organizational authority for business registrations
+     * @param string $businessRegistrationAuthority
      * @return $this Fluent Builder
      */
     public function setBusinessRegistrationAuthority(string $businessRegistrationAuthority): self
@@ -1141,9 +1181,7 @@ class UpdateTollfreeVerificationOptions extends Options
     }
 
     /**
-     * The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
-     *
-     * @param string $businessType The type of business, valid values are PRIVATE_PROFIT, PUBLIC_PROFIT, NON_PROFIT, SOLE_PROPRIETOR, GOVERNMENT
+     * @param string $businessType
      * @return $this Fluent Builder
      */
     public function setBusinessType(string $businessType): self
@@ -1245,6 +1283,28 @@ class UpdateTollfreeVerificationOptions extends Options
     public function setOptInKeywords(array $optInKeywords): self
     {
         $this->options['optInKeywords'] = $optInKeywords;
+        return $this;
+    }
+
+    /**
+     * @param string $vettingProvider
+     * @return $this Fluent Builder
+     */
+    public function setVettingProvider(string $vettingProvider): self
+    {
+        $this->options['vettingProvider'] = $vettingProvider;
+        return $this;
+    }
+
+    /**
+     * The unique ID of the vetting
+     *
+     * @param string $vettingId The unique ID of the vetting
+     * @return $this Fluent Builder
+     */
+    public function setVettingId(string $vettingId): self
+    {
+        $this->options['vettingId'] = $vettingId;
         return $this;
     }
 

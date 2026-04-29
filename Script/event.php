@@ -3,8 +3,8 @@
 /**
  * event
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -181,14 +181,18 @@ try {
       $event['reels'] = $user->get_reels($event['event_id'], 'event');
       break;
 
+    case 'blogs':
+      /* get posts (blogs) */
+      $posts = $user->get_posts(['get' => 'posts_event', 'id' => $event['event_id'], 'filter' => 'article']);
+      /* assign variables */
+      $smarty->assign('posts', $posts);
+      break;
+
     case 'products':
-      /* get content */
-      if (!$event['needs_subscription']) {
-        /* get posts (products) */
-        $posts = $user->get_posts(['get' => 'posts_event', 'id' => $event['event_id'], 'filter' => 'product']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-      }
+      /* get posts (products) */
+      $posts = $user->get_posts(['get' => 'posts_event', 'id' => $event['event_id'], 'filter' => 'product']);
+      /* assign variables */
+      $smarty->assign('posts', $posts);
       break;
 
     case 'reviews':

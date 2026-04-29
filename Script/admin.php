@@ -3,8 +3,8 @@
 /**
  * admin
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set override_shutdown
@@ -129,6 +129,11 @@ try {
         case 'posts':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Posts Settings"));
+          break;
+
+        case 'ai':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("AI Settings"));
           break;
 
         case 'registration':
@@ -736,7 +741,7 @@ try {
           $get_rows = $db->query("SELECT users.*, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.user_id AND posts.user_type = 'user' " . $where_query . ") AS posts_count FROM users " . $where_users_query . " ORDER BY user_id ASC " . $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], null, 1);
+              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
               $rows[] = $row;
             }
           }
@@ -3017,10 +3022,6 @@ try {
                   $row['method_color'] = "primary";
                   break;
 
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
-                  break;
-
                 case 'bank':
                   $row['method_color'] = "danger";
                   break;
@@ -3178,10 +3179,6 @@ try {
                   $row['method_color'] = "primary";
                   break;
 
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
-                  break;
-
                 case 'bank':
                   $row['method_color'] = "danger";
                   break;
@@ -3234,10 +3231,6 @@ try {
 
                 case 'skrill':
                   $row['method_color'] = "primary";
-                  break;
-
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
                   break;
 
                 case 'bank':
@@ -3510,10 +3503,6 @@ try {
                   $row['method_color'] = "primary";
                   break;
 
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
-                  break;
-
                 case 'bank':
                   $row['method_color'] = "danger";
                   break;
@@ -3566,10 +3555,6 @@ try {
 
                 case 'skrill':
                   $row['method_color'] = "primary";
-                  break;
-
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
                   break;
 
                 case 'bank':
@@ -3682,10 +3667,6 @@ try {
                   $row['method_color'] = "primary";
                   break;
 
-                case 'moneypoolscash':
-                  $row['method_color'] = "success";
-                  break;
-
                 case 'bank':
                   $row['method_color'] = "danger";
                   break;
@@ -3745,7 +3726,23 @@ try {
       page_header($control_panel['title'] . " &rsaquo; " . __("Bank Receipts"));
 
       // get data
-      $get_rows = $db->query("SELECT bank_transfers.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, packages.name as package_name, packages.price as package_price FROM bank_transfers INNER JOIN users ON bank_transfers.user_id = users.user_id LEFT JOIN packages ON bank_transfers.package_id = packages.package_id WHERE bank_transfers.status = '0'");
+      $get_rows = $db->query("
+        SELECT 
+          bank_transfers.*, 
+          users.user_name, 
+          users.user_firstname, 
+          users.user_lastname, 
+          users.user_gender, 
+          users.user_picture, 
+          packages.name AS package_name, 
+          packages.price AS package_price 
+        FROM bank_transfers 
+        INNER JOIN users 
+          ON bank_transfers.user_id = users.user_id 
+        LEFT JOIN packages 
+          ON bank_transfers.package_id = packages.package_id 
+        WHERE bank_transfers.status = '0'
+      ");
       if ($get_rows->num_rows > 0) {
         while ($row = $get_rows->fetch_assoc()) {
           $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);

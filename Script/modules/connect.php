@@ -3,8 +3,8 @@
 /**
  * connect
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -62,8 +62,8 @@ try {
           }
           break;
 
-        case 'Delus':
-          if (!$system['Delus_login_enabled']) {
+        case 'sngine':
+          if (!$system['sngine_login_enabled']) {
             _error(404);
           }
           break;
@@ -77,7 +77,7 @@ try {
       $provider = $_REQUEST["provider"];
       $provider = ($provider == "linkedin") ? "LinkedInOpenID" : $provider;
 
-      if ($provider != "Delus") {
+      if ($provider != "sngine") {
 
         // config hybridauth
         $config = [
@@ -134,9 +134,9 @@ try {
       } else {
 
         // get access token
-        $app_id = $system['Delus_appid'];
-        $app_secret = $system['Delus_secret'];
-        $app_url = $system['Delus_app_domain'];
+        $app_id = $system['sngine_appid'];
+        $app_secret = $system['sngine_secret'];
+        $app_url = $system['sngine_app_domain'];
         $auth_key = $_GET['auth_key'];
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://$app_url/api/authorize?app_id=$app_id&app_secret=$app_secret&auth_key=$auth_key");
@@ -220,9 +220,9 @@ try {
           $social_connected = "wordpress_connected";
           break;
 
-        case 'Delus':
-          $social_id = "Delus_id";
-          $social_connected = "Delus_connected";
+        case 'sngine':
+          $social_id = "sngine_id";
+          $social_connected = "sngine_connected";
           break;
 
         default:

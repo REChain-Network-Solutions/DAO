@@ -1,4 +1,4 @@
-const CACHE_NAME = "Delus-cache-v1";
+const CACHE_NAME = "sngine-cache-v1";
 const urlsToCache = [];
 
 // Install event

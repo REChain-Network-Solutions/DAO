@@ -2,8 +2,8 @@
 /**
  * update wizard
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set system version
@@ -63,7 +63,7 @@ if(isset($_POST['submit'])) {
 	}
 
 
-	// update the Delus tables
+	// update the sngine tables
 	$structure = "
 
 CREATE TABLE `jobs_categories` (
@@ -263,7 +263,7 @@ CREATE TABLE `posts_offers` (
 
 
 	// Done
-	_error("System Updated", "Delus has been updated to ".SYS_VER);
+	_error("System Updated", "Sngine has been updated to ".SYS_VER);
 }
 
 ?>
@@ -274,12 +274,12 @@ CREATE TABLE `posts_offers` (
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <title>Delus &rsaquo; Update (v<?php echo SYS_VER ?>)</title>
-        <link rel="shortcut icon" href="includes/assets/js/Delus/installer/favicon.png" />
+        <title>Sngine &rsaquo; Update (v<?php echo SYS_VER ?>)</title>
+        <link rel="shortcut icon" href="includes/assets/js/sngine/installer/favicon.png" />
         <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet" crossorigin="anonymous">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" crossorigin="anonymous">
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
-        <link rel="stylesheet" href="includes/assets/js/Delus/installer/wizard.css">
+        <link rel="stylesheet" href="includes/assets/js/sngine/installer/wizard.css">
     </head>
     <body>
         <main class="my-5">
@@ -291,7 +291,7 @@ CREATE TABLE `posts_offers` (
                             <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
                             <div class="media-body">
                                 <div class="bd-wizard-step-title">Update</div>
-                                <div class="bd-wizard-step-subtitle">Delus (v<?php echo SYS_VER ?>)</div>
+                                <div class="bd-wizard-step-subtitle">Sngine (v<?php echo SYS_VER ?>)</div>
                             </div>
                         </div>
                     </h3>
@@ -299,7 +299,7 @@ CREATE TABLE `posts_offers` (
                         <div class="content-wrapper">
                             <h3 class="section-heading">Welcome!</h3>
                             <p>
-                                Welcome to <strong>Delus</strong> updating process! Just fill in the information below.
+                                Welcome to <strong>Sngine</strong> updating process! Just fill in the information below.
                             </p>
                             <div class="row mt-4">
                                 <div class="form-group col-12">
@@ -332,7 +332,7 @@ CREATE TABLE `posts_offers` (
         <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
-        <script src="includes/assets/js/Delus/installer/jquery.steps.min.js"></script>
+        <script src="includes/assets/js/sngine/installer/jquery.steps.min.js"></script>
         <script type="text/javascript">
             // handle wizard
             var wizard = $("#wizard");

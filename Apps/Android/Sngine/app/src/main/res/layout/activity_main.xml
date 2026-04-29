@@ -61,7 +61,7 @@
 			android:layout_alignParentLeft="true"
 			android:layout_marginTop="120dp"
 			android:gravity="center_vertical|center_horizontal|center"
-			android:text="@string/Delus_demo"
+			android:text="@string/sngine_demo"
 			android:textColor="@color/splashScreenColor"
 			android:textSize="18sp"
 			android:textStyle="normal|bold"

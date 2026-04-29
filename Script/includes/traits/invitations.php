@@ -3,8 +3,8 @@
 /**
  * trait -> invitations
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait InvitationsTrait
@@ -23,7 +23,25 @@ trait InvitationsTrait
   {
     global $db;
     $codes = [];
-    $get_codes = $db->query(sprintf('SELECT invitation_codes.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM invitation_codes LEFT JOIN users ON invitation_codes.used_by = users.user_id WHERE invitation_codes.created_by = %s', secure($this->_data['user_id'], 'int')));
+    $get_codes = $db->query(sprintf(
+      "SELECT 
+        invitation_codes.*, 
+        users.user_id, 
+        users.user_name, 
+        users.user_firstname, 
+        users.user_lastname, 
+        users.user_gender, 
+        users.user_picture 
+      FROM 
+        invitation_codes 
+      LEFT JOIN 
+        users 
+      ON 
+        invitation_codes.used_by = users.user_id 
+      WHERE 
+        invitation_codes.created_by = %s",
+      secure($this->_data['user_id'], 'int')
+    ));
     if ($get_codes->num_rows > 0) {
       while ($code = $get_codes->fetch_assoc()) {
         if ($code['used']) {

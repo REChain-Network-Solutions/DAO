@@ -2762,18 +2762,18 @@
 
             <div class="divider"></div>
 
-            <!-- Delus -->
+            <!-- Sngine -->
             <div class="form-table-row">
               <div class="avatar">
                 {include file='__svg_icons.tpl' icon="developers" class="main-icon" width="40px" height="40px"}
               </div>
               <div>
-                <div class="form-label h6 mb5">{__("Delus")}</div>
-                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other Delus website On and Off")}</div>
+                <div class="form-label h6 mb5">{__("Sngine")}</div>
+                <div class="form-text d-none d-sm-block">{__("Turn registration/login via other Sngine website On and Off")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="Delus_login_enabled">
-                  <input type="checkbox" name="Delus_login_enabled" id="Delus_login_enabled" {if $system['Delus_login_enabled']}checked{/if}>
+                <label class="switch" for="sngine_login_enabled">
+                  <input type="checkbox" name="sngine_login_enabled" id="sngine_login_enabled" {if $system['sngine_login_enabled']}checked{/if}>
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -2781,11 +2781,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App ID")}
+                {__("Sngine App ID")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_appid" value="{$system['Delus_appid']}">
+                  <input type="text" class="form-control" name="sngine_appid" value="{$system['sngine_appid']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2794,11 +2794,11 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Secret")}
+                {__("Sngine App Secret")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_secret" value="{$system['Delus_secret']}">
+                  <input type="text" class="form-control" name="sngine_secret" value="{$system['sngine_secret']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2807,27 +2807,27 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Domain")}
+                {__("Sngine App Domain")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_app_domain" value="{$system['Delus_app_domain']}">
+                  <input type="text" class="form-control" name="sngine_app_domain" value="{$system['sngine_app_domain']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
                 <div class="form-text">
-                  {__("Please enter your Delus App Domain without http:// or https://")}
+                  {__("Please enter your Sngine App Domain without http:// or https://")}
                 </div>
               </div>
             </div>
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Name")}
+                {__("Sngine App Name")}
               </label>
               <div class="col-md-9">
                 {if !$user->_data['user_demo']}
-                  <input type="text" class="form-control" name="Delus_app_name" value="{$system['Delus_app_name']}">
+                  <input type="text" class="form-control" name="sngine_app_name" value="{$system['sngine_app_name']}">
                 {else}
                   <input type="password" class="form-control" value="*********">
                 {/if}
@@ -2836,10 +2836,10 @@
 
             <div class="row form-group">
               <label class="col-md-3 form-label">
-                {__("Delus App Icon")}
+                {__("Sngine App Icon")}
               </label>
               <div class="col-md-9">
-                {if $system['Delus_app_icon'] == ''}
+                {if $system['sngine_app_icon'] == ''}
                   <div class="x-image">
                     <button type="button" class="btn-close x-hidden js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
@@ -2848,10 +2848,10 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="">
+                    <input type="hidden" class="js_x-image-input" name="sngine_app_icon" value="">
                   </div>
                 {else}
-                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['Delus_app_icon']}')">
+                  <div class="x-image" style="background-image: url('{$system['system_uploads']}/{$system['sngine_app_icon']}')">
                     <button type="button" class="btn-close js_x-image-remover" title='{__("Remove")}'></button>
                     <div class="x-image-loader">
                       <div class="progress x-progress">
@@ -2859,12 +2859,12 @@
                       </div>
                     </div>
                     <i class="fa fa-camera fa-lg js_x-uploader" data-handle="x-image"></i>
-                    <input type="hidden" class="js_x-image-input" name="Delus_app_icon" value="{$system['Delus_app_icon']}">
+                    <input type="hidden" class="js_x-image-input" name="sngine_app_icon" value="{$system['sngine_app_icon']}">
                   </div>
                 {/if}
               </div>
             </div>
-            <!-- Delus -->
+            <!-- Sngine -->
 
             <!-- success -->
             <div class="alert alert-success mt15 mb0 x-hidden"></div>
@@ -6597,7 +6597,7 @@
               <div class="col-md-9">
                 <input type="text" class="form-control" name="cloudflare_r2_custom_domain" value="{$system['cloudflare_r2_custom_domain']}">
                 <div class="form-text">
-                  {__("Your Cloudflare R2 Custom Domain (Example: 'https://cloud.Delus.com')")}
+                  {__("Your Cloudflare R2 Custom Domain (Example: 'https://cloud.sngine.com')")}
                 </div>
               </div>
             </div>

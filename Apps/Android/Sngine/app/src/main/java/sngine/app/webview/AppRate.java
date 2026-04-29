@@ -1,4 +1,4 @@
-package Delus.app.webview;
+package sngine.app.webview;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -8,13 +8,13 @@ import android.view.View;
 
 import java.util.Date;
 
-import static Delus.app.webview.DialogManager.create;
-import static Delus.app.webview.PreferenceHelper.getInstallDate;
-import static Delus.app.webview.PreferenceHelper.getIsAgreeShowDialog;
-import static Delus.app.webview.PreferenceHelper.getLaunchTimes;
-import static Delus.app.webview.PreferenceHelper.getRemindInterval;
-import static Delus.app.webview.PreferenceHelper.isFirstLaunch;
-import static Delus.app.webview.PreferenceHelper.setInstallDate;
+import static sngine.app.webview.DialogManager.create;
+import static sngine.app.webview.PreferenceHelper.getInstallDate;
+import static sngine.app.webview.PreferenceHelper.getIsAgreeShowDialog;
+import static sngine.app.webview.PreferenceHelper.getLaunchTimes;
+import static sngine.app.webview.PreferenceHelper.getRemindInterval;
+import static sngine.app.webview.PreferenceHelper.isFirstLaunch;
+import static sngine.app.webview.PreferenceHelper.setInstallDate;
 
 public final class AppRate {
 

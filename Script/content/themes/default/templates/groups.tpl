@@ -126,7 +126,7 @@
         <span>{$view_title}</span>
         <div class="float-end">
           <!-- location filter -->
-          {if $system['newsfeed_location_filter_enabled']}
+          {if $system['groups_location_filter_enabled']}
             <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
               <i class="fa fa-globe fa-fw"></i>
               {if $selected_country}

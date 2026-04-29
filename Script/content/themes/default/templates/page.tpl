@@ -277,7 +277,13 @@
             <span class="ml5 d-none d-xl-inline-block">{__("Reels")}</span>
           </a>
         {/if}
-        {if $spage['can_sell_products']}
+        {if $system['blogs_enabled']}
+          <a href="{$system['system_url']}/pages/{$spage['page_name']}/blogs" {if $view == "blogs"}class="active" {/if}>
+            {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
+            <span class="ml5 d-none d-xl-inline-block">{__("Blogs")}</span>
+          </a>
+        {/if}
+        {if $system['market_enabled']}
           <a href="{$system['system_url']}/pages/{$spage['page_name']}/products" {if $view == "products"}class="active" {/if}>
             {include file='__svg_icons.tpl' icon="products" class="main-icon mr5" width="24px" height="24px"}
             <span class="ml5 d-none d-xl-inline-block">{__("Store")}</span>
@@ -319,7 +325,7 @@
             {if $user->_logged_in && !$spage['i_admin'] && $spage['has_subscriptions_plans']}
               <div class="d-grid">
                 <button class="btn btn-primary rounded rounded-pill mb20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$spage['page_id']}&node_type=page" data-size="large">
-                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($spage['page_monetization_min_price'])})
+                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE FOR")} {if $spage['page_monetization_discount_enabled']}{print_money($spage['page_monetization_min_price'] * (1 - $spage['page_monetization_discount_percent'] / 100))}{/if}{if $spage['page_monetization_discount_enabled']}<span style="text-decoration: line-through;" class="ml5">{/if}{print_money($spage['page_monetization_min_price'])}{if $spage['page_monetization_discount_enabled']}</span>{/if}
                 </button>
               </div>
             {/if}
@@ -677,7 +683,7 @@
           <!-- photos -->
           <div class="col-12">
             {if $spage['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <div class="card panel-photos">
                 <div class="card-header with-icon with-nav">
@@ -727,7 +733,7 @@
           <!-- albums -->
           <div class="col-12">
             {if $spage['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <div class="card">
                 <div class="card-header with-icon with-nav">
@@ -779,7 +785,7 @@
           <!-- albums -->
           <div class="col-12">
             {if $spage['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <div class="card panel-photos">
                 <div class="card-header with-icon with-nav">
@@ -821,7 +827,7 @@
           <!-- videos -->
           <div class="col-12">
             {if $spage['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <div class="card panel-videos">
                 <div class="card-header with-icon with-nav">
@@ -873,7 +879,7 @@
           <!-- reels -->
           <div class="col-12">
             {if $spage['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <div class="card panel-videos">
                 <div class="card-header with-icon with-nav">
@@ -921,11 +927,57 @@
           </div>
           <!-- reels -->
 
+        {elseif $view == "blogs"}
+          <!-- blogs -->
+          <div class="col-12">
+            {if $spage['needs_subscription']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
+            {else}
+              <!-- search -->
+              <div class="card">
+                <div class="card-header bg-transparent">
+                  {include file='__svg_icons.tpl' icon="search" class="main-icon mr5" width="24px" height="24px"}
+                  <strong>{__("Search")}</strong>
+                </div>
+                <div class="card-body">
+                  <form action="{$system['system_url']}/pages/{$spage['page_name']}/search" method="get">
+                    <div class="input-group">
+                      <input type="text" name="query" class="form-control" placeholder="{__("Search")}">
+                      <input type="hidden" name="filter" value="article">
+                      <button type="submit" class="btn btn-primary">
+                        {__("Search")}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <!-- search -->
+
+              {if $posts}
+                <ul class="row">
+                  {foreach $posts as $blog}
+                    {include file='__feeds_blog.tpl' _tpl="featured" _iteration=$blog@iteration}
+                  {/foreach}
+                </ul>
+
+                <!-- see-more -->
+                <div class="alert alert-post see-more js_see-more" data-get="blogs_page" data-id="{$spage['page_id']}">
+                  <span>{__("See More")}</span>
+                  <div class="loader loader_small x-hidden"></div>
+                </div>
+                <!-- see-more -->
+              {else}
+                {include file='_no_data.tpl'}
+              {/if}
+            {/if}
+          </div>
+          <!-- blogs -->
+
         {elseif $view == "products"}
           <!-- products -->
           <div class="col-12">
-            {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price']}
+            {if $spage['needs_subscription']}
+              {include file='_need_subscription.tpl' node_type='page' node_id=$spage['page_id'] price=$spage['page_monetization_min_price'] discount_enabled=$spage['page_monetization_discount_enabled'] discount_percent=$spage['page_monetization_discount_percent']}
             {else}
               <!-- search -->
               <div class="card">
@@ -1194,11 +1246,25 @@
                     </a>
                   </li>
                   {if $user->_data['can_monetize_content']}
-                    <li {if $sub_view == "monetization"}class="active" {/if}>
-                      <a href="{$system['system_url']}/pages/{$spage['page_name']}/settings/monetization">
+                    <li {if $sub_view == "monetization" && $show == "settings"}class="active" {/if}>
+                      <a href="#monetization-settings" data-bs-toggle="collapse" {if $sub_view == "monetization"}aria-expanded="true" {/if}>
                         {include file='__svg_icons.tpl' icon="monetization" class="main-icon mr10" width="24px" height="24px"}
                         {__("Monetization")}
                       </a>
+                      <div class='collapse {if $sub_view == "monetization"}show{/if}' id="monetization-settings">
+                        <ul>
+                          <li {if $sub_view == "monetization" && $show == "settings"}class="active" {/if}>
+                            <a href="{$system['system_url']}/pages/{$spage['page_name']}/settings/monetization?show=settings">
+                              {__("Settings")}
+                            </a>
+                          </li>
+                          <li {if $sub_view == "monetization" && $show == "coupons"}class="active" {/if}>
+                            <a href="{$system['system_url']}/pages/{$spage['page_name']}/settings/monetization?show=coupons">
+                              {__("Coupons")}
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
                     </li>
                   {/if}
                   {if $system['verification_requests']}
@@ -1593,144 +1659,251 @@
 
               {elseif $sub_view == "monetization"}
                 <div class="card-header with-icon">
+                  {if $show == "coupons"}
+                    <div class="float-end">
+                      <button data-toggle="modal" data-url="monetization/controller.php?do=add_coupon&node_id={$spage['page_id']}&node_type=page" class="btn btn-md btn-primary">
+                        <i class="fa fa-plus-circle"></i><span class="ml5 d-none d-lg-inline-block">{__("Generate New Coupon")}</span>
+                      </button>
+                    </div>
+                  {/if}
                   {include file='__svg_icons.tpl' icon="monetization" class="main-icon mr10" width="24px" height="24px"}
                   {__("Monetization")}
+                  {if $show == "coupons"} &rsaquo; {__("Coupons")}{/if}
                 </div>
                 <div class="card-body">
-                  <div class="alert alert-info">
-                    <div class="text">
-                      <strong>{__("Monetization")}</strong><br>
-                      {__("Now you can earn money from your content. Via paid posts or subscriptions plans.")}
-                      <br>
-                      {if $system['monetization_commission'] > 0}
-                        {__("There is commission")} <strong><span class="badge rounded-pill bg-warning">{$system['monetization_commission']}%</span></strong> {__("will be deducted")}.
+                  {if $show == "settings"}
+                    <div class="alert alert-info">
+                      <div class="text">
+                        <strong>{__("Monetization")}</strong><br>
+                        {__("Now you can earn money from your content. Via paid posts or subscriptions plans.")}
                         <br>
-                      {/if}
-                      {if $system['monetization_money_withdraw_enabled']}
-                        {__("You can")} <a class="alert-link" href="{$system['system_url']}/settings/monetization/payments" target="_blank">{__("withdraw your money")}</a>
-                      {/if}
-                      {if $system['monetization_money_transfer_enabled']}
-                        {if $system['monetization_money_withdraw_enabled']}{__("or")} {/if}
-                        {__("You can transfer your money to your")} <a class="alert-link" href="{$system['system_url']}/wallet" target="_blank"><i class="fa fa-wallet"></i> {__("wallet")}</a>
-                      {/if}
+                        {if $system['monetization_commission'] > 0}
+                          {__("There is commission")} <strong><span class="badge rounded-pill bg-warning">{$system['monetization_commission']}%</span></strong> {__("will be deducted")}.
+                          <br>
+                        {/if}
+                        {if $system['monetization_money_withdraw_enabled']}
+                          {__("You can")} <a class="alert-link" href="{$system['system_url']}/settings/monetization/payments" target="_blank">{__("withdraw your money")}</a>
+                        {/if}
+                        {if $system['monetization_money_transfer_enabled']}
+                          {if $system['monetization_money_withdraw_enabled']}{__("or")} {/if}
+                          {__("You can transfer your money to your")} <a class="alert-link" href="{$system['system_url']}/wallet" target="_blank"><i class="fa fa-wallet"></i> {__("wallet")}</a>
+                        {/if}
+                      </div>
                     </div>
-                  </div>
 
-                  <div class="alert alert-info">
-                    <div class="icon">
-                      <i class="fa fa-info-circle fa-2x"></i>
+                    <div class="alert alert-info">
+                      <div class="icon">
+                        <i class="fa fa-info-circle fa-2x"></i>
+                      </div>
+                      <div class="text pt5">
+                        {__("Only super admin can manage monetization and money goes to his monetization money balance")}.
+                      </div>
                     </div>
-                    <div class="text pt5">
-                      {__("Only super admin can manage monetization and money goes to his monetization money balance")}.
-                    </div>
-                  </div>
 
-                  <div class="heading-small mb20">
-                    {__("Monetization Settings")}
-                  </div>
-                  <div class="pl-md-4">
-                    <form class="js_ajax-forms" data-url="modules/create.php?type=page&do=edit&edit=monetization&id={$spage['page_id']}">
-                      <div class="form-table-row">
-                        <div class="avatar">
-                          {include file='__svg_icons.tpl' icon="monetization" class="main-icon" width="40px" height="40px"}
+                    <div class="heading-small mb20">
+                      {__("Monetization Settings")}
+                    </div>
+                    <div class="pl-md-4">
+                      <form class="js_ajax-forms" data-url="modules/create.php?type=page&do=edit&edit=monetization&id={$spage['page_id']}">
+                        <div class="form-table-row">
+                          <div class="avatar">
+                            {include file='__svg_icons.tpl' icon="monetization" class="main-icon" width="40px" height="40px"}
+                          </div>
+                          <div>
+                            <div class="form-label h6">{__("Monetization")}</div>
+                            <div class="form-text d-none d-sm-block">{__("Enable or disable monetization for your content")}</div>
+                          </div>
+                          <div class="text-end">
+                            <label class="switch" for="page_monetization_enabled">
+                              <input type="checkbox" name="page_monetization_enabled" id="page_monetization_enabled" {if $spage['page_monetization_enabled']}checked{/if}>
+                              <span class="slider round"></span>
+                            </label>
+                          </div>
                         </div>
-                        <div>
-                          <div class="form-label h6">{__("Monetization")}</div>
-                          <div class="form-text d-none d-sm-block">{__("Enable or disable monetization for your content")}</div>
+
+                        <div class="form-table-row">
+                          <div class="avatar">
+                            {include file='__svg_icons.tpl' icon="offers"  class="main-icon" width="40px" height="40px"}
+                          </div>
+                          <div>
+                            <div class="form-label h6">{__("Global Discount")}</div>
+                            <div class="form-text d-none d-sm-block">{__("Enable or disable global discount for subscriptions plans and paid posts")}</div>
+                          </div>
+                          <div class="text-end">
+                            <label class="switch" for="page_monetization_discount_enabled">
+                              <input type="checkbox" name="page_monetization_discount_enabled" id="page_monetization_discount_enabled" {if $spage['page_monetization_discount_enabled']}checked{/if}>
+                              <span class="slider round"></span>
+                            </label>
+                          </div>
                         </div>
-                        <div class="text-end">
-                          <label class="switch" for="page_monetization_enabled">
-                            <input type="checkbox" name="page_monetization_enabled" id="page_monetization_enabled" {if $spage['page_monetization_enabled']}checked{/if}>
-                            <span class="slider round"></span>
+
+                        <div class="row form-group">
+                          <label class="col-md-3 form-label">
+                            {__("Discount Percent")}
                           </label>
+                          <div class="col-md-9">
+                            <input type="number" min="1" max="99" class="form-control" name="page_monetization_discount_percent" value="{$spage['page_monetization_discount_percent']}">
+                            <div class="form-text">
+                              {__("The discount percent to apply to all monetized content (min 1, max 99)")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
 
-                      <div class="form-group row">
-                        <label class="col-md-3 form-label">
-                          {__("Subscriptions Plans")}
-                        </label>
-                        <div class="col-md-9">
-                          <div class="payment-plans">
-                            {foreach $monetization_plans as $plan}
-                              <div class="payment-plan">
-                                <div class="text-xxlg">{__($plan['title'])}</div>
-                                <div class="text-xlg">{print_money($plan['price'])} / {if $plan['period_num'] != '1'}{$plan['period_num']}{/if} {__($plan['period']|ucfirst)}</div>
-                                {if {$plan['custom_description']}}
-                                  <div>{$plan['custom_description']}</div>
-                                {/if}
-                                <div class="mt10">
-                                  <span class="text-link mr10 js_monetization-deleter" data-id="{$plan['plan_id']}">
-                                    <i class="fa fa-trash-alt mr5"></i>{__("Delete")}
-                                  </span>
-                                  |
-                                  <span data-toggle="modal" data-url="monetization/controller.php?do=edit&id={$plan['plan_id']}" class="text-link ml10">
-                                    <i class="fa fa-pen mr5"></i>{__("Edit")}
-                                  </span>
-                                </div>
+                        <div class="divider dashed"></div>
+
+                        <div class="heading-small mb20">
+                          {__("Subscriptions")}
+                        </div>
+                        <div class="pl-md-4">
+                          <div class="form-group row">
+                            <label class="col-md-3 form-label">
+                              {__("Subscriptions Plans")}
+                            </label>
+                            <div class="col-md-9">
+                              <div class="payment-plans">
+                                {foreach $monetization_plans as $plan}
+                                  <div class="payment-plan">
+                                    <div class="text-xxlg">{__($plan['title'])}</div>
+                                    <div class="text-xlg">{print_money($plan['price'])} / {if $plan['period_num'] != '1'}{$plan['period_num']}{/if} {__($plan['period']|ucfirst)}</div>
+                                    {if {$plan['custom_description']}}
+                                      <div>{$plan['custom_description']}</div>
+                                    {/if}
+                                    <div class="mt10">
+                                      <span class="text-link mr10 js_monetization-deleter" data-id="{$plan['plan_id']}">
+                                        <i class="fa fa-trash-alt mr5"></i>{__("Delete")}
+                                      </span>
+                                      |
+                                      <span data-toggle="modal" data-url="monetization/controller.php?do=edit_plan&id={$plan['plan_id']}" class="text-link ml10">
+                                        <i class="fa fa-pen mr5"></i>{__("Edit")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                {/foreach}
+                                <div data-toggle="modal" data-url="monetization/controller.php?do=add_plan&node_id={$spage['page_id']}&node_type=page" class="payment-plan new">{__("Add new plan")} </div>
                               </div>
-                            {/foreach}
-                            <div data-toggle="modal" data-url="monetization/controller.php?do=add&node_id={$spage['page_id']}&node_type=page" class="payment-plan new">{__("Add new plan")} </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="form-group row">
-                        <div class="col-md-9 offset-md-3">
-                          <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
-                        </div>
-                      </div>
-
-                      <!-- success -->
-                      <div class="alert alert-success mt15 mb0 x-hidden"></div>
-                      <!-- success -->
-
-                      <!-- error -->
-                      <div class="alert alert-danger mt15 mb0 x-hidden"></div>
-                      <!-- error -->
-                    </form>
-                  </div>
-
-                  <div class="divider"></div>
-
-                  <div class="heading-small mb20">
-                    {__("Monetization Balance")}
-                  </div>
-                  <div class="pl-md-4">
-                    <div class="row">
-                      <!-- subscribers -->
-                      <div class="col-sm-6">
-                        <div class="section-title mb20">
-                          {__("Page Subscribers")}
-                        </div>
-                        <div class="stat-panel bg-gradient-info">
-                          <div class="stat-cell">
-                            <i class="fa fas fa-users bg-icon"></i>
-                            <div class="h3 mtb10">
-                              {$subscribers_count}
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <!-- subscribers -->
 
-                      <!-- money balance -->
-                      <div class="col-sm-6">
-                        <div class="section-title mb20">
-                          {__("Monetization Money Balance")}
-                        </div>
-                        <div class="stat-panel bg-gradient-primary">
-                          <div class="stat-cell">
-                            <i class="fa fa-donate bg-icon"></i>
-                            <div class="h3 mtb10">
-                              {print_money($user->_data['user_monetization_balance'])}
-                            </div>
+                        <div class="form-group row">
+                          <div class="col-md-9 offset-md-3">
+                            <button type="submit" class="btn btn-primary">{__("Save Changes")}</button>
                           </div>
                         </div>
-                      </div>
-                      <!-- monetization balance -->
+
+                        <!-- success -->
+                        <div class="alert alert-success mt15 mb0 x-hidden"></div>
+                        <!-- success -->
+
+                        <!-- error -->
+                        <div class="alert alert-danger mt15 mb0 x-hidden"></div>
+                        <!-- error -->
+                      </form>
                     </div>
-                  </div>
+
+                    <div class="divider"></div>
+
+                    <div class="heading-small mb20">
+                      {__("Monetization Balance")}
+                    </div>
+                    <div class="pl-md-4">
+                      <div class="row">
+                        <!-- subscribers -->
+                        <div class="col-sm-6">
+                          <div class="section-title mb20">
+                            {__("Page Subscribers")}
+                          </div>
+                          <div class="stat-panel bg-gradient-info">
+                            <div class="stat-cell">
+                              <i class="fa fas fa-users bg-icon"></i>
+                              <div class="h3 mtb10">
+                                {$subscribers_count}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- subscribers -->
+
+                        <!-- money balance -->
+                        <div class="col-sm-6">
+                          <div class="section-title mb20">
+                            {__("Monetization Money Balance")}
+                          </div>
+                          <div class="stat-panel bg-gradient-primary">
+                            <div class="stat-cell">
+                              <i class="fa fa-donate bg-icon"></i>
+                              <div class="h3 mtb10">
+                                {print_money($user->_data['user_monetization_balance'])}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- monetization balance -->
+                      </div>
+                    </div>
+                  {elseif $show == "coupons"}
+                    {if $coupons}
+                      <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover js_dataTable">
+                          <thead>
+                            <tr>
+                              <th>{__("Code")}</th>
+                              <th>{__("Discount")}</th>
+                              <th>{__("Created")}</th>
+                              <th>{__("Usage Details")}</th>
+                              <th>{__("One Time")}</th>
+                              <th>{__("Actions")}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {foreach $coupons as $coupon}
+                              <tr>
+                                <td><span class="badge rounded-pill badge-lg bg-secondary">{$coupon['coupon_code']}</span></td>
+                                <td>
+                                  <span class="badge rounded-pill badge-lg bg-primary">{$coupon['discount_percent']}%</span>
+                                </td>
+                                <td>{$coupon['created_date']|date_format:"%e %B %Y"}</td>
+                                <td>
+                                  {if $coupon['usage_counter'] > 0}
+                                    <span data-toggle="modal" data-url="monetization/controller.php?do=coupon_users&coupon_id={$coupon['coupon_id']}" class="pointer text-success">
+                                      <i class="fa fa-users mr5"></i> <span class="badge rounded-pill badge-lg bg-success">{$coupon['usage_counter']}</span> {__("Users")}
+                                    </span>
+                                  {else}
+                                    {include file='__svg_icons.tpl' icon="cross" class="mr5" width="24px" height="24px"} <span class="text-muted">{__("No One")}</span>
+                                  {/if}
+                                </td>
+                                <td>
+                                  {if $coupon['is_onetime']}
+                                    {include file='__svg_icons.tpl' icon="checked" width="24px" height="24px"}
+                                  {else}
+                                    {include file='__svg_icons.tpl' icon="cross" width="24px" height="24px"}
+                                  {/if}
+                                </td>
+                                <td>
+                                  <!-- delete -->
+                                  <div class="d-inline-block" data-bs-toggle="tooltip" title='{__("Delete")}'>
+                                    <button class="btn btn-sm btn-icon btn-rounded btn-danger js_monetization-coupon-deleter" data-id="{$coupon['coupon_id']}">
+                                      <i class="fa fa-trash-alt"></i>
+                                    </button>
+                                  </div>
+                                  <!-- delete -->
+                                  <!-- share -->
+                                  <div class="d-inline-block" data-bs-toggle="tooltip" title='{__("Share")}'>
+                                    <button data-toggle="modal" data-url="monetization/controller.php?do=share_coupon&coupon_id={$coupon['coupon_id']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
+                                      <i class="fa fa-link"></i>
+                                    </button>
+                                  </div>
+                                  <!-- share -->
+                                </td>
+                              </tr>
+                            {/foreach}
+                          </tbody>
+                        </table>
+                      </div>
+                    {else}
+                      {include file='_no_data.tpl'}
+                    {/if}
+                  {/if}
                 </div>
 
               {elseif $sub_view == "verification"}

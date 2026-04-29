@@ -169,7 +169,7 @@
           {if $user->_logged_in}
             <div class="x-hidden js_reply-form">
               <div class="x-form comment-form">
-                <textarea dir="auto" class="js_autosize js_mention js_post-reply" rows="1" placeholder='{__("Write a Reply")}'></textarea>
+                <textarea dir="auto" class="js_autosize js_mentions js_post-reply" rows="1" placeholder='{__("Write a Reply")}'></textarea>
                 <ul class="x-form-tools clearfix">
                   <li class="x-form-tools-post js_post-reply">
                     <i class="far fa-paper-plane fa-lg fa-fw"></i>

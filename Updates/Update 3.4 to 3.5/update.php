@@ -3,8 +3,8 @@
 /**
  * update wizard
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -68,7 +68,7 @@ if (isset($_POST['submit'])) {
   }
 
 
-  // update the Delus tables
+  // update the sngine tables
   $structure = "
 
 CREATE TABLE `reports_categories` (
@@ -190,7 +190,7 @@ ALTER TABLE `users`
 
 
   // Done
-  _error("System Updated", "Delus has been updated to " . SYS_VER);
+  _error("System Updated", "Sngine has been updated to " . SYS_VER);
 }
 
 ?>
@@ -202,7 +202,7 @@ ALTER TABLE `users`
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Delus &rsaquo; Update (v<?php echo SYS_VER ?>)</title>
+  <title>Sngine &rsaquo; Update (v<?php echo SYS_VER ?>)</title>
   <link rel="shortcut icon" href="includes/assets/js/core/installer/favicon.png" />
   <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -220,7 +220,7 @@ ALTER TABLE `users`
             <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
             <div class="media-body">
               <div class="bd-wizard-step-title">Update</div>
-              <div class="bd-wizard-step-subtitle">Delus (v<?php echo SYS_VER ?>)</div>
+              <div class="bd-wizard-step-subtitle">Sngine (v<?php echo SYS_VER ?>)</div>
             </div>
           </div>
         </h3>
@@ -228,7 +228,7 @@ ALTER TABLE `users`
           <div class="content-wrapper">
             <h3 class="section-heading">Welcome!</h3>
             <p>
-              Welcome to <strong>Delus</strong> updating process! Just fill in the information below.
+              Welcome to <strong>Sngine</strong> updating process! Just fill in the information below.
             </p>
             <div class="row mt-4">
               <div class="form-group col-12">

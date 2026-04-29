@@ -256,6 +256,12 @@
               <span class="ml5 d-none d-xl-inline-block">{__("Reels")}</span>
             </a>
           {/if}
+          {if $system['blogs_enabled']}
+            <a href="{$system['system_url']}/events/{$event['event_id']}/blogs" {if $view == "blogs"}class="active" {/if}>
+              {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
+              <span class="ml5 d-none d-xl-inline-block">{__("Blogs")}</span>
+            </a>
+          {/if}
           {if $system['market_enabled']}
             <a href="{$system['system_url']}/events/{$event['event_id']}/products" {if $view == "products"}class="active" {/if}>
               {include file='__svg_icons.tpl' icon="products" class="main-icon mr5" width="24px" height="24px"}
@@ -851,6 +857,49 @@
             </div>
           </div>
           <!-- reels -->
+
+        {elseif $view == "blogs"}
+          <!-- blogs -->
+          <div class="col-12">
+
+            <!-- search -->
+            <div class="card">
+              <div class="card-header bg-transparent">
+                {include file='__svg_icons.tpl' icon="search" class="main-icon mr5" width="24px" height="24px"}
+                <strong>{__("Search")}</strong>
+              </div>
+              <div class="card-body">
+                <form action="{$system['system_url']}/events/{$event['event_id']}/search" method="get">
+                  <div class="input-group">
+                    <input type="text" name="query" class="form-control" placeholder="{__("Search")}">
+                    <input type="hidden" name="filter" value="article">
+                    <button type="submit" class="btn btn-primary">
+                      {__("Search")}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <!-- search -->
+
+            {if $posts}
+              <ul class="row">
+                {foreach $posts as $blog}
+                  {include file='__feeds_blog.tpl' _tpl="featured" _iteration=$blog@iteration}
+                {/foreach}
+              </ul>
+
+              <!-- see-more -->
+              <div class="alert alert-post see-more js_see-more" data-get="blogs_event" data-id="{$event['event_id']}">
+                <span>{__("See More")}</span>
+                <div class="loader loader_small x-hidden"></div>
+              </div>
+              <!-- see-more -->
+            {else}
+              {include file='_no_data.tpl'}
+            {/if}
+          </div>
+          <!-- blogs -->
 
         {elseif $view == "products"}
           <!-- products -->

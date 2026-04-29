@@ -1,9 +1,9 @@
 <?php
 /**
- * Delus updater
+ * Sngine updater
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set system version
@@ -65,7 +65,7 @@ if(isset($_POST['submit'])) {
     }
     
     
-    // [2] update the Delus tables
+    // [2] update the sngine tables
     $structure = "
 
 ALTER TABLE `ads_campaigns`
@@ -246,7 +246,7 @@ DROP TABLE `users_online`;
     fclose($handle);
 
     // [6] Done
-    _error("System Updated", "Delus has been updated to ".SYS_VER);
+    _error("System Updated", "Sngine has been updated to ".SYS_VER);
 }
 
 ?>
@@ -258,10 +258,10 @@ DROP TABLE `users_online`;
         <meta http-equiv="X-UA-Compatible" content="IE=edge"> 
         <meta name="viewport" content="width=device-width, initial-scale=1"> 
         
-        <title>Delus (<?php echo SYS_VER ?>) &rsaquo; Update</title>
+        <title>Sngine (<?php echo SYS_VER ?>) &rsaquo; Update</title>
         
-        <link rel="stylesheet" type="text/css" href="includes/assets/js/Delus/installer/installer.css" />
-        <script src="includes/assets/js/Delus/installer/modernizr.custom.js"></script>
+        <link rel="stylesheet" type="text/css" href="includes/assets/js/sngine/installer/installer.css" />
+        <script src="includes/assets/js/sngine/installer/modernizr.custom.js"></script>
     </head>
 
     <body>
@@ -271,7 +271,7 @@ DROP TABLE `users_online`;
             <div class="fs-form-wrap" id="fs-form-wrap">
                 
                 <div class="fs-title">
-                    <h1>Delus (<?php echo SYS_VER ?>) Update</h1>
+                    <h1>Sngine (<?php echo SYS_VER ?>) Update</h1>
                 </div>
                 
                 <form id="myform" class="fs-form fs-form-full" autocomplete="off" action="update.php" method="post">
@@ -279,12 +279,12 @@ DROP TABLE `users_online`;
 
                         <li>
                             <p class="fs-field-label fs-anim-upper">
-                                Welcome to <strong>Delus</strong> updating process! Just fill in the information below.
+                                Welcome to <strong>Sngine</strong> updating process! Just fill in the information below.
                             </p>
                         </li>
 
                         <li>
-                            <label class="fs-field-label fs-anim-upper" for="purchase_code" data-info="The purchase code of Delus">Purchase Code</label>
+                            <label class="fs-field-label fs-anim-upper" for="purchase_code" data-info="The purchase code of Sngine">Purchase Code</label>
                             <input class="fs-anim-lower" id="purchase_code" name="purchase_code" type="text" placeholder="xxx-xx-xxxx" required/>
                         </li>
 
@@ -296,8 +296,8 @@ DROP TABLE `users_online`;
 
         </div>
         
-        <script src="includes/assets/js/Delus/installer/classie.js"></script>
-        <script src="includes/assets/js/Delus/installer/fullscreenForm.js"></script>
+        <script src="includes/assets/js/sngine/installer/classie.js"></script>
+        <script src="includes/assets/js/sngine/installer/fullscreenForm.js"></script>
         <script>
             (function() {
                 var formWrap = document.getElementById( 'fs-form-wrap' );

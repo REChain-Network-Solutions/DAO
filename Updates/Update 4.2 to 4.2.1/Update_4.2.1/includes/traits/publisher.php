@@ -3,8 +3,8 @@
 /**
  * trait -> publisher
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait PublisherTrait
@@ -665,7 +665,7 @@ trait PublisherTrait
       'ssl_verify_host' => 1,
       'ssl_verify_peer' => 1,
       'follow_location' => true,
-      'user_agent' => 'Delus',
+      'user_agent' => 'Sngine',
     ]);
     $embed = new Embed\Embed(new Embed\Http\Crawler($client));
     $info = $embed->get($url);

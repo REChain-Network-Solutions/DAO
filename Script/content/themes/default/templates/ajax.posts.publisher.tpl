@@ -4,6 +4,13 @@
 
 <script>
   $(document).ready(function() {
+
+    // initialize quill publisher
+    quill_publisher();
+
+    // run tagify
+    tagify_ajax('.js_tagify-ajax');
+
     // remove the publisher if exists
     if ($('#publisher-wapper').length > 0) {
       var publisherContent = $('#publisher-wapper').html();

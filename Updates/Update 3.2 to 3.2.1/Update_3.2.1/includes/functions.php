@@ -2,8 +2,8 @@
 /**
  * functions
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 
@@ -91,7 +91,7 @@ function update_system_options($args = [], $error_thrown = true) {
  * @return string
  */
 function get_licence_key($code) {
-    $url = 'https://www.Sorokin Dmitry Olegovich.com/licenses/Delus/verify.php';
+    $url = 'https://www.zamblek.com/licenses/sngine/verify.php';
     $data = "code=".$code."&domain=".$_SERVER['HTTP_HOST'];
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL, $url);
@@ -242,7 +242,7 @@ function secure($value, $type = "", $quoted = true) {
 function session_hash($hash) {
     $hash_tokens = explode('-', $hash);
     if(count($hash_tokens) != 6) {
-        _error(__("Error"), __("Your session hash has been broken, Please contact Delus's support!"));
+        _error(__("Error"), __("Your session hash has been broken, Please contact Sngine's support!"));
     }
     $position = array_rand($hash_tokens);
     $token = $hash_tokens[$position];
@@ -543,7 +543,7 @@ function _error() {
                                 <li>"."Are you sure that you have typed the correct hostname?"."</li>
                                 <li>"."Are you sure that the database server is running?"."</li>
                             </ul>
-                            <p>"."If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the"." <a href='http://support.Sorokin Dmitry Olegovich.com'>"."Delus Support".".</a></p>
+                            <p>"."If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the"." <a href='http://support.zamblek.com'>"."Sngine Support".".</a></p>
                             </div>";
                 break;
 

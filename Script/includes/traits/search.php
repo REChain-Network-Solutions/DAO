@@ -3,8 +3,8 @@
 /**
  * trait -> search
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait SearchTrait
@@ -19,10 +19,11 @@ trait SearchTrait
    * 
    * @param string $query
    * @param string $tab
+   * @param string $data_type
    * @param integer $offset
    * @return array
    */
-  public function search($query, $tab, $offset = 0)
+  public function search($query, $tab, $data_type = null, $offset = 0)
   {
     global $db, $system;
     $results = [];
@@ -32,7 +33,7 @@ trait SearchTrait
     switch ($tab) {
       case 'posts':
         /* search posts */
-        $results = $this->get_posts(['query' => $query, 'offset' => $offset]);
+        $results = $this->get_posts(['query' => $query, 'filter' => $data_type, 'offset' => $offset]);
         break;
 
       case 'blogs':

@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> permissions groups
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -52,12 +52,16 @@ try {
       $_POST['stories_permission'] = (isset($_POST['stories_permission'])) ? '1' : '0';
       $_POST['posts_permission'] = (isset($_POST['posts_permission'])) ? '1' : '0';
       $_POST['schedule_posts_permission'] = (isset($_POST['schedule_posts_permission'])) ? '1' : '0';
+      $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
+      $_POST['collaborative_posts_permission'] = (isset($_POST['collaborative_posts_permission'])) ? '1' : '0';
       $_POST['colored_posts_permission'] = (isset($_POST['colored_posts_permission'])) ? '1' : '0';
       $_POST['activity_posts_permission'] = (isset($_POST['activity_posts_permission'])) ? '1' : '0';
       $_POST['polls_posts_permission'] = (isset($_POST['polls_posts_permission'])) ? '1' : '0';
       $_POST['geolocation_posts_permission'] = (isset($_POST['geolocation_posts_permission'])) ? '1' : '0';
       $_POST['gif_posts_permission'] = (isset($_POST['gif_posts_permission'])) ? '1' : '0';
-      $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
+      $_POST['ai_posts_permission'] = (isset($_POST['ai_posts_permission'])) ? '1' : '0';
+      $_POST['ai_blogs_permission'] = (isset($_POST['ai_blogs_permission'])) ? '1' : '0';
+      $_POST['ai_images_permission'] = (isset($_POST['ai_images_permission'])) ? '1' : '0';
       $_POST['invitation_permission'] = (isset($_POST['invitation_permission'])) ? '1' : '0';
       $_POST['audio_call_permission'] = (isset($_POST['audio_call_permission'])) ? '1' : '0';
       $_POST['video_call_permission'] = (isset($_POST['video_call_permission'])) ? '1' : '0';
@@ -94,12 +98,16 @@ try {
         stories_permission,
         posts_permission,
         schedule_posts_permission,
+        anonymous_posts_permission,
+        collaborative_posts_permission,
         colored_posts_permission,
         activity_posts_permission,
         polls_posts_permission,
         geolocation_posts_permission,
         gif_posts_permission,
-        anonymous_posts_permission,
+        ai_posts_permission,
+        ai_blogs_permission,
+        ai_images_permission,
         invitation_permission,
         audio_call_permission,
         video_call_permission,
@@ -134,7 +142,7 @@ try {
         affiliates_percentage_10,
         custom_points_system,
         points_per_currency
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
         secure($_POST['title']),
         secure($_POST['pages_permission'], 'int'),
         secure($_POST['groups_permission'], 'int'),
@@ -155,12 +163,16 @@ try {
         secure($_POST['stories_permission'], 'int'),
         secure($_POST['posts_permission'], 'int'),
         secure($_POST['schedule_posts_permission'], 'int'),
+        secure($_POST['anonymous_posts_permission'], 'int'),
+        secure($_POST['collaborative_posts_permission'], 'int'),
         secure($_POST['colored_posts_permission'], 'int'),
         secure($_POST['activity_posts_permission'], 'int'),
         secure($_POST['polls_posts_permission'], 'int'),
         secure($_POST['geolocation_posts_permission'], 'int'),
         secure($_POST['gif_posts_permission'], 'int'),
-        secure($_POST['anonymous_posts_permission'], 'int'),
+        secure($_POST['ai_posts_permission'], 'int'),
+        secure($_POST['ai_blogs_permission'], 'int'),
+        secure($_POST['ai_images_permission'], 'int'),
         secure($_POST['invitation_permission'], 'int'),
         secure($_POST['audio_call_permission'], 'int'),
         secure($_POST['video_call_permission'], 'int'),
@@ -231,12 +243,16 @@ try {
       $_POST['stories_permission'] = (isset($_POST['stories_permission'])) ? '1' : '0';
       $_POST['posts_permission'] = (isset($_POST['posts_permission'])) ? '1' : '0';
       $_POST['schedule_posts_permission'] = (isset($_POST['schedule_posts_permission'])) ? '1' : '0';
+      $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
+      $_POST['collaborative_posts_permission'] = (isset($_POST['collaborative_posts_permission'])) ? '1' : '0';
       $_POST['colored_posts_permission'] = (isset($_POST['colored_posts_permission'])) ? '1' : '0';
       $_POST['activity_posts_permission'] = (isset($_POST['activity_posts_permission'])) ? '1' : '0';
       $_POST['polls_posts_permission'] = (isset($_POST['polls_posts_permission'])) ? '1' : '0';
       $_POST['geolocation_posts_permission'] = (isset($_POST['geolocation_posts_permission'])) ? '1' : '0';
       $_POST['gif_posts_permission'] = (isset($_POST['gif_posts_permission'])) ? '1' : '0';
-      $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
+      $_POST['ai_posts_permission'] = (isset($_POST['ai_posts_permission'])) ? '1' : '0';
+      $_POST['ai_blogs_permission'] = (isset($_POST['ai_blogs_permission'])) ? '1' : '0';
+      $_POST['ai_images_permission'] = (isset($_POST['ai_images_permission'])) ? '1' : '0';
       $_POST['invitation_permission'] = (isset($_POST['invitation_permission'])) ? '1' : '0';
       $_POST['audio_call_permission'] = (isset($_POST['audio_call_permission'])) ? '1' : '0';
       $_POST['video_call_permission'] = (isset($_POST['video_call_permission'])) ? '1' : '0';
@@ -273,12 +289,16 @@ try {
         stories_permission = %s,
         posts_permission = %s,
         schedule_posts_permission = %s,
+        anonymous_posts_permission = %s,
+        collaborative_posts_permission = %s,
         colored_posts_permission = %s,
         activity_posts_permission = %s,
         polls_posts_permission = %s,
         geolocation_posts_permission = %s,
         gif_posts_permission = %s,
-        anonymous_posts_permission = %s,
+        ai_posts_permission = %s,
+        ai_blogs_permission = %s,
+        ai_images_permission = %s,
         invitation_permission = %s,
         audio_call_permission = %s,
         video_call_permission = %s,
@@ -334,12 +354,16 @@ try {
         secure($_POST['stories_permission'], 'int'),
         secure($_POST['posts_permission'], 'int'),
         secure($_POST['schedule_posts_permission'], 'int'),
+        secure($_POST['anonymous_posts_permission'], 'int'),
+        secure($_POST['collaborative_posts_permission'], 'int'),
         secure($_POST['colored_posts_permission'], 'int'),
         secure($_POST['activity_posts_permission'], 'int'),
         secure($_POST['polls_posts_permission'], 'int'),
         secure($_POST['geolocation_posts_permission'], 'int'),
         secure($_POST['gif_posts_permission'], 'int'),
-        secure($_POST['anonymous_posts_permission'], 'int'),
+        secure($_POST['ai_posts_permission'], 'int'),
+        secure($_POST['ai_blogs_permission'], 'int'),
+        secure($_POST['ai_images_permission'], 'int'),
         secure($_POST['invitation_permission'], 'int'),
         secure($_POST['audio_call_permission'], 'int'),
         secure($_POST['video_call_permission'], 'int'),

@@ -2113,8 +2113,8 @@ msgstr "Classe"
 
 #: content/themes/default/templates/admin.emojis.tpl:66
 #: content/themes/default/templates/admin.emojis.tpl:110
-msgid "Delus uses Twemoji Awesome and you can check"
-msgstr "Delus usa o Twemoji Awesome e você pode verificar"
+msgid "Sngine uses Twemoji Awesome and you can check"
+msgstr "Sngine usa o Twemoji Awesome e você pode verificar"
 
 #: content/themes/default/templates/admin.emojis.tpl:66
 #: content/themes/default/templates/admin.emojis.tpl:110
@@ -3094,8 +3094,8 @@ msgid "Website Keywords"
 msgstr "Palavras-Chaves do Site"
 
 #: content/themes/default/templates/admin.settings.tpl:105
-msgid "Example: social, Delus, social site"
-msgstr "Exemplo: social, Delus, site social"
+msgid "Example: social, sngine, social site"
+msgstr "Exemplo: social, sngine, site social"
 
 #: content/themes/default/templates/admin.settings.tpl:112
 msgid "Website Email"
@@ -3346,7 +3346,7 @@ msgstr "Privacidade Padrão"
 #: content/themes/default/templates/__feeds_post.body.tpl:324
 #: content/themes/default/templates/__feeds_user.tpl:40
 #: content/themes/default/templates/__feeds_user.tpl:135
-#: includes/assets/js/Delus/user.js:1227
+#: includes/assets/js/sngine/user.js:1227
 msgid "Friends"
 msgstr "Amigos"
 
@@ -4464,7 +4464,7 @@ msgid "Reach"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:588
-msgid "Delus"
+msgid "Sngine"
 msgstr ""
 
 #: content/themes/default/templates/admin.tpl:604
@@ -9438,7 +9438,7 @@ msgid "Your phone already verified"
 msgstr ""
 
 #: includes/functions.php:218
-msgid "Your session hash has been broken, Please contact Delus's support!"
+msgid "Your session hash has been broken, Please contact Sngine's support!"
 msgstr ""
 "Sua sessão foi bloqueada, entre em contato com o suporte do Ministério Jovem "
 "Club!"

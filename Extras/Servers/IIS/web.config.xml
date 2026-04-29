@@ -177,7 +177,19 @@
             </rule>
             <rule name="rule 39d" stopProcessing="true">
               <match url="^watch/?$"  />
-              <action type="Rewrite" url="/index.php?view=watch"  appendQueryString="true" />
+              <action type="Rewrite" url="/watch.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 39e" stopProcessing="true">
+              <match url="^watch/category/([^/]+)/?$"  />
+              <action type="Rewrite" url="/watch.php?view=category&amp;category_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 39f" stopProcessing="true">
+              <match url="^watch/category/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/watch.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 39g" stopProcessing="true">
+              <match url="^watch/category/([^/]+)/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/watch.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}&amp;page={R:3}"  appendQueryString="true" />
             </rule>
             <rule name="rule 40d" stopProcessing="true">
               <match url="^ads/?$"  />

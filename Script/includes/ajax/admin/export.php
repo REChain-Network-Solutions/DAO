@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> export
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -178,7 +178,7 @@ try {
       $csv_data = "";
       $csv_data .= "ID,User ID,Amount,Payment Method,Type,Date\n";
       while ($result = $results->fetch_assoc()) {
-        $csv_data .= $result['payment_id'] . "," . $result['user_id'] . "," . print_money(number_format($result['amount'])) . "," . $result['method'] . "," . $result['handle'] . "," . $result['time'] . "\n";
+        $csv_data .= $result['payment_id'] . "," . $result['user_id'] . "," . print_money($result['amount']) . "," . $result['method'] . "," . $result['handle'] . "," . $result['time'] . "\n";
       }
       /* retrun */
       return_json(['download' => true, 'data' => $csv_data, 'filename' => 'earnings.csv', 'type' => 'text/csv']);
@@ -203,7 +203,7 @@ try {
       $csv_data = "";
       $csv_data .= "ID,User ID,Amount,Type,Date\n";
       while ($result = $results->fetch_assoc()) {
-        $csv_data .= $result['payment_id'] . "," . $result['user_id'] . "," . print_money(number_format($result['amount'])) . "," . $result['handle'] . "," . $result['time'] . "\n";
+        $csv_data .= $result['payment_id'] . "," . $result['user_id'] . "," . print_money($result['amount']) . "," . $result['handle'] . "," . $result['time'] . "\n";
       }
       /* retrun */
       return_json(['download' => true, 'data' => $csv_data, 'filename' => 'commissions.csv', 'type' => 'text/csv']);
@@ -228,7 +228,7 @@ try {
       $csv_data = "";
       $csv_data .= "ID,User ID,Movie ID,Price,Date\n";
       while ($result = $results->fetch_assoc()) {
-        $csv_data .= $result['id'] . "," . $result['user_id'] . "," . $result['movie_id'] . "," . print_money(number_format($result['price'])) . "," . $result['payment_time'] . "\n";
+        $csv_data .= $result['id'] . "," . $result['user_id'] . "," . $result['movie_id'] . "," . print_money($result['price']) . "," . $result['payment_time'] . "\n";
       }
       /* retrun */
       return_json(['download' => true, 'data' => $csv_data, 'filename' => 'movies_payments.csv', 'type' => 'text/csv']);
@@ -268,7 +268,7 @@ try {
         } elseif ($result['node_type'] == "courses_module_payment") {
           $module_name = __("Paid Courses");
         }
-        $csv_data .= $result['transaction_id'] . "," . $result['user_id'] . "," . $module_name . "," . print_money(number_format($result['amount'])) . "," . $result['date'] . "\n";
+        $csv_data .= $result['transaction_id'] . "," . $result['user_id'] . "," . $module_name . "," . print_money($result['amount']) . "," . $result['date'] . "\n";
       }
       /* retrun */
       return_json(['download' => true, 'data' => $csv_data, 'filename' => 'paid_modules.csv', 'type' => 'text/csv']);

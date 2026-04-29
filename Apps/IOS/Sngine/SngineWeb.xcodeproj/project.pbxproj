@@ -13,7 +13,7 @@
 		E357134B2C5CD335009C42D4 /* OneSignalFramework in Frameworks */ = {isa = PBXBuildFile; productRef = E357134A2C5CD335009C42D4 /* OneSignalFramework */; };
 		E357134D2C5CD335009C42D4 /* OneSignalInAppMessages in Frameworks */ = {isa = PBXBuildFile; productRef = E357134C2C5CD335009C42D4 /* OneSignalInAppMessages */; };
 		E357134F2C5CD335009C42D4 /* OneSignalLocation in Frameworks */ = {isa = PBXBuildFile; productRef = E357134E2C5CD335009C42D4 /* OneSignalLocation */; };
-		E3744D522AC8270C00B6DD04 /* DelusWebApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3744D512AC8270C00B6DD04 /* DelusWebApp.swift */; };
+		E3744D522AC8270C00B6DD04 /* SngineWebApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3744D512AC8270C00B6DD04 /* SngineWebApp.swift */; };
 		E3744D542AC8270C00B6DD04 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3744D532AC8270C00B6DD04 /* ContentView.swift */; };
 		E3744D562AC8270D00B6DD04 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E3744D552AC8270D00B6DD04 /* Assets.xcassets */; };
 		E3744D592AC8270D00B6DD04 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E3744D582AC8270D00B6DD04 /* Preview Assets.xcassets */; };
@@ -44,14 +44,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E35712F52C5CCCE1009C42D4 /* DelusWeb.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DelusWeb.entitlements; sourceTree = "<group>"; };
+		E35712F52C5CCCE1009C42D4 /* SngineWeb.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SngineWeb.entitlements; sourceTree = "<group>"; };
 		E35713202C5CD0DE009C42D4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E35713342C5CD17B009C42D4 /* OneSignalNotificationServiceExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OneSignalNotificationServiceExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E35713362C5CD17B009C42D4 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		E35713382C5CD17B009C42D4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E357133F2C5CD230009C42D4 /* OneSignalNotificationServiceExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OneSignalNotificationServiceExtension.entitlements; sourceTree = "<group>"; };
-		E3744D4E2AC8270C00B6DD04 /* DelusWeb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DelusWeb.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E3744D512AC8270C00B6DD04 /* DelusWebApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelusWebApp.swift; sourceTree = "<group>"; };
+		E3744D4E2AC8270C00B6DD04 /* SngineWeb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SngineWeb.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E3744D512AC8270C00B6DD04 /* SngineWebApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SngineWebApp.swift; sourceTree = "<group>"; };
 		E3744D532AC8270C00B6DD04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E3744D552AC8270D00B6DD04 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E3744D582AC8270D00B6DD04 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -99,7 +99,7 @@
 		E3744D452AC8270C00B6DD04 = {
 			isa = PBXGroup;
 			children = (
-				E3744D502AC8270C00B6DD04 /* DelusWeb */,
+				E3744D502AC8270C00B6DD04 /* SngineWeb */,
 				E35713352C5CD17B009C42D4 /* OneSignalNotificationServiceExtension */,
 				E3744D4F2AC8270C00B6DD04 /* Products */,
 				E35713162C5CCE5A009C42D4 /* Frameworks */,
@@ -109,23 +109,23 @@
 		E3744D4F2AC8270C00B6DD04 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E3744D4E2AC8270C00B6DD04 /* DelusWeb.app */,
+				E3744D4E2AC8270C00B6DD04 /* SngineWeb.app */,
 				E35713342C5CD17B009C42D4 /* OneSignalNotificationServiceExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		E3744D502AC8270C00B6DD04 /* DelusWeb */ = {
+		E3744D502AC8270C00B6DD04 /* SngineWeb */ = {
 			isa = PBXGroup;
 			children = (
 				E35713202C5CD0DE009C42D4 /* Info.plist */,
-				E35712F52C5CCCE1009C42D4 /* DelusWeb.entitlements */,
-				E3744D512AC8270C00B6DD04 /* DelusWebApp.swift */,
+				E35712F52C5CCCE1009C42D4 /* SngineWeb.entitlements */,
+				E3744D512AC8270C00B6DD04 /* SngineWebApp.swift */,
 				E3744D532AC8270C00B6DD04 /* ContentView.swift */,
 				E3744D552AC8270D00B6DD04 /* Assets.xcassets */,
 				E3744D572AC8270D00B6DD04 /* Preview Content */,
 			);
-			path = DelusWeb;
+			path = SngineWeb;
 			sourceTree = "<group>";
 		};
 		E3744D572AC8270D00B6DD04 /* Preview Content */ = {
@@ -159,9 +159,9 @@
 			productReference = E35713342C5CD17B009C42D4 /* OneSignalNotificationServiceExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		E3744D4D2AC8270C00B6DD04 /* DelusWeb */ = {
+		E3744D4D2AC8270C00B6DD04 /* SngineWeb */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E3744D5C2AC8270D00B6DD04 /* Build configuration list for PBXNativeTarget "DelusWeb" */;
+			buildConfigurationList = E3744D5C2AC8270D00B6DD04 /* Build configuration list for PBXNativeTarget "SngineWeb" */;
 			buildPhases = (
 				E3744D4A2AC8270C00B6DD04 /* Sources */,
 				E3744D4B2AC8270C00B6DD04 /* Frameworks */,
@@ -173,14 +173,14 @@
 			dependencies = (
 				E357133A2C5CD17B009C42D4 /* PBXTargetDependency */,
 			);
-			name = DelusWeb;
+			name = SngineWeb;
 			packageProductDependencies = (
 				E357134A2C5CD335009C42D4 /* OneSignalFramework */,
 				E357134C2C5CD335009C42D4 /* OneSignalInAppMessages */,
 				E357134E2C5CD335009C42D4 /* OneSignalLocation */,
 			);
-			productName = DelusWeb;
-			productReference = E3744D4E2AC8270C00B6DD04 /* DelusWeb.app */;
+			productName = SngineWeb;
+			productReference = E3744D4E2AC8270C00B6DD04 /* SngineWeb.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -201,7 +201,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E3744D492AC8270C00B6DD04 /* Build configuration list for PBXProject "DelusWeb" */;
+			buildConfigurationList = E3744D492AC8270C00B6DD04 /* Build configuration list for PBXProject "SngineWeb" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -217,7 +217,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E3744D4D2AC8270C00B6DD04 /* DelusWeb */,
+				E3744D4D2AC8270C00B6DD04 /* SngineWeb */,
 				E35713332C5CD17B009C42D4 /* OneSignalNotificationServiceExtension */,
 			);
 		};
@@ -256,7 +256,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E3744D542AC8270C00B6DD04 /* ContentView.swift in Sources */,
-				E3744D522AC8270C00B6DD04 /* DelusWebApp.swift in Sources */,
+				E3744D522AC8270C00B6DD04 /* SngineWebApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -297,7 +297,7 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Delus.demo.OneSignalNotificationServiceExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sngine.demo.OneSignalNotificationServiceExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -333,7 +333,7 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Delus.demo.OneSignalNotificationServiceExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sngine.demo.OneSignalNotificationServiceExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -464,16 +464,16 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = DelusWeb/DelusWeb.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SngineWeb/SngineWeb.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
-				DEVELOPMENT_ASSET_PATHS = "\"DelusWeb/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"SngineWeb/Preview Content\"";
 				DEVELOPMENT_TEAM = Q3YBB55MTY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = DelusWeb/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Delus;
+				INFOPLIST_FILE = SngineWeb/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Sngine;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires access to the camera to allow you to live stream your video and video calls";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to find friends and content near you";
@@ -489,7 +489,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Delus.demo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sngine.demo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -504,16 +504,16 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = DelusWeb/DelusWeb.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SngineWeb/SngineWeb.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
-				DEVELOPMENT_ASSET_PATHS = "\"DelusWeb/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"SngineWeb/Preview Content\"";
 				DEVELOPMENT_TEAM = Q3YBB55MTY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = DelusWeb/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Delus;
+				INFOPLIST_FILE = SngineWeb/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Sngine;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires access to the camera to allow you to live stream your video and video calls";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to find friends and content near you";
@@ -529,7 +529,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Delus.demo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sngine.demo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -550,7 +550,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E3744D492AC8270C00B6DD04 /* Build configuration list for PBXProject "DelusWeb" */ = {
+		E3744D492AC8270C00B6DD04 /* Build configuration list for PBXProject "SngineWeb" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E3744D5A2AC8270D00B6DD04 /* Debug */,
@@ -559,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E3744D5C2AC8270D00B6DD04 /* Build configuration list for PBXNativeTarget "DelusWeb" */ = {
+		E3744D5C2AC8270D00B6DD04 /* Build configuration list for PBXNativeTarget "SngineWeb" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E3744D5D2AC8270D00B6DD04 /* Debug */,

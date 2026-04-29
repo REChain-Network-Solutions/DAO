@@ -3,8 +3,8 @@
 /**
  * trait -> funding
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait FundingTrait

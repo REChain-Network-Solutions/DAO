@@ -53,6 +53,7 @@ final class CurlClientState extends ClientState
         foreach ($this->pushedResponses as $url => $response) {
             $this->logger?->debug(\sprintf('Unused pushed response: "%s"', $url));
             curl_multi_remove_handle($this->handle, $response->handle);
+            unset($this->handlesActivity[(int) $response->handle]);
         }
 
         $this->pushedResponses = [];
@@ -84,11 +85,12 @@ final class CurlClientState extends ClientState
             if (\defined('CURLPIPE_MULTIPLEX')) {
                 curl_multi_setopt($this->handle, \CURLMOPT_PIPELINING, \CURLPIPE_MULTIPLEX);
             }
-            if (\defined('CURLMOPT_MAX_HOST_CONNECTIONS') && 0 < $this->maxHostConnections) {
-                $this->maxHostConnections = curl_multi_setopt($this->handle, \CURLMOPT_MAX_HOST_CONNECTIONS, $this->maxHostConnections) ? min(50 * $this->maxHostConnections, 4294967295) : $this->maxHostConnections;
+            $maxHostConnections = $this->maxHostConnections;
+            if (\defined('CURLMOPT_MAX_HOST_CONNECTIONS') && 0 < $maxHostConnections) {
+                $maxHostConnections = curl_multi_setopt($this->handle, \CURLMOPT_MAX_HOST_CONNECTIONS, $maxHostConnections) ? min(50 * $maxHostConnections, 4294967295) : $maxHostConnections;
             }
-            if (\defined('CURLMOPT_MAXCONNECTS') && 0 < $this->maxHostConnections) {
-                curl_multi_setopt($this->handle, \CURLMOPT_MAXCONNECTS, $this->maxHostConnections);
+            if (\defined('CURLMOPT_MAXCONNECTS') && 0 < $maxHostConnections) {
+                curl_multi_setopt($this->handle, \CURLMOPT_MAXCONNECTS, $maxHostConnections);
             }
 
             // Skip configuring HTTP/2 push when it's unsupported or buggy, see https://bugs.php.net/77535

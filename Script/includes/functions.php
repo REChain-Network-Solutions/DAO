@@ -3,8 +3,8 @@
 /**
  * functions
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Sorokin Dmitry Olegovich.com/licenses/Delus/verify.php';
+  $url = 'https://zamblek.com/licenses/sngine/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -704,6 +704,7 @@ function init_smarty()
   $smarty->registerPlugin('modifier', 'implode', 'implode');
   $smarty->registerPlugin('modifier', 'trim', 'trim');
   $smarty->registerPlugin('modifier', 'filemtime', 'filemtime');
+  $smarty->registerPlugin('modifier', 'floor', 'floor');
   return $smarty;
 }
 
@@ -1148,7 +1149,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich.com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://zamblek.com/support'>" . "Sngine Support" . ".</a></p>
                             </div>";
         break;
 
@@ -1849,7 +1850,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       $onesignal_app_id = $system['onesignal_app_id'];
       $onesignal_api_key = $system['onesignal_api_key'];
       if ($type == 'web-view') {
-        $notification['url'] = str_replace('https://', 'Delus://', $notification['url']);
+        $notification['url'] = str_replace('https://', 'sngine://', $notification['url']);
       }
       break;
 
@@ -1859,7 +1860,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       }
       $onesignal_app_id = $system['onesignal_messenger_app_id'];
       $onesignal_api_key = $system['onesignal_messenger_api_key'];
-      $notification['url'] = str_replace('https://', 'Delus_messenger://', $notification['url']);
+      $notification['url'] = str_replace('https://', 'sngine_messenger://', $notification['url']);
       break;
 
     case 'timeline':
@@ -1868,7 +1869,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
       }
       $onesignal_app_id = $system['onesignal_timeline_app_id'];
       $onesignal_api_key = $system['onesignal_timeline_api_key'];
-      $notification['url'] = str_replace('https://', 'Delus_timeline://', $notification['url']);
+      $notification['url'] = str_replace('https://', 'sngine_timeline://', $notification['url']);
       break;
   }
   $request_body = [
@@ -3219,14 +3220,16 @@ function add_pending_uploads($file_name, $file_size, $handle)
  * remove_pending_uploads
  *
  * @param array $files
+ * @param int $user_id
  * @return void
  */
-function remove_pending_uploads($files = [])
+function remove_pending_uploads($files = [], $user_id = null)
 {
   global $db, $user;
+  $user_id = ($user_id) ? $user_id : $user->_data['user_id'];
   foreach ($files as $file_name) {
     if (empty($file_name)) continue;
-    $db->query(sprintf("DELETE FROM users_uploads_pending WHERE user_id = %s AND file_name = %s", secure($user->_data['user_id'], 'int'), secure($file_name)));
+    $db->query(sprintf("DELETE FROM users_uploads_pending WHERE user_id = %s AND file_name = %s", secure($user_id, 'int'), secure($file_name)));
   }
 }
 
@@ -3241,7 +3244,7 @@ function clear_pending_uploads()
   global $db;
   $pending_uploads = $db->query("SELECT * FROM users_uploads_pending");
   while ($pending_upload = $pending_uploads->fetch_assoc()) {
-    delete_uploads_file($pending_upload['file_name']);
+    delete_uploads_file($pending_upload['file_name'], true, $pending_upload['user_id']);
   }
 }
 
@@ -3909,16 +3912,18 @@ function ftp_upload($file_source, $file_name)
  *
  * @param string $file_name
  * @param bool $bypass_db_check
+ * @param int $user_id
  * @return void
  */
-function delete_uploads_file($file_name, $bypass_db_check = true)
+function delete_uploads_file($file_name, $bypass_db_check = true, $user_id = null)
 {
-  global $system, $db;
+  global $system, $db, $user;
+  $user_id = ($user_id) ? $user_id : $user->_data['user_id'];
   if (!$file_name) {
     return;
   }
   /* delete from pending uploads */
-  remove_pending_uploads([$file_name]);
+  remove_pending_uploads([$file_name], $user_id);
   /* delete from database */
   if (!$bypass_db_check) {
     $check_upload = $db->query(sprintf("SELECT COUNT(*) AS count FROM users_uploads WHERE file_name = %s", secure($file_name)));
@@ -4558,11 +4563,6 @@ function process_automatic_withdrawal($method, $amount, $email)
         paypal_payout($amount, $email);
       }
       break;
-    case 'moneypoolscash':
-      if ($system['moneypoolscash_payouts_enabled']) {
-        moneypoolscash_payout($amount, $email);
-      }
-      break;
   }
 }
 
@@ -4624,9 +4624,10 @@ function paypal_access_token()
  * @param string $handle
  * @param float $price
  * @param integer $id
+ * @param boolean $bypass_subscription
  * @return string
  */
-function paypal_payment_link($handle, $price, $id = null)
+function paypal_payment_link($handle, $price, $id = null, $bypass_subscription = false)
 {
   global $system, $user;
   /* prepare */
@@ -4650,7 +4651,7 @@ function paypal_payment_link($handle, $price, $id = null)
       if (!$monetization_plan) {
         throw new Exception(__("The monetization plan you're trying to subscribe to is not found"));
       }
-      if ($monetization_plan['paypal_billing_plan']) {
+      if (!$bypass_subscription && $monetization_plan['paypal_billing_plan']) {
         return paypal_subscription_link($handle, $id, $monetization_plan['paypal_billing_plan']);
       }
       $product = __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
@@ -5443,9 +5444,10 @@ function paypal_payout($amount, $email)
  * @param string $handle
  * @param string $price
  * @param integer $id
+ * @param boolean $bypass_subscription
  * @return string
  */
-function stripe_payment_session($method, $handle, $price, $id = null)
+function stripe_payment_session($method, $handle, $price, $id = null, $bypass_subscription = false)
 {
   global $system, $user;
   /* prepare */
@@ -5469,7 +5471,7 @@ function stripe_payment_session($method, $handle, $price, $id = null)
       if (!$monetization_plan) {
         throw new Exception(__("The monetization plan you're trying to subscribe to is not found"));
       }
-      if ($monetization_plan['stripe_billing_plan']) {
+      if (!$bypass_subscription && $monetization_plan['stripe_billing_plan']) {
         return stripe_subscription_session($method, $handle, $id, $monetization_plan['stripe_billing_plan']);
       }
       $product = __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
@@ -6382,309 +6384,6 @@ function shift4_check($charge_id)
     return true;
   }
   return false;
-}
-
-
-
-/* ------------------------------- */
-/* MoneyPoolsCash */
-/* ------------------------------- */
-
-/**
- * moneypoolscash_payment_token
- *
- * @return string
- */
-function moneypoolscash_payment_token()
-{
-  global $system;
-  $headers = [
-    'Content-Type: application/json',
-    'API-KEY: ' . $system['moneypoolscash_api_key'],
-  ];
-  $request_body = [
-    'merchant_email' => $system['moneypoolscash_merchant_email']
-  ];
-  $ch = curl_init();
-  curl_setopt_array($ch, [
-    CURLOPT_URL => 'https://moneypoolscash.com/gettoken?merchant_email=' . $system['moneypoolscash_merchant_email'],
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'GET',
-    CURLOPT_POSTFIELDS => json_encode($request_body),
-    CURLOPT_HTTPHEADER => $headers,
-  ]);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
-  }
-  $response = json_decode($response, true);
-  if ($response['status'] != 'success') {
-    throw new Exception("Error Processing Request");
-  }
-  $token = $response['data']['token'];
-  return $token;
-}
-
-
-/**
- * moneypoolscash_wallet_token
- *
- * @return string
- */
-function moneypoolscash_wallet_token()
-{
-  global $system;
-  $headers = [
-    'Content-Type: application/json',
-    'User-Agent: Delus',
-    'API-KEY: ' . $system['moneypoolscash_api_key'],
-  ];
-  $request_body = [
-    'user' => [
-      'email' => $system['moneypoolscash_merchant_email'],
-      'password' => $system['moneypoolscash_merchant_password']
-    ],
-  ];
-  $ch = curl_init();
-  curl_setopt_array($ch, [
-    CURLOPT_URL => 'https://moneypoolscash.com/api/loginapp',
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'POST',
-    CURLOPT_POSTFIELDS => json_encode($request_body),
-    CURLOPT_HTTPHEADER => $headers,
-  ]);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
-  }
-  $response = json_decode($response, true);
-  if ($response['result'] != 'success') {
-    throw new Exception("Error Processing Request");
-  }
-  $token = $response['token'];
-  return $token;
-}
-
-
-/**
- * moneypoolscash
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function moneypoolscash($handle, $price, $id = null)
-{
-  global $system;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  $token = moneypoolscash_payment_token();
-  switch ($handle) {
-    case 'packages':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=packages&package_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      break;
-
-    case 'wallet':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=wallet";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=donate&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=paid_post&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      break;
-
-    case 'movies':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=movies&movie_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      break;
-
-    case 'marketplace':
-      $URL['success'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=success&handle=marketplace&orders_collection_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/moneypoolscash.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* make payment request */
-  $merchant_ref = md5(time() . rand(1111, 9999));
-  $headers = [
-    'Content-Type: application/json',
-    'API-KEY: ' . $system['moneypoolscash_api_key'],
-    'token: ' . $token,
-  ];
-  $request_body = [
-    'merchant_email' => $system['moneypoolscash_merchant_email'],
-    'amount' => $total,
-    'currency' => $system['system_currency'],
-    'return_url' => $URL['success'],
-    'cancel_url' => $URL['cancel'],
-    'merchant_ref' => $merchant_ref,
-  ];
-  $ch = curl_init();
-  curl_setopt_array($ch, [
-    CURLOPT_URL => 'https://moneypoolscash.com/payrequest',
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'GET',
-    CURLOPT_POSTFIELDS => json_encode($request_body),
-    CURLOPT_HTTPHEADER => $headers,
-  ]);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
-  }
-  $response = json_decode($response, true);
-  $_SESSION['moneypoolscash_merchant_ref'] = $merchant_ref;
-  $_SESSION['moneypoolscash_trx'] = $response['data']['trx'];
-  return $response['data']['redirect_url'];
-}
-
-
-/**
- * moneypoolscash_check
- *
- * @return boolean
- */
-function moneypoolscash_check()
-{
-  global $system;
-  /* get token */
-  $token = moneypoolscash_payment_token();
-  $headers = [
-    'Content-Type: application/json',
-    'API-KEY: ' . $system['moneypoolscash_api_key'],
-    'token: ' . $token,
-  ];
-  $request_body = [
-    'merchant_email' => $system['moneypoolscash_merchant_email'],
-    'trx' => $_SESSION['moneypoolscash_trx'],
-    'merchant_ref' => $_SESSION['moneypoolscash_merchant_ref'],
-  ];
-  $ch = curl_init();
-  curl_setopt_array($ch, [
-    CURLOPT_URL => 'https://moneypoolscash.com/gettrx',
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'GET',
-    CURLOPT_POSTFIELDS => json_encode($request_body),
-    CURLOPT_HTTPHEADER => $headers,
-  ]);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    return false;
-  }
-  $response = json_decode($response, true);
-  if ($response['code'] == '200' && $response['status'] == 'completed') {
-    return true;
-  }
-  return false;
-}
-
-
-/**
- * moneypoolscash_payout
- * 
- * @param string $amount
- * @param string $email
- * @return void
- */
-function moneypoolscash_payout($amount, $email)
-{
-  global $system;
-  /* get token */
-  $token = moneypoolscash_wallet_token();
-  $headers = [
-    'Content-Type: application/json',
-    'API-KEY: ' . $system['moneypoolscash_api_key'],
-    'token: ' . $token,
-    'email: ' . $system['moneypoolscash_merchant_email'],
-  ];
-  $request_body = [
-    'toemail' => $email,
-    'amount' => $amount,
-    'currency' => $system['system_currency'],
-  ];
-  $ch = curl_init();
-  curl_setopt_array($ch, [
-    CURLOPT_URL => 'https://moneypoolscash.com/api/transferfunds',
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'POST',
-    CURLOPT_POSTFIELDS => json_encode($request_body),
-    CURLOPT_HTTPHEADER => $headers,
-  ]);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
-  }
-  $response = json_decode($response, true);
-  if ($response['code'] != '200') {
-    throw new Exception($response['message']);
-  }
 }
 
 
@@ -7693,15 +7392,24 @@ function get_feeling_icon($needle, $array, $key = "action")
 function censored_words($text)
 {
   global $system;
-  if ($system['censored_words_enabled'] && $text) {
-    $bad_words = explode(',', trim($system['censored_words']));
-    if ($bad_words) {
-      foreach ($bad_words as $word) {
-        $word = trim($word);
-        $pattern = '/\b' . $word . '\b/iu';
-        $text = preg_replace($pattern, str_repeat('*', strlen($word)), $text);
-      }
-    }
+  if (!$system['censored_words_enabled']) {
+    return $text;
+  }
+  if (!$text) {
+    return $text;
+  }
+  $censored_words = json_decode(html_entity_decode($system['censored_words']), true);
+  if (!$censored_words) {
+    return $text;
+  }
+  $censored_words_values = array_column($censored_words, "value");
+  if (count($censored_words_values) == 0) {
+    return $text;
+  }
+  foreach ($censored_words_values as $word) {
+    $word = trim($word);
+    $pattern = '/\b' . $word . '\b/iu';
+    $text = preg_replace($pattern, str_repeat('*', strlen($word)), $text);
   }
   return $text;
 }
@@ -8484,7 +8192,7 @@ function get_base_domain($url)
 function decode_urls($text)
 {
   if (!$text) return $text;
-  return preg_replace('@(https?://([-\w\.]+[-\w])+(:\d+)?(/([\w/_\.#-]*(\?\S+)?[^\.\s])?)?)@', '<a href="$1">$1</a>', $text);
+  return preg_replace('@(https?://([-\w\.]+[-\w])+(:\d+)?(/([\w/_\.#-]*(\?\S+)?[^\.\s])?)?)@', '<a href="$1" target="_blank">$1</a>', $text);
 }
 
 

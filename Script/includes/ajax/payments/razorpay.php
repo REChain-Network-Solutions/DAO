@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> payments -> razorpay
+ * ajax -> payments -> razorpay [Post-Payment Integration]
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -23,12 +23,14 @@ if (!$system['razorpay_enabled']) {
 
 try {
 
+  // check razorpay payment id
+  if (!isset($_POST['razorpay_payment_id'])) {
+    _error(400);
+  }
+
   switch ($_POST['handle']) {
     case 'packages':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['package_id']) || !is_numeric($_POST['package_id'])) {
         _error(400);
       }
@@ -53,16 +55,13 @@ try {
 
     case 'wallet':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['price']) || !is_numeric($_POST['price'])) {
         _error(400);
       }
 
       // check payment
       $payment = razorpay_check($_POST['razorpay_payment_id'], $_POST['price']);
-      if ($payment && isset($_SESSION['wallet_replenish_amount'])) {
+      if ($payment) {
         /* update user wallet balance */
         $_SESSION['wallet_replenish_amount'] = $_POST['price'];
         $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($_SESSION['wallet_replenish_amount']), secure($user->_data['user_id'], 'int')));
@@ -77,9 +76,6 @@ try {
 
     case 'donate':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['post_id']) || !is_numeric($_POST['post_id'])) {
         _error(400);
       }
@@ -101,9 +97,6 @@ try {
 
     case 'subscribe':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['plan_id']) || !is_numeric($_POST['plan_id'])) {
         _error(400);
       }
@@ -114,6 +107,18 @@ try {
         _error(400);
       }
 
+      // check if discount is enabled
+      if ($monetization_plan['discounted_price']) {
+        $monetization_plan['price'] = $monetization_plan['discounted_price'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $monetization_plan['price'] = $monetization_plan['price'] * (1 - $coupon['discount_percent'] / 100);
+        }
+      }
+
       // check payment
       $payment = razorpay_check($_POST['razorpay_payment_id'], $monetization_plan['price']);
       if ($payment) {
@@ -121,6 +126,8 @@ try {
         $node_link = $user->subscribe($_POST['plan_id']);
         /* log payment */
         $user->log_payment($user->_data['user_id'], $monetization_plan['price'], 'razorpay', 'subscribe');
+        /* update coupon usage */
+        $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
         /* redirect */
         return_json(['callback' => 'window.location.href = "' . $system['system_url'] . $node_link . '";']);
       }
@@ -128,9 +135,6 @@ try {
 
     case 'paid_post':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['post_id']) || !is_numeric($_POST['post_id'])) {
         _error(400);
       }
@@ -141,6 +145,18 @@ try {
         _error(400);
       }
 
+      // check if discount is enabled
+      if ($post['post_price_discounted']) {
+        $post['post_price'] = $post['post_price_discounted'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $post['post_price'] = $post['post_price'] * (1 - $coupon['discount_percent'] / 100);
+        }
+      }
+
       // check payment
       $payment = razorpay_check($_POST['razorpay_payment_id'], $post['post_price']);
       if ($payment) {
@@ -148,6 +164,8 @@ try {
         $post_link = $user->unlock_paid_post($_POST['post_id']);
         /* log payment */
         $user->log_payment($user->_data['user_id'], $post['post_price'], 'razorpay', 'paid_post');
+        /* update coupon usage */
+        $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
         /* redirect */
         return_json(['callback' => 'window.location.href = "' . $system['system_url'] . $post_link . '";']);
       }
@@ -155,9 +173,6 @@ try {
 
     case 'movies':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['movie_id']) || !is_numeric($_POST['movie_id'])) {
         _error(400);
       }
@@ -182,9 +197,6 @@ try {
 
     case 'marketplace':
       // valid inputs
-      if (!isset($_POST['razorpay_payment_id'])) {
-        _error(400);
-      }
       if (!isset($_POST['orders_collection_id'])) {
         _error(400);
       }

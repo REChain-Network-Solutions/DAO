@@ -3,8 +3,8 @@
 /**
  * functions
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 
@@ -76,7 +76,7 @@ function check_system_requirements()
  */
 function get_licence_key($code)
 {
-  $url = 'https://Sorokin Dmitry Olegovich.com/licenses/Delus/verify.php';
+  $url = 'https://zamblek.com/licenses/sngine/verify.php';
   $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
@@ -1099,7 +1099,7 @@ function _error()
                                 <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
                                 <li>" . "Are you sure that the database server is running?" . "</li>
                             </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://Sorokin Dmitry Olegovich.com/support'>" . "Delus Support" . ".</a></p>
+                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://zamblek.com/support'>" . "Sngine Support" . ".</a></p>
                             </div>";
         break;
 
@@ -6009,7 +6009,7 @@ function moneypoolscash_wallet_token()
   global $system;
   $headers = [
     'Content-Type: application/json',
-    'User-Agent: Delus',
+    'User-Agent: Sngine',
     'API-KEY: ' . $system['moneypoolscash_api_key'],
   ];
   $request_body = [

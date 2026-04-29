@@ -62,7 +62,7 @@
       </div>
       <div>
         <div class="form-label h6">
-          {if $system['friends_enabled']}{__("Hide from friends suggestions list?")}{else}{__("Hide from followings suggestions list?")}{/if}
+          {if $system['friends_enabled']}{__("Hide from friends suggestions list")}{else}{__("Hide from followings suggestions list")}{/if}
         </div>
         <div class="form-text d-none d-sm-block">{__("Enable this option to hide your profile from the suggestions list")}</div>
       </div>
@@ -77,7 +77,7 @@
     <div class="row">
       {if $system['chat_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can message you")}</label>
+          <label class="form-label">{__("Who can message you?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-message"></i></span>
             <select class="form-select" name="user_privacy_chat">
@@ -97,7 +97,7 @@
 
       {if $system['pokes_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can poke you")}</label>
+          <label class="form-label">{__("Who can poke you?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-hand-point-right"></i></span>
             <select class="form-select" name="user_privacy_poke">
@@ -117,7 +117,7 @@
 
       {if $system['gifts_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can send you gifts")}</label>
+          <label class="form-label">{__("Who can send you gifts?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-gift"></i></span>
             <select class="form-select" name="user_privacy_gifts">
@@ -137,7 +137,7 @@
 
       {if $system['wall_posts_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can post on your wall")}</label>
+          <label class="form-label">{__("Who can post on your wall?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-newspaper"></i></span>
             <select class="form-select" name="user_privacy_wall">
@@ -155,9 +155,29 @@
         </div>
       {/if}
 
+      {if $user->_data['can_add_collaborative_posts']}
+        <div class="form-group col-md-6">
+          <label class="form-label">{__("Who can tag you in collaborative posts?")}</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+            <select class="form-select" name="user_privacy_collaborative">
+              <option {if $user->_data['user_privacy_collaborative'] == "public"}selected{/if} value="public">
+                {__("Everyone")}
+              </option>
+              <option {if $user->_data['user_privacy_collaborative'] == "friends"}selected{/if} value="friends">
+                {if $system['friends_enabled']}{__("Friends")}{else}{__("Followers")}{/if}
+              </option>
+              <option {if $user->_data['user_privacy_collaborative'] == "me"}selected{/if} value="me">
+                {__("Just Me")}
+              </option>
+            </select>
+          </div>
+        </div>
+      {/if}
+
       {if !$system['genders_disabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("gender")}</label>
+          <label class="form-label">{__("Who can see your gender?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
             <select class="form-select" name="user_privacy_gender">
@@ -177,7 +197,7 @@
 
       {if $system['relationship_info_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("relationship")}</label>
+          <label class="form-label">{__("Who can see your relationship?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-heart"></i></span>
             <select class="form-select" name="user_privacy_relationship">
@@ -196,7 +216,7 @@
       {/if}
 
       <div class="form-group col-md-6">
-        <label class="form-label">{__("Who can see your")} {__("birthdate")}</label>
+        <label class="form-label">{__("Who can see your birthdate?")}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="fas fa-birthday-cake"></i></span>
           <select class="form-select" name="user_privacy_birthdate">
@@ -214,7 +234,7 @@
       </div>
 
       <div class="form-group col-md-6">
-        <label class="form-label">{__("Who can see your")} {__("basic info")}</label>
+        <label class="form-label">{__("Who can see your basic info?")}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="fas fa-user"></i></span>
           <select class="form-select" name="user_privacy_basic">
@@ -233,7 +253,7 @@
 
       {if $system['work_info_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("work info")}</label>
+          <label class="form-label">{__("Who can see your work info?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
             <select class="form-select" name="user_privacy_work">
@@ -253,7 +273,7 @@
 
       {if $system['location_info_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("location info")}</label>
+          <label class="form-label">{__("Who can see your location info?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
             <select class="form-select" name="user_privacy_location">
@@ -273,7 +293,7 @@
 
       {if $system['education_info_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("education info")}</label>
+          <label class="form-label">{__("Who can see your education info?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-university"></i></span>
             <select class="form-select" name="user_privacy_education">
@@ -292,7 +312,7 @@
       {/if}
 
       <div class="form-group col-md-6">
-        <label class="form-label">{__("Who can see your")} {__("other info")}</label>
+        <label class="form-label">{__("Who can see your other info?")}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="fas fa-folder-plus"></i></span>
           <select class="form-select" name="user_privacy_other">
@@ -311,7 +331,7 @@
 
       {if $system['friends_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("friends")}</label>
+          <label class="form-label">{__("Who can see your friends?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
             <select class="form-select" name="user_privacy_friends">
@@ -330,7 +350,7 @@
       {/if}
 
       <div class="form-group col-md-6">
-        <label class="form-label">{__("Who can see your")} {__("followers/followings")}</label>
+        <label class="form-label">{__("Who can see your followers/followings?")}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
           <select class="form-select" name="user_privacy_followers">
@@ -349,7 +369,7 @@
 
       {if $system['monetization_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("subscriptions")}</label>
+          <label class="form-label">{__("Who can see your subscriptions?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
             <select class="form-select" name="user_privacy_subscriptions">
@@ -368,7 +388,7 @@
       {/if}
 
       <div class="form-group col-md-6">
-        <label class="form-label">{__("Who can see your")} {__("photos")}</label>
+        <label class="form-label">{__("Who can see your photos?")}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="fas fa-images"></i></span>
           <select class="form-select" name="user_privacy_photos">
@@ -387,7 +407,7 @@
 
       {if $system['pages_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("liked pages")}</label>
+          <label class="form-label">{__("Who can see your liked pages?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-flag"></i></span>
             <select class="form-select" name="user_privacy_pages">
@@ -407,7 +427,7 @@
 
       {if $system['groups_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("joined groups")}</label>
+          <label class="form-label">{__("Who can see your joined groups?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-users"></i></span>
             <select class="form-select" name="user_privacy_groups">
@@ -427,7 +447,7 @@
 
       {if $system['events_enabled']}
         <div class="form-group col-md-6">
-          <label class="form-label">{__("Who can see your")} {__("joined events")}</label>
+          <label class="form-label">{__("Who can see your joined events?")}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-calendar"></i></span>
             <select class="form-select" name="user_privacy_events">

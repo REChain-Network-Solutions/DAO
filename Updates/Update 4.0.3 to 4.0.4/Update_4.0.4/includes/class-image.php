@@ -3,8 +3,8 @@
 /**
  * class -> image
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 class Image

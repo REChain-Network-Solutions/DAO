@@ -1,4 +1,4 @@
-package Delus.app.webview;
+package sngine.app.webview;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -69,34 +69,34 @@ import com.onesignal.Continue;
 public class MainActivity extends AppCompatActivity {
 
     //Permission variables
-    static boolean DelusApp_JSCRIPT = DelusConfig.DelusApp_JSCRIPT;
-    static boolean DelusApp_FUPLOAD = DelusConfig.DelusApp_FUPLOAD;
-    static boolean DelusApp_CAMUPLOAD = DelusConfig.DelusApp_CAMUPLOAD;
-    static boolean DelusApp_ONLYCAM = DelusConfig.DelusApp_ONLYCAM;
-    static boolean DelusApp_MULFILE = DelusConfig.DelusApp_MULFILE;
-    static boolean DelusApp_LOCATION = DelusConfig.DelusApp_LOCATION;
-    static boolean DelusApp_RATINGS = DelusConfig.DelusApp_RATINGS;
-    static boolean DelusApp_PULLFRESH = DelusConfig.DelusApp_PULLFRESH;
-    static boolean DelusApp_PBAR = DelusConfig.DelusApp_PBAR;
-    static boolean DelusApp_ZOOM = DelusConfig.DelusApp_ZOOM;
-    static boolean DelusApp_SFORM = DelusConfig.DelusApp_SFORM;
-    static boolean DelusApp_OFFLINE = DelusConfig.DelusApp_OFFLINE;
-    static boolean DelusApp_EXTURL = DelusConfig.DelusApp_EXTURL;
+    static boolean SngineApp_JSCRIPT = SngineConfig.SngineApp_JSCRIPT;
+    static boolean SngineApp_FUPLOAD = SngineConfig.SngineApp_FUPLOAD;
+    static boolean SngineApp_CAMUPLOAD = SngineConfig.SngineApp_CAMUPLOAD;
+    static boolean SngineApp_ONLYCAM = SngineConfig.SngineApp_ONLYCAM;
+    static boolean SngineApp_MULFILE = SngineConfig.SngineApp_MULFILE;
+    static boolean SngineApp_LOCATION = SngineConfig.SngineApp_LOCATION;
+    static boolean SngineApp_RATINGS = SngineConfig.SngineApp_RATINGS;
+    static boolean SngineApp_PULLFRESH = SngineConfig.SngineApp_PULLFRESH;
+    static boolean SngineApp_PBAR = SngineConfig.SngineApp_PBAR;
+    static boolean SngineApp_ZOOM = SngineConfig.SngineApp_ZOOM;
+    static boolean SngineApp_SFORM = SngineConfig.SngineApp_SFORM;
+    static boolean SngineApp_OFFLINE = SngineConfig.SngineApp_OFFLINE;
+    static boolean SngineApp_EXTURL = SngineConfig.SngineApp_EXTURL;
 
     //Security variables
-    static boolean DelusApp_CERT_VERIFICATION = DelusConfig.DelusApp_CERT_VERIFICATION;
+    static boolean SngineApp_CERT_VERIFICATION = SngineConfig.SngineApp_CERT_VERIFICATION;
 
     //Configuration variables
-    private static String Delus_URL = DelusConfig.Delus_URL;
-    private String CURR_URL = Delus_URL;
+    private static String Sngine_URL = SngineConfig.Sngine_URL;
+    private String CURR_URL = Sngine_URL;
 
     private String oneSignalUserID;
 
-    private static String Delus_F_TYPE = DelusConfig.Delus_F_TYPE;
+    private static String Sngine_F_TYPE = SngineConfig.Sngine_F_TYPE;
 
-    private static String Delus_ONESIGNAL_APP_ID = DelusConfig.Delus_ONESIGNAL_APP_ID;
+    private static String Sngine_ONESIGNAL_APP_ID = SngineConfig.Sngine_ONESIGNAL_APP_ID;
 
-    public static String ASWV_HOST = aswm_host(Delus_URL);
+    public static String ASWV_HOST = aswm_host(Sngine_URL);
 
     //Careful with these variable names if altering
     WebView swvp_view;
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
                         if (dataString != null) {
                             results = new Uri[]{Uri.parse(dataString)};
                         } else {
-                            if (DelusApp_MULFILE) {
+                            if (SngineApp_MULFILE) {
                                 if (intent.getClipData() != null) {
                                     final int numSelectedFiles = intent.getClipData().getItemCount();
                                     results = new Uri[numSelectedFiles];
@@ -169,8 +169,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         // OneSignal Initialization
-        if (!Objects.equals(Delus_ONESIGNAL_APP_ID, "")) {
-            OneSignal.initWithContext(this, Delus_ONESIGNAL_APP_ID);
+        if (!Objects.equals(Sngine_ONESIGNAL_APP_ID, "")) {
+            OneSignal.initWithContext(this, Sngine_ONESIGNAL_APP_ID);
 
             // requestPermission will show the native Android notification permission prompt.
             // NOTE: It's recommended to use a OneSignal In-App Message to prompt instead.
@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
         swvp_view.getSettings().setJavaScriptEnabled(true);
 
         final SwipeRefreshLayout pullfresh = findViewById(R.id.pullfresh);
-        if (DelusApp_PULLFRESH) {
+        if (SngineApp_PULLFRESH) {
             pullfresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                 @Override
                 public void onRefresh() {
@@ -218,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
             pullfresh.setEnabled(false);
         }
 
-        if (DelusApp_PBAR) {
+        if (SngineApp_PBAR) {
             swvp_progress = findViewById(R.id.msw_progress);
         } else {
             findViewById(R.id.msw_progress).setVisibility(View.GONE);
@@ -227,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
         Handler handler = new Handler();
 
         //Launching app rating request
-        if (DelusApp_RATINGS) {
+        if (SngineApp_RATINGS) {
             handler.postDelayed(new Runnable() {
                 public void run() {
                     get_rating();
@@ -243,15 +243,15 @@ public class MainActivity extends AppCompatActivity {
 
         //Webview settings; defaults are customized for best performance
         WebSettings webSettings = swvp_view.getSettings();
-        swvp_view.getSettings().setUserAgentString("DelusAndroid");
+        swvp_view.getSettings().setUserAgentString("SngineAndroid");
         swvp_view.getSettings().setMediaPlaybackRequiresUserGesture(false);
 
-        if (!DelusApp_OFFLINE) {
-            webSettings.setJavaScriptEnabled(DelusApp_JSCRIPT);
+        if (!SngineApp_OFFLINE) {
+            webSettings.setJavaScriptEnabled(SngineApp_JSCRIPT);
         }
-        webSettings.setSaveFormData(DelusApp_SFORM);
-        webSettings.setSupportZoom(DelusApp_ZOOM);
-        webSettings.setGeolocationEnabled(DelusApp_LOCATION);
+        webSettings.setSaveFormData(SngineApp_SFORM);
+        webSettings.setSupportZoom(SngineApp_ZOOM);
+        webSettings.setGeolocationEnabled(SngineApp_LOCATION);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowFileAccessFromFileURLs(true);
         webSettings.setAllowUniversalAccessFromFileURLs(true);
@@ -294,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
         swvp_view.setWebViewClient(new Callback());
 
         //Rendering the default URL
-        aswm_view(Delus_URL, false);
+        aswm_view(Sngine_URL, false);
 
         //Get Cam & Mic & location permissions
         if (!check_permission(1) || !check_permission(3) || !check_permission(4)) {
@@ -315,20 +315,20 @@ public class MainActivity extends AppCompatActivity {
             //Handling input[type="file"]
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                 if (check_permission(3)) {
-                    if (DelusApp_FUPLOAD) {
+                    if (SngineApp_FUPLOAD) {
                         if (swvp_file_path != null) {
                             swvp_file_path.onReceiveValue(null);
                         }
                         swvp_file_path = filePathCallback;
                         Intent takePictureIntent = null;
-                        if (DelusApp_CAMUPLOAD) {
+                        if (SngineApp_CAMUPLOAD) {
                             takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                             if (takePictureIntent.resolveActivity(MainActivity.this.getPackageManager()) != null) {
                                 File photoFile = null;
                                 Uri photoURI = null;
                                 try {
                                     photoFile = create_image();
-                                    photoURI = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + ".provider", photoFile);
+                                    photoURI = FileProvider.getUriForFile(MainActivity.this, MainActivity.this.getPackageName() + ".provider", photoFile);
                                 } catch (IOException ex) {
                                     Log.e(TAG, "Image file creation failed", ex);
                                 }
@@ -341,10 +341,10 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
-                        if (!DelusApp_ONLYCAM) {
+                        if (!SngineApp_ONLYCAM) {
                             contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
-                            contentSelectionIntent.setType(Delus_F_TYPE);
-                            if (DelusApp_MULFILE) {
+                            contentSelectionIntent.setType(Sngine_F_TYPE);
+                            if (SngineApp_MULFILE) {
                                 contentSelectionIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                             }
                         }
@@ -371,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
             //Getting webview rendering progress
             @Override
             public void onProgressChanged(WebView view, int p) {
-                if (DelusApp_PBAR) {
+                if (SngineApp_PBAR) {
                     swvp_progress.setProgress(p);
                     if (p == 100) {
                         swvp_progress.setProgress(0);
@@ -381,8 +381,8 @@ public class MainActivity extends AppCompatActivity {
         });
         if (getIntent().getData() != null) {
             String path = getIntent().getDataString();
-            if (path != null && path.startsWith("Delus://")) {
-                path = path.replace("Delus://", "https://");
+            if (path != null && path.startsWith("sngine://")) {
+                path = path.replace("sngine://", "https://");
             }
             aswm_view(path, false);
         }
@@ -454,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-            if (DelusApp_CERT_VERIFICATION) {
+            if (SngineApp_CERT_VERIFICATION) {
                 super.onReceivedSslError(view, handler, error);
             } else {
                 handler.proceed(); // Ignore SSL certificate errors
@@ -488,19 +488,19 @@ public class MainActivity extends AppCompatActivity {
     public boolean url_actions(WebView view, String url) {
         boolean a = true;
         //Show toast error if not connected to the network
-        if (!DelusApp_OFFLINE && !DetectConnection.isInternetAvailable(MainActivity.this)) {
+        if (!SngineApp_OFFLINE && !DetectConnection.isInternetAvailable(MainActivity.this)) {
             Toast.makeText(getApplicationContext(), getString(R.string.check_connection), Toast.LENGTH_SHORT).show();
 
-        } else if (url.startsWith("Delus:")) {
+        } else if (url.startsWith("sngine:")) {
             // Replace custom scheme with actual URL
-            String newUrl = url.replace("Delus://", "https://");
+            String newUrl = url.replace("sngine://", "https://");
             aswm_view(newUrl, false);
 
             //Use this in a hyperlink to redirect back to default URL :: href="refresh:android"
         } else if (url.startsWith("refresh:")) {
             String ref_sch = (Uri.parse(url).toString()).replace("refresh:", "");
             if (ref_sch.matches("URL")) {
-                CURR_URL = Delus_URL;
+                CURR_URL = Sngine_URL;
             }
             pull_fresh();
 
@@ -535,12 +535,12 @@ public class MainActivity extends AppCompatActivity {
 
             //Getting location for offline files
         } else if (url.startsWith("offloc:")) {
-            String offloc = Delus_URL + "?loc=" + get_location();
+            String offloc = Sngine_URL + "?loc=" + get_location();
             aswm_view(offloc, false);
             Log.d("OFFLINE LOC REQ", offloc);
 
             //Opening external URLs in android default web browser
-        } else if (DelusApp_EXTURL && !aswm_host(url).equals(ASWV_HOST)) {
+        } else if (SngineApp_EXTURL && !aswm_host(url).equals(ASWV_HOST)) {
             aswm_view(url, true);
 
         } else {
@@ -569,15 +569,15 @@ public class MainActivity extends AppCompatActivity {
 
     //Reloading current page
     public void pull_fresh() {
-        aswm_view((!CURR_URL.equals("") ? CURR_URL : Delus_URL), false);
+        aswm_view((!CURR_URL.equals("") ? CURR_URL : Sngine_URL), false);
     }
 
     //Getting device basic information
     public void get_info() {
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
-        cookieManager.setCookie(Delus_URL, "DEVICE=android");
-        cookieManager.setCookie(Delus_URL, "DEV_API=" + Build.VERSION.SDK_INT);
+        cookieManager.setCookie(Sngine_URL, "DEVICE=android");
+        cookieManager.setCookie(Sngine_URL, "DEV_API=" + Build.VERSION.SDK_INT);
     }
 
     //Checking permission for storage and camera for writing and uploading images
@@ -585,15 +585,15 @@ public class MainActivity extends AppCompatActivity {
         String[] perms = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA};
 
         //Checking for storage permission to write images for upload
-        if (DelusApp_FUPLOAD && DelusApp_CAMUPLOAD && !check_permission(2) && !check_permission(3)) {
+        if (SngineApp_FUPLOAD && SngineApp_CAMUPLOAD && !check_permission(2) && !check_permission(3)) {
             ActivityCompat.requestPermissions(MainActivity.this, perms, file_perm);
 
             //Checking for WRITE_EXTERNAL_STORAGE permission
-        } else if (DelusApp_FUPLOAD && !check_permission(2)) {
+        } else if (SngineApp_FUPLOAD && !check_permission(2)) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, file_perm);
 
             //Checking for CAMERA permissions
-        } else if (DelusApp_CAMUPLOAD && !check_permission(3)) {
+        } else if (SngineApp_CAMUPLOAD && !check_permission(3)) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, file_perm);
         }
     }
@@ -602,18 +602,18 @@ public class MainActivity extends AppCompatActivity {
     public String get_location() {
         String newloc = "0,0";
         //Checking for location permissions
-        if (DelusApp_LOCATION && (Build.VERSION.SDK_INT < 23 || check_permission(1))) {
+        if (SngineApp_LOCATION && (Build.VERSION.SDK_INT < 23 || check_permission(1))) {
             GPSTrack gps;
             gps = new GPSTrack(MainActivity.this);
             double latitude = gps.getLatitude();
             double longitude = gps.getLongitude();
             if (gps.canGetLocation()) {
                 if (latitude != 0 || longitude != 0) {
-                    if (!DelusApp_OFFLINE) {
+                    if (!SngineApp_OFFLINE) {
                         CookieManager cookieManager = CookieManager.getInstance();
                         cookieManager.setAcceptCookie(true);
-                        cookieManager.setCookie(Delus_URL, "lat=" + latitude);
-                        cookieManager.setCookie(Delus_URL, "long=" + longitude);
+                        cookieManager.setCookie(Sngine_URL, "lat=" + latitude);
+                        cookieManager.setCookie(Sngine_URL, "long=" + longitude);
                     }
                     newloc = latitude + "," + longitude;
                 } else {
@@ -659,9 +659,9 @@ public class MainActivity extends AppCompatActivity {
         if (DetectConnection.isInternetAvailable(MainActivity.this)) {
             AppRate.with(this)
                     .setStoreType(StoreType.GOOGLEPLAY)     //default is Google Play, other option is Amazon App Store
-                    .setInstallDays(DelusConfig.ASWR_DAYS)
-                    .setLaunchTimes(DelusConfig.ASWR_TIMES)
-                    .setRemindInterval(DelusConfig.ASWR_INTERVAL)
+                    .setInstallDays(SngineConfig.ASWR_DAYS)
+                    .setLaunchTimes(SngineConfig.ASWR_TIMES)
+                    .setRemindInterval(SngineConfig.ASWR_INTERVAL)
                     .setTitle(R.string.rate_dialog_title)
                     .setMessage(R.string.rate_dialog_message)
                     .setTextLater(R.string.rate_dialog_cancel)

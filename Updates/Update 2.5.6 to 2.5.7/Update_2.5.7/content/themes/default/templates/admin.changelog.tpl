@@ -19,9 +19,9 @@
             <li>[Updated] Documentation</li>
             <li>[Updated] System Security</li>
             <li>[Updated] System Optimization</li>
-            <li>[Updated] Delus Libs [AWS|Embed|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]</li>
-            <li>[Updated] Delus JS Dependencies [mustache|bootstrap.select|codemirror|metismenu|moment|readmore|tinymce]</li>
-            <li>[Updated] Delus CSS Dependencies [Font-Awesome]</li>
+            <li>[Updated] Sngine Libs [AWS|Embed|HybridAuth|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]</li>
+            <li>[Updated] Sngine JS Dependencies [mustache|bootstrap.select|codemirror|metismenu|moment|readmore|tinymce]</li>
+            <li>[Updated] Sngine CSS Dependencies [Font-Awesome]</li>
             <li>[Added] Delete Uploaded (Photos, Video, Audio, File) after deleting posts</li>
             <li>[Added] Fake User Generator</li>
             <li>[Added] Verification Attachments for Users</li>
@@ -92,9 +92,9 @@
             <li>[Updated] Documentation</li>
             <li>[Updated] System Security</li>
             <li>[Updated] System Optimization</li>
-            <li>[Updated] Delus Libs [AWS|Embed|HybridAuth|Smarty|Stripe|Twilio]</li>
-            <li>[Updated] Delus JS Dependencies [autosize|bootstrap.colorpicker|codemirror|datatables|mediaelement|metismenu|moment|tinymce]</li>
-            <li>[Updated] Delus CSS Dependencies [Font-Awesome]</li>
+            <li>[Updated] Sngine Libs [AWS|Embed|HybridAuth|Smarty|Stripe|Twilio]</li>
+            <li>[Updated] Sngine JS Dependencies [autosize|bootstrap.colorpicker|codemirror|datatables|mediaelement|metismenu|moment|tinymce]</li>
+            <li>[Updated] Sngine CSS Dependencies [Font-Awesome]</li>
 
             <li>[Added] Secured Cookies [GDPR]</li>
             <li>[Added] Cookies Consent Notification [GDPR]</li>
@@ -148,9 +148,9 @@
             <li>[Updated] Documentation</li>
             <li>[Updated] System Security</li>
             <li>[Updated] System Optimization</li>
-            <li>[Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]</li>
-            <li>[Updated] Delus JS Dependencies [jQuery|dataTables|mediaelement|metisMenu|moment|noty|tinymce]</li>
-            <li>[Updated] Delus CSS Dependencies [Font-Awesome|Flag-Icon]</li>
+            <li>[Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|Stripe|Twilio]</li>
+            <li>[Updated] Sngine JS Dependencies [jQuery|dataTables|mediaelement|metisMenu|moment|noty|tinymce]</li>
+            <li>[Updated] Sngine CSS Dependencies [Font-Awesome|Flag-Icon]</li>
 
             <li>[Added] Advanced ADS system for users</li>
             <li>[Added] User Wallet System</li>
@@ -202,8 +202,8 @@
         <ul class="change-log-list mb20">
             <li>[Updated] System Security</li>
             <li>[Updated] System Optimization</li>
-            <li>[Updated] Delus Libs [Twilio]</li>
-            <li>[Updated] Delus CSS Dependencies [Font-Awesome(v5)]</li>
+            <li>[Updated] Sngine Libs [Twilio]</li>
+            <li>[Updated] Sngine CSS Dependencies [Font-Awesome(v5)]</li>
 
             <li>[Added] Forums</li>
             <li>[Added] Mass Notifications from Admin Panel</li>
@@ -243,11 +243,11 @@
         <ul class="change-log-list mb20">
             <li>[Updated] System Security</li>
             <li>[Updated] System Optimization</li>
-            <li>[Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]</li>
-            <li>[Updated] Delus JS Dependencies [</jQuery|jquery.form|jquery.inview|jquery.geocomplete|autosize|moment|mediaelementplayer|bootstrap.select|bootstrap.datetimepicker|bootstrap.colorpicker|metisMenu|dataTables]
+            <li>[Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|ReCaptcha|Smarty|Stripe|Twilio]</li>
+            <li>[Updated] Sngine JS Dependencies [</jQuery|jquery.form|jquery.inview|jquery.geocomplete|autosize|moment|mediaelementplayer|bootstrap.select|bootstrap.datetimepicker|bootstrap.colorpicker|metisMenu|dataTables]
             <li>[Updated] Installer Wizard & Pre-Installation Check</jQuery|jquery.form|jquery.inview|jquery.geocomplete|autosize|moment|mediaelementplayer|bootstrap.select|bootstrap.datetimepicker|bootstrap.colorpicker|metisMenu|dataTables]>
-            <li>[Updated] Delus GTmetrix Optimization</li>
-            <li>[Updated] Delus Google PageSpeed Optimization</li>
+            <li>[Updated] Sngine GTmetrix Optimization</li>
+            <li>[Updated] Sngine Google PageSpeed Optimization</li>
 
             <li>[Added] Romanian Language</li>
             <li>[Added] Events</li>
@@ -322,7 +322,7 @@
         <blockquote>Release Date: 21th March 2017</blockquote>
         <ul class="change-log-list mb20">
             <li>[Updated] System optimization</li>
-            <li>[Updated] Delus JS Dependencies [mediaelementplayer]</li>
+            <li>[Updated] Sngine JS Dependencies [mediaelementplayer]</li>
             <li>[Added] Stripe Receipt Email</li>
             <li>[Fixed] Page Verification Request</li>
             <li>[Fixed] Minor CSS bugs</li>
@@ -348,9 +348,9 @@
         <ul class="change-log-list mb20">
             <li>[Updated] System Security</li>
             <li>[Updated] System optimization</li>
-            <li>[Updated] Delus Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|reCAPTCHA|Smarty|Stripe|Twilio]</li>
-            <li>[Updated] Delus JS Dependencies [jQuery|Bootstrap|Mustache|html5shiv|slimscroll|autosize|readmore|moment|datetimepicker|DataTables]</li>
-            <li>[Updated] Delus CSS Dependencies [Font-Awesome|Twemoji-Awesome|Flag-Icon]</li>
+            <li>[Updated] Sngine Libs [AWS|Embed|HybridAuth|PayPal|PHPMailer|reCAPTCHA|Smarty|Stripe|Twilio]</li>
+            <li>[Updated] Sngine JS Dependencies [jQuery|Bootstrap|Mustache|html5shiv|slimscroll|autosize|readmore|moment|datetimepicker|DataTables]</li>
+            <li>[Updated] Sngine CSS Dependencies [Font-Awesome|Twemoji-Awesome|Flag-Icon]</li>
             <li>[Updated] Installer Wizard & Pre-Installation Check</li>
 
             <li>[Added] New Mobile UI Enhancement</li>
@@ -436,14 +436,14 @@
         <h3>Version 2.3.1</h3>
         <blockquote>Release Date: 22th March 2017</blockquote>
         <ul class="change-log-list mb20">
-            <li>[Updated] Delus Libs [PHPMailer]</li>
+            <li>[Updated] Sngine Libs [PHPMailer]</li>
         </ul>
         <div class="divider"></div>
 
         <h3>Version 2.3</h3>
         <blockquote>Release Date: 3rd September 2016</blockquote>
         <ul class="change-log-list mb20">
-            <li>[Updated] Delus Dependencies [Bootstrap|Font-Awesome|Flag-Icon|Twemoji-Awesome]</li>
+            <li>[Updated] Sngine Dependencies [Bootstrap|Font-Awesome|Flag-Icon|Twemoji-Awesome]</li>
             <li>[Updated] Cache system to speed up your website (97/100 on Google PageSpeed)</li>
             <li>[Updated] System Security</li>
             <li>[Updated] Improve Search to include wall posts and group posts</li>
@@ -496,7 +496,7 @@
         <h3>Version 2.2.1</h3>
         <blockquote>Release Date: 26th July 2016</blockquote>
         <ul class="change-log-list mb20">
-            <li>- [Updated] Delus Dependencies [Smarty|HybridAuth|Google reCAPTCHA]</li>
+            <li>- [Updated] Sngine Dependencies [Smarty|HybridAuth|Google reCAPTCHA]</li>
         </ul>
         <div class="divider"></div>
 
@@ -534,7 +534,7 @@
             <li>[Added] [Admin] Offline after | The amount of time to be considered online since the last user's activity (in seconds)</li>
             <li>[Added] [Admin] Custom Design</li>
             <li>[Added] [Admin] Build Version in admin panel main menu</li>
-            <li>[Added] Update all Delus Dependencies to latest version</li>
+            <li>[Added] Update all Sngine Dependencies to latest version</li>
             <li>[Added] Uploads folder now arranged with years/months and file types like WordPress</li>
             <li>[Added] Getting started page</li>
             <li>[Added] User now can upload and share audio file</li>
@@ -556,8 +556,8 @@
         <h3>Version 2.1</h3>
         <blockquote>Release Date: 16th February 2016</blockquote>
         <ul class="change-log-list mb20">
-            <li>[Added] Delus 2.1 Structure for better caching and performance</li>
-            <li>[Added] Delus APIs v1.0</li>
+            <li>[Added] Sngine 2.1 Structure for better caching and performance</li>
+            <li>[Added] Sngine APIs v1.0</li>
             <li>[Added] Transfer Awesome features from Material theme to default theme</li>
             <li>[Added] New Social Logins [Linkedin & Vkontakte]</li>
             <li>[Added] New Link Scraper</li>

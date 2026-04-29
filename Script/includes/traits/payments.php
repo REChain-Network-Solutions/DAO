@@ -3,8 +3,8 @@
 /**
  * trait -> payments
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait PaymentsTrait
@@ -26,6 +26,7 @@ trait PaymentsTrait
   {
     global $system;
     /* prepare */
+    $total = get_payment_total_value($price);
     switch ($handle) {
       case 'packages':
         $product = __($system['system_title']) . " " . __('Pro Package');
@@ -59,6 +60,30 @@ trait PaymentsTrait
         $URL['ipn'] = $system['system_url'] . "/webhooks/coinpayments.php?handle=subscribe&plan_id=$id";
         break;
 
+      case 'paid_post':
+        $product = __($system['system_title']) . " " . __('Paid Post');
+        $description = __('Pay For') . " " . __($system['system_title']);
+        $URL['success'] = $system['system_url'] . "/settings/coinpayments";
+        $URL['cancel'] = $system['system_url'];
+        $URL['ipn'] = $system['system_url'] . "/webhooks/coinpayments.php?handle=paid_post&post_id=$id";
+        break;
+
+      case 'movies':
+        $product = __($system['system_title']) . " " . __('Movies');
+        $description = __('Pay For') . " " . __($system['system_title']);
+        $URL['success'] = $system['system_url'] . "/settings/coinpayments";
+        $URL['cancel'] = $system['system_url'];
+        $URL['ipn'] = $system['system_url'] . "/webhooks/coinpayments.php?handle=movies&movie_id=$id";
+        break;
+
+      case 'marketplace':
+        $product = __($system['system_title']) . " " . __('Marketplace');
+        $description = __('Pay For') . " " . __($system['system_title']);
+        $URL['success'] = $system['system_url'] . "/settings/coinpayments";
+        $URL['cancel'] = $system['system_url'];
+        $URL['ipn'] = $system['system_url'] . "/webhooks/coinpayments.php?handle=marketplace&orders_collection_id=$id";
+        break;
+
       default:
         _error(400);
         break;
@@ -74,7 +99,7 @@ trait PaymentsTrait
     $form .= '<input type="hidden" name="item_name" value="' . $product . '">';
     $form .= '<input type="hidden" name="item_desc" value="' . $description . '">';
     $form .= '<input type="hidden" name="currency" value="' . $system['system_currency'] . '">';
-    $form .= '<input type="hidden" name="amountf" value="' . $price . '">';
+    $form .= '<input type="hidden" name="amountf" value="' . $total . '">';
     $form .= '<input type="hidden" name="want_shipping" value="0">';
     $form .= '<input type="hidden" name="success_url" value="' . $URL['success'] . '">';
     $form .= '<input type="hidden" name="cancel_url" value="' . $URL['cancel'] . '">';

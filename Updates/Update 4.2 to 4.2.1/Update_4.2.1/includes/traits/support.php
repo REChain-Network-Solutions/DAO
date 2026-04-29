@@ -3,8 +3,8 @@
 /**
  * trait -> support center
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait SupportTrait

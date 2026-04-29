@@ -3,8 +3,8 @@
 /**
  * class -> user
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 /* 
@@ -47,6 +47,7 @@ class User
 
   use AdsTrait,
     AffiliatesTrait,
+    AiTrait,
     AnnouncementsTrait,
     BlogsTrait,
     CallsTrait,
@@ -288,6 +289,10 @@ class User
         $this->_data['can_publish_posts'] = $this->check_module_permission('posts_permission');
         /* check scheduled posts permission */
         $this->_data['can_schedule_posts'] = $system['posts_schedule_enabled'] && $this->check_module_permission('schedule_posts_permission');
+        /* check anonymous posts permission */
+        $this->_data['can_add_anonymous_posts'] = $system['anonymous_mode'] && $this->check_module_permission('anonymous_posts_permission');
+        /* check collaborative posts permission */
+        $this->_data['can_add_collaborative_posts'] = $system['collaborative_posts_enabled'] && $this->check_module_permission('collaborative_posts_permission');
         /* check colored posts permission */
         $this->_data['can_add_colored_posts'] = $system['colored_posts_enabled'] && $this->check_module_permission('colored_posts_permission');
         /* check activity posts permission */
@@ -298,8 +303,12 @@ class User
         $this->_data['can_add_geolocation_posts'] = $system['geolocation_enabled'] && $this->check_module_permission('geolocation_posts_permission');
         /* check gif posts permission */
         $this->_data['can_add_gif_posts'] = $system['gif_enabled'] && $this->check_module_permission('gif_posts_permission');
-        /* check anonymous posts permission */
-        $this->_data['can_add_anonymous_posts'] = $system['anonymous_mode'] && $this->check_module_permission('anonymous_posts_permission');
+        /* check ai posts permission */
+        $this->_data['can_generate_ai_posts'] = $system['ai_posts_enabled'] && $this->check_module_permission('ai_posts_permission');
+        /* check ai blogs permission */
+        $this->_data['can_generate_ai_blogs'] = $system['ai_blogs_enabled'] && $this->check_module_permission('ai_blogs_permission');
+        /* check ai images permission */
+        $this->_data['can_generate_ai_images'] = $system['ai_images_enabled'] && $this->check_module_permission('ai_images_permission');
         /* check invitation permission */
         $this->_data['can_invite_users'] = $system['invitation_enabled'] && $this->check_module_permission('invitation_permission');
         /* check audio call permission */
@@ -691,6 +700,27 @@ class User
 
 
   /**
+   * get_pages_managed_ids
+   * 
+   * @return array
+   */
+  public function get_pages_managed_ids()
+  {
+    global $db;
+    $pages = [];
+    if ($this->_logged_in) {
+      $get_pages = $db->query(sprintf("SELECT pages.page_id FROM pages_admins INNER JOIN pages ON pages_admins.page_id = pages.page_id WHERE pages_admins.user_id = %s ORDER BY page_id DESC", secure($this->_data['user_id'], 'int')));
+      if ($get_pages->num_rows > 0) {
+        while ($page = $get_pages->fetch_assoc()) {
+          $pages[] = $page['page_id'];
+        }
+      }
+    }
+    return $pages;
+  }
+
+
+  /**
    * get_groups_ids
    * 
    * @param boolean $only_approved
@@ -713,6 +743,27 @@ class User
   }
 
 
+  /** 
+   * get_groups_managed_ids
+   * 
+   * @return array
+   */
+  public function get_groups_managed_ids()
+  {
+    global $db;
+    $groups = [];
+    if ($this->_logged_in) {
+      $get_groups = $db->query(sprintf("SELECT groups.group_id FROM groups_admins INNER JOIN groups ON groups_admins.group_id = groups.group_id WHERE groups_admins.user_id = %s ORDER BY group_id DESC", secure($this->_data['user_id'], 'int')));
+      if ($get_groups->num_rows > 0) {
+        while ($group = $get_groups->fetch_assoc()) {
+          $groups[] = $group['group_id'];
+        }
+      }
+    }
+    return $groups;
+  }
+
+
   /**
    * get_events_ids
    * 
@@ -724,6 +775,27 @@ class User
     $events = [];
     if ($this->_logged_in) {
       $get_events = $db->query(sprintf("SELECT event_id FROM events_members WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+      if ($get_events->num_rows > 0) {
+        while ($event = $get_events->fetch_assoc()) {
+          $events[] = $event['event_id'];
+        }
+      }
+    }
+    return $events;
+  }
+
+
+  /**
+   * get_events_managed_ids
+   * 
+   * @return array
+   */
+  public function get_events_managed_ids()
+  {
+    global $db;
+    $events = [];
+    if ($this->_logged_in) {
+      $get_events = $db->query(sprintf("SELECT events.event_id events WHERE event_admin = %s ORDER BY event_id DESC", secure($this->_data['user_id'], 'int')));
       if ($get_events->num_rows > 0) {
         while ($event = $get_events->fetch_assoc()) {
           $events[] = $event['event_id'];
@@ -2882,6 +2954,8 @@ class User
         $args['user_privacy_gifts'] = (isset($args['user_privacy_gifts'])) ? $args['user_privacy_gifts'] : 'public';
         /* check if wall posts enabled */
         $args['user_privacy_wall'] = (isset($args['user_privacy_wall'])) ? $args['user_privacy_wall'] : 'public';
+        /* check if collaborative posts enabled */
+        $args['user_privacy_collaborative'] = (isset($args['user_privacy_collaborative'])) ? $args['user_privacy_collaborative'] : 'public';
         /* check if genders enabled */
         $args['user_privacy_gender'] = (isset($args['user_privacy_gender'])) ? $args['user_privacy_gender'] : 'public';
         /* check if relationship info enabled */
@@ -2903,7 +2977,7 @@ class User
         /* check if events enabled */
         $args['user_privacy_events'] = (isset($args['user_privacy_events'])) ? $args['user_privacy_events'] : 'public';
         /* check if valid privacy */
-        if (!in_array($args['user_privacy_chat'], $privacy) || !in_array($args['user_privacy_poke'], $privacy) || !in_array($args['user_privacy_gifts'], $privacy) || !in_array($args['user_privacy_wall'], $privacy) || !in_array($args['user_privacy_gender'], $privacy) || !in_array($args['user_privacy_relationship'], $privacy) || !in_array($args['user_privacy_birthdate'], $privacy) || !in_array($args['user_privacy_basic'], $privacy) || !in_array($args['user_privacy_work'], $privacy) || !in_array($args['user_privacy_location'], $privacy) || !in_array($args['user_privacy_education'], $privacy) || !in_array($args['user_privacy_other'], $privacy) || !in_array($args['user_privacy_friends'], $privacy) || !in_array($args['user_privacy_followers'], $privacy) || !in_array($args['user_privacy_subscriptions'], $privacy) || !in_array($args['user_privacy_photos'], $privacy) || !in_array($args['user_privacy_pages'], $privacy) || !in_array($args['user_privacy_groups'], $privacy) || !in_array($args['user_privacy_events'], $privacy)) {
+        if (!in_array($args['user_privacy_chat'], $privacy) || !in_array($args['user_privacy_poke'], $privacy) || !in_array($args['user_privacy_gifts'], $privacy) || !in_array($args['user_privacy_wall'], $privacy) || !in_array($args['user_privacy_collaborative'], $privacy) || !in_array($args['user_privacy_gender'], $privacy) || !in_array($args['user_privacy_relationship'], $privacy) || !in_array($args['user_privacy_birthdate'], $privacy) || !in_array($args['user_privacy_basic'], $privacy) || !in_array($args['user_privacy_work'], $privacy) || !in_array($args['user_privacy_location'], $privacy) || !in_array($args['user_privacy_education'], $privacy) || !in_array($args['user_privacy_other'], $privacy) || !in_array($args['user_privacy_friends'], $privacy) || !in_array($args['user_privacy_followers'], $privacy) || !in_array($args['user_privacy_subscriptions'], $privacy) || !in_array($args['user_privacy_photos'], $privacy) || !in_array($args['user_privacy_pages'], $privacy) || !in_array($args['user_privacy_groups'], $privacy) || !in_array($args['user_privacy_events'], $privacy)) {
           _error(400);
         }
         /* update user */
@@ -2917,6 +2991,7 @@ class User
                     user_privacy_poke = %s,
                     user_privacy_gifts = %s,
                     user_privacy_wall = %s,
+                    user_privacy_collaborative = %s,
                     user_privacy_gender = %s, 
                     user_privacy_relationship = %s,
                     user_privacy_birthdate = %s, 
@@ -2941,6 +3016,7 @@ class User
           secure($args['user_privacy_poke']),
           secure($args['user_privacy_gifts']),
           secure($args['user_privacy_wall']),
+          secure($args['user_privacy_collaborative']),
           secure($args['user_privacy_gender']),
           secure($args['user_privacy_relationship']),
           secure($args['user_privacy_birthdate']),
@@ -3031,12 +3107,31 @@ class User
         }
         /* prepare */
         $args['user_monetization_enabled'] = (isset($args['user_monetization_enabled'])) ? '1' : '0';
+        $args['user_monetization_discount_enabled'] = (isset($args['user_monetization_discount_enabled'])) ? '1' : '0';
+        /* validate discount percent */
+        if (!is_numeric($args['user_monetization_discount_percent']) || $args['user_monetization_discount_percent'] < 1 || $args['user_monetization_discount_percent'] > 99) {
+          throw new Exception(__("Please enter a valid discount percent (min 1, max 99)"));
+        }
         /* check if verification for monetization required */
         if ($args['user_monetization_enabled'] && $system['verification_for_monetization'] && !$this->_data['user_verified']) {
           throw new Exception(__("To enable this feature your account must be verified"));
         }
         /* update user */
-        $db->query(sprintf("UPDATE users SET user_monetization_enabled = %s, user_monetization_chat_price = %s, user_monetization_call_price = %s WHERE user_id = %s", secure($args['user_monetization_enabled']), secure($args['user_monetization_chat_price'], 'float'), secure($args['user_monetization_call_price'], 'float'), secure($this->_data['user_id'], 'int')));
+        $db->query(sprintf(
+          "UPDATE users SET 
+            user_monetization_enabled = %s, 
+            user_monetization_discount_enabled = %s,
+            user_monetization_discount_percent = %s,
+            user_monetization_chat_price = %s, 
+            user_monetization_call_price = %s 
+           WHERE user_id = %s",
+          secure($args['user_monetization_enabled']),
+          secure($args['user_monetization_discount_enabled']),
+          secure($args['user_monetization_discount_percent'], 'float'),
+          secure($args['user_monetization_chat_price'], 'float'),
+          secure($args['user_monetization_call_price'], 'float'),
+          secure($this->_data['user_id'], 'int')
+        ));
         /* update monetization plans */
         $this->update_monetization_plans();
         break;
@@ -4166,9 +4261,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
     }
     /* check if user connected or not */
@@ -4255,9 +4350,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
 
       default:

@@ -6135,23 +6135,23 @@ body.night-mode .add-story .add {
   background: var(--card-dark-color);
 }
 
-.stories.Delus.carousel .story {
+.stories.sngine.carousel .story {
   width: 110px;
   max-width: 100%;
 }
 
-.stories.Delus.carousel .story>.item-link>.item-preview {
+.stories.sngine.carousel .story>.item-link>.item-preview {
   max-height: 100%;
   height: 160px;
 }
 
-.stories.Delus .story>a>.item-preview>img {
+.stories.sngine .story>a>.item-preview>img {
   border-radius: 16px;
   padding: 2px;
   border: 2px solid var(--link-color);
 }
 
-.stories.Delus .story.seen {
+.stories.sngine .story.seen {
   opacity: 0.5;
 }
 

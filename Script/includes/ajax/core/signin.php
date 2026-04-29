@@ -3,8 +3,8 @@
 /**
  * ajax -> core -> signin
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set override_shutdown

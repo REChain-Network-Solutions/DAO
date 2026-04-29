@@ -2,8 +2,8 @@
 /**
  * functions
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 
@@ -22,34 +22,34 @@ function check_system_requirements() {
     /* check php version */
     $php_version = phpversion();
     if(version_compare( $required_php_version, $php_version, '>')) {
-        _error("Installation Error", sprintf('<p class="text-center">Your server is running PHP version %1$s but Delus requires at least %3$s.</p>', $php_version, $required_php_version));
+        _error("Installation Error", sprintf('<p class="text-center">Your server is running PHP version %1$s but Sngine requires at least %3$s.</p>', $php_version, $required_php_version));
     }
     /* check if mysqli enabled */
     if(!extension_loaded('mysqli')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "mysqli" extension which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "mysqli" extension which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     /* check if curl enabled */
     if(!extension_loaded('curl')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "cURL" extension which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "cURL" extension which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     /* check if intl enabled */
     if(!extension_loaded('intl')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "intl" extension which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "intl" extension which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     /* check if json_decode enabled */
     if(!function_exists('json_decode')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "json_decode()" function which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "json_decode()" function which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     /* check if base64_decode enabled */
     if(!function_exists('base64_decode')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "base64_decode()" function which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "base64_decode()" function which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     /* check if mail enabled */
     if(!function_exists('mail')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "mail()" function which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "mail()" function which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
     if(!function_exists('getimagesize')) {
-        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "getimagesize()" function which is required by Delus.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
+        _error("Installation Error", '<p class="text-center">Your PHP installation appears to be missing the "getimagesize()" function which is required by Sngine.</p><small>Back to your server admin or hosting provider to enable it for you</small>');
     }
 }
 
@@ -61,7 +61,7 @@ function check_system_requirements() {
  * @return string
  */
 function get_licence_key($code) {
-    $url = 'http://www.Delus.com/licence/v2/verify.php';
+    $url = 'http://www.sngine.com/licence/v2/verify.php';
     $data = "code=".$code."&domain=".$_SERVER['HTTP_HOST'];
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL, $url);
@@ -215,7 +215,7 @@ function secure($value, $type = "", $quoted = true) {
 function session_hash($hash) {
     $hash_tokens = explode('-', $hash);
     if(count($hash_tokens) != 6) {
-        _error(__("Error"), __("Your session hash has been broken, Please contact Delus's support!"));
+        _error(__("Error"), __("Your session hash has been broken, Please contact Sngine's support!"));
     }
     $position = array_rand($hash_tokens);
     $token = $hash_tokens[$position];
@@ -485,7 +485,7 @@ function _error() {
                                 <li>"."Are you sure that you have typed the correct hostname?"."</li>
                                 <li>"."Are you sure that the database server is running?"."</li>
                             </ul>
-                            <p>"."If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the"." <a href='http://support.Sorokin Dmitry Olegovich.com'>"."Delus Support".".</a></p>
+                            <p>"."If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the"." <a href='http://support.zamblek.com'>"."Sngine Support".".</a></p>
                             </div>";
                 break;
 

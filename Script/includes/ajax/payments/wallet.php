@@ -3,8 +3,8 @@
 /**
  * ajax -> payments -> wallet
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -52,7 +52,7 @@ try {
       }
 
       // return
-      modal("#payment", "{'handle': 'wallet', 'price': '" . $_POST['amount'] . "', 'vat': '" . get_payment_vat_value($_POST['amount']) . "', 'fees': '" . get_payment_fees_value($_POST['amount']) . "', 'total': '" . get_payment_total_value($_POST['amount']) . "', 'total_printed': '" . get_payment_total_value($_POST['amount'], true) . "'}");
+      modal("#payment", "{'handle': 'wallet', 'wallet': 'true', 'price': '" . $_POST['amount'] . "', 'vat': '" . get_payment_vat_value($_POST['amount']) . "', 'fees': '" . get_payment_fees_value($_POST['amount']) . "', 'total': '" . get_payment_total_value($_POST['amount']) . "', 'total_printed': '" . get_payment_total_value($_POST['amount'], true) . "'}");
       break;
 
     case 'wallet_withdraw_affiliates':
@@ -130,7 +130,7 @@ try {
 
     case 'wallet_monetization_payment':
       // process
-      $user->wallet_monetization_payment($_POST['plan_id']);
+      $user->wallet_monetization_payment($_POST['plan_id'], $_POST['promo_code']);
 
       // return
       return_json(['callback' => 'window.location = site_path + "/wallet?wallet_monetization_payment_succeed"']);
@@ -138,7 +138,7 @@ try {
 
     case 'wallet_paid_post':
       // process
-      $user->wallet_paid_post($_POST['post_id']);
+      $user->wallet_paid_post($_POST['post_id'], $_POST['promo_code']);
 
       // return
       return_json(['callback' => 'window.location = site_path + "/wallet?wallet_paid_post_succeed"']);

@@ -3,8 +3,8 @@
 /**
  * class -> user
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 /* 
@@ -4485,7 +4485,7 @@ class User
       }
       /* prepare notification for apps */
       $notification_mobile = $notification;
-      $notification_mobile['url'] = str_replace('https://', 'Delus://', $notification_mobile['url']);
+      $notification_mobile['url'] = str_replace('https://', 'sngine://', $notification_mobile['url']);
       $notification_mobile['headings'] = $this->_data['user_fullname'];
       $notification_mobile['full_message'] = $notification_mobile['message'];
       /* onesignal push notifications (apps) */
@@ -23510,9 +23510,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
     }
     /* check if user connected or not */
@@ -23606,9 +23606,9 @@ class User
         $social_connected = "wordpress_connected";
         break;
 
-      case 'Delus':
-        $social_id = "Delus_id";
-        $social_connected = "Delus_connected";
+      case 'sngine':
+        $social_id = "sngine_id";
+        $social_connected = "sngine_connected";
         break;
 
       default:

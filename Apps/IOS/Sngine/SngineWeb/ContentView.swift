@@ -3,7 +3,7 @@ import WebKit
 import OneSignalFramework
 
 struct ContentView: View {
-    let urlString: String = "https://demo.Delus.com/" // Your main website URL
+    let urlString: String = "https://demo.sngine.com/" // Your main website URL
 
     var body: some View {
         WebView(url: URL(string: urlString)!)
@@ -23,7 +23,7 @@ struct WebView: UIViewRepresentable {
         webView.configuration.allowsInlineMediaPlayback = true
 
         // Set a custom User-Agent for WebView
-        webView.customUserAgent = "DelusIOS"
+        webView.customUserAgent = "SngineIOS"
 
         // Add refresh control to the WKWebView's scroll view
         let refreshControl = UIRefreshControl()

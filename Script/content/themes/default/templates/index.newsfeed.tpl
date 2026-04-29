@@ -446,11 +446,6 @@
               <!-- upgrade -->
             {/if}
 
-          {elseif $view == "watch"}
-            <!-- videos posts -->
-            {include file='_posts.tpl' _get="discover" _filter="video" _load_more="watch" _title=__("Watch")}
-            <!-- videos posts -->
-
           {/if}
         </div>
         <!-- center panel -->

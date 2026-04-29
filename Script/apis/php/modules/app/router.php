@@ -3,8 +3,8 @@
 /**
  * APIs -> modules -> app -> router
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // get controller 

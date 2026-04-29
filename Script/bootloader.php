@@ -3,8 +3,8 @@
 /**
  * bootloader
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -37,7 +37,7 @@ try {
     }
 
     // get countries
-    if ($system['2checkout_enabled'] || $system['authorize_net_enabled'] || $system['newsfeed_location_filter_enabled']) {
+    if ($system['2checkout_enabled'] || $system['authorize_net_enabled'] || $system['newsfeed_location_filter_enabled'] || $system['pages_location_filter_enabled'] || $system['groups_location_filter_enabled'] || $system['events_location_filter_enabled']) {
       $countries = $user->get_countries();
       /* assign variables */
       $smarty->assign('countries', $countries);

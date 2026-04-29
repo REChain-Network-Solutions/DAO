@@ -3,7 +3,7 @@
     <a href="{if $blog['needs_payment'] || $blog['needs_subscription'] || $blog['needs_pro_package'] || $blog['needs_age_verification']}{$system['system_url']}/posts/{$blog['post_id']}{else}{$system['system_url']}/blogs/{$blog['post_id']}/{$blog['blog']['title_url']}{/if}" class="blog-container {if $_iteration == 1}primary{/if}">
       {if $blog['needs_payment']}
         <div class="ptb20 plr20">
-          {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price']}
+          {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price'] discounted_price=$blog['post_price_discounted']}
         </div>
       {elseif $blog['needs_subscription']}
         <div class="ptb20 plr20">
@@ -50,7 +50,7 @@
     {if $blog['needs_payment']}
       <a href="{$system['system_url']}/posts/{$blog['post_id']}">
         <div class="ptb20 plr20">
-          {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price'] paid_text=$blog['paid_text']}
+          {include file='_need_payment.tpl' post_id=$blog['post_id'] price=$blog['post_price'] discounted_price=$blog['post_price_discounted'] paid_text=$blog['paid_text']}
         </div>
       </a>
     {elseif $blog['needs_subscription']}

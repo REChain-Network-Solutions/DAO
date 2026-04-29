@@ -1,7 +1,7 @@
 <?php
 
 // set system name
-define('SYS_NAME', 'Delus');
+define('SYS_NAME', 'Sngine');
 
 // set system version
 define('SYS_VER', '3.9.1');

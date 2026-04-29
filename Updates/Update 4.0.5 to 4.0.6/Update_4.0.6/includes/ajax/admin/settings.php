@@ -3,8 +3,8 @@
 /**
  * ajax -> admin -> settings
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -332,7 +332,7 @@ try {
       $_POST['linkedin_login_enabled'] = (isset($_POST['linkedin_login_enabled'])) ? '1' : '0';
       $_POST['vkontakte_login_enabled'] = (isset($_POST['vkontakte_login_enabled'])) ? '1' : '0';
       $_POST['wordpress_login_enabled'] = (isset($_POST['wordpress_login_enabled'])) ? '1' : '0';
-      $_POST['Delus_login_enabled'] = (isset($_POST['Delus_login_enabled'])) ? '1' : '0';
+      $_POST['sngine_login_enabled'] = (isset($_POST['sngine_login_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'social_login_enabled' => secure($_POST['social_login_enabled']),
@@ -354,12 +354,12 @@ try {
         'wordpress_login_enabled' => secure($_POST['wordpress_login_enabled']),
         'wordpress_appid' => secure($_POST['wordpress_appid']),
         'wordpress_secret' => secure($_POST['wordpress_secret']),
-        'Delus_login_enabled' => secure($_POST['Delus_login_enabled']),
-        'Delus_appid' => secure($_POST['Delus_appid']),
-        'Delus_secret' => secure($_POST['Delus_secret']),
-        'Delus_app_domain' => secure($_POST['Delus_app_domain']),
-        'Delus_app_name' => secure($_POST['Delus_app_name']),
-        'Delus_app_icon' => secure($_POST['Delus_app_icon'])
+        'sngine_login_enabled' => secure($_POST['sngine_login_enabled']),
+        'sngine_appid' => secure($_POST['sngine_appid']),
+        'sngine_secret' => secure($_POST['sngine_secret']),
+        'sngine_app_domain' => secure($_POST['sngine_app_domain']),
+        'sngine_app_name' => secure($_POST['sngine_app_name']),
+        'sngine_app_icon' => secure($_POST['sngine_app_icon'])
       ]);
       break;
 

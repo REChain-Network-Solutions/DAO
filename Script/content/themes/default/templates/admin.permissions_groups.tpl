@@ -519,6 +519,42 @@
           </div>
           <!-- Posts Schedule Permission -->
 
+          <!-- Anonymous Posts Permission -->
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="spy" class="main-icon" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Anonymous Posts")}</div>
+              <div class="form-text d-none d-sm-block">{__("Can Add Anonymous Posts")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="anonymous_posts_permission">
+                <input type="checkbox" name="anonymous_posts_permission" id="anonymous_posts_permission">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          <!-- Anonymous Posts Permission -->
+
+          <!-- Collaborative Posts Permission -->
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="collaborative" class="main-icon" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Collaborative Posts")}</div>
+              <div class="form-text d-none d-sm-block">{__("Can Add Collaborative Posts")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="collaborative_posts_permission">
+                <input type="checkbox" name="collaborative_posts_permission" id="collaborative_posts_permission">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          <!-- Collaborative Posts Permission -->
+
           <!-- Colored Posts Permission -->
           <div class="form-table-row">
             <div class="avatar">
@@ -608,24 +644,67 @@
             </div>
           </div>
           <!-- GIF Posts Permission -->
+        </div>
 
-          <!-- Anonymous Posts Permission -->
+        <div class="divider"></div>
+
+        <div class="heading-small mb20">
+          {__("AI Permissions")}
+        </div>
+        <div class="pl-md-4">
+          <!-- AI Posts Permission -->
           <div class="form-table-row">
             <div class="avatar">
-              {include file='__svg_icons.tpl' icon="spy" class="main-icon" width="40px" height="40px"}
+              {include file='__svg_icons.tpl' icon="ai_post" class="main-icon" width="40px" height="40px"}
             </div>
             <div>
-              <div class="form-label h6">{__("Anonymous Posts")}</div>
-              <div class="form-text d-none d-sm-block">{__("Can Add Anonymous Posts")}</div>
+              <div class="form-label h6">{__("AI Posts")}</div>
+              <div class="form-text d-none d-sm-block">{__("Can generate posts using AI")}</div>
             </div>
             <div class="text-end">
-              <label class="switch" for="anonymous_posts_permission">
-                <input type="checkbox" name="anonymous_posts_permission" id="anonymous_posts_permission">
+              <label class="switch" for="ai_posts_permission">
+                <input type="checkbox" name="ai_posts_permission" id="ai_posts_permission">
                 <span class="slider round"></span>
               </label>
             </div>
           </div>
-          <!-- Anonymous Posts Permission -->
+          <!-- AI Posts Permission -->
+
+          <!-- AI Blogs Permission -->
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="ai_blog" class="main-icon" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("AI Blogs")}</div>
+              <div class="form-text d-none d-sm-block">{__("Can generate blogs using AI")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="ai_blogs_permission">
+                <input type="checkbox" name="ai_blogs_permission" id="ai_blogs_permission">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          <!-- AI Blogs Permission -->
+
+          <!-- AI Images Permission -->
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="ai_image" class="main-icon" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("AI Images")}</div>
+              <div class="form-text d-none d-sm-block">{__("Can generate images using AI")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="ai_images_permission">
+                <input type="checkbox" name="ai_images_permission" id="ai_images_permission">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+          <!-- AI Images Permission -->
         </div>
 
         <div class="divider"></div>
@@ -1906,6 +1985,42 @@
             </div>
             <!-- Posts Schedule Permission -->
 
+            <!-- Anonymous Posts Permission -->
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="spy" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Anonymous Posts")}</div>
+                <div class="form-text d-none d-sm-block">{__("Can Add Anonymous Posts")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="anonymous_posts_permission">
+                  <input type="checkbox" name="anonymous_posts_permission" id="anonymous_posts_permission" {if $data['anonymous_posts_permission']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            <!-- Anonymous Posts Permission -->
+
+            <!-- Collaborative Posts Permission -->
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="collaborative" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("Collaborative Posts")}</div>
+                <div class="form-text d-none d-sm-block">{__("Can Add Collaborative Posts")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="collaborative_posts_permission">
+                  <input type="checkbox" name="collaborative_posts_permission" id="collaborative_posts_permission" {if $data['collaborative_posts_permission']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            <!-- Collaborative Posts Permission -->
+
             <!-- Colored Posts Permission -->
             <div class="form-table-row">
               <div class="avatar">
@@ -1995,24 +2110,67 @@
               </div>
             </div>
             <!-- GIF Posts Permission -->
+          </div>
 
-            <!-- Anonymous Posts Permission -->
+          <div class="divider"></div>
+
+          <div class="heading-small mb20">
+            {__("AI Permissions")}
+          </div>
+          <div class="pl-md-4">
+            <!-- AI Posts Permission -->
             <div class="form-table-row">
               <div class="avatar">
-                {include file='__svg_icons.tpl' icon="spy" class="main-icon" width="40px" height="40px"}
+                {include file='__svg_icons.tpl' icon="ai_post" class="main-icon" width="40px" height="40px"}
               </div>
               <div>
-                <div class="form-label h6">{__("Anonymous Posts")}</div>
-                <div class="form-text d-none d-sm-block">{__("Can Add Anonymous Posts")}</div>
+                <div class="form-label h6">{__("AI Posts")}</div>
+                <div class="form-text d-none d-sm-block">{__("Can generate posts using AI")}</div>
               </div>
               <div class="text-end">
-                <label class="switch" for="anonymous_posts_permission">
-                  <input type="checkbox" name="anonymous_posts_permission" id="anonymous_posts_permission" {if $data['anonymous_posts_permission']}checked{/if}>
+                <label class="switch" for="ai_posts_permission">
+                  <input type="checkbox" name="ai_posts_permission" id="ai_posts_permission" {if $data['ai_posts_permission']}checked{/if}>
                   <span class="slider round"></span>
                 </label>
               </div>
             </div>
-            <!-- Anonymous Posts Permission -->
+            <!-- AI Posts Permission -->
+
+            <!-- AI Blogs Permission -->
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="ai_blog" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("AI Blogs")}</div>
+                <div class="form-text d-none d-sm-block">{__("Can generate blogs using AI")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="ai_blogs_permission">
+                  <input type="checkbox" name="ai_blogs_permission" id="ai_blogs_permission" {if $data['ai_blogs_permission']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            <!-- AI Blogs Permission -->
+
+            <!-- AI Images Permission -->
+            <div class="form-table-row">
+              <div class="avatar">
+                {include file='__svg_icons.tpl' icon="ai_image" class="main-icon" width="40px" height="40px"}
+              </div>
+              <div>
+                <div class="form-label h6">{__("AI Images")}</div>
+                <div class="form-text d-none d-sm-block">{__("Can generate images using AI")}</div>
+              </div>
+              <div class="text-end">
+                <label class="switch" for="ai_images_permission">
+                  <input type="checkbox" name="ai_images_permission" id="ai_images_permission" {if $data['ai_images_permission']}checked{/if}>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            <!-- AI Images Permission -->
           </div>
 
           <div class="divider"></div>

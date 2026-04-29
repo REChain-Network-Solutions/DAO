@@ -2,8 +2,8 @@
 /**
  * ajax -> admin -> users
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time

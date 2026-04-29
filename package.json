@@ -1,7 +1,7 @@
 {
  "dependencies": {
   "@benmajor/jquery-touch-events": "^2.0.3",
-  "@yaireo/tagify": "^4.33.2",
+  "@yaireo/tagify": "^4.37.1",
   "autosize": "^6.0.1",
   "bootstrap": "^5.3.3",
   "easytimer.js": "^4.6.0",
@@ -16,11 +16,11 @@
   "rcrop": "github:zamblektech/rcrop",
   "readmore-js": "^2.2.1",
   "slick-carousel": "^1.8.1",
-  "theia-sticky-sidebar": "^1.7.0",
-  "tinymce": "^7.6.1",
-  "tinymce-i18n": "^25.2.3",
+  "theia-sticky-sidebar": "^2.0.0",
+  "tinymce": "^8.5.0",
+  "tinymce-i18n": "^26.4.6",
   "triggeredautocomplete": "github:zamblektech/triggeredAutocomplete",
   "web-audio-recorder-js": "^0.0.2",
-  "zuck.js": "^1.6.0"
+  "zuck.js": "^2.1.1"
  }
 }

@@ -8,7 +8,7 @@
   </div>
   <div class="comment-data">
     <div class="x-form comment-form">
-      <textarea dir="auto" class="js_autosize js_mention js_post-comment" rows="1" placeholder='{__("Write a comment")}'></textarea>
+      <textarea dir="auto" class="js_autosize js_mentions js_post-comment" rows="1" placeholder='{__("Write a comment")}'></textarea>
       <ul class="x-form-tools clearfix">
         <li class="x-form-tools-post js_post-comment">
           <i class="far fa-paper-plane fa-lg fa-fw"></i>

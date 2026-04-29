@@ -3,8 +3,8 @@
 /**
  * page
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -60,8 +60,6 @@ try {
   if ($system['events_enabled'] && $system['pages_events_enabled']) {
     $spage['events'] = $user->get_events(['page_id' => $spage['page_id'], 'results' => $system['min_results']]);
   }
-  /* check if can sell products */
-  $spage['can_sell_products'] = $system['market_enabled'] && $user->check_user_permission($spage['page_admin'], 'market_permission');
   /* check if can receivce tips */
   $spage['can_receive_tips'] = $system['tips_enabled'] && $user->check_user_permission($spage['page_admin'], 'tips_permission');
   /* check if page's admin can monetize content */
@@ -187,6 +185,16 @@ try {
       }
       break;
 
+    case 'blogs':
+      /* get content */
+      if (!$spage['needs_subscription']) {
+        /* get posts (blogs) */
+        $posts = $user->get_posts(['get' => 'posts_page', 'id' => $spage['page_id'], 'filter' => 'article']);
+        /* assign variables */
+        $smarty->assign('posts', $posts);
+      }
+      break;
+
     case 'products':
       /* get content */
       if (!$spage['needs_subscription']) {
@@ -297,11 +305,33 @@ try {
             _error(404);
           }
 
-          /* get monetozaion plans */
-          $smarty->assign('monetization_plans', $user->get_monetization_plans($spage['page_id'], 'page'));
+          /* get sub view content */
+          switch ($_GET['show']) {
+            case '':
+            case 'settings':
+              /* set the show if not set */
+              if (!isset($_GET['show'])) {
+                $_GET['show'] = 'settings';
+              }
 
-          /* get subscribers count */
-          $smarty->assign('subscribers_count', $user->get_subscribers_count($spage['page_id'], 'page'));
+              /* get monetozaion plans */
+              $smarty->assign('monetization_plans', $user->get_monetization_plans($spage['page_id'], 'page'));
+
+              /* get subscribers count */
+              $smarty->assign('subscribers_count', $user->get_subscribers_count($spage['page_id'], 'page'));
+              break;
+
+            case 'coupons':
+              /* get coupons */
+              $smarty->assign('coupons', $user->get_monetization_coupons($spage['page_id'], 'page'));
+              break;
+
+            default:
+              _error(404);
+              break;
+          }
+          /* assign variables */
+          $smarty->assign('show', $_GET['show']);
           break;
 
         case 'verification':

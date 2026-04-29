@@ -3,8 +3,8 @@
 /**
  * APIs -> routes -> core
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 # ping route...

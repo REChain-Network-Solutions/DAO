@@ -3,8 +3,8 @@
 /**
  * index
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -244,11 +244,6 @@ try {
           _error(404);
         }
 
-        // check blogs permission
-        if (!$user->_data['can_write_blogs']) {
-          _error(404);
-        }
-
         // page header
         page_header(__("My Blogs"));
 
@@ -261,11 +256,6 @@ try {
       case 'products':
         // check if market enabled
         if (!$system['market_enabled']) {
-          _error(404);
-        }
-
-        // check market permission
-        if (!$user->_data['can_sell_products']) {
           _error(404);
         }
 
@@ -284,11 +274,6 @@ try {
           _error(404);
         }
 
-        // check funding permission
-        if (!$user->_data['can_raise_funding']) {
-          _error(404);
-        }
-
         // page header
         page_header(__("My Funding"));
 
@@ -301,11 +286,6 @@ try {
       case 'offers':
         // check if offers enabled
         if (!$system['offers_enabled']) {
-          _error(404);
-        }
-
-        // check offers permission
-        if (!$user->_data['can_create_offers']) {
           _error(404);
         }
 
@@ -324,11 +304,6 @@ try {
           _error(404);
         }
 
-        // check jobs permission
-        if (!$user->_data['can_create_jobs']) {
-          _error(404);
-        }
-
         // page header
         page_header(__("My Jobs"));
 
@@ -341,11 +316,6 @@ try {
       case 'courses':
         // check if courses enabled
         if (!$system['courses_enabled']) {
-          _error(404);
-        }
-
-        // check courses permission
-        if (!$user->_data['can_create_courses']) {
           _error(404);
         }
 
@@ -463,41 +433,6 @@ try {
         $smarty->assign('boosted_events', $boosted_events);
         break;
 
-      case 'watch':
-        // check if watch enabled
-        if (!$system['watch_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("Watch") . ' | ' . __($system['system_title']));
-
-        // newsfeed location filter
-        if ($system['newsfeed_location_filter_enabled']) {
-          // get countries if not defined
-          if (!$countries) {
-            $smarty->assign('countries', $user->get_countries());
-          }
-
-          // get selected country
-          if (isset($_GET['country'])) {
-            /* get selected country */
-            $selected_country = $user->get_country_by_name($_GET['country']);
-            /* assign variables */
-            $smarty->assign('selected_country', $selected_country);
-          }
-        }
-
-        // get posts (watch)
-        /* first get the videos from public */
-        $posts_discover = ($selected_country) ? $user->get_posts(['get' => 'discover', 'filter' => 'video', 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'discover', 'filter' => 'video']);
-        /* second get the videos from friends */
-        $posts_friends = ($selected_country) ? $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'newsfeed', 'filter' => 'video']);
-        /* merge the two arrays */
-        $posts = array_merge($posts_discover, $posts_friends);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
       default:
         _error(404);
         break;

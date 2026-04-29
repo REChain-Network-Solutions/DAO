@@ -3,8 +3,8 @@
 /**
  * trait -> posts
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait PostsTrait
@@ -29,6 +29,7 @@ trait PostsTrait
     $get = !isset($args['get']) ? 'newsfeed' : $args['get'];
     $filter = !isset($args['filter']) ? 'all' : $args['filter'];
     $country = !isset($args['country']) ? 'all' : $args['country'];
+    $category = !isset($args['category']) ? null : $args['category'];
     $max_results = !isset($args['results']) ? $system['newsfeed_results'] : $args['results'];
     if (!in_array($filter, ['all', '', 'link', 'media', 'live', 'photos', 'map', 'article', 'product', 'funding', 'offer', 'job', 'course', 'poll', 'reel', 'video', 'audio', 'file', 'merit'])) {
       _error(400);
@@ -74,17 +75,24 @@ trait PostsTrait
               if ($this->_logged_in) {
                 /* [1] get viewer posts */
                 $me = $this->_data['user_id'];
+                /* get viewer own posts */
                 $where_query .= "(posts.user_id = $me AND posts.user_type = 'user')";
+                /* get viewer collaborative posts */
+                $where_query .= " OR (posts.is_collaborative = '1' AND posts.user_type = 'user' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id = $me))";
                 /* [2] get posts from friends still followed */
                 /* viewer friends posts -> authors */
                 $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'user' AND posts.privacy = 'friends' AND posts.in_group = '0' AND posts.in_event = '0')", $this->spread_ids($this->get_friends_followings_ids()));
                 /* viewer friends posts -> their wall posts */
-                $where_query .= sprintf(" OR (posts.in_wall = '1' AND posts.wall_id IN (%s) AND posts.user_type = 'user' AND posts.privacy = 'friends')", $this->spread_ids($this->get_friends_followings_ids()));
+                $where_query .= sprintf(" OR (posts.in_wall = '1' AND posts.user_type = 'user' AND posts.privacy = 'friends' AND posts.wall_id IN (%s))", $this->spread_ids($this->get_friends_followings_ids()));
+                /* viewer friends posts -> collaborative posts */
+                $where_query .= sprintf(" OR ( posts.is_collaborative = '1' AND posts.user_type = 'user' AND posts.privacy = 'friends' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id IN (%s)))", $this->spread_ids($this->get_friends_followings_ids()));
                 /* [3] get posts from followings */
                 /* viewer followings posts -> authors */
                 $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.in_group = '0' AND posts.in_event = '0')", $this->spread_ids($this->_data['followings_ids']));
                 /* viewer followings posts -> their wall posts */
-                $where_query .= sprintf(" OR (posts.in_wall = '1' AND posts.wall_id IN (%s) AND posts.user_type = 'user' AND posts.privacy = 'public')", $this->spread_ids($this->_data['followings_ids']));
+                $where_query .= sprintf(" OR (posts.in_wall = '1' AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.wall_id IN (%s))", $this->spread_ids($this->_data['followings_ids']));
+                /* viewer followings posts -> collaborative posts */
+                $where_query .= sprintf(" OR (posts.is_collaborative = '1' AND posts.user_type = 'user' AND posts.privacy = 'public' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id IN (%s)))", $this->spread_ids($this->_data['followings_ids']));
                 /* [4] get viewer liked pages posts */
                 $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'page')", $this->spread_ids($this->get_pages_ids()));
                 /* [5] get groups (memberhsip approved only) posts & exclude the viewer posts */
@@ -131,7 +139,9 @@ trait PostsTrait
             /* get all target posts */
             $where_query .= "(posts.user_id = $id AND posts.user_type = 'user')";
             /* get target wall posts (from others to the target) */
-            $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1')";
+            $where_query .= " OR (posts.in_wall = '1' AND posts.wall_id = $id)";
+            /* get target collaborative posts */
+            $where_query .= " OR (posts.is_collaborative = '1' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id = $id))";
             $where_query .= ")";
           } else {
             /* check if the viewer & the target user are friends */
@@ -141,7 +151,9 @@ trait PostsTrait
               /* get all target posts [except: group posts & event posts & hidden posts & anonymous posts] */
               $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy != 'me'AND posts.is_hidden = '0' AND posts.is_anonymous = '0' AND posts.in_group = '0' AND posts.in_event = '0' )";
               /* get target wall posts (from others to the target) [except: hidden posts] */
-              $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1' AND posts.is_hidden = '0')";
+              $where_query .= " OR (posts.in_wall = '1' AND posts.is_hidden = '0' AND posts.wall_id = $id)";
+              /* get target collaborative posts [except: hidden posts] */
+              $where_query .= " OR (posts.is_collaborative = '1' AND posts.is_hidden = '0' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id = $id))";
               $where_query .= ")";
             } else {
               /* No they are not friends */
@@ -150,7 +162,9 @@ trait PostsTrait
               $where_query .= "WHERE (";
               $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.is_anonymous = '0')";
               /* get target public wall posts (from others to the target) [except: hidden posts] */
-              $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0')";
+              $where_query .= " OR (posts.in_wall = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.wall_id = $id)";
+              /* get target collaborative posts [except: hidden posts] */
+              $where_query .= " OR (posts.is_collaborative = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id = $id))";
               $where_query .= ")";
             }
           }
@@ -160,13 +174,17 @@ trait PostsTrait
           /* note: we didn't except group posts & event posts as they are not public already */
           $where_query .= "(posts.user_id = $id AND posts.user_type = 'user' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.is_anonymous = '0')";
           /* get target public wall posts (from others to the target) [except: hidden posts] */
-          $where_query .= " OR (posts.wall_id = $id AND posts.in_wall = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0')";
+          $where_query .= " OR (posts.in_wall = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND posts.wall_id = $id)";
+          /* get target collaborative posts [except: hidden posts] */
+          $where_query .= " OR (posts.is_collaborative = '1' AND posts.privacy = 'public' AND posts.is_hidden = '0' AND EXISTS (SELECT 1 FROM posts_collaborative_users pcu WHERE pcu.post_id = posts.post_id AND pcu.user_id = $id))";
           $where_query .= ")";
         }
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query";
           if ($filter == "product") {
             $where_query .= " OR posts.post_id IN (SELECT post_id FROM posts_products WHERE name LIKE $query)";
+          } elseif ($filter == "article") {
+            $where_query .= " OR posts.post_id IN (SELECT post_id FROM posts_articles WHERE title LIKE $query)";
           }
           $where_query .= ")";
         }
@@ -188,7 +206,7 @@ trait PostsTrait
           _error(400);
         }
         $id = $args['id'];
-        $where_query .= "WHERE (posts.group_id = $id AND posts.in_group = '1' AND posts.group_approved = '1') OR (posts.group_id = $id AND posts.post_type = 'group')";
+        $where_query .= "WHERE ((posts.group_id = $id AND posts.in_group = '1' AND posts.group_approved = '1') OR (posts.group_id = $id AND posts.post_type = 'group'))";
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query)";
         }
@@ -216,7 +234,7 @@ trait PostsTrait
           _error(400);
         }
         $id = $args['id'];
-        $where_query .= "WHERE (posts.event_id = $id AND posts.in_event = '1' AND posts.event_approved = '1') OR (posts.event_id = $id AND posts.post_type = 'event')";
+        $where_query .= "WHERE ((posts.event_id = $id AND posts.in_event = '1' AND posts.event_approved = '1') OR (posts.event_id = $id AND posts.post_type = 'event'))";
         if ($query) {
           $where_query .= " AND (posts.text LIKE $query)";
         }
@@ -274,7 +292,7 @@ trait PostsTrait
         /* [1] get viewer posts */
         $where_query .= "WHERE (posts.user_id = $id AND posts.user_type = 'user' AND posts.is_schedule = '1' AND posts.time > NOW())";
         /* [2] get viewer liked pages posts */
-        $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'page' AND posts.is_schedule = '1' AND posts.time > NOW())", $this->spread_ids($this->get_pages_ids()));
+        $where_query .= sprintf(" OR (posts.user_id IN (%s) AND posts.user_type = 'page' AND posts.is_schedule = '1' AND posts.time > NOW())", $this->spread_ids($this->get_pages_managed_ids()));
         break;
 
       case 'memories':
@@ -307,6 +325,15 @@ trait PostsTrait
     if ($system['newsfeed_location_filter_enabled'] && $country != "all") {
       $where_query .= sprintf(" AND ( (posts.user_type = 'user' AND user_post_author.user_country = %s) OR (posts.user_type = 'page' AND page_post_author.page_country = %s) )", secure($country, 'int'), secure($country, 'int'));
     }
+    /* newsfeed category filter */
+    if ($category) {
+      switch ($filter) {
+        case 'video':
+          $category_join = " LEFT JOIN posts_videos ON posts.post_id = posts_videos.post_id ";
+          $where_query .= sprintf(" AND (posts_videos.category_id = %s)", secure($category, 'int'));
+          break;
+      }
+    }
     /* prepare approval system */
     if ($system['posts_approval_enabled']) {
       $where_query .= " AND (posts.pre_approved = '1' OR posts.has_approved = '1') ";
@@ -326,10 +353,10 @@ trait PostsTrait
     }
     /* get posts */
     if ($last_post_id != null && !in_array($get, ['popular', 'saved', 'scheduled', 'memories'])) { /* excluded as not ordered by post_id */
-      $get_posts = $db->query(sprintf("SELECT * FROM (SELECT posts.post_id FROM posts " . $author_join . $where_query . ") posts WHERE posts.post_id > %s ORDER BY posts.post_id DESC", secure($last_post_id, 'int')));
+      $get_posts = $db->query(sprintf("SELECT * FROM (SELECT posts.post_id FROM posts " . $author_join . $category_join . $where_query . ") posts WHERE posts.post_id > %s ORDER BY posts.post_id DESC", secure($last_post_id, 'int')));
     } else {
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($max_results, 'int', false)); /* get_all for cases like download user's posts */
-      $get_posts = $db->query("SELECT posts.post_id FROM posts " . $author_join . $where_query . " " . $order_query . " " . $limit_statement);
+      $get_posts = $db->query("SELECT posts.post_id FROM posts " . $author_join . $category_join . $where_query . " " . $order_query . " " . $limit_statement);
     }
     if ($get_posts->num_rows > 0) {
       while ($post = $get_posts->fetch_assoc()) {
@@ -420,8 +447,12 @@ trait PostsTrait
 
     if ($post['can_get_details']) {
       /* parse text */
-      $post['text_plain'] = $post['text'];
-      $post['text'] = $this->parse(["text" => $post['text_plain']]);
+      $post['text_raw'] = $post['text'];
+      $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
+      $post['text_html'] = ($post['text_html']) ? preg_replace('/^<p>|<\/p>$/', '', $post['text_html']) : $post['text_html'];
+      $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
+      $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
+      $post['text'] = $this->parse(["text" => $post['text_html'], 'decode_emojis' => false]);
 
       /* og-meta tags */
       $post['og_title'] .= ($post['text_plain'] != "") ? " - " . $post['text_plain'] : "";
@@ -520,6 +551,13 @@ trait PostsTrait
           return false;
         }
         $post['blog'] = $get_blog->fetch_assoc();
+        /* get references */
+        $get_references = $db->query(sprintf("SELECT title, link FROM posts_articles_references WHERE post_id = %s", secure($post['post_id'], 'int')));
+        if ($get_references->num_rows > 0) {
+          while ($reference = $get_references->fetch_assoc()) {
+            $post['blog']['references'][] = $reference;
+          }
+        }
         /* check blogs permissions */
         $post['needs_pro_package'] = false;
         /* check if user is not the author of the post or not admin */
@@ -784,6 +822,7 @@ trait PostsTrait
           return false;
         } else {
           $post['video'] = $get_video->fetch_assoc();
+          $post['video']['category_url'] = get_url_text($post['video']['category_name']);
           /* og-meta tags */
           if ($post['video']['thumbnail']) {
             $post['og_image'] = $system['system_uploads'] . '/' . $post['video']['thumbnail'];
@@ -1203,6 +1242,8 @@ trait PostsTrait
                 users.user_pinned_post,
                 users.user_banned,
                 users.user_monetization_enabled,
+                users.user_monetization_discount_enabled,
+                users.user_monetization_discount_percent,
                 users.user_monetization_min_price,
                 users.user_monetization_plans,
                 packages.name as package_name,
@@ -1325,7 +1366,7 @@ trait PostsTrait
     /* check if post can be shared with subscribers only */
     $post['can_be_for_subscriptions'] = false;
     if ($this->_logged_in) {
-      if ($system['monetization_enabled'] && !$post['in_event']) {
+      if ($system['monetization_enabled'] && !$post['in_event'] && !$post['is_collaborative']) {
         if ($post['in_group']) {
           $node_monetization_enabled = $post['group_monetization_enabled'];
           $node_author = $post['group_admin'];
@@ -1357,6 +1398,8 @@ trait PostsTrait
         $node_subscription_type = 'group';
         $node_subscription_id = $post['group_id'];
         $node_subscription_price = $post['group_monetization_min_price'];
+        $node_monetization_discount_enabled = $post['group_monetization_discount_enabled'];
+        $node_monetization_discount_percent = $post['group_monetization_discount_percent'];
       } elseif ($post['user_type'] == "page") {
         $node_monetization_enabled = $post['page_monetization_enabled'];
         $node_author = $post['page_admin'];
@@ -1364,6 +1407,8 @@ trait PostsTrait
         $node_subscription_type = 'page';
         $node_subscription_id = $post['page_id'];
         $node_subscription_price = $post['page_monetization_min_price'];
+        $node_monetization_discount_enabled = $post['page_monetization_discount_enabled'];
+        $node_monetization_discount_percent = $post['page_monetization_discount_percent'];
       } elseif ($post['user_type'] == "user") {
         $node_monetization_enabled = $post['user_monetization_enabled'];
         $node_author = $post['author_id'];
@@ -1371,6 +1416,8 @@ trait PostsTrait
         $node_subscription_type = 'profile';
         $node_subscription_id = $post['user_id'];
         $node_subscription_price = $post['user_monetization_min_price'];
+        $node_monetization_discount_enabled = $post['user_monetization_discount_enabled'];
+        $node_monetization_discount_percent = $post['user_monetization_discount_percent'];
       }
       /* get can_monetize_content */
       $post['can_monetize_content'] = $node_monetization_enabled && $this->check_user_permission($node_author, 'monetization_permission');
@@ -1383,6 +1430,7 @@ trait PostsTrait
               /* check if the viewer subscribed to this node || paid for this post */
               if (!$this->is_user_paid_for_post($post['post_id'])) {
                 $post['needs_payment'] = true;
+                $post['post_price_discounted'] = $post['post_price'] * (1 - $node_monetization_discount_percent / 100);
               }
             } else {
               if ($node_monetization_plans > 0) {
@@ -1392,6 +1440,8 @@ trait PostsTrait
                   $post['needs_subscription_type'] = $node_subscription_type;
                   $post['needs_subscription_id'] = $node_subscription_id;
                   $post['needs_subscription_price'] = $node_subscription_price;
+                  $post['needs_subscription_discount_enabled'] = $node_monetization_discount_enabled;
+                  $post['needs_subscription_discount_percent'] = $node_monetization_discount_percent;
                 }
               }
             }
@@ -1399,12 +1449,15 @@ trait PostsTrait
         } else {
           if ($post['is_paid']) {
             $post['needs_payment'] = true;
+            $post['post_price_discounted'] = $post['post_price'] * (1 - $node_monetization_discount_percent / 100);
           } else {
             if ($node_monetization_plans > 0) {
               $post['needs_subscription'] = true;
               $post['needs_subscription_type'] = $node_subscription_type;
               $post['needs_subscription_id'] = $node_subscription_id;
               $post['needs_subscription_price'] = $node_subscription_price;
+              $post['needs_subscription_discount_enabled'] = $node_monetization_discount_enabled;
+              $post['needs_subscription_discount_percent'] = $node_monetization_discount_percent;
             }
           }
         }
@@ -1454,6 +1507,22 @@ trait PostsTrait
         $post['can_get_details'] = false;
       }
     }
+
+    /* check if post is collaborative */
+    if ($post['is_collaborative']) {
+      /* get collaborative users */
+      $post['collaborative_users'] = $this->get_collaborative_users($post['post_id']);
+      /* check if the viewer is a collaborative user */
+      $post['i_collaborative'] = false;
+      if ($this->_logged_in && $post['author_id'] != $this->_data['user_id']) {
+        $post['i_collaborative'] = $this->is_collaborative_user($this->_data['user_id'], $post['post_id']);
+        /* if the viewer is a collaborative user, then they can get the full details of the post anyway */
+        if ($post['i_collaborative']) {
+          $post['can_get_details'] = true;
+        }
+      }
+    }
+
 
     /* check privacy */
     /* overwrite the pass_privacy_check */
@@ -2028,6 +2097,15 @@ trait PostsTrait
     if ($post['in_event'] && !$post['event_approved']) {
       $this->delete_notification($post['event_admin'], 'event_post_pending', $post['event_title'], $post['event_id'] . "-[guid=]" . $post['post_id']);
     }
+    /* delete collaborative users */
+    if ($post['is_collaborative']) {
+      /* delete collaborative users notifications */
+      foreach ($post['collaborative_users'] as $collaborative_user) {
+        $this->delete_notification($collaborative_user['user_id'], 'collaborative_post', 'post', $post_id);
+      }
+      /* delete collaborative users from database */
+      $db->query(sprintf("DELETE FROM posts_collaborative_users WHERE post_id = %s", secure($post_id, 'int')));
+    }
     return $refresh;
   }
 
@@ -2081,7 +2159,7 @@ trait PostsTrait
     $this->post_mentions($message, $post_id);
     /* parse text */
     $post['text_plain'] = htmlentities($message, ENT_QUOTES, 'utf-8');
-    $post['text'] = $this->parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post_id]);
+    $post['text'] = $this->parse(["text" => $post['text_plain'], 'decode_emojis' => false, "trending_hashtags" => true, "post_id" => $post_id]);
     /* get post colored pattern */
     $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
     /* return */

@@ -616,10 +616,6 @@
 
     {include file='../images/svg/noads.svg'}
 
-  {elseif $icon == "moneypoolscash"}
-
-    {include file='../images/svg/moneypoolscash.svg'}
-
   {elseif $icon == "tips"}
 
     {include file='../images/svg/tips.svg'}
@@ -1075,6 +1071,35 @@
   {elseif $icon == "support"}
 
     {include file='../images/svg/support.svg'}
+
+  {elseif $icon == "collaborative"}
+
+    {include file='../images/svg/collaborative.svg'}
+
+  {elseif $icon == "ai"}
+
+    {include file='../images/svg/ai.svg'}
+
+  {elseif $icon == "ai_post"}
+
+    {include file='../images/svg/ai_post.svg'}
+
+  {elseif $icon == "ai_blog"}
+
+    {include file='../images/svg/ai_blog.svg'}
+
+  {elseif $icon == "ai_image"}
+
+    {include file='../images/svg/ai_image.svg'}
+
+  {elseif $icon == "openai"}
+
+    {include file='../images/svg/openai.svg'}
+
+  {elseif $icon == "replicate"}
+
+    {include file='../images/svg/replicate.svg'}
+
   {/if}
 
 </div>

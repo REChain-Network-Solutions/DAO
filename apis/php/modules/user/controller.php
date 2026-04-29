@@ -3,8 +3,8 @@
 /**
  * APIs -> modules -> user -> controller
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // connectUser

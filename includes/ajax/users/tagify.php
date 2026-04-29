@@ -3,8 +3,8 @@
 /**
  * ajax -> users -> tagify
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -33,6 +33,22 @@ try {
       $get_users = $db->query(sprintf('SELECT user_id, user_firstname, user_lastname FROM users WHERE user_id != %s AND (user_name LIKE %2$s OR user_firstname LIKE %2$s OR user_lastname LIKE %2$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %2$s) ORDER BY user_firstname ASC LIMIT %3$s', secure($user->_data['user_id'], 'int'), secure($_POST['query'], 'search'), secure($system['min_results'], 'int', false)));
       if ($get_users->num_rows > 0) {
         while ($_user = $get_users->fetch_assoc()) {
+          $result['value'] = html_entity_decode(trim($_user['user_firstname']) . " " . trim($_user['user_lastname']));
+          $result['id'] = $_user['user_id'];
+          $list[] = $result;
+        }
+        $return['list'] = json_encode($list);
+      }
+      break;
+
+    case 'collaborative_users':
+      /* get users */
+      $get_users = $db->query(sprintf('SELECT user_id, user_firstname, user_lastname, user_privacy_collaborative FROM users WHERE user_id != %s AND user_privacy_collaborative != "me" AND (user_name LIKE %2$s OR user_firstname LIKE %2$s OR user_lastname LIKE %2$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %2$s) ORDER BY user_firstname ASC LIMIT %3$s', secure($user->_data['user_id'], 'int'), secure($_POST['query'], 'search'), secure($system['min_results'], 'int', false)));
+      if ($get_users->num_rows > 0) {
+        while ($_user = $get_users->fetch_assoc()) {
+          if ($_user['user_privacy_collaborative'] == 'friends' && !$user->friendship_approved($_user['user_id'])) {
+            continue;
+          }
           $result['value'] = html_entity_decode(trim($_user['user_firstname']) . " " . trim($_user['user_lastname']));
           $result['id'] = $_user['user_id'];
           $list[] = $result;

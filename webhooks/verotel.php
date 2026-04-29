@@ -3,8 +3,8 @@
 /**
  * webhooks -> verotel
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -56,6 +56,7 @@ try {
 
         // check payment
         $payment = verotel_check($_GET['saleID']);
+        $_SESSION['wallet_replenish_amount'] = (isset($_SESSION['wallet_replenish_amount'])) ? $_SESSION['wallet_replenish_amount'] : $id;
         if ($payment && isset($_SESSION['wallet_replenish_amount'])) {
           /* update user wallet balance */
           $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($_SESSION['wallet_replenish_amount']), secure($user->_data['user_id'], 'int')));
@@ -94,12 +95,12 @@ try {
         if (!isset($_GET['saleID'])) {
           _error(404);
         }
-        if (!isset($_GET['plan_id']) || !is_numeric($_GET['plan_id'])) {
+        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
           _error(404);
         }
 
         // get monetization plan
-        $monetization_plan = $user->get_monetization_plan($_GET['plan_id'], true);
+        $monetization_plan = $user->get_monetization_plan($_GET['id'], true);
         if (!$monetization_plan) {
           _error(404);
         }
@@ -108,9 +109,10 @@ try {
         $payment = verotel_check($_GET['saleID']);
         if ($payment) {
           /* subscribe to node */
-          $node_link = $user->subscribe($_GET['plan_id']);
+          $node_link = $user->subscribe($_GET['id']);
           /* log payment */
-          $user->log_payment($user->_data['user_id'], $monetization_plan['price'], 'verotel', 'subscribe');
+          $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+          $user->log_payment($user->_data['user_id'], $price, 'verotel', 'subscribe');
           /* redirect */
           redirect($node_link);
         }
@@ -137,7 +139,8 @@ try {
           /* unlock paid post */
           $post_link = $user->unlock_paid_post($id);
           /* log payment */
-          $user->log_payment($user->_data['user_id'], $post['post_price'], 'verotel', 'paid_post');
+          $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
+          $user->log_payment($user->_data['user_id'], $price, 'verotel', 'paid_post');
           /* redirect */
           redirect($post_link);
         }

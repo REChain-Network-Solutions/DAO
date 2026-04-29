@@ -3,8 +3,8 @@
 /**
  * APIs -> modules -> auth -> controller
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // signUp

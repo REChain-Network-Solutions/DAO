@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> data -> autocomplete
+ * ajax -> users -> autocomplete
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap

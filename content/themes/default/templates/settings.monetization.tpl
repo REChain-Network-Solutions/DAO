@@ -1,6 +1,16 @@
 <div class="card-header with-icon">
+  {if $sub_view == "coupons"}
+    <div class="float-end">
+      <button data-toggle="modal" data-url="monetization/controller.php?do=add_coupon&node_id={$user->_data['user_id']}&node_type=profile" class="btn btn-md btn-primary">
+        <i class="fa fa-plus-circle"></i><span class="ml5 d-none d-lg-inline-block">{__("Generate New Coupon")}</span>
+      </button>
+    </div>
+  {/if}
   {include file='__svg_icons.tpl' icon="monetization" class="main-icon mr15" width="24px" height="24px"}
   {__("Monetization")}
+  {if $sub_view == "coupons"} &rsaquo; {__("Coupons")}{/if}
+  {if $sub_view == "payments"} &rsaquo; {__("Payments")}{/if}
+  {if $sub_view == "earnings"} &rsaquo; {__("Earnings")}{/if}
 </div>
 <div class="card-body">
   {if $sub_view == ""}
@@ -57,6 +67,36 @@
           </div>
         </div>
 
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="offers"  class="main-icon" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6">{__("Global Discount")}</div>
+            <div class="form-text d-none d-sm-block">{__("Enable or disable global discount for subscriptions plans and paid posts")}</div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="user_monetization_discount_enabled">
+              <input type="checkbox" name="user_monetization_discount_enabled" id="user_monetization_discount_enabled" {if $user->_data['user_monetization_discount_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Discount Percent")}
+          </label>
+          <div class="col-md-9">
+            <input type="number" min="1" max="99" class="form-control" name="user_monetization_discount_percent" value="{$user->_data['user_monetization_discount_percent']}">
+            <div class="form-text">
+              {__("The discount percent to apply to all monetized content (min 1, max 99)")}
+            </div>
+          </div>
+        </div>
+
+        <div class="divider dashed"></div>
+
         <div class="heading-small mb20">
           {__("Paid Chat")}
         </div>
@@ -86,6 +126,8 @@
           </div>
         </div>
 
+        <div class="divider dashed"></div>
+
         <div class="heading-small mb20">
           {__("Subscriptions")}
         </div>
@@ -108,13 +150,13 @@
                         <i class="fa fa-trash-alt mr5"></i>{__("Delete")}
                       </span>
                       |
-                      <span data-toggle="modal" data-url="monetization/controller.php?do=edit&id={$plan['plan_id']}" class="text-link ml10">
+                      <span data-toggle="modal" data-url="monetization/controller.php?do=edit_plan&id={$plan['plan_id']}" class="text-link ml10">
                         <i class="fa fa-pen mr5"></i>{__("Edit")}
                       </span>
                     </div>
                   </div>
                 {/foreach}
-                <div data-toggle="modal" data-url="monetization/controller.php?do=add&node_id={$user->_data['user_id']}&node_type=profile" class="payment-plan new">
+                <div data-toggle="modal" data-url="monetization/controller.php?do=add_plan&node_id={$user->_data['user_id']}&node_type=profile" class="payment-plan new">
                   <div class="d-flex align-items-center justify-content-center">
                     <i class="fa fa-plus mr5"></i>
                     {__("Add New")}
@@ -181,6 +223,71 @@
         <!-- monetization balance -->
       </div>
     </div>
+
+  {elseif $sub_view == "coupons"}
+
+    {if $coupons}
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered table-hover js_dataTable">
+          <thead>
+            <tr>
+              <th>{__("Code")}</th>
+              <th>{__("Discount")}</th>
+              <th>{__("Created")}</th>
+              <th>{__("Usage Details")}</th>
+              <th>{__("One Time")}</th>
+              <th>{__("Actions")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {foreach $coupons as $coupon}
+              <tr>
+                <td><span class="badge rounded-pill badge-lg bg-secondary">{$coupon['coupon_code']}</span></td>
+                <td>
+                  <span class="badge rounded-pill badge-lg bg-primary">{$coupon['discount_percent']}%</span>
+                </td>
+                <td>{$coupon['created_date']|date_format:"%e %B %Y"}</td>
+                <td>
+                  {if $coupon['usage_counter'] > 0}
+                    <span data-toggle="modal" data-url="monetization/controller.php?do=coupon_users&coupon_id={$coupon['coupon_id']}" class="pointer text-success">
+                      <i class="fa fa-users mr5"></i> <span class="badge rounded-pill badge-lg bg-success">{$coupon['usage_counter']}</span> {__("Users")}
+                    </span>
+                  {else}
+                    {include file='__svg_icons.tpl' icon="cross" class="mr5" width="24px" height="24px"} <span class="text-muted">{__("No One")}</span>
+                  {/if}
+                </td>
+                <td>
+                  {if $coupon['is_onetime']}
+                    {include file='__svg_icons.tpl' icon="checked" width="24px" height="24px"}
+                  {else}
+                    {include file='__svg_icons.tpl' icon="cross" width="24px" height="24px"}
+                  {/if}
+                </td>
+                <td>
+                  <!-- delete -->
+                  <div class="d-inline-block" data-bs-toggle="tooltip" title='{__("Delete")}'>
+                    <button class="btn btn-sm btn-icon btn-rounded btn-danger js_monetization-coupon-deleter" data-id="{$coupon['coupon_id']}">
+                      <i class="fa fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <!-- delete -->
+                  <!-- share -->
+                  <div class="d-inline-block" data-bs-toggle="tooltip" title='{__("Share")}'>
+                    <button data-toggle="modal" data-url="monetization/controller.php?do=share_coupon&coupon_id={$coupon['coupon_id']}" class="btn btn-sm btn-icon btn-rounded btn-primary">
+                      <i class="fa fa-link"></i>
+                    </button>
+                  </div>
+                  <!-- share -->
+                </td>
+              </tr>
+            {/foreach}
+          </tbody>
+        </table>
+      </div>
+    {else}
+      {include file='_no_data.tpl'}
+    {/if}
+
   {elseif $sub_view == "payments"}
     <div class="heading-small mb20">
       {__("Withdrawal Request")}

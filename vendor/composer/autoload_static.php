@@ -22,6 +22,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         '8a9dc1de0ca7e01f3e08231539562f61' => __DIR__ . '/..' . '/aws/aws-sdk-php/src/functions.php',
         '09fc349b549513bf7f4291502426f919' => __DIR__ . '/..' . '/embed/embed/src/functions.php',
         '2cffec82183ee1cea088009cef9a6fc3' => __DIR__ . '/..' . '/ezyang/htmlpurifier/library/HTMLPurifier.composer.php',
+        '61ba3e92ef91a7a0f1cc260ebd9290e4' => __DIR__ . '/..' . '/openai-php/client/src/OpenAI.php',
         'd08bec471a180204a14ef3c91e951f99' => __DIR__ . '/..' . '/p3k/emoji-detector/src/Emoji.php',
         'c15d4a1253e33e055d05e547c61dcb71' => __DIR__ . '/..' . '/smarty/smarty/src/functions.php',
         'afbfa7a43c52370cda17774bbbc223ea' => __DIR__ . '/..' . '/verotel/flexpay-php-client/FlexPay.php',
@@ -79,6 +80,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
             'PHPSocketIO\\' => 12,
             'PHPMailer\\PHPMailer\\' => 20,
         ),
+        'O' =>
+        array (
+            'OpenAI\\' => 7,
+        ),
         'M' =>
         array (
             'Monolog\\' => 8,
@@ -98,6 +103,7 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         array (
             'Hybridauth\\' => 11,
             'Http\\Promise\\' => 13,
+            'Http\\Message\\MultipartStream\\' => 29,
             'Http\\Message\\' => 13,
             'Http\\Factory\\Guzzle\\' => 20,
             'Http\\Discovery\\' => 15,
@@ -303,6 +309,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
+        'OpenAI\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/openai-php/client/src',
+        ),
         'Monolog\\' =>
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
@@ -334,6 +344,10 @@ class ComposerStaticInit46f1519da8c67ffeff699a3e6b0a7c09
         'Http\\Promise\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/promise/src',
+        ),
+        'Http\\Message\\MultipartStream\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/php-http/multipart-stream-builder/src',
         ),
         'Http\\Message\\' =>
         array (

@@ -3,8 +3,8 @@
 /**
  * trait -> publisher
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait PublisherTrait
@@ -68,16 +68,16 @@ trait PublisherTrait
     if ($args['handle'] == "user") {
       /* check if system allow wall posts */
       if (!$system['wall_posts_enabled']) {
-        _error(400);
+        throw new Exception(__("Wall posts are disabled"));
       }
       /* check if the user is valid & the viewer can post on his wall */
       $check_user = $db->query(sprintf("SELECT * FROM users WHERE user_id = %s", secure($args['id'], 'int')));
       if ($check_user->num_rows == 0) {
-        _error(400);
+        throw new Exception(__("User not found"));
       }
       $_user = $check_user->fetch_assoc();
       if ($_user['user_privacy_wall'] == 'me' || ($_user['user_privacy_wall'] == 'friends' && !$this->friendship_approved($args['id']))) {
-        _error(400);
+        throw new Exception(__("You cannot post on this user's wall"));
       }
       $post['in_wall'] = 1;
       $post['wall_id'] = $args['id'];
@@ -217,6 +217,9 @@ trait PublisherTrait
     $post['post_price'] = $args['post_price'];
     $post['paid_text'] = $args['paid_text'];
     $post['paid_image'] = $args['paid_image'];
+    $post['is_collaborative'] = (isset($args['is_collaborative'])) ? $args['is_collaborative'] : '0';
+    $post['collaborative_users_ids'] = $args['collaborative_users_ids'];
+    $post['collaborative_percent'] = $args['collaborative_percent'];
     $post['reaction_like_count'] = 0;
     $post['reaction_love_count'] = 0;
     $post['reaction_haha_count'] = 0;
@@ -345,7 +348,82 @@ trait PublisherTrait
     }
 
     /* insert the post */
-    $db->query(sprintf("INSERT INTO posts (user_id, user_type, in_wall, wall_id, in_group, group_id, group_approved, in_event, event_id, event_approved, post_type, colored_pattern, time, location, privacy, text, feeling_action, feeling_value, for_adult, is_schedule, is_anonymous, tips_enabled, for_subscriptions, subscriptions_image, is_paid, is_paid_locked, post_price, paid_text, paid_image, processing, pre_approved, has_approved, post_latitude, post_longitude) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($post['user_id'], 'int'), secure($post['user_type']), secure($post['in_wall'], 'int'), secure($post['wall_id'], 'int'), secure($post['in_group']), secure($post['group_id'], 'int'), secure($post['group_approved']), secure($post['in_event']), secure($post['event_id'], 'int'), secure($post['event_approved']), secure($post['post_type']), secure($post['colored_pattern'], 'int'), secure($post['time']), secure($post['location']), secure($post['privacy']), secure($post['text']), secure($post['feeling_action']), secure($post['feeling_value']), secure($post['for_adult']), secure($post['is_schedule']), secure($post['is_anonymous']), secure($post['tips_enabled']), secure($post['for_subscriptions']), secure($post['subscriptions_image']), secure($post['is_paid']), secure($post['is_paid_locked']), secure($post['post_price'], 'float'), secure($post['paid_text']), secure($post['paid_image']), secure($post['processing']), secure($post['pre_approved']), secure($post['has_approved']), secure($this->_data['user_latitude']), secure($this->_data['user_longitude'])));
+    $db->query(sprintf(
+      "INSERT INTO posts (
+          user_id, 
+          user_type, 
+          in_wall, 
+          wall_id, 
+          is_collaborative, 
+          collaborative_percent, 
+          in_group, 
+          group_id, 
+          group_approved, 
+          in_event, 
+          event_id, 
+          event_approved, 
+          post_type, 
+          colored_pattern, 
+          time, 
+          location, 
+          privacy, 
+          text, 
+          feeling_action, 
+          feeling_value, 
+          for_adult, 
+          is_schedule, 
+          is_anonymous, 
+          tips_enabled, 
+          for_subscriptions, 
+          subscriptions_image, 
+          is_paid, 
+          is_paid_locked, 
+          post_price, 
+          paid_text, 
+          paid_image, 
+          processing, 
+          pre_approved, 
+          has_approved, 
+          post_latitude, 
+          post_longitude
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+      secure($post['user_id'], 'int'),
+      secure($post['user_type']),
+      secure($post['in_wall'], 'int'),
+      secure($post['wall_id'], 'int'),
+      secure($post['is_collaborative']),
+      secure($post['collaborative_percent'], 'float'),
+      secure($post['in_group']),
+      secure($post['group_id'], 'int'),
+      secure($post['group_approved']),
+      secure($post['in_event']),
+      secure($post['event_id'], 'int'),
+      secure($post['event_approved']),
+      secure($post['post_type']),
+      secure($post['colored_pattern'], 'int'),
+      secure($post['time']),
+      secure($post['location']),
+      secure($post['privacy']),
+      secure($post['text']),
+      secure($post['feeling_action']),
+      secure($post['feeling_value']),
+      secure($post['for_adult']),
+      secure($post['is_schedule']),
+      secure($post['is_anonymous']),
+      secure($post['tips_enabled']),
+      secure($post['for_subscriptions']),
+      secure($post['subscriptions_image']),
+      secure($post['is_paid']),
+      secure($post['is_paid_locked']),
+      secure($post['post_price'], 'float'),
+      secure($post['paid_text']),
+      secure($post['paid_image']),
+      secure($post['processing']),
+      secure($post['pre_approved']),
+      secure($post['has_approved']),
+      secure($this->_data['user_latitude']),
+      secure($this->_data['user_longitude'])
+    ));
     $post['post_id'] = $db->insert_id;
 
     /* remove pending uploads */
@@ -596,6 +674,12 @@ trait PublisherTrait
     /* post mention notifications */
     $this->post_mentions($args['message'], $post['post_id']);
 
+    /* insert collaborative users */
+    if ($post['is_collaborative']) {
+      $this->insert_collaborative_users($post['post_id'], $post['collaborative_users_ids']);
+      $post['collaborative_users'] = $this->get_collaborative_users($post['post_id']);
+    }
+
     /* post wall notifications */
     if ($post['in_wall']) {
       $this->post_notification(['to_user_id' => $post['wall_id'], 'action' => 'wall', 'node_type' => 'post', 'node_url' => $post['post_id']]);
@@ -614,8 +698,12 @@ trait PublisherTrait
     }
 
     /* parse text */
-    $post['text_plain'] = htmlentities($post['text'], ENT_QUOTES, 'utf-8');
-    $post['text'] = $this->parse(["text" => $post['text_plain'], "trending_hashtags" => true, "post_id" => $post['post_id']]);
+    $post['text_raw'] = $post['text'];
+    $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
+    $post['text_html'] = ($post['text_html']) ? preg_replace('/^<p>|<\/p>$/', '', $post['text_html']) : $post['text_html'];
+    $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
+    $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
+    $post['text'] = $this->parse(["text" => $post['text_html'], 'decode_emojis' => false, "trending_hashtags" => true, "post_id" => $post['post_id']]);
 
     /* get post colored pattern */
     $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
@@ -638,6 +726,110 @@ trait PublisherTrait
 
 
   /**
+   * validate_collaborative_users
+   * 
+   * @param string $collaborative_users
+   * @return array
+   */
+  public function validate_collaborative_users($collaborative_users)
+  {
+    global $db, $system;
+    $collaborative_users_ids = [];
+    /* check if system allow collaborative posts */
+    if (!$system['collaborative_posts_enabled']) {
+      throw new Exception(__("Collaborative posts are disabled"));
+    }
+    /* check if user can add collaborative posts */
+    if (!$this->_data['can_add_collaborative_posts']) {
+      throw new Exception(__("You don't have the permission to add collaborative posts"));
+    }
+    /* check if collaborative users is empty */
+    if (empty($collaborative_users)) {
+      throw new ValidationException(__("Please select at least one user to collaborate with"));
+    }
+    /* remove values without id and if it's numeric */
+    $collaborative_users_array = json_encode(array_filter(json_decode($collaborative_users, true), function ($value) {
+      return isset($value['id']) && is_numeric($value['id']);
+    }));
+    /* make a list from target users */
+    $collaborative_users_array = json_decode(html_entity_decode($collaborative_users), true);
+    if (count($collaborative_users_array) == 0) {
+      throw new ValidationException(__("Please select at least one user to collaborate with"));
+    }
+    foreach ($collaborative_users_array as $_user) {
+      /* check if the user is valid & the viewer can post on his wall */
+      $check_user = $db->query(sprintf("SELECT user_id, user_privacy_collaborative FROM users WHERE user_id = %s", secure($_user['id'], 'int')));
+      if ($check_user->num_rows == 0) {
+        continue;
+      }
+      $_user = $check_user->fetch_assoc();
+      if ($_user['user_privacy_collaborative'] == 'me' || ($_user['user_privacy_collaborative'] == 'friends' && !$this->friendship_approved($_user['user_id']))) {
+        continue;
+      }
+      $collaborative_users_ids[] = $_user['user_id'];
+    }
+    return $collaborative_users_ids;
+  }
+
+
+  /**
+   * insert_collaborative_users
+   * 
+   * @param integer $post_id
+   * @param array $collaborative_users_ids
+   * @return void
+   */
+  public function insert_collaborative_users($post_id, $collaborative_users_ids)
+  {
+    global $db;
+    foreach ($collaborative_users_ids as $collaborative_user_id) {
+      /* insert collaborative user */
+      $db->query(sprintf("INSERT INTO posts_collaborative_users (post_id, user_id) VALUES (%s, %s)", secure($post_id, 'int'), secure($collaborative_user_id, 'int')));
+      /* send notification to collaborative user */
+      $this->post_notification(['to_user_id' => $collaborative_user_id, 'action' => 'collaborative_post', 'node_type' => 'post', 'node_url' => $post_id]);
+    }
+  }
+
+
+  /**
+   * get_collaborative_users
+   * 
+   * @param integer $post_id
+   * @return array
+   */
+  public function get_collaborative_users($post_id)
+  {
+    global $db;
+    $collaborative_users = [];
+    $get_collaborative_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, user_gender FROM posts_collaborative_users INNER JOIN users ON posts_collaborative_users.user_id = users.user_id WHERE posts_collaborative_users.post_id = %s", secure($post_id, 'int')));
+    while ($collaborative_user = $get_collaborative_users->fetch_assoc()) {
+      $collaborative_user['user_picture'] = get_picture($collaborative_user['user_picture'], $collaborative_user['user_gender']);
+      $collaborative_user['user_fullname'] = ($system['show_usernames_enabled']) ? $collaborative_user['user_name'] : $collaborative_user['user_firstname'] . " " . $collaborative_user['user_lastname'];
+      $collaborative_users[] = $collaborative_user;
+    }
+    return $collaborative_users;
+  }
+
+
+  /**
+   * is_collaborative_user
+   * 
+   * @param integer $user_id
+   * @param integer $post_id
+   * @return boolean
+   */
+  public function is_collaborative_user($user_id, $post_id)
+  {
+    global $db;
+    $check_collaborative_user = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_collaborative_users WHERE user_id = %s AND post_id = %s", secure($user_id, 'int'), secure($post_id, 'int')));
+    if ($check_collaborative_user->fetch_assoc()['count'] > 0) {
+      return true;
+    }
+    return false;
+  }
+
+
+  /**
    * scraper
    * 
    * @param string $url
@@ -652,11 +844,8 @@ trait PublisherTrait
     }
     /* check if the url is banned */
     $host = get_base_domain($url);
-    if ($system['censored_domains_enabled']) {
-      $banned_domains =  array_map('trim', explode(',', trim($system['censored_domains'])));
-      if ($banned_domains && in_array($host, $banned_domains)) {
-        return false;
-      }
+    if ($this->check_censored_domains($host)) {
+      return false;
     }
     /* get the embed */
     $client = new Embed\Http\CurlClient();
@@ -665,7 +854,7 @@ trait PublisherTrait
       'ssl_verify_host' => 1,
       'ssl_verify_peer' => 1,
       'follow_location' => true,
-      'user_agent' => 'Delus',
+      'user_agent' => 'Sngine',
     ]);
     $embed = new Embed\Embed(new Embed\Http\Crawler($client));
     $info = $embed->get($url);
@@ -763,6 +952,7 @@ trait PublisherTrait
     $decode_emojis = !isset($args['decode_emojis']) ? true : $args['decode_emojis'];
     $decode_stickers = !isset($args['decode_stickers']) ? true : $args['decode_stickers'];
     $decode_mentions = !isset($args['decode_mentions']) ? true : $args['decode_mentions'];
+    $decode_mentions_html = !isset($args['decode_mentions_html']) ? true : $args['decode_mentions_html'];
     $decode_hashtags = !isset($args['decode_hashtags']) ? true : $args['decode_hashtags'];
     $trending_hashtags = !isset($args['trending_hashtags']) ? false : $args['trending_hashtags'];
     $post_id = !isset($args['post_id']) ? null : $args['post_id'];
@@ -781,7 +971,11 @@ trait PublisherTrait
     }
     /* decode @mention */
     if ($decode_mentions) {
-      $text = $this->decode_mention($text);
+      $text = $this->decode_mentions($text);
+    }
+    /* decode @mention html */
+    if ($decode_mentions_html) {
+      $text = $this->decode_mentions($text, true);
     }
     /* decode #hashtag */
     if ($decode_hashtags) {
@@ -816,5 +1010,29 @@ trait PublisherTrait
         throw new Exception(__("You have reached the maximum limit of posts/hour, please try again later"));
       }
     }
+  }
+
+
+  /**
+   * check_censored_domains ✅
+   * 
+   * @param string $url
+   * @return boolean
+   */
+  public function check_censored_domains($url)
+  {
+    global $system;
+    if (!$system['censored_domains_enabled']) {
+      return false;
+    }
+    /* make a list from target usernames */
+    $censored_domains = array_column(json_decode(html_entity_decode($system['censored_domains']), true), "value");
+    if (count($censored_domains) == 0) {
+      return false;
+    }
+    if (in_array(strtolower($url), $censored_domains)) {
+      return true;
+    }
+    return false;
   }
 }

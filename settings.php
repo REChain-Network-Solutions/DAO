@@ -3,8 +3,8 @@
 /**
  * settings
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // remove timeout limit
@@ -266,7 +266,7 @@ try {
       if (!$system['social_login_enabled']) {
         _error(404);
       }
-      if (!$system['facebook_login_enabled'] && !$system['twitter_login_enabled'] && !$system['google_login_enabled'] && !$system['linkedin_login_enabled'] && !$system['vkontakte_login_enabled'] && !$system['wordpress_login_enabled'] && !$system['Delus_login_enabled']) {
+      if (!$system['facebook_login_enabled'] && !$system['twitter_login_enabled'] && !$system['google_login_enabled'] && !$system['linkedin_login_enabled'] && !$system['vkontakte_login_enabled'] && !$system['wordpress_login_enabled'] && !$system['sngine_login_enabled']) {
         _error(404);
       }
 
@@ -335,6 +335,14 @@ try {
 
           // get subscribers count
           $smarty->assign('subscribers_count', $user->get_subscribers_count());
+          break;
+
+        case 'coupons':
+          // page header
+          page_header(__("Settings") . " &rsaquo; " . __("Monetization Coupons"));
+
+          // get coupons
+          $smarty->assign('coupons', $user->get_monetization_coupons());
           break;
 
         case 'payments':

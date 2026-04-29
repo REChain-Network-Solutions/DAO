@@ -1,6 +1,7 @@
 <div class="card-header with-icon">
   {include file='__svg_icons.tpl' icon="affiliates" class="main-icon mr15" width="24px" height="24px"}
   {__("Affiliates")}
+  {if $sub_view == "payments"} &rsaquo; {__("Payments")}{/if}
 </div>
 <div class="card-body">
   {if $sub_view == ""}

@@ -3,8 +3,8 @@
 /**
  * trait -> monetization
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait MonetizationTrait
@@ -26,9 +26,32 @@ trait MonetizationTrait
     global $db;
     $monetization_plans = [];
     $node_id = (isset($node_id)) ? $node_id : $this->_data['user_id'];
+    /* get node */
+    switch ($node_type) {
+      case 'profile':
+        $node = $this->get_user($node_id);
+        $node['monetization_discount_enabled'] = $node['user_monetization_discount_enabled'];
+        $node['monetization_discount_percent'] = $node['user_monetization_discount_percent'];
+        break;
+      case 'page':
+        $node = $this->get_page($node_id);
+        $node['monetization_discount_enabled'] = $node['page_monetization_discount_enabled'];
+        $node['monetization_discount_percent'] = $node['page_monetization_discount_percent'];
+        break;
+      case 'group':
+        $node = $this->get_group($node_id);
+        $node['monetization_discount_enabled'] = $node['group_monetization_discount_enabled'];
+        $node['monetization_discount_percent'] = $node['group_monetization_discount_percent'];
+        break;
+    }
+    /* get monetization plans */
     $get_monetization_plans = $db->query(sprintf("SELECT * FROM monetization_plans WHERE node_id = %s AND node_type = %s ORDER BY plan_order", secure($node_id, 'int'), secure($node_type)));
     if ($get_monetization_plans->num_rows > 0) {
       while ($monetization_plan = $get_monetization_plans->fetch_assoc()) {
+        /* apply discount */
+        if ($node['monetization_discount_enabled'] && $node['monetization_discount_percent'] > 0) {
+          $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $node['monetization_discount_percent'] / 100);
+        }
         $monetization_plans[] = $monetization_plan;
       }
     }
@@ -71,29 +94,54 @@ trait MonetizationTrait
       return false;
     }
     $monetization_plan = $get_monetization_plan->fetch_assoc();
-    /* check if the viewer authorized */
-    if (!$override_authorization) {
-      if (!$this->_is_admin && !$this->_is_moderator) {
-        switch ($monetization_plan['node_type']) {
-          case 'profile':
-            if ($monetization_plan['node_id'] != $this->_data['user_id']) {
-              throw new AuthorizationException(__("You are not authorized to do this action"));
-            }
-            break;
-
-          case 'page':
-            if (!$this->check_page_adminship($this->_data['user_id'], $monetization_plan['node_id'])) {
-              throw new AuthorizationException(__("You are not authorized to do this action"));
-            }
-            break;
-
-          case 'group':
-            if (!$this->check_group_adminship($this->_data['user_id'], $monetization_plan['node_id'])) {
-              throw new AuthorizationException(__("You are not authorized to do this action"));
-            }
-            break;
+    switch ($monetization_plan['node_type']) {
+      case 'profile':
+        /* check if the viewer authorized */
+        if (!$override_authorization && !$this->_is_admin && !$this->_is_moderator) {
+          if ($monetization_plan['node_id'] != $this->_data['user_id']) {
+            throw new AuthorizationException(__("You are not authorized to do this action"));
+          }
         }
-      }
+        /* get user */
+        $user = $this->get_user($monetization_plan['node_id']);
+        if (!$user) {
+          throw new Exception(__("This user is not available"));
+        }
+        /* get user monetization discount */
+        $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $user['user_monetization_discount_percent'] / 100);
+        break;
+
+      case 'page':
+        /* check if the viewer authorized */
+        if (!$override_authorization && !$this->_is_admin && !$this->_is_moderator) {
+          if (!$this->check_page_adminship($this->_data['user_id'], $monetization_plan['node_id'])) {
+            throw new AuthorizationException(__("You are not authorized to do this action"));
+          }
+        }
+        /* get page */
+        $page = $this->get_page($monetization_plan['node_id']);
+        if (!$page) {
+          throw new Exception(__("This page is not available"));
+        }
+        /* get page monetization discount */
+        $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $page['page_monetization_discount_percent'] / 100);
+        break;
+
+      case 'group':
+        /* check if the viewer authorized */
+        if (!$override_authorization && !$this->_is_admin && !$this->_is_moderator) {
+          if (!$this->check_group_adminship($this->_data['user_id'], $monetization_plan['node_id'])) {
+            throw new AuthorizationException(__("You are not authorized to do this action"));
+          }
+        }
+        /* get group */
+        $group = $this->get_group($monetization_plan['node_id']);
+        if (!$group) {
+          throw new Exception(__("This group is not available"));
+        }
+        /* get group monetization discount */
+        $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $group['group_monetization_discount_percent'] / 100);
+        break;
     }
     return $monetization_plan;
   }
@@ -667,16 +715,37 @@ trait MonetizationTrait
     }
     /* unlock the post */
     $db->query(sprintf("INSERT INTO posts_paid (post_id, user_id, time) VALUES (%s, %s, %s)", secure($post_id, 'int'), secure($user_id, 'int'), secure($date)));
+    /* check if the post has a discount */
+    if ($post['post_price_discounted']) {
+      $post['post_price'] = $post['post_price_discounted'];
+    }
     /* prepare commission */
-    $content_price = $post['post_price'];
-    $commission = ($system['monetization_commission']) ? $content_price * ($system['monetization_commission'] / 100) : 0;
-    $content_price = $content_price - $commission;
+    $commission = ($system['monetization_commission']) ? $post['post_price'] * ($system['monetization_commission'] / 100) : 0;
+    $content_price = $post['post_price'] - $commission;
+    $author_share = $content_price;
+    /* check if the post is collaborative */
+    if ($post['is_collaborative']) {
+      /* calculate the collaborative share */
+      $collaborative_share = ($post['collaborative_percent']) ? $content_price * ($post['collaborative_percent'] / 100) : 0;
+      /* calculate the author share */
+      $author_share = $content_price - $collaborative_share;
+      if ($collaborative_share > 0) {
+        /* calculate the each collaborative share */
+        $each_collaborative_share = $collaborative_share / count($post['collaborative_users']);
+        /* update the collaborative users monetization balance */
+        foreach ($post['collaborative_users'] as $collaborative_user) {
+          $db->query(sprintf("UPDATE users SET user_monetization_balance = user_monetization_balance + %s WHERE user_id = %s", secure($each_collaborative_share, 'float'), secure($collaborative_user['user_id'], 'int')));
+          /* notify the content creator */
+          $this->post_notification(['to_user_id' => $collaborative_user['user_id'], 'from_user_id' => $user_id, 'action' => 'paid_post', 'node_url' => $post['post_id']]);
+        }
+      }
+    }
     /* update content creator monetization balance */
-    $db->query(sprintf("UPDATE users SET user_monetization_balance = user_monetization_balance + %s WHERE user_id = %s", secure($content_price, 'float'), secure($post['author_id'], 'int')));
-    /* log commission */
-    $this->log_commission($post['author_id'], $commission, 'paid_post');
+    $db->query(sprintf("UPDATE users SET user_monetization_balance = user_monetization_balance + %s WHERE user_id = %s", secure($author_share, 'float'), secure($post['author_id'], 'int')));
     /* notify the content creator */
     $this->post_notification(['to_user_id' => $post['author_id'], 'from_user_id' => $user_id, 'action' => 'paid_post', 'node_url' => $post['post_id']]);
+    /* log commission */
+    $this->log_commission($post['author_id'], $commission, 'paid_post');
     /* affiliates system */
     if ($system['affiliate_payment_to'] == "seller") {
       /* get the seller referrer */
@@ -713,5 +782,238 @@ trait MonetizationTrait
       return true;
     }
     return false;
+  }
+
+
+  /**
+   * get_monetization_coupons
+   * 
+   * @param integer $node_id
+   * @param string $node_type
+   * @return array
+   */
+  public function get_monetization_coupons($node_id = null, $node_type = 'profile')
+  {
+    global $db;
+    $node_id = ($node_id) ? $node_id : $this->_data['user_id'];
+    $coupons = [];
+    $get_coupons = $db->query(sprintf("SELECT * FROM monetization_coupons WHERE node_id = %s AND node_type = %s", secure($node_id, 'int'), secure($node_type)));
+    if ($get_coupons->num_rows > 0) {
+      while ($coupon = $get_coupons->fetch_assoc()) {
+        $coupons[] = $coupon;
+      }
+    }
+    return $coupons;
+  }
+
+
+  /**
+   * insert_monetization_coupon
+   * 
+   * @param integer $node_id
+   * @param string $node_type
+   * @param float $discount_percent
+   * @param boolean $is_onetime
+   * @return string
+   */
+  public function insert_monetization_coupon($node_id, $node_type, $discount_percent, $is_onetime)
+  {
+    global $db, $date;
+    /* generate coupon code */
+    $coupon_code = get_hash_key();
+    /* validate */
+    if (!in_array($node_type, ['profile', 'page', 'group'])) {
+      throw new BadRequestException(__("Invalid node type"));
+    }
+    if (!isset($discount_percent) || !is_numeric($discount_percent)) {
+      throw new ValidationException(__("Invalid discount percent"));
+    }
+    if ($discount_percent < 1 || $discount_percent > 99) {
+      throw new ValidationException(__("Invalid discount percent, must be between 1 and 99"));
+    }
+    $is_onetime = ($is_onetime) ? 1 : 0;
+    /* insert coupon */
+    $db->query(sprintf(
+      "INSERT INTO monetization_coupons (coupon_code, discount_percent, is_onetime, node_id, node_type, created_date) VALUES (%s, %s, %s, %s, %s, %s)",
+      secure($coupon_code),
+      secure($discount_percent, 'float'),
+      secure($is_onetime, 'int'),
+      secure($node_id, 'int'),
+      secure($node_type),
+      secure($date)
+    ));
+    /* return */
+    return $coupon_code;
+  }
+
+
+  /**
+   * who_used_coupon
+   * 
+   * @param integer $coupon_id
+   * @param integer $offset
+   * @return array
+   */
+  public function who_used_coupon($coupon_id, $offset = 0)
+  {
+    global $db, $system;
+    /* check coupon */
+    $coupon = $this->get_monetization_coupon($coupon_id);
+    if (!$coupon) {
+      throw new BadRequestException(__("This coupon is not available"));
+    }
+    /* get users who used this coupon */
+    $users = [];
+    $offset *= $system['max_results'];
+    $get_users = $db->query(sprintf(
+      'SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified 
+      FROM users 
+      INNER JOIN monetization_coupons_users 
+        ON users.user_id = monetization_coupons_users.user_id 
+      WHERE monetization_coupons_users.coupon_id = %s 
+      LIMIT %s, %s',
+      secure($coupon_id, 'int'),
+      secure($offset, 'int', false),
+      secure($system['max_results'], 'int', false)
+    ));
+    if ($get_users->num_rows > 0) {
+      while ($user = $get_users->fetch_assoc()) {
+        $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
+        /* get the connection between the viewer & the target */
+        $user['connection'] = $this->connection($user['user_id'], false);
+        $users[] = $user;
+      }
+    }
+    return $users;
+  }
+
+
+  /**
+   * get_monetization_coupon
+   *
+   * @param integer $coupon_id
+   * @return array
+   */
+  public function get_monetization_coupon($coupon_id)
+  {
+    global $db;
+    $get_coupon = $db->query(sprintf("SELECT * FROM monetization_coupons WHERE coupon_id = %s", secure($coupon_id, 'int')));
+    if ($get_coupon->num_rows == 0) {
+      return false;
+    }
+    $coupon = $get_coupon->fetch_assoc();
+    /* check if the viewer is the owner of the coupon */
+    switch ($coupon['node_type']) {
+      case 'profile':
+        if ($coupon['node_id'] != $this->_data['user_id']) {
+          throw new AuthorizationException(__("You are not authorized to do this action"));
+        }
+        break;
+
+      case 'page':
+        if (!$this->check_page_adminship($this->_data['user_id'], $coupon['node_id'])) {
+          throw new AuthorizationException(__("You are not authorized to do this action"));
+        }
+        break;
+
+      case 'group':
+        if (!$this->check_group_adminship($this->_data['user_id'], $coupon['node_id'])) {
+          throw new AuthorizationException(__("You are not authorized to do this action"));
+        }
+        break;
+    }
+    $coupon['sharing_text'] = __("Get") . " " . $coupon['discount_percent'] . " " . __("discount") . " " . __("when you use the coupon code") . " " . $coupon['coupon_code'];
+    return $coupon;
+  }
+
+
+  /**
+   * delete_monetization_coupon
+   *
+   * @param integer $coupon_id
+   * @return void
+   */
+  public function delete_monetization_coupon($coupon_id)
+  {
+    global $db;
+    $coupon = $this->get_monetization_coupon($coupon_id);
+    if (!$coupon) {
+      throw new BadRequestException(__("This coupon is not available"));
+    }
+    /* delete coupon */
+    $db->query(sprintf("DELETE FROM monetization_coupons WHERE coupon_id = %s", secure($coupon_id, 'int')));
+    /* delete users who used this coupon */
+    $db->query(sprintf("DELETE FROM monetization_coupons_users WHERE coupon_id = %s", secure($coupon_id, 'int')));
+  }
+
+
+  /**
+   * check_monetization_coupon
+   *
+   * @param string $code
+   * @param integer $user_id
+   * @return boolean
+   */
+  public function check_monetization_coupon($code, $user_id = null)
+  {
+    global $db;
+    $user_id = ($user_id) ? $user_id : $this->_data['user_id'];
+    $get_coupon = $db->query(sprintf("SELECT * FROM monetization_coupons WHERE coupon_code = %s", secure($code)));
+    if ($get_coupon->num_rows == 0) {
+      return false;
+    }
+    $coupon = $get_coupon->fetch_assoc();
+    if ($coupon['is_onetime'] == 1) {
+      if ($coupon['used'] == 1) {
+        return false;
+      }
+    } else {
+      /* check if the viewer used this coupon before */
+      $check_used = $db->query(sprintf("SELECT COUNT(*) as count FROM monetization_coupons_users WHERE coupon_id = %s AND user_id = %s", secure($coupon['coupon_id'], 'int'), secure($user_id, 'int')));
+      if ($check_used->fetch_assoc()['count'] > 0) {
+        return false;
+      }
+    }
+    return $coupon;
+  }
+
+
+  /**
+   * check_monetization_coupon_by_user
+   * 
+   * @param integer $coupon_id
+   * @param integer $user_id
+   * @return boolean
+   */
+  public function check_monetization_coupon_by_user($coupon_id, $user_id = null)
+  {
+    global $db;
+    $user_id = ($user_id) ? $user_id : $this->_data['user_id'];
+    $get_coupon = $db->query(sprintf("SELECT COUNT(*) as count FROM monetization_coupons WHERE coupon_id = %s AND user_id = %s", secure($coupon_id, 'int'), secure($user_id, 'int')));
+    if ($get_coupon->fetch_assoc()['count'] > 0) {
+      return true;
+    }
+    return false;
+  }
+
+
+  /**
+   * update_monetization_coupon
+   *
+   * @param string $code
+   * @param string $user_id
+   * @return void
+   */
+  public function update_monetization_coupon($code, $user_id)
+  {
+    global $db, $date;
+    $coupon = $this->check_monetization_coupon($code);
+    if (!$coupon) {
+      throw new Exception(__("This coupon is not available"));
+    }
+    /* update coupon */
+    $db->query(sprintf("UPDATE monetization_coupons SET used = '1', usage_counter = usage_counter + 1 WHERE coupon_id = %s", secure($coupon['coupon_id'], "int")));
+    /* insert to monetization coupons users */
+    $db->query(sprintf("INSERT INTO monetization_coupons_users (coupon_id, user_id, used_date) VALUES (%s, %s, %s)", secure($coupon['coupon_id'], "int"), secure($user_id, "int"), secure($date)));
   }
 }

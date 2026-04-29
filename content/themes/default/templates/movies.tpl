@@ -90,12 +90,25 @@
           <div style="margin: 20px -30px;">
             {if $movie['can_watch']}
               {if $movie['source_type'] == "youtube"}
-                <div class="ratio ratio-16x9">
-                  <iframe width="560" height="315" src="https://www.youtube.com/embed/{get_youtube_id($movie['source'], false)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                </div>
+                {if $system['smart_yt_player']}
+                  <div class="youtube-player js_youtube-player" data-id="{get_youtube_id($movie['source'], false)}">
+                    <img src="https://i.ytimg.com/vi/{get_youtube_id($movie['source'], false)}/hqdefault.jpg">
+                    <div class="play"></div>
+                  </div>
+                {else}
+                  <div class="post-media">
+                    {if $system['disable_yt_player']}
+                      <div class="plyr__video-embed js_video-plyr-youtube" data-plyr-provider="youtube" data-plyr-embed-id="{get_youtube_id($movie['source'], false)}"></div>
+                    {else}
+                      <div class="ratio ratio-16x9">
+                        {html_entity_decode($movie['source'], ENT_QUOTES)}
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
               {elseif $movie['source_type'] == "vimeo"}
                 <div class="ratio ratio-16x9">
-                  <iframe width="560" height="315" src="https://player.vimeo.com/video/{get_vimeo_id($movie['source'])}" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                  <iframe width="560" height="315" src="https://player.vimeo.com/video/{get_vimeo_id($movie['source'])}" frameborder="0" allow="autoplay; fullscreen" allowfullscreen referrerpolicy='strict-origin-when-cross-origin'></iframe>
                 </div>
               {elseif $movie['source_type'] == "link"}
                 <div>

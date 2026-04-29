@@ -51,7 +51,7 @@
   </div>
   {if $invitation_codes}
     <div class="table-responsive">
-      <table class="table table-striped table-bordered table-hover">
+      <table class="table table-striped table-bordered table-hover js_dataTable">
         <thead>
           <tr>
             <th>{__("Invitation Code")}</th>

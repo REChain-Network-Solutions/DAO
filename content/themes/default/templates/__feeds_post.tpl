@@ -52,6 +52,18 @@
       {/if}
       <!-- post top alert -->
 
+      {if $post['is_collaborative'] && ($post['i_collaborative'] || ($post['is_paid'] && $post['author_id'] == $user->_data['user_id']))}
+        <div class="post-collaborative-alert">
+          <i class="fa-solid fa-circle-info mr5"></i>
+          {if $post['i_collaborative']}
+            {__("You are collaborating on this post")} {if $post['is_paid']} & {/if}
+          {/if}
+          {if $post['is_paid']}
+            {__("Collaborators will receive")} {$post['collaborative_percent']}% {__("of the revenue")}
+          {/if}
+        </div>
+      {/if}
+
       {include file='__feeds_post.body.tpl' _post=$post _shared=false}
 
       {if $post['can_get_details'] && !$post['needs_pro_package'] && !$post['needs_permission'] }

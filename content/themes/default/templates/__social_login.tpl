@@ -1,4 +1,4 @@
-{if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['Delus_login_enabled']}
+{if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
   {if $_or_pos != 'bottom'}
     <div class="hr-heading mt5 mb10">
       <div class="hr-heading-text">
@@ -42,10 +42,10 @@
       {__("Sign in with WordPress")}
     </a>
   {/if}
-  {if $system['Delus_login_enabled']}
-    <a href="https://{$system['Delus_app_domain']}/api/oauth?app_id={$system['Delus_appid']}" class="d-block mb5 btn btn-social">
-      <img src="{$system['system_uploads']}/{$system['Delus_app_icon']}" width="24" height="24" alt="{__({$system['Delus_app_name']})}" class="mr5">
-      {__("Sign in with")} {$system['Delus_app_name']}
+  {if $system['sngine_login_enabled']}
+    <a href="https://{$system['sngine_app_domain']}/api/oauth?app_id={$system['sngine_appid']}" class="d-block mb5 btn btn-social">
+      <img src="{$system['system_uploads']}/{$system['sngine_app_icon']}" width="24" height="24" alt="{__({$system['sngine_app_name']})}" class="mr5">
+      {__("Sign in with")} {$system['sngine_app_name']}
     </a>
   {/if}
   {if $_or_pos == 'bottom'}

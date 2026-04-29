@@ -3,8 +3,8 @@
 /**
  * trait -> blogs
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait BlogsTrait
@@ -64,40 +64,49 @@ trait BlogsTrait
    * @param string $cover
    * @param integer $category_id
    * @param string $tags
+   * @param array $references
    * @param boolean $tips_enabled
    * @param boolean $for_subscriptions
    * @param boolean $is_paid
    * @param float $post_price
    * @param string $paid_text
+   * @param boolean $is_collaborative
+   * @param array $collaborative_users
+   * @param float $collaborative_percent
    * @return integer
    */
-  public function post_blog($publish_to, $page_id, $group_id, $event_id, $title, $text, $cover, $category_id, $tags, $tips_enabled, $for_subscriptions, $is_paid, $post_price, $paid_text)
+  public function post_blog($publish_to, $page_id, $group_id, $event_id, $title, $text, $cover, $category_id, $tags, $references, $tips_enabled, $for_subscriptions, $is_paid, $post_price, $paid_text, $is_collaborative, $collaborative_users, $collaborative_percent)
   {
     global $db, $system, $date;
+    /* prepare */
+    $tips_enabled = (isset($tips_enabled)) ? '1' : '0';
+    $for_subscriptions = (isset($for_subscriptions)) ? '1' : '0';
+    $is_paid = (isset($is_paid)) ? '1' : '0';
+    $is_collaborative = (isset($is_collaborative)) ? '1' : '0';
     /* check if blogs enabled */
     if (!$system['blogs_enabled']) {
-      throw new Exception(__("The blogs module has been disabled by the admin"));
+      throw new ValidationException(__("The blogs module has been disabled by the admin"));
     }
     /* check blogs permission */
     if (!$this->_data['can_write_blogs']) {
-      throw new Exception(__("You don't have the permission to do this"));
+      throw new ValidationException(__("You don't have the permission to do this"));
     }
     /* check if verification for posts required */
     if ($system['verification_for_posts'] && !$this->_data['user_verified']) {
-      throw new Exception(__("To use this feature your account must be verified"));
+      throw new ValidationException(__("To use this feature your account must be verified"));
     }
     /* check max posts/hour limit */
     $this->check_posts_limit(($publish_to == 'page') ? 'page' : 'user', ($publish_to == 'page') ? $page_id : null);
     /* check tips permission */
     if (!$this->_data['can_receive_tip'] && $tips_enabled) {
-      throw new Exception(__("You don't have the permission to do this"));
+      throw new ValidationException(__("You don't have the permission to do this"));
     }
     /* check monetization permission */
     if ($for_subscriptions) {
       switch ($publish_to) {
         case 'timeline':
           if (!($this->_data['can_monetize_content'] && $this->_data['user_monetization_enabled'] && $this->_data['user_monetization_plans'] > 0)) {
-            throw new Exception(__("You don't have the permission to do this"));
+            throw new ValidationException(__("You don't have the permission to do this"));
           }
           break;
 
@@ -111,7 +120,7 @@ trait BlogsTrait
           $page['can_monetize_content'] = $system['monetization_enabled'] && $this->check_user_permission($page['page_admin'], 'monetization_permission');
           /* check if page has monetization enabled && subscriptions plans */
           if (!($page['can_monetize_content'] && $page['page_monetization_enabled'] && $page['page_monetization_plans'] > 0)) {
-            throw new Exception(__("You don't have the permission to do this"));
+            throw new ValidationException(__("You don't have the permission to do this"));
           }
           break;
 
@@ -125,49 +134,86 @@ trait BlogsTrait
           $group['can_monetize_content'] = $system['monetization_enabled'] && $this->check_user_permission($group['group_admin'], 'monetization_permission');
           /* check if group has monetization enabled && subscriptions plans */
           if (!($group['can_monetize_content'] && $group['group_monetization_enabled'] && $group['group_monetization_plans'] > 0)) {
-            throw new Exception(__("You don't have the permission to do this"));
+            throw new ValidationException(__("You don't have the permission to do this"));
           }
           break;
 
         default:
-          throw new Exception(__("You don't have the permission to do this"));
+          throw new ValidationException(__("You don't have the permission to do this"));
           break;
       }
     }
-    /* check paid posts permission */
-    if (!$this->_data['can_monetize_content'] && !$this->_data['user_monetization_enabled'] && $is_paid) {
-      throw new Exception(__("You don't have the permission to do this"));
-    }
     /* check if both for_subscriptions & is_paid enabled */
     if ($for_subscriptions && $is_paid) {
-      throw new Exception(__("You can't enable both subscribers only & paid post"));
+      throw new ValidationException(__("You can't enable both subscribers only & paid post"));
+    }
+    /* check paid posts permission */
+    if (!$this->_data['can_monetize_content'] && !$this->_data['user_monetization_enabled'] && $is_paid) {
+      throw new ValidationException(__("You don't have the permission to do this"));
+    }
+    /* check is_collaborative */
+    if ($is_collaborative) {
+      /* check if for_subscriptions post */
+      if ($for_subscriptions) {
+        throw new ValidationException(__("You can not collaborate with for subscriptions post"));
+      }
+      /* validate collaborative users */
+      $collaborative_users_ids = $this->validate_collaborative_users($collaborative_users);
+      /* check if paid post */
+      if ($is_paid) {
+        /* check if collaborative percent is valid */
+        if (!is_numeric($collaborative_percent) || $collaborative_percent < 0 || $collaborative_percent > 100) {
+          throw new ValidationException(__("Please enter a valid percentage"));
+        }
+      }
     }
     /* validate title */
     if (is_empty($title)) {
-      throw new Exception(__("You must enter a title for your blog"));
+      throw new ValidationException(__("You must enter a title for your blog"));
     }
     if (strlen($title) < 3) {
-      throw new Exception(__("Title must be at least 3 characters long. Please try another"));
+      throw new ValidationException(__("Title must be at least 3 characters long. Please try another"));
     }
     /* validate text */
     if (is_empty($text)) {
-      throw new Exception(__("You must enter some text for your blog"));
+      throw new ValidationException(__("You must enter some text for your blog"));
     }
     /* validate category */
     if (is_empty($category_id)) {
-      throw new Exception(__("You must select valid category for your blog"));
+      throw new ValidationException(__("You must select valid category for your blog"));
     }
     $category = $this->get_category('blogs_categories', $category_id);
     if (!$category) {
-      throw new Exception(__("You must select valid category for your blog"));
+      throw new ValidationException(__("You must select valid category for your blog"));
     }
-    /* validate price */
+    /* validate references */
+    if ($references) {
+      foreach ($references as $reference) {
+        /* remove empty references */
+        if (is_empty($reference['title']) && is_empty($reference['link'])) {
+          unset($references[$key]);
+          continue;
+        }
+        /* validate title */
+        if (is_empty($reference['title'])) {
+          throw new ValidationException(__("You must enter a title for your reference"));
+        }
+        /* validate link */
+        if (is_empty($reference['link']) || !valid_url($reference['link'])) {
+          throw new ValidationException(__("Please enter a valid URL for your reference: ") . $reference['title']);
+        }
+      }
+    }
+    /* validate paid price */
     if ($is_paid) {
       if (!is_numeric($post_price) || $post_price <= 0) {
-        throw new Exception(__("Please enter a valid price"));
+        throw new ValidationException(__("Please enter a valid price"));
+      }
+      if ($system['monetization_max_paid_post_price'] > 0 && $post_price > $system['monetization_max_paid_post_price']) {
+        throw new ValidationException(__("The price must be less than or equal to") . " " . print_money($system['monetization_max_paid_post_price']));
       }
       if (strlen($paid_text) > 1000) {
-        modal("ERROR", __("Error"), __("Paid post description is more than 1000 characters"));
+        throw new ValidationException(__("Paid post description is more than 1000 characters"));
       }
     }
     /* prepare text */
@@ -202,7 +248,35 @@ trait BlogsTrait
     switch ($publish_to) {
       case 'timeline':
         /* insert the post */
-        $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, tips_enabled, for_subscriptions, is_paid, post_price, paid_text, time, privacy, pre_approved, has_approved) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, %s, 'public', %s, %s)", secure($this->_data['user_id'], 'int'), secure($tips_enabled), secure($for_subscriptions), secure($is_paid), secure($post_price, 'float'), secure($paid_text), secure($date), secure($pre_approved), secure($has_approved)));
+        $db->query(sprintf(
+          "INSERT INTO posts (
+            user_id,
+            user_type,
+            post_type,
+            tips_enabled,
+            for_subscriptions,
+            is_paid,
+            post_price,
+            paid_text,
+            time,
+            privacy,
+            pre_approved,
+            has_approved,
+            is_collaborative,
+            collaborative_percent
+          ) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, %s, 'public', %s, %s, %s, %s)",
+          secure($this->_data['user_id'], 'int'),
+          secure($tips_enabled),
+          secure($for_subscriptions),
+          secure($is_paid),
+          secure($post_price, 'float'),
+          secure($paid_text),
+          secure($date),
+          secure($pre_approved),
+          secure($has_approved),
+          secure($is_collaborative),
+          secure($collaborative_percent, 'float')
+        ));
         $post_id = $db->insert_id;
         break;
 
@@ -217,7 +291,35 @@ trait BlogsTrait
           _error(400);
         }
         /* insert the post */
-        $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, tips_enabled, for_subscriptions, is_paid, post_price, paid_text, time, privacy, pre_approved, has_approved) VALUES (%s, 'page', 'article', %s, %s, %s, %s, %s, %s, 'public', %s, %s)", secure($page_id, 'int'), secure($tips_enabled), secure($for_subscriptions), secure($is_paid), secure($post_price, 'float'), secure($paid_text), secure($date), secure($pre_approved), secure($has_approved)));
+        $db->query(sprintf(
+          "INSERT INTO posts (
+            user_id,
+            user_type,
+            post_type,
+            tips_enabled,
+            for_subscriptions,
+            is_paid,
+            post_price,
+            paid_text,
+            time,
+            privacy,
+            pre_approved,
+            has_approved,
+            is_collaborative,
+            collaborative_percent
+          ) VALUES (%s, 'page', 'article', %s, %s, %s, %s, %s, %s, 'public', %s, %s, %s, %s)",
+          secure($page_id, 'int'),
+          secure($tips_enabled),
+          secure($for_subscriptions),
+          secure($is_paid),
+          secure($post_price, 'float'),
+          secure($paid_text),
+          secure($date),
+          secure($pre_approved),
+          secure($has_approved),
+          secure($is_collaborative),
+          secure($collaborative_percent, 'float')
+        ));
         $post_id = $db->insert_id;
         break;
 
@@ -239,7 +341,40 @@ trait BlogsTrait
         }
         /* insert the post */
         $group_approved = ($group['group_publish_approval_enabled'] && !$group['i_admin']) ? "0" : "1";
-        $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, tips_enabled, for_subscriptions, is_paid, post_price, paid_text, time, privacy, in_group, group_id, group_approved, pre_approved, has_approved) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, %s, 'custom', '1', %s, %s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($tips_enabled), secure($for_subscriptions), secure($is_paid), secure($post_price, 'float'), secure($paid_text), secure($date), secure($group_id, 'int'), secure($group_approved), secure($pre_approved), secure($has_approved)));
+        $db->query(sprintf(
+          "INSERT INTO posts (
+            user_id,
+            user_type,
+            post_type,
+            tips_enabled,
+            for_subscriptions,
+            is_paid,
+            post_price,
+            paid_text,
+            time,
+            privacy,
+            in_group,
+            group_id,
+            group_approved,
+            pre_approved,
+            has_approved,
+            is_collaborative,
+            collaborative_percent
+          ) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, %s, 'custom', '1', %s, %s, %s, %s, %s, %s)",
+          secure($this->_data['user_id'], 'int'),
+          secure($tips_enabled),
+          secure($for_subscriptions),
+          secure($is_paid),
+          secure($post_price, 'float'),
+          secure($paid_text),
+          secure($date),
+          secure($group_id, 'int'),
+          secure($group_approved),
+          secure($pre_approved),
+          secure($has_approved),
+          secure($is_collaborative),
+          secure($collaborative_percent, 'float')
+        ));
         $post_id = $db->insert_id;
         /* post in_group notification */
         if (!$group_approved) {
@@ -266,7 +401,38 @@ trait BlogsTrait
         }
         /* insert the post */
         $event_approved = ($event['event_publish_approval_enabled'] && !$event['i_admin']) ? "0" : "1";
-        $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, tips_enabled, is_paid, post_price, paid_text, time, privacy, in_event, event_id, event_approved, pre_approved, has_approved) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, 'custom', '1', %s, %s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($tips_enabled), secure($is_paid), secure($post_price, 'float'), secure($paid_text), secure($date), secure($event_id, 'int'), secure($event_approved), secure($pre_approved), secure($has_approved)));
+        $db->query(sprintf(
+          "INSERT INTO posts (
+              user_id,
+              user_type,
+              post_type,
+              tips_enabled,
+              is_paid,
+              post_price,
+              paid_text,
+              time,
+              privacy,
+              in_event,
+              event_id,
+              event_approved,
+              pre_approved,
+              has_approved,
+              is_collaborative,
+              collaborative_percent
+            ) VALUES (%s, 'user', 'article', %s, %s, %s, %s, %s, 'custom', '1', %s, %s, %s, %s, %s, %s)",
+          secure($this->_data['user_id'], 'int'),
+          secure($tips_enabled),
+          secure($is_paid),
+          secure($post_price, 'float'),
+          secure($paid_text),
+          secure($date),
+          secure($event_id, 'int'),
+          secure($event_approved),
+          secure($pre_approved),
+          secure($has_approved),
+          secure($is_collaborative),
+          secure($collaborative_percent, 'float')
+        ));
         $post_id = $db->insert_id;
         /* post in_event notification */
         if (!$event_approved) {
@@ -281,6 +447,16 @@ trait BlogsTrait
     }
     /* insert blog */
     $db->query(sprintf("INSERT INTO posts_articles (post_id, cover, title, text, category_id, tags) VALUES (%s, %s, %s, %s, %s, %s)", secure($post_id, 'int'), secure($cover), secure($title), secure($clean_text), secure($category_id, 'int'), secure($tags)));
+    /* insert references */
+    if ($references) {
+      foreach ($references as $reference) {
+        $db->query(sprintf("INSERT INTO posts_articles_references (post_id, title, link) VALUES (%s, %s, %s)", secure($post_id, 'int'), secure($reference['title']), secure($reference['link'])));
+      }
+    }
+    /* insert collaborative users */
+    if ($is_collaborative) {
+      $this->insert_collaborative_users($post_id, $collaborative_users_ids);
+    }
     /* extract hosted images from the text */
     $uploaded_images = extract_uploaded_images_from_text($clean_text);
     /* remove pending uploads */
@@ -305,6 +481,7 @@ trait BlogsTrait
    * @param string $cover
    * @param integer $category_id
    * @param string $tags
+   * @param array $references
    * @param boolean $tips_enabled
    * @param boolean $for_subscriptions
    * @param boolean $is_paid
@@ -312,9 +489,13 @@ trait BlogsTrait
    * @param string $paid_text
    * @return void
    */
-  public function edit_blog($post_id, $title, $text, $cover, $category_id, $tags, $tips_enabled, $for_subscriptions, $is_paid, $post_price, $paid_text)
+  public function edit_blog($post_id, $title, $text, $cover, $category_id, $tags, $references, $tips_enabled, $for_subscriptions, $is_paid, $post_price, $paid_text)
   {
     global $db, $system, $date;
+    /* prepare */
+    $tips_enabled = (isset($tips_enabled)) ? '1' : '0';
+    $for_subscriptions = (isset($for_subscriptions)) ? '1' : '0';
+    $is_paid = (isset($is_paid)) ? '1' : '0';
     /* (check|get) post */
     $post = $this->_check_post($post_id, true);
     if (!$post) {
@@ -326,56 +507,77 @@ trait BlogsTrait
     }
     /* check if blogs enabled */
     if (!$system['blogs_enabled']) {
-      throw new Exception(__("The blogs has been disabled by the admin"));
+      throw new ValidationException(__("The blogs has been disabled by the admin"));
     }
     /* check blogs permission */
     if (!$this->_data['can_write_blogs']) {
-      throw new Exception(__("You don't have the permission to do this"));
+      throw new ValidationException(__("You don't have the permission to do this"));
     }
     /* check tips permission */
     if (!$this->_data['can_receive_tip'] && $tips_enabled) {
-      throw new Exception(__("You don't have the permission to do this"));
+      throw new ValidationException(__("You don't have the permission to do this"));
     }
     /* check monetization permission */
     if ($for_subscriptions) {
       if (!$post['can_be_for_subscriptions']) {
-        throw new Exception(__("You don't have the permission to do this"));
+        throw new ValidationException(__("You don't have the permission to do this"));
       }
-    }
-    /* check paid posts permission */
-    if (!$this->_data['can_monetize_content'] && !$this->_data['user_monetization_enabled'] && $is_paid) {
-      throw new Exception(__("You don't have the permission to do this"));
     }
     /* check if both for_subscriptions & is_paid enabled */
     if ($for_subscriptions && $is_paid) {
-      throw new Exception(__("You can't enable both subscribers only & paid post"));
+      throw new ValidationException(__("You can't enable both subscribers only & paid post"));
+    }
+    /* check paid posts permission */
+    if (!$this->_data['can_monetize_content'] && !$this->_data['user_monetization_enabled'] && $is_paid) {
+      throw new ValidationException(__("You don't have the permission to do this"));
     }
     /* validate title */
     if (is_empty($title)) {
-      throw new Exception(__("You must enter a title for your blog"));
+      throw new ValidationException(__("You must enter a title for your blog"));
     }
     if (strlen($title) < 3) {
-      throw new Exception(__("Title must be at least 3 characters long. Please try another"));
+      throw new ValidationException(__("Title must be at least 3 characters long. Please try another"));
     }
     /* validate text */
     if (is_empty($text)) {
-      throw new Exception(__("You must enter some text for your blog"));
+      throw new ValidationException(__("You must enter some text for your blog"));
     }
     /* validate category */
     if (is_empty($category_id)) {
-      throw new Exception(__("You must select valid category for your blog"));
+      throw new ValidationException(__("You must select valid category for your blog"));
     }
     $category = $this->get_category('blogs_categories', $category_id);
     if (!$category) {
-      throw new Exception(__("You must select valid category for your blog"));
+      throw new ValidationException(__("You must select valid category for your blog"));
     }
-    /* validate price */
+    /* validate references */
+    if ($references) {
+      foreach ($references as $key => $reference) {
+        /* remove empty references */
+        if (is_empty($reference['title']) && is_empty($reference['link'])) {
+          unset($references[$key]);
+          continue;
+        }
+        /* validate title */
+        if (is_empty($reference['title'])) {
+          throw new ValidationException(__("You must enter a title for your reference"));
+        }
+        /* validate link */
+        if (is_empty($reference['link']) || !valid_url($reference['link'])) {
+          throw new ValidationException(__("Please enter a valid URL for your reference: ") . $reference['title']);
+        }
+      }
+    }
+    /* validate paid price */
     if ($is_paid) {
       if (!is_numeric($post_price) || $post_price <= 0) {
-        throw new Exception(__("Please enter a valid price"));
+        throw new ValidationException(__("Please enter a valid price"));
+      }
+      if ($system['monetization_max_paid_post_price'] > 0 && $post_price > $system['monetization_max_paid_post_price']) {
+        throw new ValidationException(__("The price must be less than or equal to") . " " . print_money($system['monetization_max_paid_post_price']));
       }
       if (strlen($paid_text) > 1000) {
-        modal("ERROR", __("Error"), __("Paid post description is more than 1000 characters"));
+        throw new ValidationException(__("Paid post description is more than 1000 characters"));
       }
     }
     /* prepare text */
@@ -397,6 +599,15 @@ trait BlogsTrait
     $db->query(sprintf("UPDATE posts SET tips_enabled = %s, for_subscriptions = %s, is_paid = %s, post_price = %s, paid_text = %s WHERE post_id = %s", secure($tips_enabled), secure($for_subscriptions), secure($is_paid), secure($post_price, 'float'), secure($oaid_text), secure($post_id, 'int')));
     /* update the blog */
     $db->query(sprintf("UPDATE posts_articles SET cover = %s, title = %s, text = %s, category_id = %s, tags = %s WHERE post_id = %s", secure($cover), secure($title), secure($clean_text), secure($category_id, 'int'), secure($tags), secure($post_id, 'int')));
+    /* delete existing references */
+    $db->query(sprintf("DELETE FROM posts_articles_references WHERE post_id = %s", secure($post_id, 'int')));
+    /* update references */
+    if ($references) {
+      /* insert new references */
+      foreach ($references as $reference) {
+        $db->query(sprintf("INSERT INTO posts_articles_references (post_id, title, link) VALUES (%s, %s, %s)", secure($post_id, 'int'), secure($reference['title']), secure($reference['link'])));
+      }
+    }
     /* extract hosted images from the text */
     $uploaded_images = extract_uploaded_images_from_text($clean_text);
     /* remove pending uploads */

@@ -412,13 +412,13 @@
                             <i class="fa fa-trash-alt mr5"></i>{__("Delete")}
                           </span>
                           |
-                          <span data-toggle="modal" data-url="monetization/controller.php?do=edit&id={$plan['plan_id']}" class="text-link ml10">
+                          <span data-toggle="modal" data-url="monetization/controller.php?do=edit_plan&id={$plan['plan_id']}" class="text-link ml10">
                             <i class="fa fa-pen mr5"></i>{__("Edit")}
                           </span>
                         </div>
                       </div>
                     {/foreach}
-                    <div data-toggle="modal" data-url="monetization/controller.php?do=add&node_id={$data['page_id']}&node_type=page" class="payment-plan new">{__("Add new plan")} </div>
+                    <div data-toggle="modal" data-url="monetization/controller.php?do=add_plan&node_id={$data['page_id']}&node_type=page" class="payment-plan new">{__("Add new plan")} </div>
                   </div>
                 </div>
               </div>

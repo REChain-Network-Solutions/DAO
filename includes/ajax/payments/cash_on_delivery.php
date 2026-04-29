@@ -3,8 +3,8 @@
 /**
  * ajax -> payments -> cash on delivery
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap

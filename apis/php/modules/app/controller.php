@@ -3,8 +3,8 @@
 /**
  * APIs -> modules -> app -> controller
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // appSettings

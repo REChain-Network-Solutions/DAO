@@ -21,6 +21,7 @@ return array(
     '8a9dc1de0ca7e01f3e08231539562f61' => $vendorDir . '/aws/aws-sdk-php/src/functions.php',
     '09fc349b549513bf7f4291502426f919' => $vendorDir . '/embed/embed/src/functions.php',
     '2cffec82183ee1cea088009cef9a6fc3' => $vendorDir . '/ezyang/htmlpurifier/library/HTMLPurifier.composer.php',
+    '61ba3e92ef91a7a0f1cc260ebd9290e4' => $vendorDir . '/openai-php/client/src/OpenAI.php',
     'd08bec471a180204a14ef3c91e951f99' => $vendorDir . '/p3k/emoji-detector/src/Emoji.php',
     'c15d4a1253e33e055d05e547c61dcb71' => $vendorDir . '/smarty/smarty/src/functions.php',
     'afbfa7a43c52370cda17774bbbc223ea' => $vendorDir . '/verotel/flexpay-php-client/FlexPay.php',

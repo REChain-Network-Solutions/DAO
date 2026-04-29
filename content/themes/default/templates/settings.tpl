@@ -151,7 +151,7 @@
             {/if}
 
             {if $system['social_login_enabled']}
-              {if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['Delus_login_enabled']}
+              {if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
                 <li {if $view == "linked"}class="active" {/if}>
                   <a href="{$system['system_url']}/settings/linked">
                     {include file='__svg_icons.tpl' icon="linked_accounts" class="main-icon mr10" width="24px" height="24px"}
@@ -185,6 +185,11 @@
                     <li {if $view == "monetization" && $sub_view == ""}class="active" {/if}>
                       <a href="{$system['system_url']}/settings/monetization">
                         {__("Settings")}
+                      </a>
+                    </li>
+                    <li {if $view == "monetization" && $sub_view == "coupons"}class="active" {/if}>
+                      <a href="{$system['system_url']}/settings/monetization/coupons">
+                        {__("Coupons")}
                       </a>
                     </li>
                     {if $system['monetization_money_withdraw_enabled']}

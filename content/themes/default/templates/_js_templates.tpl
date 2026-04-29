@@ -1377,7 +1377,87 @@
         </div>
       </div>
     </script>
+
+    <script id="publisher-mention-item" type="text/template">
+      <div class="publisher-mention-item">
+        <div class="publisher-mention-item__avatar">
+          <img class="publisher-mention-item__img" src="{literal}{{avatar}}{/literal}" alt="" loading="lazy" draggable="false">
+        </div>
+        <div class="publisher-mention-item__body">
+          <div class="publisher-mention-item__name mention-item-label">{literal}{{value}}{/literal}</div>
+        </div>
+      </div>
+    </script>
+
+    <script id="publisher-hashtag-item" type="text/template">
+      <div class="publisher-hashtag-item">
+        <div class="publisher-hashtag-item__body">
+          <div class="publisher-hashtag-item__name mention-item-label">#{literal}{{value}}{/literal}</div>
+        </div>
+      </div>
+    </script>
     <!-- Publisher -->
+
+    <!-- AI -->
+    {if $system['ai_text_credit_enabled'] || $system['ai_image_credit_enabled']}
+      <script id="ai-credit" type="text/template">
+        <div class="modal-header">
+          <h6 class="modal-title">
+            {include file='__svg_icons.tpl' icon="ai" class="main-icon mr10" width="24px" height="24px"}
+            {__("Buy Credits")}
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form class="js_ajax-forms" data-url="ai/credit.php">
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-12 col-md-5">
+                <div class="card-balance">
+                  <p>
+                    {__("Your Wallet Balance")}
+                  </p>
+                  <p class="card-balance-value text-primary">
+                    {print_money($user->_data['user_wallet_balance'])}
+                  </p>
+                  <div class="d-flex justify-content-center mt20">
+                    <button class="btn btn-md btn-dark w-100" data-toggle="modal" data-url="#wallet-replenish">
+                      <i class="fa fa-wallet fa-fw mr5"></i>{__("Add Funds")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-7">
+                <div class="bs-callout bs-callout-warning mt0">
+                  {literal}{{#is_text}}{/literal}
+                  {__("Each word costs")} <span class="badge badge-lg bg-light text-primary">{$system['ai_generated_word_cost']}</span> {__("credits")}
+                  {literal}{{/is_text}}{/literal}
+                  {literal}{{#is_image}}{/literal}
+                  {__("Each image costs")} <span class="badge badge-lg bg-light text-primary">{$system['ai_generated_image_cost']}</span> {__("credits")}
+                  {literal}{{/is_image}}{/literal}
+                </div>
+                <div class="form-group">
+                  <label class="form-label">
+                    {__("How much credits you want to add?")}
+                  </label>
+                  <input type="number" class="form-control js_ai-credits-amount" name="amount" placeholder="0" {literal}{{#is_text}}{/literal} data-node-cost="{$system['ai_generated_word_cost']}" {literal}{{/is_text}}{/literal} {literal}{{#is_image}}{/literal} data-node-cost="{$system['ai_generated_image_cost']}" {literal}{{/is_image}}{/literal}>
+                  <div class="form-text x-hidden js_ai-credits-cost-text">
+                    {__("This will cost you")} {$system['system_currency_symbol']}<span class="js_ai-credits-cost"></span>
+                  </div>
+                </div>
+                <!-- error -->
+                <div class="alert alert-danger mb0 mt10 x-hidden"></div>
+                <!-- error -->
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}">
+            <button type="submit" class="btn btn-dark">{__("Buy")}</button>
+          </div>
+        </form>
+      </script>
+    {/if}
+    <!-- AI -->
 
     <!-- Posts & Comments -->
     {if in_array($page, ["index", "profile", "page", "group", "event", "post", "photo", "market", "blogs", "directory", "search", "share", "reels"])}
@@ -1394,7 +1474,7 @@
       <script id="edit-post" type="text/template">
         <div class="post-edit">
           <div class="x-form post-form">
-            <textarea rows="2" class="js_autosize js_mention js_update-post-textarea">{literal}{{text}}{/literal}</textarea>
+            <textarea rows="2" class="js_autosize js_mentions js_update-post-textarea">{literal}{{text}}{/literal}</textarea>
             <ul class="x-form-tools clearfix">
               <li class="x-form-tools-emoji js_emoji-menu-toggle">
                 <i class="far fa-smile-wink fa-lg fa-fw"></i>
@@ -1411,7 +1491,7 @@
       <script id="edit-comment" type="text/template">
         <div class="comment-edit">
           <div class="x-form comment-form">
-            <textarea rows="1" class="js_autosize js_mention js_update-comment-textarea">{literal}{{text}}{/literal}</textarea>
+            <textarea rows="1" class="js_autosize js_mentions js_update-comment-textarea">{literal}{{text}}{/literal}</textarea>
             <ul class="x-form-tools clearfix">
               <li class="x-form-tools-attach">
                 <i class="far fa-image fa-lg fa-fw js_x-uploader" data-handle="comment"></i>
@@ -1465,11 +1545,8 @@
           </div>
           <form class="js_ajax-forms" data-url="payments/wallet.php?do=send_tip">
             <div class="modal-body">
-            <div class="form-group">
-                <label class="form-label" for="amount">{__("Your Wallet Credit")}</label>
-                <div>
-                  <span class="badge badge-lg bg-info">{print_money($user->_data['user_wallet_balance'])}</span>
-                </div>
+              <div class="bs-callout bs-callout-warning mt0">
+                {__("Your Wallet Balance")} <span class="badge badge-lg bg-light text-primary">{print_money($user->_data['user_wallet_balance'])}</span>
               </div>
               <div class="form-group">
                 <label class="form-label">{__("Amount")}</label>
@@ -1499,31 +1576,31 @@
 
     <!-- Wallet -->
     <script id="wallet-replenish" type="text/template">
-        <div class="modal-header">
-          <h6 class="modal-title">
+      <div class="modal-header">
+        <h6 class="modal-title">
           {include file='__svg_icons.tpl' icon="payments" class="main-icon mr10" width="24px" height="24px"}
           {__("Add Funds")}
-          </h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
       <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_replenish">
-          <div class="modal-body">
-            <div class="form-group">
+        <div class="modal-body">
+          <div class="form-group">
             <label class="form-label" for="amount">{__("Amount")}</label>
-              <div class="input-money {$system['system_currency_dir']}">
-                <span>{$system['system_currency_symbol']}</span>
-                <input class="form-control" type="text" placeholder="0.00" min="1.00" max="1000" name="amount">
-              </div>
+            <div class="input-money {$system['system_currency_dir']}">
+              <span>{$system['system_currency_symbol']}</span>
+              <input class="form-control" type="text" placeholder="0.00" min="1.00" max="1000" name="amount">
             </div>
-            <!-- error -->
-            <div class="alert alert-danger mb0 mt10 x-hidden"></div>
-            <!-- error -->
           </div>
-          <div class="modal-footer">
+          <!-- error -->
+          <div class="alert alert-danger mb0 mt10 x-hidden"></div>
+          <!-- error -->
+        </div>
+        <div class="modal-footer">
           <button type="submit" class="btn btn-primary">{__("Continue")}</button>
-          </div>
-        </form>
-      </script>
+        </div>
+      </form>
+    </script>
     
     {if $page == "wallet"}
       <script id="wallet-transfer" type="text/template">
@@ -1576,11 +1653,8 @@
         </div>
         <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_withdraw_affiliates">
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="amount">{__("Your Affiliates Credit")}</label>
-              <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_affiliate_balance'])}</span>
-              </div>
+            <div class="bs-callout bs-callout-warning mt0">
+              {__("Your Affiliates Balance")} <span class="badge badge-lg bg-light text-primary">{print_money($user->_data['user_affiliate_balance'])}</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="amount">{__("Amount")}</label>
@@ -1609,13 +1683,8 @@
         </div>
         <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_withdraw_points">
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="amount">{__("Your Points Credit")}</label>
-              <div>
-                <span class="badge badge-lg bg-info">
-                  {if $system['points_per_currency'] == 0}0{else}{print_money((((1/$system['points_per_currency'])*$user->_data['user_points'])))}{/if}
-                </span>
-              </div>
+            <div class="bs-callout bs-callout-warning mt0">
+              {__("Your Points Balance")} <span class="badge badge-lg bg-light text-primary">{if $system['points_per_currency'] == 0}0{else}{print_money((((1/$system['points_per_currency'])*$user->_data['user_points'])))}{/if}</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="amount">{__("Amount")}</label>
@@ -1644,11 +1713,8 @@
         </div>
         <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_withdraw_market">
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="amount">{__("Your Funding Credit")}</label>
-              <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_market_balance'])}</span>
-              </div>
+            <div class="bs-callout bs-callout-warning mt0">
+              {__("Your Marketplace Balance")} <span class="badge badge-lg bg-light text-primary">{print_money($user->_data['user_market_balance'])}</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="amount">{__("Amount")}</label>
@@ -1677,11 +1743,8 @@
         </div>
         <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_withdraw_funding">
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="amount">{__("Your Funding Credit")}</label>
-              <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_funding_balance'])}</span>
-              </div>
+            <div class="bs-callout bs-callout-warning mt0">
+              {__("Your Funding Balance")} <span class="badge badge-lg bg-light text-primary">{print_money($user->_data['user_funding_balance'])}</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="amount">{__("Amount")}</label>
@@ -1710,11 +1773,8 @@
         </div>
         <form class="js_ajax-forms" data-url="payments/wallet.php?do=wallet_withdraw_monetization">
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="amount">{__("Your Monetization Credit")}</label>
-              <div>
-                <span class="badge badge-lg bg-info">{print_money($user->_data['user_monetization_balance'])}</span>
-              </div>
+            <div class="bs-callout bs-callout-warning mt0">
+              {__("Your Monetization Balance")} <span class="badge badge-lg bg-light text-primary">{print_money($user->_data['user_monetization_balance'])}</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="amount">{__("Amount")}</label>
@@ -1968,34 +2028,52 @@
       <div class="modal-body">
         <div id="payment-summry">
           <div class="plr20 text-start">
+            {if $page != "wallet"}
+              <div class="mb15" id="payment-coupon-form">
+                <div class="w-100 d-flex gap-2">
+                  <input type="text" class="form-control form-control-sm" placeholder="{__('Promo code')}" name="payment-promo-code" id="payment-promo-code" data-price="{literal}{{price}}{/literal}" data-handle="{literal}{{handle}}{/literal}">
+                  <button type="button" class="btn btn-light btn-sm js_payment-apply-coupon">{__("Apply")}</button>
+                  <button type="button" class="btn btn-light btn-sm js_payment-clear-coupon x-hidden">{__("Clear")}</button>
+                </div>
+                <div class="alert alert-success mt10 x-hidden" id="payment-coupon-success"></div>
+                <div class="alert alert-danger mt10 x-hidden" id="payment-coupon-error"></div>
+              </div>
+              <div class="divider mtb15"></div>
+            {/if}
             <div class="mb15">
               <span>{__("Amount")}</span>
-              <span class="float-end">{literal}{{price}}{/literal}</span>
+              <span class="float-end" id="payment-amount">{literal}{{price}}{/literal}</span>
             </div>
             {if $system['payment_vat_enabled']}
-            <div class="mb15">
-              <span>{__("VAT")} +%{get_payment_vat_percentage()}</span>
-              <span class="float-end">{literal}{{vat}}{/literal}</span>
-            </div>
+              <div class="mb15">
+                <span>{__("VAT")} <small class="text-muted">{get_payment_vat_percentage()}%</small></span>
+                <span class="float-end" id="payment-vat" data-initial-value="{literal}{{vat}}{/literal}">{literal}{{vat}}{/literal}</span>
+              </div>
             {/if}
             {if $system['payment_fees_enabled']}
               <div class="mb15">
-                <span>{__("Fees")} +%{$system['payment_fees_percentage']}</span>
-                <span class="float-end">{literal}{{fees}}{/literal}</span>
+                <span>{__("Fees")} <small class="text-muted">{$system['payment_fees_percentage']}%</small></span>
+                  <span class="float-end" id="payment-fees" data-initial-value="{literal}{{fees}}{/literal}">{literal}{{fees}}{/literal}</span>
               </div>
             {/if}
+            <div class="mb15">
+              <span>{__("Discount")} <small class="text-muted"><span id="payment-discount-percentage">0</span>%</small></span>
+              <span class="float-end text-success"><span class="mr5">-</span><span id="payment-discount-value">0</span></span>
+            </div>
             <div class="divider mtb15"></div>
             <div class="mb15">
               <span><strong>{__("Total")}</strong></span>
-              <span class="float-end"><strong>{literal}{{total_printed}}{/literal}</strong></span>
+              <span class="float-end"><strong id="payment-total" data-initial-value="{literal}{{total_printed}}{/literal}">{literal}{{total_printed}}{/literal}</strong></span>
             </div>
             <div class="divider mtb15"></div>
             {if $system['wallet_enabled']}
               {if $page == "packages" && $system['packages_enabled'] && $system['packages_wallet_payment_enabled']}
+                {literal}{{^wallet}}{/literal}
                 <div>
                   <small class="text-muted"><i>{__("Note: Paying via wallet credit will not be charged any VAT or fees")}</i></small>
                   <div class="divider mtb15"></div>
                 </div>
+                {literal}{{/wallet}}{/literal}
               {/if}
               {if ($page != "packages" && $page != "wallet") && $system['monetization_enabled'] && $system['monetization_wallet_payment_enabled']}
                 {literal}{{#subscribe}}{/literal}
@@ -2076,7 +2154,7 @@
             {if $system['2checkout_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
-                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#twocheckout" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}" }'>
+                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#twocheckout" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}", "total": "{literal}{{total}}{/literal}" }'>
                     {include file='__svg_icons.tpl' icon="2co" class="mr5" width="20px" height="20px"}{__("2Checkout")}
                   </button>
                 </div>
@@ -2085,7 +2163,7 @@
             {if $system['authorize_net_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
-                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#authorizenet" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}" }'>
+                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#authorizenet" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}", "total": "{literal}{{total}}{/literal}" }'>
                     {include file='__svg_icons.tpl' icon="authorize.net" class="mr5" width="20px" height="20px"}{__("Authorize.Net")}
                   </button>
                 </div>
@@ -2103,7 +2181,7 @@
             {if $system['cashfree_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
-                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#cashfree" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}" }'>
+                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#cashfree" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}", "total": "{literal}{{total}}{/literal}" }'>
                     {include file='__svg_icons.tpl' icon="cashfree" class="mr5" width="20px" height="20px"}{__("Cashfree")}
                   </button>
                 </div>
@@ -2114,15 +2192,6 @@
                 <div class="d-grid">
                   <button class="js_payment-shift4 btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
                     {include file='__svg_icons.tpl' icon="shift4" class="mr10" width="20px" height="20px"}{__("Shift4")}
-                  </button>
-                </div>
-              </div>
-            {/if}
-            {if $system['moneypoolscash_enabled']}
-              <div class="col-12 col-sm-6 mb10">
-                <div class="d-grid">
-                  <button class="js_payment-moneypoolscash btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
-                    {include file='__svg_icons.tpl' icon="moneypoolscash" class="mr10" width="20px" height="20px"}{__("MoneyPoolsCash")}
                   </button>
                 </div>
               </div>
@@ -2202,7 +2271,7 @@
             {if $system['bank_transfers_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
-                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#bank-transfer" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}" }' data-size="large">
+                  <button class="btn btn-md btn-payment" data-toggle="modal" data-url="#bank-transfer" data-options='{ "handle": "{literal}{{handle}}{/literal}", "id": "{literal}{{id}}{/literal}", "price": "{literal}{{price}}{/literal}", "total": "{literal}{{total}}{/literal}" }' data-size="large">
                     <i class="fa fa-university fa-lg fa-fw mr5" style="color: #4CAF50;"></i>{__("Bank Transfer")}
                   </button>
                 </div>
@@ -2210,6 +2279,7 @@
             {/if}
             {if $system['wallet_enabled']}
               {if $page == "packages" && $system['packages_enabled'] && $system['packages_wallet_payment_enabled']}
+                {literal}{{^wallet}}{/literal}
                 <div class="col-12 col-sm-6 mb10">
                   <div class="d-grid">
                     <button class="js_payment-wallet-package btn btn-md btn-payment" data-id="{literal}{{id}}{/literal}">
@@ -2217,6 +2287,7 @@
                     </button>
                   </div>
                 </div>
+                {literal}{{/wallet}}{/literal}
               {/if}
               {if ($page != "packages" && $page != "wallet") && $system['monetization_enabled'] && $system['monetization_wallet_payment_enabled']}
                 {literal}{{#subscribe}}{/literal}
@@ -2263,16 +2334,14 @@
                 {literal}{{/marketplace}}{/literal}
               {/if}
             {/if}
-            {if $system['market_cod_payment_enabled']}
-              {if $page == "market"}
-                <div class="col-12 col-sm-6 mb10">
-                  <div class="d-grid">
-                    <button class="js_payment-cod-marketplace btn btn-md btn-payment" data-id="{literal}{{id}}{/literal}" data-price="{literal}{{price}}{/literal}">
-                      <i class="fa fa-money-bill-wave fa-lg fa-fw mr5" style="color: #28a745;"></i>{__("Cash on Delivery")}
-                    </button>
-                  </div>
+            {if $system['market_cod_payment_enabled'] && $page == "market"}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-cod-marketplace btn btn-md btn-payment" data-id="{literal}{{id}}{/literal}" data-price="{literal}{{price}}{/literal}">
+                    <i class="fa fa-money-bill-wave fa-lg fa-fw mr5" style="color: #28a745;"></i>{__("Cash on Delivery")}
+                  </button>
                 </div>
-              {/if}
+              </div>
             {/if}
           </div>
         </div>
@@ -2402,9 +2471,11 @@
           </div>
           <div class="modal-footer">
             <input type="hidden" name="token" value="" />
+            <input type="hidden" name="promo_code" value="{literal}{{promo_code}}{/literal}" />
             <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}">
             <input type="hidden" name="id" value="{literal}{{id}}{/literal}">
             <input type="hidden" name="price" value="{literal}{{price}}{/literal}">
+            <input type="hidden" name="total" value="{literal}{{total}}{/literal}">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
             <button type="submit" class="btn btn-primary"><i class="fa fa-check-circle mr10"></i>{__("Pay")}</button>
           </div>
@@ -2423,7 +2494,7 @@
           </h6>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <form class="js_ajax-forms" data-url="payments/authorize.php">
+        <form id="authorizenet_form">
           <div class="modal-body">
             <div class="heading-small mb20">
               {__("Card Info")}
@@ -2505,9 +2576,11 @@
             <!-- error -->
           </div>
           <div class="modal-footer">
+            <input type="hidden" name="promo_code" value="{literal}{{promo_code}}{/literal}" />
             <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}">
             <input type="hidden" name="id" value="{literal}{{id}}{/literal}">
             <input type="hidden" name="price" value="{literal}{{price}}{/literal}">
+            <input type="hidden" name="total" value="{literal}{{total}}{/literal}">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
             <button type="submit" class="btn btn-primary"><i class="fa fa-check-circle mr10"></i>{__("Pay")}</button>
           </div>
@@ -2547,6 +2620,7 @@
             <!-- error -->
           </div>
           <div class="modal-footer">
+            <input type="hidden" name="promo_code" value="{literal}{{promo_code}}{/literal}" />
             <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}" />
             <input type="hidden" name="id" value="{literal}{{id}}{/literal}" />
             <input type="hidden" name="price" value="{literal}{{price}}{/literal}" />
@@ -2590,9 +2664,11 @@
             <!-- error -->
           </div>
           <div class="modal-footer">
+            <input type="hidden" name="promo_code" value="{literal}{{promo_code}}{/literal}" />
             <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}" />
             <input type="hidden" name="id" value="{literal}{{id}}{/literal}" />
             <input type="hidden" name="price" value="{literal}{{price}}{/literal}" />
+            <input type="hidden" name="total" value="{literal}{{total}}{/literal}" />
             <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
             <button type="submit" class="btn btn-primary"><i class="fa fa-check-circle mr10"></i>{__("Pay")}</button>
           </div>
@@ -2611,7 +2687,7 @@
           </h6>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <form class="js_ajax-forms" data-url="payments/bank.php">
+        <form id="banktransfer_form">
           <div class="modal-body">
             <div class="page-header rounded bank-transfer mb30">
               <div class="circle-1"></div>
@@ -2686,9 +2762,11 @@
             <!-- error -->
           </div>
           <div class="modal-footer">
+            <input type="hidden" name="promo_code" value="{literal}{{promo_code}}{/literal}" />
             <input type="hidden" name="handle" value="{literal}{{handle}}{/literal}">
             <input type="hidden" name="id" value="{literal}{{id}}{/literal}">
             <input type="hidden" name="price" value="{literal}{{price}}{/literal}">
+            <input type="hidden" name="total" value="{literal}{{total}}{/literal}">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal">{__("Cancel")}</button>
             <button type="submit" class="btn btn-primary"><i class="fa fa-check-circle mr10"></i>{__("Send")}</button>
           </div>
@@ -2721,6 +2799,27 @@
       </script>
     {/if}
     <!-- Auto Connect -->
+
+    <!-- Blog reference -->
+    {if $page == "blogs" && in_array($view, ['edit', 'new'])}
+      <script id="blog-reference" type="text/template">
+        <div class="auto-connect-node">
+          <div class="row form-group">
+            <label class="col-md-2 form-label">
+              {__("reference")}
+            </label>
+            <div class="col-md-10">
+              <input type="text" class="form-control mb10" name="references[{literal}{{index}}{/literal}][title]" placeholder="{__('Title')}">
+              <input type="text" class="form-control mb10" name="references[{literal}{{index}}{/literal}][link]" placeholder="{__('Link')}">
+              <div class="form-text">
+                {__("Add a reference title and link to cite your source")}
+              </div>
+            </div>
+          </div>
+        </div>
+      </script>
+    {/if}
+    <!-- Blog reference -->
 
   {/if}
 

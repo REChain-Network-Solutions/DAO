@@ -3,8 +3,8 @@
 /**
  * ajax -> data -> load
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -40,15 +40,15 @@ try {
       /* get newsfeed */
       if ($user->_logged_in && $system['newsfeed_merge_enabled']) {
         /* first get the posts from normal newsfeed */
-        $data_newsfeed = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_recent_results']]);
+        $data_newsfeed = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_recent_results']]);
         /* second get the posts from popular */
-        $data_popular = $user->get_posts(['get' => 'popular', 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_popular_results']]);
+        $data_popular = $user->get_posts(['get' => 'popular', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_popular_results']]);
         $data_popular = array_map(function ($element) {
           $element['source'] = "popular";
           return $element;
         }, $data_popular);
         /* third get the posts from discover */
-        $data_discover = $user->get_posts(['get' => 'discover', 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_discover_results']]);
+        $data_discover = $user->get_posts(['get' => 'discover', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_discover_results']]);
         $data_discover = array_map(function ($element) {
           $element['source'] = "discover";
           return $element;
@@ -56,16 +56,16 @@ try {
         /* merge the three arrays */
         $data = array_merge($data_newsfeed, $data_popular, $data_discover);
       } else {
-        $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+        $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       }
 
       if ($user->_logged_in && $system['reels_enabled']) {
         // get posts (reels)
         /* first get the reels from discover */
         $offset = $_POST['offset'] - 1;
-        $reels_discover = $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'offset' => $offset]);
+        $reels_discover = $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $offset]);
         /* second get the reels from newsfeed */
-        $reels_newsfeed = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'offset' => $offset]);
+        $reels_newsfeed = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $offset]);
         /* merge the two arrays */
         $reels = array_merge($reels_discover, $reels_newsfeed);
         /* randomize the array */
@@ -116,7 +116,7 @@ try {
 
     case 'popular':
       /* get popular */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
 
       // get ads campaigns
       $ads_campaigns = $user->ads_campaigns('newsfeed');
@@ -143,7 +143,7 @@ try {
 
     case 'discover':
       /* get discover */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
 
       // get ads campaigns
       $ads_campaigns = $user->ads_campaigns('newsfeed');
@@ -173,15 +173,15 @@ try {
     case 'memories':
     case 'boosted':
       /* get [saved || scheduled || memories || boosted] */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       break;
 
     case 'reels':
       /* get reels */
       /* first get the reels from public */
-      $data_discover = ($user->_logged_in) ? $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'offset' => $_POST['offset']]) : [];
+      $data_discover = ($user->_logged_in) ? $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $_POST['offset']]) : [];
       /* second get the reels from friends */
-      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'offset' => $_POST['offset']]);
+      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $_POST['offset']]);
       /* merge the two arrays */
       $data = array_merge($data_discover, $data_friends);
       break;
@@ -189,9 +189,9 @@ try {
     case 'watch':
       /* get watch */
       /* first get the videos from public */
-      $data_discover = $user->get_posts(['get' => 'discover', 'filter' => 'video', 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data_discover = $user->get_posts(['get' => 'discover', 'filter' => 'video', 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       /* second get the videos from friends */
-      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       /* merge the two arrays */
       $data = array_merge($data_discover, $data_friends);
       break;
@@ -233,6 +233,42 @@ try {
       }
       /* assign variables */
       $smarty->assign('ads', $ads);
+      break;
+
+    case 'blogs_profile':
+      /* get blogs */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_posts(['get' => 'posts_profile', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      break;
+
+    case 'blogs_page':
+      /* get blogs */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_posts(['get' => 'posts_page', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      break;
+
+    case 'blogs_group':
+      /* get blogs */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_posts(['get' => 'posts_group', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      break;
+
+    case 'blogs_event':
+      /* get blogs */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_posts(['get' => 'posts_event', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
       break;
 
     case 'products_profile':
@@ -853,11 +889,11 @@ try {
     case 'search_events':
       /* get search results */
       /* check query */
-      if (!isset($_POST['filter'])) {
+      if (!isset($_POST['query'])) {
         _error(400);
       }
       $tab = str_replace("search_", "", $_POST['get']);
-      $data = $user->search($_POST['filter'], $tab, $_POST['offset']);
+      $data = $user->search($_POST['query'], $tab, $_POST['type'], $_POST['offset']);
       break;
 
     case 'orders':
@@ -884,6 +920,14 @@ try {
         _error(400);
       }
       $data = $user->get_reviews($_POST['id'], $_POST['type'], $_POST['offset']);
+      break;
+
+    case 'coupon_users':
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->who_used_coupon($_POST['id'], $_POST['offset']);
       break;
 
     default:

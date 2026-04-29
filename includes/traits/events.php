@@ -3,8 +3,8 @@
 /**
  * trait -> events
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait EventsTrait
@@ -52,7 +52,7 @@ trait EventsTrait
       }
     }
     /* prepare country statement */
-    if ($country && $system['newsfeed_location_filter_enabled'] && $country != "all") {
+    if ($country && $system['events_location_filter_enabled'] && $country != "all") {
       $country_statement = sprintf(" AND event_country = %s ", secure($country, 'int'));
     }
     /* prepare language statement */

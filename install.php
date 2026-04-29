@@ -3,8 +3,8 @@
 /**
  * install wizard
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set execution time
@@ -94,9 +94,9 @@ if (isset($_POST['submit'])) {
   // init the database
   $structure = "
     
-    SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
+    SET SQL_MODE = `NO_AUTO_VALUE_ON_ZERO`;
     START TRANSACTION;
-    SET time_zone = '+00:00';
+    SET time_zone = `+00:00`;
 
 
     /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -105,7 +105,7 @@ if (isset($_POST['submit'])) {
     /*!40101 SET NAMES utf8mb4 */;
 
     --
-    -- Database: `Delus`
+    -- Database: `sngine`
     --
 
     -- --------------------------------------------------------
@@ -115,7 +115,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `ads_campaigns` (
-      `campaign_id` int NOT NULL,
+      `campaign_id` int UNSIGNED NOT NULL,
       `campaign_user_id` int UNSIGNED NOT NULL,
       `campaign_title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `campaign_start_date` datetime NOT NULL,
@@ -152,7 +152,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `ads_system` (
-      `ads_id` int NOT NULL,
+      `ads_id` int UNSIGNED NOT NULL,
       `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `place` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `ads_pages_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
@@ -168,7 +168,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `affiliates_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -184,7 +184,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `announcements` (
-      `announcement_id` int NOT NULL,
+      `announcement_id` int UNSIGNED NOT NULL,
       `name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -234,6 +234,7 @@ if (isset($_POST['submit'])) {
       `movie_id` int UNSIGNED DEFAULT NULL,
       `orders_collection_id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `price` float DEFAULT NULL,
+      `total` float DEFAULT NULL,
       `bank_receipt` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `time` datetime NOT NULL,
       `status` tinyint(1) NOT NULL DEFAULT '0'
@@ -2544,7 +2545,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `funding_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2560,7 +2561,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `games` (
-      `game_id` int NOT NULL,
+      `game_id` int UNSIGNED NOT NULL,
       `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `genres` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
@@ -2662,6 +2663,8 @@ if (isset($_POST['submit'])) {
       `group_boosted_by` int UNSIGNED DEFAULT NULL,
       `group_members` int UNSIGNED NOT NULL DEFAULT '0',
       `group_monetization_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `group_monetization_discount_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `group_monetization_discount_percent` float NOT NULL DEFAULT '0',
       `group_monetization_min_price` float NOT NULL DEFAULT '0',
       `group_monetization_plans` int UNSIGNED NOT NULL DEFAULT '0',
       `chatbox_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -2837,7 +2840,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `log_commissions` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` float NOT NULL,
       `handle` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2851,7 +2854,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `log_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` float NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2866,7 +2869,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `log_points` (
-      `log_id` int NOT NULL,
+      `log_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `node_id` int UNSIGNED NOT NULL,
       `node_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2898,7 +2901,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `log_subscriptions` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `plan_title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `subscriber_id` int UNSIGNED NOT NULL,
       `node_id` int UNSIGNED NOT NULL,
@@ -2946,7 +2949,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `market_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2970,6 +2973,47 @@ if (isset($_POST['submit'])) {
       `category_order` int UNSIGNED NOT NULL DEFAULT '1'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+    --
+    -- Dumping data for table `merits_categories`
+    --
+
+    INSERT INTO `merits_categories` (`category_id`, `category_parent_id`, `category_name`, `category_description`, `category_image`, `category_order`) VALUES
+    (1, 0, 'Respect', 'Respect', 'merits/Respect.png', 1),
+    (2, 0, 'Integrity', 'Integrit', 'merits/Integrity.png', 2),
+    (3, 0, 'Collaboration', 'Collaboration', 'merits/Collaboration.png', 3),
+    (4, 0, 'Quality', 'Quality', 'merits/Quality.png', 4);
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `monetization_coupons`
+    --
+
+    CREATE TABLE `monetization_coupons` (
+      `coupon_id` int UNSIGNED NOT NULL,
+      `coupon_code` varchar(128) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+      `discount_percent` float UNSIGNED NOT NULL,
+      `is_onetime` enum('0','1') CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT '0',
+      `node_id` int UNSIGNED NOT NULL,
+      `node_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `created_date` datetime NOT NULL,
+      `used` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `usage_counter` int UNSIGNED NOT NULL DEFAULT '0'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `monetization_coupons_users`
+    --
+
+    CREATE TABLE `monetization_coupons_users` (
+      `id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `coupon_id` int UNSIGNED NOT NULL,
+      `used_date` datetime DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
     -- --------------------------------------------------------
 
     --
@@ -2977,7 +3021,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `monetization_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -2993,7 +3037,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `monetization_plans` (
-      `plan_id` int NOT NULL,
+      `plan_id` int UNSIGNED NOT NULL,
       `node_id` int UNSIGNED NOT NULL,
       `node_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -3164,7 +3208,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `orders_items` (
-      `id` int NOT NULL,
+      `id` int UNSIGNED NOT NULL,
       `order_id` int UNSIGNED NOT NULL,
       `product_post_id` int UNSIGNED NOT NULL,
       `quantity` int UNSIGNED NOT NULL,
@@ -3178,7 +3222,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `packages` (
-      `package_id` int NOT NULL,
+      `package_id` int UNSIGNED NOT NULL,
       `name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `price` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `period_num` int UNSIGNED NOT NULL,
@@ -3213,7 +3257,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `packages_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `payment_date` datetime NOT NULL,
       `package_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `package_price` float UNSIGNED NOT NULL,
@@ -3263,6 +3307,8 @@ if (isset($_POST['submit'])) {
       `page_social_vkontakte` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `page_likes` int UNSIGNED NOT NULL DEFAULT '0',
       `page_monetization_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `page_monetization_discount_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `page_monetization_discount_percent` float NOT NULL DEFAULT '0',
       `page_monetization_min_price` float NOT NULL DEFAULT '0',
       `page_monetization_plans` int UNSIGNED NOT NULL DEFAULT '0',
       `page_rate` float NOT NULL DEFAULT '0',
@@ -3371,15 +3417,19 @@ if (isset($_POST['submit'])) {
       `movies_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `games_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `gifts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `ai_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `ai_blogs_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `ai_images_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `stories_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `schedule_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `anonymous_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `collaborative_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `colored_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `activity_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `polls_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `geolocation_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `gif_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `anonymous_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `invitation_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `audio_call_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `video_call_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -3420,9 +3470,9 @@ if (isset($_POST['submit'])) {
     -- Dumping data for table `permissions_groups`
     --
 
-    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `stories_permission`, `posts_permission`, `schedule_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `anonymous_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `affiliates_per_user_6`, `affiliates_percentage_6`, `affiliates_per_user_7`, `affiliates_percentage_7`, `affiliates_per_user_8`, `affiliates_percentage_8`, `affiliates_per_user_9`, `affiliates_percentage_9`, `affiliates_per_user_10`, `affiliates_percentage_10`, `custom_points_system`, `points_per_currency`) VALUES
-    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100),
-    (2, 'Verified Permissions', '0', '0', '0', '1', '1', '1', '1', '0', '0', '1', '0', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100);
+    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `ai_posts_permission`, `ai_blogs_permission`, `ai_images_permission`, `stories_permission`, `posts_permission`, `schedule_posts_permission`, `anonymous_posts_permission`, `collaborative_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `affiliates_per_user_6`, `affiliates_percentage_6`, `affiliates_per_user_7`, `affiliates_percentage_7`, `affiliates_per_user_8`, `affiliates_percentage_8`, `affiliates_per_user_9`, `affiliates_percentage_9`, `affiliates_per_user_10`, `affiliates_percentage_10`, `custom_points_system`, `points_per_currency`) VALUES
+    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100),
+    (2, 'Verified Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100);
 
     -- --------------------------------------------------------
 
@@ -3431,7 +3481,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `points_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -3458,6 +3508,8 @@ if (isset($_POST['submit'])) {
       `event_approved` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `in_wall` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `wall_id` int UNSIGNED DEFAULT NULL,
+      `is_collaborative` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `collaborative_percent` float UNSIGNED NOT NULL DEFAULT '0',
       `post_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `colored_pattern` int UNSIGNED DEFAULT NULL,
       `origin_id` int UNSIGNED DEFAULT NULL,
@@ -3520,6 +3572,19 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `posts_articles_references`
+    --
+
+    CREATE TABLE `posts_articles_references` (
+      `refrence_id` int UNSIGNED NOT NULL,
+      `post_id` int UNSIGNED NOT NULL,
+      `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `link` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `posts_audios`
     --
 
@@ -3539,6 +3604,18 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `posts_cache` (
       `cache_id` int UNSIGNED NOT NULL,
       `cache_date` datetime NOT NULL,
+      `post_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `posts_collaborative_users`
+    --
+
+    CREATE TABLE `posts_collaborative_users` (
+      `id` int UNSIGNED NOT NULL,
       `post_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
@@ -4196,7 +4273,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `shopping_cart` (
-      `id` int NOT NULL,
+      `id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `product_post_id` int UNSIGNED NOT NULL,
       `quantity` int UNSIGNED NOT NULL DEFAULT '1'
@@ -4241,8 +4318,8 @@ if (isset($_POST['submit'])) {
 
     INSERT INTO `static_pages` (`page_id`, `page_title`, `page_is_redirect`, `page_redirect_url`, `page_url`, `page_text`, `page_in_footer`, `page_in_sidebar`, `page_icon`, `page_order`) VALUES
     (1, 'About', '0', '', 'about', '&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.&lt;/p&gt;\r\n&lt;h3 class=&quot;text-info&quot;&gt;Big Title&lt;/h3&gt;\r\n&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.&lt;/p&gt;\r\n&lt;h3 class=&quot;text-info&quot;&gt;Big Title&lt;/h3&gt;\r\n&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.&lt;/p&gt;', '1', '0', NULL, 1),
-    (2, 'Terms', '0', '', 'terms', '&lt;p&gt;The Delus website located at &lt;a href=&quot;https://demo.Delus.com/&quot;&gt;https://demo.Delus.com/&lt;/a&gt; is a copyrighted work belonging to Delus. Certain features of the Site may be subject to additional guidelines, terms, or rules, which will be posted on the Site in connection with such features.&lt;/p&gt;\r\n&lt;p&gt;All such additional terms, guidelines, and rules are incorporated by reference into these Terms.&lt;/p&gt;\r\n&lt;p&gt;These Terms of Use described the legally binding terms and conditions that oversee your use of the Site.&amp;nbsp;BY LOGGING INTO THE SITE, YOU ARE BEING COMPLIANT THAT THESE TERMS and you represent that you have the authority and capacity to enter into these Terms.&amp;nbsp;YOU SHOULD BE AT LEAST 18 YEARS OF AGE TO ACCESS THE SITE. IF YOU DISAGREE WITH ALL OF THE PROVISION OF THESE TERMS, DO NOT LOG INTO AND/OR USE THE SITE.&lt;/p&gt;\r\n&lt;p&gt;These terms require the use of arbitration Section 10.2 on an individual basis to resolve disputes and also limit the remedies available to you in the event of a dispute.&lt;/p&gt;\r\n&lt;h2&gt;Access to the Site&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;Subject to these Terms.&lt;/strong&gt; Company grants you a non-transferable, non-exclusive, revocable, limited license to access the Site solely for your own personal, noncommercial use.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Certain Restrictions.&lt;/strong&gt; The rights approved to you in these Terms are subject to the following restrictions: (a) you shall not sell, rent, lease, transfer, assign, distribute, host, or otherwise commercially exploit the Site; (b) you shall not change, make derivative works of, disassemble, reverse compile or reverse engineer any part of the Site; (c) you shall not access the Site in order to build a similar or competitive website; and (d) except as expressly stated herein, no part of the Site may be copied, reproduced, distributed, republished, downloaded, displayed, posted or transmitted in any form or by any means unless otherwise indicated, any future release, update, or other addition to functionality of the Site shall be subject to these Terms.&amp;nbsp; All copyright and other proprietary notices on the Site must be retained on all copies thereof.&lt;/p&gt;\r\n&lt;p&gt;Company reserves the right to change, suspend, or cease the Site with or without notice to you.&amp;nbsp; You approved that Company will not be held liable to you or any third-party for any change, interruption, or termination of the Site or any part.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;No Support or Maintenance.&lt;/strong&gt; You agree that Company will have no obligation to provide you with any support in connection with the Site.&lt;/p&gt;\r\n&lt;p&gt;Excluding any User Content that you may provide, you are aware that all the intellectual property rights, including copyrights, patents, trademarks, and trade secrets, in the Site and its content are owned by Company or Company&amp;rsquo;s suppliers. Note that these Terms and access to the Site do not give you any rights, title or interest in or to any intellectual property rights, except for the limited access rights expressed in Section 2.1. Company and its suppliers reserve all rights not granted in these Terms.&lt;/p&gt;\r\n&lt;h2&gt;User Content&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;User Content.&lt;/strong&gt; &quot;User Content&quot; means any and all information and content that a user submits to the Site. You are exclusively responsible for your User Content. You bear all risks associated with use of your User Content.&amp;nbsp; You hereby certify that your User Content does not violate our Acceptable Use Policy.&amp;nbsp; You may not represent or imply to others that your User Content is in any way provided, sponsored or endorsed by Company. Because you alone are responsible for your User Content, you may expose yourself to liability. Company is not obliged to backup any User Content that you post; also, your User Content may be deleted at any time without prior notice to you. You are solely responsible for making your own backup copies of your User Content if you desire.&lt;/p&gt;\r\n&lt;p&gt;You hereby grant to Company an irreversible, nonexclusive, royalty-free and fully paid, worldwide license to reproduce, distribute, publicly display and perform, prepare derivative works of, incorporate into other works, and otherwise use and exploit your User Content, and to grant sublicenses of the foregoing rights, solely for the purposes of including your User Content in the Site.&amp;nbsp; You hereby irreversibly waive any claims and assertions of moral rights or attribution with respect to your User Content.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Acceptable Use Policy.&lt;/strong&gt; The following terms constitute our &quot;Acceptable Use Policy&quot;: You agree not to use the Site to collect, upload, transmit, display, or distribute any User Content (i) that violates any third-party right or any intellectual property or proprietary right; (ii) that is unlawful, harassing, abusive, tortious, threatening, harmful, invasive of another&amp;rsquo;s privacy, vulgar, defamatory, false, intentionally misleading, trade libelous, pornographic, obscene, patently offensive, promotes racism, bigotry, hatred, or physical harm of any kind against any group or individual; (iii) that is harmful to minors in any way; or (iv) that is in violation of any law, regulation, or obligations or restrictions imposed by any third party.&lt;/p&gt;\r\n&lt;p&gt;In addition, you agree not to: (i) upload, transmit, or distribute to or through the Site any software intended to damage or alter a computer system or data; (ii) send through the Site unsolicited or unauthorized advertising, promotional materials, junk mail, spam, chain letters, pyramid schemes, or any other form of duplicative or unsolicited messages; (iii) use the Site to harvest, collect, gather or assemble information or data regarding other users without their consent; (iv) interfere with, disrupt, or create an undue burden on servers or networks connected to the Site, or violate the regulations, policies or procedures of such networks; (v) attempt to gain unauthorized access to the Site, whether through password mining or any other means; (vi) harass or interfere with any other user&amp;rsquo;s use and enjoyment of the Site; or (vi) use software or automated agents or scripts to produce multiple accounts on the Site, or to generate automated searches, requests, or queries to the Site.&lt;/p&gt;\r\n&lt;p&gt;We reserve the right to review any User Content, and to investigate and/or take appropriate action against you in our sole discretion if you violate the Acceptable Use Policy or any other provision of these Terms or otherwise create liability for us or any other person. Such action may include removing or modifying your User Content, terminating your Account in accordance with Section 8, and/or reporting you to law enforcement authorities.&lt;/p&gt;\r\n&lt;p&gt;If you provide Company with any feedback or suggestions regarding the Site, you hereby assign to Company all rights in such Feedback and agree that Company shall have the right to use and fully exploit such Feedback and related information in any manner it believes appropriate.&amp;nbsp; Company will treat any Feedback you provide to Company as non-confidential and non-proprietary.&lt;/p&gt;\r\n&lt;p&gt;You agree to indemnify and hold Company and its officers, employees, and agents harmless, including costs and attorneys&amp;rsquo; fees, from any claim or demand made by any third-party due to or arising out of (a) your use of the Site, (b) your violation of these Terms, (c) your violation of applicable laws or regulations or (d) your User Content.&amp;nbsp; Company reserves the right to assume the exclusive defense and control of any matter for which you are required to indemnify us, and you agree to cooperate with our defense of these claims.&amp;nbsp; You agree not to settle any matter without the prior written consent of Company.&amp;nbsp; Company will use reasonable efforts to notify you of any such claim, action or proceeding upon becoming aware of it.&lt;/p&gt;\r\n&lt;h2&gt;Third-Party Links &amp;amp; Ads; Other Users&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;Third-Party Links &amp;amp; Ads.&lt;/strong&gt; The Site may contain links to third-party websites and services, and/or display advertisements for third-parties.&amp;nbsp; Such Third-Party Links &amp;amp; Ads are not under the control of Company, and Company is not responsible for any Third-Party Links &amp;amp; Ads.&amp;nbsp; Company provides access to these Third-Party Links &amp;amp; Ads only as a convenience to you, and does not review, approve, monitor, endorse, warrant, or make any representations with respect to Third-Party Links &amp;amp; Ads.&amp;nbsp; You use all Third-Party Links &amp;amp; Ads at your own risk, and should apply a suitable level of caution and discretion in doing so. When you click on any of the Third-Party Links &amp;amp; Ads, the applicable third party&amp;rsquo;s terms and policies apply, including the third party&amp;rsquo;s privacy and data gathering practices.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Other Users.&lt;/strong&gt; Each Site user is solely responsible for any and all of its own User Content.&amp;nbsp; Because we do not control User Content, you acknowledge and agree that we are not responsible for any User Content, whether provided by you or by others.&amp;nbsp; You agree that Company will not be responsible for any loss or damage incurred as the result of any such interactions.&amp;nbsp; If there is a dispute between you and any Site user, we are under no obligation to become involved.&lt;/p&gt;\r\n&lt;p&gt;You hereby release and forever discharge the Company and our officers, employees, agents, successors, and assigns from, and hereby waive and relinquish, each and every past, present and future dispute, claim, controversy, demand, right, obligation, liability, action and cause of action of every kind and nature, that has arisen or arises directly or indirectly out of, or that relates directly or indirectly to, the Site. If you are a California resident, you hereby waive California civil code section 1542 in connection with the foregoing, which states: &quot;a general release does not extend to claims which the creditor does not know or suspect to exist in his or her favor at the time of executing the release, which if known by him or her must have materially affected his or her settlement with the debtor.&quot;&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Cookies and Web Beacons.&lt;/strong&gt; Like any other website, Delus uses &amp;lsquo;cookies&amp;rsquo;. These cookies are used to store information including visitors&amp;rsquo; preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users&amp;rsquo; experience by customizing our web page content based on visitors&amp;rsquo; browser type and/or other information.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Google DoubleClick DART Cookie.&lt;/strong&gt; Google is one of a third-party vendor on our site. It also uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.website.com and other sites on the internet. However, visitors may choose to decline the use of DART cookies by visiting the Google ad and content network Privacy Policy at the following URL &amp;ndash; &lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Our Advertising Partners.&lt;/strong&gt; Some of advertisers on our site may use cookies and web beacons. Our advertising partners are listed below. Each of our advertising partners has their own Privacy Policy for their policies on user data. For easier access, we hyperlinked to their Privacy Policies below.&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;\r\n&lt;p&gt;Google&lt;/p&gt;\r\n&lt;p&gt;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Disclaimers&lt;/h2&gt;\r\n&lt;p&gt;The site is provided on an &quot;as-is&quot; and &quot;as available&quot; basis, and company and our suppliers expressly disclaim any and all warranties and conditions of any kind, whether express, implied, or statutory, including all warranties or conditions of merchantability, fitness for a particular purpose, title, quiet enjoyment, accuracy, or non-infringement.&amp;nbsp; We and our suppliers make not guarantee that the site will meet your requirements, will be available on an uninterrupted, timely, secure, or error-free basis, or will be accurate, reliable, free of viruses or other harmful code, complete, legal, or safe.&amp;nbsp; If applicable law requires any warranties with respect to the site, all such warranties are limited in duration to ninety (90) days from the date of first use.&lt;/p&gt;\r\n&lt;p&gt;Some jurisdictions do not allow the exclusion of implied warranties, so the above exclusion may not apply to you.&amp;nbsp; Some jurisdictions do not allow limitations on how long an implied warranty lasts, so the above limitation may not apply to you.&lt;/p&gt;\r\n&lt;h2&gt;Limitation on Liability&lt;/h2&gt;\r\n&lt;p&gt;To the maximum extent permitted by law, in no event shall company or our suppliers be liable to you or any third-party for any lost profits, lost data, costs of procurement of substitute products, or any indirect, consequential, exemplary, incidental, special or punitive damages arising from or relating to these terms or your use of, or incapability to use the site even if company has been advised of the possibility of such damages.&amp;nbsp; Access to and use of the site is at your own discretion and risk, and you will be solely responsible for any damage to your device or computer system, or loss of data resulting therefrom.&lt;/p&gt;\r\n&lt;p&gt;To the maximum extent permitted by law, notwithstanding anything to the contrary contained herein, our liability to you for any damages arising from or related to this agreement, will at all times be limited to a maximum of fifty U.S. dollars (u.s. $50). The existence of more than one claim will not enlarge this limit.&amp;nbsp; You agree that our suppliers will have no liability of any kind arising from or relating to this agreement.&lt;/p&gt;\r\n&lt;p&gt;Some jurisdictions do not allow the limitation or exclusion of liability for incidental or consequential damages, so the above limitation or exclusion may not apply to you.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Term and Termination.&lt;/strong&gt; Subject to this Section, these Terms will remain in full force and effect while you use the Site.&amp;nbsp; We may suspend or terminate your rights to use the Site at any time for any reason at our sole discretion, including for any use of the Site in violation of these Terms.&amp;nbsp; Upon termination of your rights under these Terms, your Account and right to access and use the Site will terminate immediately.&amp;nbsp; You understand that any termination of your Account may involve deletion of your User Content associated with your Account from our live databases.&amp;nbsp; Company will not have any liability whatsoever to you for any termination of your rights under these Terms.&amp;nbsp; Even after your rights under these Terms are terminated, the following provisions of these Terms will remain in effect: Sections 2 through 2.5, Section 3 and Sections 4 through 10.&lt;/p&gt;\r\n&lt;h2&gt;Copyright Policy.&lt;/h2&gt;\r\n&lt;p&gt;Company respects the intellectual property of others and asks that users of our Site do the same.&amp;nbsp; In connection with our Site, we have adopted and implemented a policy respecting copyright law that provides for the removal of any infringing materials and for the termination of users of our online Site who are repeated infringers of intellectual property rights, including copyrights.&amp;nbsp; If you believe that one of our users is, through the use of our Site, unlawfully infringing the copyright(s) in a work, and wish to have the allegedly infringing material removed, the following information in the form of a written notification (pursuant to 17 U.S.C. &amp;sect; 512(c)) must be provided to our designated Copyright Agent:&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;your physical or electronic signature;&lt;/li&gt;\r\n&lt;li&gt;identification of the copyrighted work(s) that you claim to have been infringed;&lt;/li&gt;\r\n&lt;li&gt;identification of the material on our services that you claim is infringing and that you request us to remove;&lt;/li&gt;\r\n&lt;li&gt;sufficient information to permit us to locate such material;&lt;/li&gt;\r\n&lt;li&gt;your address, telephone number, and e-mail address;&lt;/li&gt;\r\n&lt;li&gt;a statement that you have a good faith belief that use of the objectionable material is not authorized by the copyright owner, its agent, or under the law; and&lt;/li&gt;\r\n&lt;li&gt;a statement that the information in the notification is accurate, and under penalty of perjury, that you are either the owner of the copyright that has allegedly been infringed or that you are authorized to act on behalf of the copyright owner.&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;p&gt;Please note that, pursuant to 17 U.S.C. &amp;sect; 512(f), any misrepresentation of material fact in a written notification automatically subjects the complaining party to liability for any damages, costs and attorney&amp;rsquo;s fees incurred by us in connection with the written notification and allegation of copyright infringement.&lt;/p&gt;\r\n&lt;h2&gt;General&lt;/h2&gt;\r\n&lt;p&gt;These Terms are subject to occasional revision, and if we make any substantial changes, we may notify you by sending you an e-mail to the last e-mail address you provided to us and/or by prominently posting notice of the changes on our Site.&amp;nbsp; You are responsible for providing us with your most current e-mail address.&amp;nbsp; In the event that the last e-mail address that you have provided us is not valid our dispatch of the e-mail containing such notice will nonetheless constitute effective notice of the changes described in the notice.&amp;nbsp; Any changes to these Terms will be effective upon the earliest of thirty (30) calendar days following our dispatch of an e-mail notice to you or thirty (30) calendar days following our posting of notice of the changes on our Site.&amp;nbsp; These changes will be effective immediately for new users of our Site.&amp;nbsp; Continued use of our Site following notice of such changes shall indicate your acknowledgement of such changes and agreement to be bound by the terms and conditions of such changes. Dispute Resolution. Please read this Arbitration Agreement carefully. It is part of your contract with Company and affects your rights.&amp;nbsp; It contains procedures for MANDATORY BINDING ARBITRATION AND A CLASS ACTION WAIVER.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Applicability of Arbitration Agreement.&lt;/strong&gt; All claims and disputes in connection with the Terms or the use of any product or service provided by the Company that cannot be resolved informally or in small claims court shall be resolved by binding arbitration on an individual basis under the terms of this Arbitration Agreement.&amp;nbsp; Unless otherwise agreed to, all arbitration proceedings shall be held in English.&amp;nbsp; This Arbitration Agreement applies to you and the Company, and to any subsidiaries, affiliates, agents, employees, predecessors in interest, successors, and assigns, as well as all authorized or unauthorized users or beneficiaries of services or goods provided under the Terms.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Notice Requirement and Informal Dispute Resolution.&lt;/strong&gt; Before either party may seek arbitration, the party must first send to the other party a written Notice of Dispute describing the nature and basis of the claim or dispute, and the requested relief.&amp;nbsp; A Notice to the Company should be sent to: Delus. After the Notice is received, you and the Company may attempt to resolve the claim or dispute informally.&amp;nbsp; If you and the Company do not resolve the claim or dispute within thirty (30) days after the Notice is received, either party may begin an arbitration proceeding.&amp;nbsp; The amount of any settlement offer made by any party may not be disclosed to the arbitrator until after the arbitrator has determined the amount of the award to which either party is entitled.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Arbitration Rules.&lt;/strong&gt; Arbitration shall be initiated through the American Arbitration Association, an established alternative dispute resolution provider that offers arbitration as set forth in this section.&amp;nbsp; If AAA is not available to arbitrate, the parties shall agree to select an alternative ADR Provider.&amp;nbsp; The rules of the ADR Provider shall govern all aspects of the arbitration except to the extent such rules are in conflict with the Terms.&amp;nbsp; The AAA Consumer Arbitration Rules governing the arbitration are available online at adr.org or by calling the AAA at 1-800-778-7879.&amp;nbsp; The arbitration shall be conducted by a single, neutral arbitrator.&amp;nbsp; Any claims or disputes where the total amount of the award sought is less than Ten Thousand U.S. Dollars (US $10,000.00) may be resolved through binding non-appearance-based arbitration, at the option of the party seeking relief.&amp;nbsp; For claims or disputes where the total amount of the award sought is Ten Thousand U.S. Dollars (US $10,000.00) or more, the right to a hearing will be determined by the Arbitration Rules.&amp;nbsp; Any hearing will be held in a location within 100 miles of your residence, unless you reside outside of the United States, and unless the parties agree otherwise.&amp;nbsp; If you reside outside of the U.S., the arbitrator shall give the parties reasonable notice of the date, time and place of any oral hearings. Any judgment on the award rendered by the arbitrator may be entered in any court of competent jurisdiction.&amp;nbsp; If the arbitrator grants you an award that is greater than the last settlement offer that the Company made to you prior to the initiation of arbitration, the Company will pay you the greater of the award or $2,500.00.&amp;nbsp; Each party shall bear its own costs and disbursements arising out of the arbitration and shall pay an equal share of the fees and costs of the ADR Provider.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Additional Rules for Non-Appearance Based Arbitration.&lt;/strong&gt; If non-appearance based arbitration is elected, the arbitration shall be conducted by telephone, online and/or based solely on written submissions; the specific manner shall be chosen by the party initiating the arbitration.&amp;nbsp; The arbitration shall not involve any personal appearance by the parties or witnesses unless otherwise agreed by the parties.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Time Limits.&lt;/strong&gt; If you or the Company pursues arbitration, the arbitration action must be initiated and/or demanded within the statute of limitations and within any deadline imposed under the AAA Rules for the pertinent claim.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Authority of Arbitrator.&lt;/strong&gt; If arbitration is initiated, the arbitrator will decide the rights and liabilities of you and the Company, and the dispute will not be consolidated with any other matters or joined with any other cases or parties.&amp;nbsp; The arbitrator shall have the authority to grant motions dispositive of all or part of any claim.&amp;nbsp; The arbitrator shall have the authority to award monetary damages, and to grant any non-monetary remedy or relief available to an individual under applicable law, the AAA Rules, and the Terms.&amp;nbsp; The arbitrator shall issue a written award and statement of decision describing the essential findings and conclusions on which the award is based.&amp;nbsp; The arbitrator has the same authority to award relief on an individual basis that a judge in a court of law would have.&amp;nbsp; The award of the arbitrator is final and binding upon you and the Company.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Waiver of Jury Trial.&lt;/strong&gt; THE PARTIES HEREBY WAIVE THEIR CONSTITUTIONAL AND STATUTORY RIGHTS TO GO TO COURT AND HAVE A TRIAL IN FRONT OF A JUDGE OR A JURY, instead electing that all claims and disputes shall be resolved by arbitration under this Arbitration Agreement.&amp;nbsp; Arbitration procedures are typically more limited, more efficient and less expensive than rules applicable in a court and are subject to very limited review by a court.&amp;nbsp; In the event any litigation should arise between you and the Company in any state or federal court in a suit to vacate or enforce an arbitration award or otherwise, YOU AND THE COMPANY WAIVE ALL RIGHTS TO A JURY TRIAL, instead electing that the dispute be resolved by a judge.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Waiver of Class or Consolidated Actions.&lt;/strong&gt; All claims and disputes within the scope of this arbitration agreement must be arbitrated or litigated on an individual basis and not on a class basis, and claims of more than one customer or user cannot be arbitrated or litigated jointly or consolidated with those of any other customer or user.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Confidentiality.&lt;/strong&gt; All aspects of the arbitration proceeding shall be strictly confidential.&amp;nbsp; The parties agree to maintain confidentiality unless otherwise required by law.&amp;nbsp; This paragraph shall not prevent a party from submitting to a court of law any information necessary to enforce this Agreement, to enforce an arbitration award, or to seek injunctive or equitable relief.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Severability.&lt;/strong&gt; If any part or parts of this Arbitration Agreement are found under the law to be invalid or unenforceable by a court of competent jurisdiction, then such specific part or parts shall be of no force and effect and shall be severed and the remainder of the Agreement shall continue in full force and effect.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Right to Waive.&lt;/strong&gt; Any or all of the rights and limitations set forth in this Arbitration Agreement may be waived by the party against whom the claim is asserted.&amp;nbsp; Such waiver shall not waive or affect any other portion of this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Survival of Agreement.&lt;/strong&gt; This Arbitration Agreement will survive the termination of your relationship with Company.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Small Claims Court.&lt;/strong&gt; Nonetheless the foregoing, either you or the Company may bring an individual action in small claims court.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Emergency Equitable Relief.&lt;/strong&gt; Anyhow the foregoing, either party may seek emergency equitable relief before a state or federal court in order to maintain the status quo pending arbitration.&amp;nbsp; A request for interim measures shall not be deemed a waiver of any other rights or obligations under this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Claims Not Subject to Arbitration.&lt;/strong&gt; Notwithstanding the foregoing, claims of defamation, violation of the Computer Fraud and Abuse Act, and infringement or misappropriation of the other party&amp;rsquo;s patent, copyright, trademark or trade secrets shall not be subject to this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;In any circumstances where the foregoing Arbitration Agreement permits the parties to litigate in court, the parties hereby agree to submit to the personal jurisdiction of the courts located within Netherlands County, California, for such purposes.&lt;/p&gt;\r\n&lt;p&gt;The Site may be subject to U.S. export control laws and may be subject to export or import regulations in other countries. You agree not to export, re-export, or transfer, directly or indirectly, any U.S. technical data acquired from Company, or any products utilizing such data, in violation of the United States export laws or regulations.&lt;/p&gt;\r\n&lt;p&gt;Company is located at the address in Section 10.8. If you are a California resident, you may report complaints to the Complaint Assistance Unit of the Division of Consumer Product of the California Department of Consumer Affairs by contacting them in writing at 400 R Street, Sacramento, CA 95814, or by telephone at (800) 952-5210.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Electronic Communications.&lt;/strong&gt; The communications between you and Company use electronic means, whether you use the Site or send us emails, or whether Company posts notices on the Site or communicates with you via email. For contractual purposes, you (a) consent to receive communications from Company in an electronic form; and (b) agree that all terms and conditions, agreements, notices, disclosures, and other communications that Company provides to you electronically satisfy any legal obligation that such communications would satisfy if it were be in a hard copy writing.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Entire Terms.&lt;/strong&gt; These Terms constitute the entire agreement between you and us regarding the use of the Site. Our failure to exercise or enforce any right or provision of these Terms shall not operate as a waiver of such right or provision. The section titles in these Terms are for convenience only and have no legal or contractual effect. The word &quot;including&quot; means &quot;including without limitation&quot;. If any provision of these Terms is held to be invalid or unenforceable, the other provisions of these Terms will be unimpaired and the invalid or unenforceable provision will be deemed modified so that it is valid and enforceable to the maximum extent permitted by law.&amp;nbsp; Your relationship to Company is that of an independent contractor, and neither party is an agent or partner of the other.&amp;nbsp; These Terms, and your rights and obligations herein, may not be assigned, subcontracted, delegated, or otherwise transferred by you without Company&amp;rsquo;s prior written consent, and any attempted assignment, subcontract, delegation, or transfer in violation of the foregoing will be null and void.&amp;nbsp; Company may freely assign these Terms.&amp;nbsp; The terms and conditions set forth in these Terms shall be binding upon assignees.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Your Privacy.&lt;/strong&gt; Please read our Privacy Policy.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Copyright/Trademark Information.&lt;/strong&gt; Copyright &amp;copy;. All rights reserved.&amp;nbsp; All trademarks, logos and service marks displayed on the Site are our property or the property of other third-parties. You are not permitted to use these Marks without our prior written consent or the consent of such third party which may own the Marks.&lt;/p&gt;', '1', '0', NULL, 2),
-    (3, 'Privacy', '0', '', 'privacy', '&lt;p&gt;At Delus, accessible from &lt;a href=&quot;https://demo.Delus.com/&quot;&gt;https://demo.Delus.com/&lt;/a&gt;, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Delus and how we use it.&lt;/p&gt;\r\n&lt;p&gt;If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.&lt;/p&gt;\r\n&lt;p&gt;This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information that they shared and/or collect in Delus. This policy is not applicable to any information collected offline or via channels other than this website.&lt;/p&gt;\r\n&lt;h2&gt;Consent&lt;/h2&gt;\r\n&lt;p&gt;By using our website, you hereby consent to our Privacy Policy and agree to its terms.&lt;/p&gt;\r\n&lt;h2&gt;Information we collect&lt;/h2&gt;\r\n&lt;p&gt;The personal information that you are asked to provide, and the reasons why you are asked to provide it, will be made clear to you at the point we ask you to provide your personal information.&lt;/p&gt;\r\n&lt;p&gt;If you contact us directly, we may receive additional information about you such as your name, email address, phone number, the contents of the message and/or attachments you may send us, and any other information you may choose to provide.&lt;/p&gt;\r\n&lt;p&gt;When you register for an Account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number.&lt;/p&gt;\r\n&lt;h2&gt;How we use your information&lt;/h2&gt;\r\n&lt;p&gt;We use the information we collect in various ways, including to:&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;Provide, operate, and maintain our website&lt;/li&gt;\r\n&lt;li&gt;Improve, personalize, and expand our website&lt;/li&gt;\r\n&lt;li&gt;Understand and analyze how you use our website&lt;/li&gt;\r\n&lt;li&gt;Develop new products, services, features, and functionality&lt;/li&gt;\r\n&lt;li&gt;Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes&lt;/li&gt;\r\n&lt;li&gt;Send you emails&lt;/li&gt;\r\n&lt;li&gt;Find and prevent fraud&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Log Files&lt;/h2&gt;\r\n&lt;p&gt;Delus follows a standard procedure of using log files. These files log visitors when they visit websites. All hosting companies do this and a part of hosting services&#039; analytics. The information collected by log files include internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. These are not linked to any information that is personally identifiable. The purpose of the information is for analyzing trends, administering the site, tracking users&#039; movement on the website, and gathering demographic information.&lt;/p&gt;\r\n&lt;h2&gt;Cookies and Web Beacons&lt;/h2&gt;\r\n&lt;p&gt;Like any other website, Delus uses &#039;cookies&#039;. These cookies are used to store information including visitors&#039; preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users&#039; experience by customizing our web page content based on visitors&#039; browser type and/or other information.&lt;/p&gt;\r\n&lt;h2&gt;Google DoubleClick DART Cookie&lt;/h2&gt;\r\n&lt;p&gt;Google is one of a third-party vendor on our site. It also uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.website.com and other sites on the internet. However, visitors may choose to decline the use of DART cookies by visiting the Google ad and content network Privacy Policy at the following URL &amp;ndash;&amp;nbsp;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;h2&gt;Our Advertising Partners&lt;/h2&gt;\r\n&lt;p&gt;Some of advertisers on our site may use cookies and web beacons. Our advertising partners are listed below. Each of our advertising partners has their own Privacy Policy for their policies on user data. For easier access, we hyperlinked to their Privacy Policies below.&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;\r\n&lt;p&gt;Google&lt;/p&gt;\r\n&lt;p&gt;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Advertising Partners Privacy Policies&lt;/h2&gt;\r\n&lt;p&gt;You may consult this list to find the Privacy Policy for each of the advertising partners of Delus.&lt;/p&gt;\r\n&lt;p&gt;Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or Web Beacons that are used in their respective advertisements and links that appear on Delus, which are sent directly to users&#039; browser. They automatically receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns and/or to personalize the advertising content that you see on websites that you visit.&lt;/p&gt;\r\n&lt;p&gt;Note that Delus has no access to or control over these cookies that are used by third-party advertisers.&lt;/p&gt;\r\n&lt;h2&gt;Third Party Privacy Policies&lt;/h2&gt;\r\n&lt;p&gt;Delus&#039;s Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the respective Privacy Policies of these third-party ad servers for more detailed information. It may include their practices and instructions about how to opt-out of certain options.&lt;/p&gt;\r\n&lt;p&gt;You can choose to disable cookies through your individual browser options. To know more detailed information about cookie management with specific web browsers, it can be found at the browsers&#039; respective websites.&lt;/p&gt;\r\n&lt;h2&gt;CCPA Privacy Rights (Do Not Sell My Personal Information)&lt;/h2&gt;\r\n&lt;p&gt;Under the CCPA, among other rights, California consumers have the right to:&lt;/p&gt;\r\n&lt;p&gt;Request that a business that collects a consumer&#039;s personal data disclose the categories and specific pieces of personal data that a business has collected about consumers.&lt;/p&gt;\r\n&lt;p&gt;Request that a business delete any personal data about the consumer that a business has collected.&lt;/p&gt;\r\n&lt;p&gt;Request that a business that sells a consumer&#039;s personal data, not sell the consumer&#039;s personal data.&lt;/p&gt;\r\n&lt;p&gt;If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.&lt;/p&gt;\r\n&lt;h2&gt;GDPR Data Protection Rights&lt;/h2&gt;\r\n&lt;p&gt;We would like to make sure you are fully aware of all of your data protection rights. Every user is entitled to the following:&lt;/p&gt;\r\n&lt;p&gt;The right to access &amp;ndash; You have the right to request copies of your personal data. We may charge you a small fee for this service.&lt;/p&gt;\r\n&lt;p&gt;The right to rectification &amp;ndash; You have the right to request that we correct any information you believe is inaccurate. You also have the right to request that we complete the information you believe is incomplete.&lt;/p&gt;\r\n&lt;p&gt;The right to erasure &amp;ndash; You have the right to request that we erase your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to restrict processing &amp;ndash; You have the right to request that we restrict the processing of your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to object to processing &amp;ndash; You have the right to object to our processing of your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to data portability &amp;ndash; You have the right to request that we transfer the data that we have collected to another organization, or directly to you, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.&lt;/p&gt;\r\n&lt;h2&gt;Children&#039;s Information&lt;/h2&gt;\r\n&lt;p&gt;Another part of our priority is adding protection for children while using the internet. We encourage parents and guardians to observe, participate in, and/or monitor and guide their online activity.&lt;/p&gt;\r\n&lt;p&gt;Delus does not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think that your child provided this kind of information on our website, we strongly encourage you to contact us immediately and we will do our best efforts to promptly remove such information from our records.&lt;/p&gt;', '1', '0', NULL, 3);
+    (2, 'Terms', '0', '', 'terms', '&lt;p&gt;The Sngine website located at &lt;a href=&quot;https://demo.sngine.com/&quot;&gt;https://demo.sngine.com/&lt;/a&gt; is a copyrighted work belonging to Sngine. Certain features of the Site may be subject to additional guidelines, terms, or rules, which will be posted on the Site in connection with such features.&lt;/p&gt;\r\n&lt;p&gt;All such additional terms, guidelines, and rules are incorporated by reference into these Terms.&lt;/p&gt;\r\n&lt;p&gt;These Terms of Use described the legally binding terms and conditions that oversee your use of the Site.&amp;nbsp;BY LOGGING INTO THE SITE, YOU ARE BEING COMPLIANT THAT THESE TERMS and you represent that you have the authority and capacity to enter into these Terms.&amp;nbsp;YOU SHOULD BE AT LEAST 18 YEARS OF AGE TO ACCESS THE SITE. IF YOU DISAGREE WITH ALL OF THE PROVISION OF THESE TERMS, DO NOT LOG INTO AND/OR USE THE SITE.&lt;/p&gt;\r\n&lt;p&gt;These terms require the use of arbitration Section 10.2 on an individual basis to resolve disputes and also limit the remedies available to you in the event of a dispute.&lt;/p&gt;\r\n&lt;h2&gt;Access to the Site&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;Subject to these Terms.&lt;/strong&gt; Company grants you a non-transferable, non-exclusive, revocable, limited license to access the Site solely for your own personal, noncommercial use.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Certain Restrictions.&lt;/strong&gt; The rights approved to you in these Terms are subject to the following restrictions: (a) you shall not sell, rent, lease, transfer, assign, distribute, host, or otherwise commercially exploit the Site; (b) you shall not change, make derivative works of, disassemble, reverse compile or reverse engineer any part of the Site; (c) you shall not access the Site in order to build a similar or competitive website; and (d) except as expressly stated herein, no part of the Site may be copied, reproduced, distributed, republished, downloaded, displayed, posted or transmitted in any form or by any means unless otherwise indicated, any future release, update, or other addition to functionality of the Site shall be subject to these Terms.&amp;nbsp; All copyright and other proprietary notices on the Site must be retained on all copies thereof.&lt;/p&gt;\r\n&lt;p&gt;Company reserves the right to change, suspend, or cease the Site with or without notice to you.&amp;nbsp; You approved that Company will not be held liable to you or any third-party for any change, interruption, or termination of the Site or any part.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;No Support or Maintenance.&lt;/strong&gt; You agree that Company will have no obligation to provide you with any support in connection with the Site.&lt;/p&gt;\r\n&lt;p&gt;Excluding any User Content that you may provide, you are aware that all the intellectual property rights, including copyrights, patents, trademarks, and trade secrets, in the Site and its content are owned by Company or Company&amp;rsquo;s suppliers. Note that these Terms and access to the Site do not give you any rights, title or interest in or to any intellectual property rights, except for the limited access rights expressed in Section 2.1. Company and its suppliers reserve all rights not granted in these Terms.&lt;/p&gt;\r\n&lt;h2&gt;User Content&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;User Content.&lt;/strong&gt; &quot;User Content&quot; means any and all information and content that a user submits to the Site. You are exclusively responsible for your User Content. You bear all risks associated with use of your User Content.&amp;nbsp; You hereby certify that your User Content does not violate our Acceptable Use Policy.&amp;nbsp; You may not represent or imply to others that your User Content is in any way provided, sponsored or endorsed by Company. Because you alone are responsible for your User Content, you may expose yourself to liability. Company is not obliged to backup any User Content that you post; also, your User Content may be deleted at any time without prior notice to you. You are solely responsible for making your own backup copies of your User Content if you desire.&lt;/p&gt;\r\n&lt;p&gt;You hereby grant to Company an irreversible, nonexclusive, royalty-free and fully paid, worldwide license to reproduce, distribute, publicly display and perform, prepare derivative works of, incorporate into other works, and otherwise use and exploit your User Content, and to grant sublicenses of the foregoing rights, solely for the purposes of including your User Content in the Site.&amp;nbsp; You hereby irreversibly waive any claims and assertions of moral rights or attribution with respect to your User Content.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Acceptable Use Policy.&lt;/strong&gt; The following terms constitute our &quot;Acceptable Use Policy&quot;: You agree not to use the Site to collect, upload, transmit, display, or distribute any User Content (i) that violates any third-party right or any intellectual property or proprietary right; (ii) that is unlawful, harassing, abusive, tortious, threatening, harmful, invasive of another&amp;rsquo;s privacy, vulgar, defamatory, false, intentionally misleading, trade libelous, pornographic, obscene, patently offensive, promotes racism, bigotry, hatred, or physical harm of any kind against any group or individual; (iii) that is harmful to minors in any way; or (iv) that is in violation of any law, regulation, or obligations or restrictions imposed by any third party.&lt;/p&gt;\r\n&lt;p&gt;In addition, you agree not to: (i) upload, transmit, or distribute to or through the Site any software intended to damage or alter a computer system or data; (ii) send through the Site unsolicited or unauthorized advertising, promotional materials, junk mail, spam, chain letters, pyramid schemes, or any other form of duplicative or unsolicited messages; (iii) use the Site to harvest, collect, gather or assemble information or data regarding other users without their consent; (iv) interfere with, disrupt, or create an undue burden on servers or networks connected to the Site, or violate the regulations, policies or procedures of such networks; (v) attempt to gain unauthorized access to the Site, whether through password mining or any other means; (vi) harass or interfere with any other user&amp;rsquo;s use and enjoyment of the Site; or (vi) use software or automated agents or scripts to produce multiple accounts on the Site, or to generate automated searches, requests, or queries to the Site.&lt;/p&gt;\r\n&lt;p&gt;We reserve the right to review any User Content, and to investigate and/or take appropriate action against you in our sole discretion if you violate the Acceptable Use Policy or any other provision of these Terms or otherwise create liability for us or any other person. Such action may include removing or modifying your User Content, terminating your Account in accordance with Section 8, and/or reporting you to law enforcement authorities.&lt;/p&gt;\r\n&lt;p&gt;If you provide Company with any feedback or suggestions regarding the Site, you hereby assign to Company all rights in such Feedback and agree that Company shall have the right to use and fully exploit such Feedback and related information in any manner it believes appropriate.&amp;nbsp; Company will treat any Feedback you provide to Company as non-confidential and non-proprietary.&lt;/p&gt;\r\n&lt;p&gt;You agree to indemnify and hold Company and its officers, employees, and agents harmless, including costs and attorneys&amp;rsquo; fees, from any claim or demand made by any third-party due to or arising out of (a) your use of the Site, (b) your violation of these Terms, (c) your violation of applicable laws or regulations or (d) your User Content.&amp;nbsp; Company reserves the right to assume the exclusive defense and control of any matter for which you are required to indemnify us, and you agree to cooperate with our defense of these claims.&amp;nbsp; You agree not to settle any matter without the prior written consent of Company.&amp;nbsp; Company will use reasonable efforts to notify you of any such claim, action or proceeding upon becoming aware of it.&lt;/p&gt;\r\n&lt;h2&gt;Third-Party Links &amp;amp; Ads; Other Users&lt;/h2&gt;\r\n&lt;p&gt;&lt;strong&gt;Third-Party Links &amp;amp; Ads.&lt;/strong&gt; The Site may contain links to third-party websites and services, and/or display advertisements for third-parties.&amp;nbsp; Such Third-Party Links &amp;amp; Ads are not under the control of Company, and Company is not responsible for any Third-Party Links &amp;amp; Ads.&amp;nbsp; Company provides access to these Third-Party Links &amp;amp; Ads only as a convenience to you, and does not review, approve, monitor, endorse, warrant, or make any representations with respect to Third-Party Links &amp;amp; Ads.&amp;nbsp; You use all Third-Party Links &amp;amp; Ads at your own risk, and should apply a suitable level of caution and discretion in doing so. When you click on any of the Third-Party Links &amp;amp; Ads, the applicable third party&amp;rsquo;s terms and policies apply, including the third party&amp;rsquo;s privacy and data gathering practices.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Other Users.&lt;/strong&gt; Each Site user is solely responsible for any and all of its own User Content.&amp;nbsp; Because we do not control User Content, you acknowledge and agree that we are not responsible for any User Content, whether provided by you or by others.&amp;nbsp; You agree that Company will not be responsible for any loss or damage incurred as the result of any such interactions.&amp;nbsp; If there is a dispute between you and any Site user, we are under no obligation to become involved.&lt;/p&gt;\r\n&lt;p&gt;You hereby release and forever discharge the Company and our officers, employees, agents, successors, and assigns from, and hereby waive and relinquish, each and every past, present and future dispute, claim, controversy, demand, right, obligation, liability, action and cause of action of every kind and nature, that has arisen or arises directly or indirectly out of, or that relates directly or indirectly to, the Site. If you are a California resident, you hereby waive California civil code section 1542 in connection with the foregoing, which states: &quot;a general release does not extend to claims which the creditor does not know or suspect to exist in his or her favor at the time of executing the release, which if known by him or her must have materially affected his or her settlement with the debtor.&quot;&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Cookies and Web Beacons.&lt;/strong&gt; Like any other website, Sngine uses &amp;lsquo;cookies&amp;rsquo;. These cookies are used to store information including visitors&amp;rsquo; preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users&amp;rsquo; experience by customizing our web page content based on visitors&amp;rsquo; browser type and/or other information.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Google DoubleClick DART Cookie.&lt;/strong&gt; Google is one of a third-party vendor on our site. It also uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.website.com and other sites on the internet. However, visitors may choose to decline the use of DART cookies by visiting the Google ad and content network Privacy Policy at the following URL &amp;ndash; &lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Our Advertising Partners.&lt;/strong&gt; Some of advertisers on our site may use cookies and web beacons. Our advertising partners are listed below. Each of our advertising partners has their own Privacy Policy for their policies on user data. For easier access, we hyperlinked to their Privacy Policies below.&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;\r\n&lt;p&gt;Google&lt;/p&gt;\r\n&lt;p&gt;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Disclaimers&lt;/h2&gt;\r\n&lt;p&gt;The site is provided on an &quot;as-is&quot; and &quot;as available&quot; basis, and company and our suppliers expressly disclaim any and all warranties and conditions of any kind, whether express, implied, or statutory, including all warranties or conditions of merchantability, fitness for a particular purpose, title, quiet enjoyment, accuracy, or non-infringement.&amp;nbsp; We and our suppliers make not guarantee that the site will meet your requirements, will be available on an uninterrupted, timely, secure, or error-free basis, or will be accurate, reliable, free of viruses or other harmful code, complete, legal, or safe.&amp;nbsp; If applicable law requires any warranties with respect to the site, all such warranties are limited in duration to ninety (90) days from the date of first use.&lt;/p&gt;\r\n&lt;p&gt;Some jurisdictions do not allow the exclusion of implied warranties, so the above exclusion may not apply to you.&amp;nbsp; Some jurisdictions do not allow limitations on how long an implied warranty lasts, so the above limitation may not apply to you.&lt;/p&gt;\r\n&lt;h2&gt;Limitation on Liability&lt;/h2&gt;\r\n&lt;p&gt;To the maximum extent permitted by law, in no event shall company or our suppliers be liable to you or any third-party for any lost profits, lost data, costs of procurement of substitute products, or any indirect, consequential, exemplary, incidental, special or punitive damages arising from or relating to these terms or your use of, or incapability to use the site even if company has been advised of the possibility of such damages.&amp;nbsp; Access to and use of the site is at your own discretion and risk, and you will be solely responsible for any damage to your device or computer system, or loss of data resulting therefrom.&lt;/p&gt;\r\n&lt;p&gt;To the maximum extent permitted by law, notwithstanding anything to the contrary contained herein, our liability to you for any damages arising from or related to this agreement, will at all times be limited to a maximum of fifty U.S. dollars (u.s. $50). The existence of more than one claim will not enlarge this limit.&amp;nbsp; You agree that our suppliers will have no liability of any kind arising from or relating to this agreement.&lt;/p&gt;\r\n&lt;p&gt;Some jurisdictions do not allow the limitation or exclusion of liability for incidental or consequential damages, so the above limitation or exclusion may not apply to you.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Term and Termination.&lt;/strong&gt; Subject to this Section, these Terms will remain in full force and effect while you use the Site.&amp;nbsp; We may suspend or terminate your rights to use the Site at any time for any reason at our sole discretion, including for any use of the Site in violation of these Terms.&amp;nbsp; Upon termination of your rights under these Terms, your Account and right to access and use the Site will terminate immediately.&amp;nbsp; You understand that any termination of your Account may involve deletion of your User Content associated with your Account from our live databases.&amp;nbsp; Company will not have any liability whatsoever to you for any termination of your rights under these Terms.&amp;nbsp; Even after your rights under these Terms are terminated, the following provisions of these Terms will remain in effect: Sections 2 through 2.5, Section 3 and Sections 4 through 10.&lt;/p&gt;\r\n&lt;h2&gt;Copyright Policy.&lt;/h2&gt;\r\n&lt;p&gt;Company respects the intellectual property of others and asks that users of our Site do the same.&amp;nbsp; In connection with our Site, we have adopted and implemented a policy respecting copyright law that provides for the removal of any infringing materials and for the termination of users of our online Site who are repeated infringers of intellectual property rights, including copyrights.&amp;nbsp; If you believe that one of our users is, through the use of our Site, unlawfully infringing the copyright(s) in a work, and wish to have the allegedly infringing material removed, the following information in the form of a written notification (pursuant to 17 U.S.C. &amp;sect; 512(c)) must be provided to our designated Copyright Agent:&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;your physical or electronic signature;&lt;/li&gt;\r\n&lt;li&gt;identification of the copyrighted work(s) that you claim to have been infringed;&lt;/li&gt;\r\n&lt;li&gt;identification of the material on our services that you claim is infringing and that you request us to remove;&lt;/li&gt;\r\n&lt;li&gt;sufficient information to permit us to locate such material;&lt;/li&gt;\r\n&lt;li&gt;your address, telephone number, and e-mail address;&lt;/li&gt;\r\n&lt;li&gt;a statement that you have a good faith belief that use of the objectionable material is not authorized by the copyright owner, its agent, or under the law; and&lt;/li&gt;\r\n&lt;li&gt;a statement that the information in the notification is accurate, and under penalty of perjury, that you are either the owner of the copyright that has allegedly been infringed or that you are authorized to act on behalf of the copyright owner.&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;p&gt;Please note that, pursuant to 17 U.S.C. &amp;sect; 512(f), any misrepresentation of material fact in a written notification automatically subjects the complaining party to liability for any damages, costs and attorney&amp;rsquo;s fees incurred by us in connection with the written notification and allegation of copyright infringement.&lt;/p&gt;\r\n&lt;h2&gt;General&lt;/h2&gt;\r\n&lt;p&gt;These Terms are subject to occasional revision, and if we make any substantial changes, we may notify you by sending you an e-mail to the last e-mail address you provided to us and/or by prominently posting notice of the changes on our Site.&amp;nbsp; You are responsible for providing us with your most current e-mail address.&amp;nbsp; In the event that the last e-mail address that you have provided us is not valid our dispatch of the e-mail containing such notice will nonetheless constitute effective notice of the changes described in the notice.&amp;nbsp; Any changes to these Terms will be effective upon the earliest of thirty (30) calendar days following our dispatch of an e-mail notice to you or thirty (30) calendar days following our posting of notice of the changes on our Site.&amp;nbsp; These changes will be effective immediately for new users of our Site.&amp;nbsp; Continued use of our Site following notice of such changes shall indicate your acknowledgement of such changes and agreement to be bound by the terms and conditions of such changes. Dispute Resolution. Please read this Arbitration Agreement carefully. It is part of your contract with Company and affects your rights.&amp;nbsp; It contains procedures for MANDATORY BINDING ARBITRATION AND A CLASS ACTION WAIVER.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Applicability of Arbitration Agreement.&lt;/strong&gt; All claims and disputes in connection with the Terms or the use of any product or service provided by the Company that cannot be resolved informally or in small claims court shall be resolved by binding arbitration on an individual basis under the terms of this Arbitration Agreement.&amp;nbsp; Unless otherwise agreed to, all arbitration proceedings shall be held in English.&amp;nbsp; This Arbitration Agreement applies to you and the Company, and to any subsidiaries, affiliates, agents, employees, predecessors in interest, successors, and assigns, as well as all authorized or unauthorized users or beneficiaries of services or goods provided under the Terms.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Notice Requirement and Informal Dispute Resolution.&lt;/strong&gt; Before either party may seek arbitration, the party must first send to the other party a written Notice of Dispute describing the nature and basis of the claim or dispute, and the requested relief.&amp;nbsp; A Notice to the Company should be sent to: Sngine. After the Notice is received, you and the Company may attempt to resolve the claim or dispute informally.&amp;nbsp; If you and the Company do not resolve the claim or dispute within thirty (30) days after the Notice is received, either party may begin an arbitration proceeding.&amp;nbsp; The amount of any settlement offer made by any party may not be disclosed to the arbitrator until after the arbitrator has determined the amount of the award to which either party is entitled.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Arbitration Rules.&lt;/strong&gt; Arbitration shall be initiated through the American Arbitration Association, an established alternative dispute resolution provider that offers arbitration as set forth in this section.&amp;nbsp; If AAA is not available to arbitrate, the parties shall agree to select an alternative ADR Provider.&amp;nbsp; The rules of the ADR Provider shall govern all aspects of the arbitration except to the extent such rules are in conflict with the Terms.&amp;nbsp; The AAA Consumer Arbitration Rules governing the arbitration are available online at adr.org or by calling the AAA at 1-800-778-7879.&amp;nbsp; The arbitration shall be conducted by a single, neutral arbitrator.&amp;nbsp; Any claims or disputes where the total amount of the award sought is less than Ten Thousand U.S. Dollars (US $10,000.00) may be resolved through binding non-appearance-based arbitration, at the option of the party seeking relief.&amp;nbsp; For claims or disputes where the total amount of the award sought is Ten Thousand U.S. Dollars (US $10,000.00) or more, the right to a hearing will be determined by the Arbitration Rules.&amp;nbsp; Any hearing will be held in a location within 100 miles of your residence, unless you reside outside of the United States, and unless the parties agree otherwise.&amp;nbsp; If you reside outside of the U.S., the arbitrator shall give the parties reasonable notice of the date, time and place of any oral hearings. Any judgment on the award rendered by the arbitrator may be entered in any court of competent jurisdiction.&amp;nbsp; If the arbitrator grants you an award that is greater than the last settlement offer that the Company made to you prior to the initiation of arbitration, the Company will pay you the greater of the award or $2,500.00.&amp;nbsp; Each party shall bear its own costs and disbursements arising out of the arbitration and shall pay an equal share of the fees and costs of the ADR Provider.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Additional Rules for Non-Appearance Based Arbitration.&lt;/strong&gt; If non-appearance based arbitration is elected, the arbitration shall be conducted by telephone, online and/or based solely on written submissions; the specific manner shall be chosen by the party initiating the arbitration.&amp;nbsp; The arbitration shall not involve any personal appearance by the parties or witnesses unless otherwise agreed by the parties.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Time Limits.&lt;/strong&gt; If you or the Company pursues arbitration, the arbitration action must be initiated and/or demanded within the statute of limitations and within any deadline imposed under the AAA Rules for the pertinent claim.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Authority of Arbitrator.&lt;/strong&gt; If arbitration is initiated, the arbitrator will decide the rights and liabilities of you and the Company, and the dispute will not be consolidated with any other matters or joined with any other cases or parties.&amp;nbsp; The arbitrator shall have the authority to grant motions dispositive of all or part of any claim.&amp;nbsp; The arbitrator shall have the authority to award monetary damages, and to grant any non-monetary remedy or relief available to an individual under applicable law, the AAA Rules, and the Terms.&amp;nbsp; The arbitrator shall issue a written award and statement of decision describing the essential findings and conclusions on which the award is based.&amp;nbsp; The arbitrator has the same authority to award relief on an individual basis that a judge in a court of law would have.&amp;nbsp; The award of the arbitrator is final and binding upon you and the Company.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Waiver of Jury Trial.&lt;/strong&gt; THE PARTIES HEREBY WAIVE THEIR CONSTITUTIONAL AND STATUTORY RIGHTS TO GO TO COURT AND HAVE A TRIAL IN FRONT OF A JUDGE OR A JURY, instead electing that all claims and disputes shall be resolved by arbitration under this Arbitration Agreement.&amp;nbsp; Arbitration procedures are typically more limited, more efficient and less expensive than rules applicable in a court and are subject to very limited review by a court.&amp;nbsp; In the event any litigation should arise between you and the Company in any state or federal court in a suit to vacate or enforce an arbitration award or otherwise, YOU AND THE COMPANY WAIVE ALL RIGHTS TO A JURY TRIAL, instead electing that the dispute be resolved by a judge.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Waiver of Class or Consolidated Actions.&lt;/strong&gt; All claims and disputes within the scope of this arbitration agreement must be arbitrated or litigated on an individual basis and not on a class basis, and claims of more than one customer or user cannot be arbitrated or litigated jointly or consolidated with those of any other customer or user.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Confidentiality.&lt;/strong&gt; All aspects of the arbitration proceeding shall be strictly confidential.&amp;nbsp; The parties agree to maintain confidentiality unless otherwise required by law.&amp;nbsp; This paragraph shall not prevent a party from submitting to a court of law any information necessary to enforce this Agreement, to enforce an arbitration award, or to seek injunctive or equitable relief.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Severability.&lt;/strong&gt; If any part or parts of this Arbitration Agreement are found under the law to be invalid or unenforceable by a court of competent jurisdiction, then such specific part or parts shall be of no force and effect and shall be severed and the remainder of the Agreement shall continue in full force and effect.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Right to Waive.&lt;/strong&gt; Any or all of the rights and limitations set forth in this Arbitration Agreement may be waived by the party against whom the claim is asserted.&amp;nbsp; Such waiver shall not waive or affect any other portion of this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Survival of Agreement.&lt;/strong&gt; This Arbitration Agreement will survive the termination of your relationship with Company.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Small Claims Court.&lt;/strong&gt; Nonetheless the foregoing, either you or the Company may bring an individual action in small claims court.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Emergency Equitable Relief.&lt;/strong&gt; Anyhow the foregoing, either party may seek emergency equitable relief before a state or federal court in order to maintain the status quo pending arbitration.&amp;nbsp; A request for interim measures shall not be deemed a waiver of any other rights or obligations under this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Claims Not Subject to Arbitration.&lt;/strong&gt; Notwithstanding the foregoing, claims of defamation, violation of the Computer Fraud and Abuse Act, and infringement or misappropriation of the other party&amp;rsquo;s patent, copyright, trademark or trade secrets shall not be subject to this Arbitration Agreement.&lt;/p&gt;\r\n&lt;p&gt;In any circumstances where the foregoing Arbitration Agreement permits the parties to litigate in court, the parties hereby agree to submit to the personal jurisdiction of the courts located within Netherlands County, California, for such purposes.&lt;/p&gt;\r\n&lt;p&gt;The Site may be subject to U.S. export control laws and may be subject to export or import regulations in other countries. You agree not to export, re-export, or transfer, directly or indirectly, any U.S. technical data acquired from Company, or any products utilizing such data, in violation of the United States export laws or regulations.&lt;/p&gt;\r\n&lt;p&gt;Company is located at the address in Section 10.8. If you are a California resident, you may report complaints to the Complaint Assistance Unit of the Division of Consumer Product of the California Department of Consumer Affairs by contacting them in writing at 400 R Street, Sacramento, CA 95814, or by telephone at (800) 952-5210.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Electronic Communications.&lt;/strong&gt; The communications between you and Company use electronic means, whether you use the Site or send us emails, or whether Company posts notices on the Site or communicates with you via email. For contractual purposes, you (a) consent to receive communications from Company in an electronic form; and (b) agree that all terms and conditions, agreements, notices, disclosures, and other communications that Company provides to you electronically satisfy any legal obligation that such communications would satisfy if it were be in a hard copy writing.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Entire Terms.&lt;/strong&gt; These Terms constitute the entire agreement between you and us regarding the use of the Site. Our failure to exercise or enforce any right or provision of these Terms shall not operate as a waiver of such right or provision. The section titles in these Terms are for convenience only and have no legal or contractual effect. The word &quot;including&quot; means &quot;including without limitation&quot;. If any provision of these Terms is held to be invalid or unenforceable, the other provisions of these Terms will be unimpaired and the invalid or unenforceable provision will be deemed modified so that it is valid and enforceable to the maximum extent permitted by law.&amp;nbsp; Your relationship to Company is that of an independent contractor, and neither party is an agent or partner of the other.&amp;nbsp; These Terms, and your rights and obligations herein, may not be assigned, subcontracted, delegated, or otherwise transferred by you without Company&amp;rsquo;s prior written consent, and any attempted assignment, subcontract, delegation, or transfer in violation of the foregoing will be null and void.&amp;nbsp; Company may freely assign these Terms.&amp;nbsp; The terms and conditions set forth in these Terms shall be binding upon assignees.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Your Privacy.&lt;/strong&gt; Please read our Privacy Policy.&lt;/p&gt;\r\n&lt;p&gt;&lt;strong&gt;Copyright/Trademark Information.&lt;/strong&gt; Copyright &amp;copy;. All rights reserved.&amp;nbsp; All trademarks, logos and service marks displayed on the Site are our property or the property of other third-parties. You are not permitted to use these Marks without our prior written consent or the consent of such third party which may own the Marks.&lt;/p&gt;', '1', '0', NULL, 2),
+    (3, 'Privacy', '0', '', 'privacy', '&lt;p&gt;At Sngine, accessible from &lt;a href=&quot;https://demo.sngine.com/&quot;&gt;https://demo.sngine.com/&lt;/a&gt;, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Sngine and how we use it.&lt;/p&gt;\r\n&lt;p&gt;If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.&lt;/p&gt;\r\n&lt;p&gt;This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information that they shared and/or collect in Sngine. This policy is not applicable to any information collected offline or via channels other than this website.&lt;/p&gt;\r\n&lt;h2&gt;Consent&lt;/h2&gt;\r\n&lt;p&gt;By using our website, you hereby consent to our Privacy Policy and agree to its terms.&lt;/p&gt;\r\n&lt;h2&gt;Information we collect&lt;/h2&gt;\r\n&lt;p&gt;The personal information that you are asked to provide, and the reasons why you are asked to provide it, will be made clear to you at the point we ask you to provide your personal information.&lt;/p&gt;\r\n&lt;p&gt;If you contact us directly, we may receive additional information about you such as your name, email address, phone number, the contents of the message and/or attachments you may send us, and any other information you may choose to provide.&lt;/p&gt;\r\n&lt;p&gt;When you register for an Account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number.&lt;/p&gt;\r\n&lt;h2&gt;How we use your information&lt;/h2&gt;\r\n&lt;p&gt;We use the information we collect in various ways, including to:&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;Provide, operate, and maintain our website&lt;/li&gt;\r\n&lt;li&gt;Improve, personalize, and expand our website&lt;/li&gt;\r\n&lt;li&gt;Understand and analyze how you use our website&lt;/li&gt;\r\n&lt;li&gt;Develop new products, services, features, and functionality&lt;/li&gt;\r\n&lt;li&gt;Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes&lt;/li&gt;\r\n&lt;li&gt;Send you emails&lt;/li&gt;\r\n&lt;li&gt;Find and prevent fraud&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Log Files&lt;/h2&gt;\r\n&lt;p&gt;Sngine follows a standard procedure of using log files. These files log visitors when they visit websites. All hosting companies do this and a part of hosting services&#039; analytics. The information collected by log files include internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. These are not linked to any information that is personally identifiable. The purpose of the information is for analyzing trends, administering the site, tracking users&#039; movement on the website, and gathering demographic information.&lt;/p&gt;\r\n&lt;h2&gt;Cookies and Web Beacons&lt;/h2&gt;\r\n&lt;p&gt;Like any other website, Sngine uses &#039;cookies&#039;. These cookies are used to store information including visitors&#039; preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users&#039; experience by customizing our web page content based on visitors&#039; browser type and/or other information.&lt;/p&gt;\r\n&lt;h2&gt;Google DoubleClick DART Cookie&lt;/h2&gt;\r\n&lt;p&gt;Google is one of a third-party vendor on our site. It also uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.website.com and other sites on the internet. However, visitors may choose to decline the use of DART cookies by visiting the Google ad and content network Privacy Policy at the following URL &amp;ndash;&amp;nbsp;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;h2&gt;Our Advertising Partners&lt;/h2&gt;\r\n&lt;p&gt;Some of advertisers on our site may use cookies and web beacons. Our advertising partners are listed below. Each of our advertising partners has their own Privacy Policy for their policies on user data. For easier access, we hyperlinked to their Privacy Policies below.&lt;/p&gt;\r\n&lt;ul&gt;\r\n&lt;li&gt;\r\n&lt;p&gt;Google&lt;/p&gt;\r\n&lt;p&gt;&lt;a href=&quot;https://policies.google.com/technologies/ads&quot;&gt;https://policies.google.com/technologies/ads&lt;/a&gt;&lt;/p&gt;\r\n&lt;/li&gt;\r\n&lt;/ul&gt;\r\n&lt;h2&gt;Advertising Partners Privacy Policies&lt;/h2&gt;\r\n&lt;p&gt;You may consult this list to find the Privacy Policy for each of the advertising partners of Sngine.&lt;/p&gt;\r\n&lt;p&gt;Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or Web Beacons that are used in their respective advertisements and links that appear on Sngine, which are sent directly to users&#039; browser. They automatically receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns and/or to personalize the advertising content that you see on websites that you visit.&lt;/p&gt;\r\n&lt;p&gt;Note that Sngine has no access to or control over these cookies that are used by third-party advertisers.&lt;/p&gt;\r\n&lt;h2&gt;Third Party Privacy Policies&lt;/h2&gt;\r\n&lt;p&gt;Sngine&#039;s Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the respective Privacy Policies of these third-party ad servers for more detailed information. It may include their practices and instructions about how to opt-out of certain options.&lt;/p&gt;\r\n&lt;p&gt;You can choose to disable cookies through your individual browser options. To know more detailed information about cookie management with specific web browsers, it can be found at the browsers&#039; respective websites.&lt;/p&gt;\r\n&lt;h2&gt;CCPA Privacy Rights (Do Not Sell My Personal Information)&lt;/h2&gt;\r\n&lt;p&gt;Under the CCPA, among other rights, California consumers have the right to:&lt;/p&gt;\r\n&lt;p&gt;Request that a business that collects a consumer&#039;s personal data disclose the categories and specific pieces of personal data that a business has collected about consumers.&lt;/p&gt;\r\n&lt;p&gt;Request that a business delete any personal data about the consumer that a business has collected.&lt;/p&gt;\r\n&lt;p&gt;Request that a business that sells a consumer&#039;s personal data, not sell the consumer&#039;s personal data.&lt;/p&gt;\r\n&lt;p&gt;If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.&lt;/p&gt;\r\n&lt;h2&gt;GDPR Data Protection Rights&lt;/h2&gt;\r\n&lt;p&gt;We would like to make sure you are fully aware of all of your data protection rights. Every user is entitled to the following:&lt;/p&gt;\r\n&lt;p&gt;The right to access &amp;ndash; You have the right to request copies of your personal data. We may charge you a small fee for this service.&lt;/p&gt;\r\n&lt;p&gt;The right to rectification &amp;ndash; You have the right to request that we correct any information you believe is inaccurate. You also have the right to request that we complete the information you believe is incomplete.&lt;/p&gt;\r\n&lt;p&gt;The right to erasure &amp;ndash; You have the right to request that we erase your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to restrict processing &amp;ndash; You have the right to request that we restrict the processing of your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to object to processing &amp;ndash; You have the right to object to our processing of your personal data, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;The right to data portability &amp;ndash; You have the right to request that we transfer the data that we have collected to another organization, or directly to you, under certain conditions.&lt;/p&gt;\r\n&lt;p&gt;If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.&lt;/p&gt;\r\n&lt;h2&gt;Children&#039;s Information&lt;/h2&gt;\r\n&lt;p&gt;Another part of our priority is adding protection for children while using the internet. We encourage parents and guardians to observe, participate in, and/or monitor and guide their online activity.&lt;/p&gt;\r\n&lt;p&gt;Sngine does not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think that your child provided this kind of information on our website, we strongly encourage you to contact us immediately and we will do our best efforts to promptly remove such information from our records.&lt;/p&gt;', '1', '0', NULL, 3);
 
     -- --------------------------------------------------------
 
@@ -4748,7 +4825,7 @@ if (isset($_POST['submit'])) {
     (1, 'system_public', '1'),
     (2, 'system_live', '1'),
     (3, 'system_message', 'We will Back Soon'),
-    (4, 'system_title', 'Delus'),
+    (4, 'system_title', 'Sngine'),
     (5, 'system_description', 'Share your memories, connect with others, make new friends'),
     (6, 'system_keywords', ''),
     (7, 'system_email', ''),
@@ -4856,20 +4933,20 @@ if (isset($_POST['submit'])) {
     (114, 'video_call_enabled', '0'),
     (115, 'audio_call_enabled', '0'),
     (116, 'uploads_directory', 'content/uploads'),
-    (117, 'uploads_prefix', 'Delus'),
-    (118, 'max_avatar_size', '10240'),
-    (119, 'max_cover_size', '10240'),
+    (117, 'uploads_prefix', 'sngine'),
+    (118, 'max_avatar_size', '102400'),
+    (119, 'max_cover_size', '102400'),
     (120, 'photos_enabled', '1'),
-    (121, 'max_photo_size', '10240'),
+    (121, 'max_photo_size', '102400'),
     (122, 'uploads_quality', 'medium'),
     (123, 'videos_enabled', '1'),
-    (124, 'max_video_size', '10240'),
-    (125, 'video_extensions', 'mp4, webm, ogg, mov, m4a, 3gp, 3g2, mj2, asf, avi, flv, webm, m4v, mpeg, ogv, mkv'),
+    (124, 'max_video_size', '102400'),
+    (125, 'video_extensions', 'mp4, webm, ogg, mov, m4a, 3gp, 3g2, mj2, asf, avi, flv, webm, m4v, mpeg, ogv, mkv, ts'),
     (126, 'audio_enabled', '1'),
-    (127, 'max_audio_size', '10240'),
+    (127, 'max_audio_size', '102400'),
     (128, 'audio_extensions', 'mp3, wav, ogg, m4a'),
     (129, 'file_enabled', '1'),
-    (130, 'max_file_size', '10240'),
+    (130, 'max_file_size', '102400'),
     (131, 'file_extensions', 'txt, zip, json, docx'),
     (132, 's3_enabled', '0'),
     (133, 's3_bucket', ''),
@@ -4896,7 +4973,7 @@ if (isset($_POST['submit'])) {
     (154, 'two_factor_enabled', '1'),
     (155, 'two_factor_type', 'google'),
     (156, 'censored_words_enabled', '1'),
-    (157, 'censored_words', 'pussy, fuck, shit, asshole, dick, tits, boobs'),
+    (157, 'censored_words', '[{&quot;value&quot;:&quot;pussy&quot;},{&quot;value&quot;:&quot;fuck&quot;},{&quot;value&quot;:&quot;shit&quot;},{&quot;value&quot;:&quot;asshole&quot;},{&quot;value&quot;:&quot;dick&quot;},{&quot;value&quot;:&quot;tits&quot;},{&quot;value&quot;:&quot;boobs&quot;}]'),
     (158, 'reCAPTCHA_enabled', '0'),
     (159, 'reCAPTCHA_site_key', ''),
     (160, 'reCAPTCHA_secret_key', ''),
@@ -4972,7 +5049,7 @@ if (isset($_POST['submit'])) {
     (230, 'points_min_withdrawal', '50'),
     (231, 'points_money_transfer_enabled', '1'),
     (232, 'points_per_currency', '100'),
-    (233, 'points_per_post', '0'),
+    (233, 'points_per_post', '5'),
     (234, 'points_per_comment', '5'),
     (235, 'points_per_reaction', '5'),
     (236, 'points_limit_user', '1000'),
@@ -5039,7 +5116,7 @@ if (isset($_POST['submit'])) {
     (306, 'system_description_directory', 'Discover new people, create new connections and make new friends'),
     (307, 'system_description_offers', 'Discover new offers'),
     (308, 'system_description_jobs', 'Discover new jobs offers'),
-    (309, 'system_description_blogs', 'Explore the latest articles'),
+    (309, 'system_description_blogs', 'Explore the latest blogs'),
     (310, 'system_description_marketplace', 'Discover new products'),
     (311, 'system_description_forums', 'The great place to discuss topics with other users'),
     (312, 'system_description_movies', 'Discover new movies'),
@@ -5179,12 +5256,12 @@ if (isset($_POST['submit'])) {
     (2449, 'css_main_icons_night', ''),
     (2450, 'css_action_icons', ''),
     (2451, 'css_action_icons_night', ''),
-    (2454, 'Delus_login_enabled', '0'),
-    (2455, 'Delus_appid', ''),
-    (2456, 'Delus_secret', ''),
-    (2499, 'Delus_app_domain', ''),
-    (2522, 'Delus_app_name', ''),
-    (2570, 'Delus_app_icon', ''),
+    (2454, 'sngine_login_enabled', '0'),
+    (2455, 'sngine_appid', ''),
+    (2456, 'sngine_secret', ''),
+    (2499, 'sngine_app_domain', ''),
+    (2522, 'sngine_app_name', ''),
+    (2570, 'sngine_app_icon', ''),
     (2571, 'market_money_withdraw_enabled', '1'),
     (2572, 'market_payment_method', 'paypal,skrill'),
     (2573, 'market_payment_method_custom', ''),
@@ -5304,7 +5381,7 @@ if (isset($_POST['submit'])) {
     (4055, 'max_daily_upload_size', '0'),
     (4372, 'pages_pbid_enabled', '1'),
     (4374, 'activities_edit_limit', '15'),
-    (4375, 'stripe_payment_element_enabled', '1'),
+    (4375, 'stripe_payment_element_enabled', '0'),
     (4606, 'blogs_results', '12'),
     (4624, 'funding_results', '12'),
     (4719, 'verotel_enabled', '0'),
@@ -5317,8 +5394,8 @@ if (isset($_POST['submit'])) {
     (4727, 'google_translation_key', ''),
     (4775, 'chat_translation_enabled', '0'),
     (4776, 'market_wallet_payment_enabled', '1'),
-    (4784, 'censored_domains_enabled', '0'),
-    (4785, 'censored_domains', ''),
+    (4784, 'censored_domains_enabled', '1'),
+    (4785, 'censored_domains', '[{&quot;value&quot;:&quot;pornhub.com&quot;},{&quot;value&quot;:&quot;xvideos.com&quot;}]'),
     (4786, 'mods_users_permission', '1'),
     (4793, 'mods_posts_permission', '1'),
     (4794, 'mods_pages_permission', '1'),
@@ -5410,7 +5487,7 @@ if (isset($_POST['submit'])) {
     (7640, 'cronjob_undelivered_orders', '1'),
     (8259, 'system_api_key', ''),
     (8260, 'system_api_secret', ''),
-    (8272, 'system_jwt_key', '2b9023ed83bc6dfcd03c5e00b28355ae'),
+    (8272, 'system_jwt_key', '9399793d85eca12df5a946e3d9f55113'),
     (8389, 'onesignal_messenger_notification_enabled', '0'),
     (8390, 'onesignal_messenger_app_id', ''),
     (8391, 'onesignal_messenger_api_key', ''),
@@ -5476,16 +5553,43 @@ if (isset($_POST['submit'])) {
     (12320, 'gifts_points_enabled', '0'),
     (12369, 'blogs_widget_enabled', '1'),
     (12371, 'support_center_enabled', '1'),
-    (14111, 'affiliates_per_user_6', ''),
-    (14112, 'affiliates_percentage_6', ''),
-    (14113, 'affiliates_per_user_7', ''),
-    (14114, 'affiliates_percentage_7', ''),
-    (14115, 'affiliates_per_user_8', ''),
-    (14116, 'affiliates_percentage_8', ''),
-    (14117, 'affiliates_per_user_9', ''),
-    (14118, 'affiliates_percentage_9', ''),
-    (14119, 'affiliates_per_user_10', ''),
-    (14120, 'affiliates_percentage_10', '');
+    (13200, 'pages_location_filter_enabled', '1'),
+    (13201, 'groups_location_filter_enabled', '1'),
+    (13202, 'events_location_filter_enabled', '1'),
+    (13330, 'collaborative_posts_enabled', '1'),
+    (13332, 'user_privacy_collaborative', 'public'),
+    (13519, 'monetization_discounts_enabled', '1'),
+    (13683, 'ai_posts_enabled', '0'),
+    (13684, 'ai_posts_provider', 'openai'),
+    (13685, 'ai_blogs_enabled', '0'),
+    (13686, 'ai_blogs_provider', 'openai'),
+    (13687, 'ai_images_enabled', '0'),
+    (13688, 'ai_images_provider', 'openai'),
+    (13695, 'openai_api_key', ''),
+    (13696, 'openai_text_model', ''),
+    (13697, 'replicate_api_token', ''),
+    (13698, 'replicate_model', ''),
+    (13699, 'replicate_denoising_steps', '1'),
+    (13700, 'replicate_guidance_scale', '1'),
+    (13701, 'replicate_seed', ''),
+    (13716, 'ai_credit_cost', '100'),
+    (13717, 'ai_text_credit_enabled', '1'),
+    (13718, 'ai_generated_word_cost', '10'),
+    (13719, 'ai_image_credit_enabled', '1'),
+    (13720, 'ai_generated_image_cost', '25'),
+    (13750, 'system_description_watch', 'Explore the latest videos'),
+    (14159, 'openai_image_model', ''),
+    (14460, 'ai_mode', 'live'),
+    (14954, 'affiliates_per_user_6', ''),
+    (14955, 'affiliates_percentage_6', ''),
+    (14956, 'affiliates_per_user_7', ''),
+    (14957, 'affiliates_percentage_7', ''),
+    (14958, 'affiliates_per_user_8', ''),
+    (14959, 'affiliates_percentage_8', ''),
+    (14960, 'affiliates_per_user_9', ''),
+    (14961, 'affiliates_percentage_9', ''),
+    (14962, 'affiliates_per_user_10', ''),
+    (14963, 'affiliates_percentage_10', '');
 
     -- --------------------------------------------------------
 
@@ -5633,6 +5737,7 @@ if (isset($_POST['submit'])) {
       `user_privacy_poke` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_gifts` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_wall` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'friends',
+      `user_privacy_collaborative` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'friends',
       `user_privacy_gender` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_birthdate` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_relationship` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
@@ -5674,8 +5779,8 @@ if (isset($_POST['submit'])) {
       `vkontakte_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `wordpress_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `wordpress_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-      `Delus_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `Delus_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `sngine_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `sngine_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `user_referrer_id` int DEFAULT NULL,
       `custom_affiliates_system` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `affiliates_per_user` float UNSIGNED NOT NULL DEFAULT '0',
@@ -5705,11 +5810,14 @@ if (isset($_POST['submit'])) {
       `user_market_balance` float NOT NULL DEFAULT '0',
       `user_funding_balance` float NOT NULL DEFAULT '0',
       `user_monetization_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `user_monetization_discount_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `user_monetization_discount_percent` float NOT NULL DEFAULT '0',
       `user_monetization_chat_price` float NOT NULL DEFAULT '0',
       `user_monetization_call_price` float NOT NULL DEFAULT '0',
       `user_monetization_min_price` float NOT NULL DEFAULT '0',
       `user_monetization_plans` int UNSIGNED NOT NULL DEFAULT '0',
       `user_monetization_balance` float NOT NULL DEFAULT '0',
+      `user_ai_credits_balance` int NOT NULL DEFAULT '0',
       `chat_sound` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `notifications_sound` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `user_language` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'en_us',
@@ -5933,7 +6041,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `users_uploads` (
-      `id` int NOT NULL,
+      `id` int UNSIGNED NOT NULL,
       `user_id` int NOT NULL,
       `file_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `file_size` float NOT NULL,
@@ -5947,7 +6055,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `users_uploads_pending` (
-      `id` int NOT NULL,
+      `id` int UNSIGNED NOT NULL,
       `user_id` int NOT NULL,
       `file_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `file_size` float NOT NULL,
@@ -5981,7 +6089,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `wallet_payments` (
-      `payment_id` int NOT NULL,
+      `payment_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `amount` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `method` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -5997,7 +6105,7 @@ if (isset($_POST['submit'])) {
     --
 
     CREATE TABLE `wallet_transactions` (
-      `transaction_id` int NOT NULL,
+      `transaction_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `node_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `node_id` int UNSIGNED DEFAULT NULL,
@@ -6352,7 +6460,8 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `invitation_codes`
       ADD PRIMARY KEY (`code_id`),
       ADD KEY `created_by` (`created_by`),
-      ADD KEY `used_by` (`used_by`);
+      ADD KEY `used_by` (`used_by`),
+      ADD KEY `code` (`code`) USING BTREE;
 
     --
     -- Indexes for table `jobs_categories`
@@ -6418,6 +6527,20 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `merits_categories`
       ADD PRIMARY KEY (`category_id`),
       ADD KEY `category_parent_id` (`category_parent_id`);
+
+    --
+    -- Indexes for table `monetization_coupons`
+    --
+    ALTER TABLE `monetization_coupons`
+      ADD PRIMARY KEY (`coupon_id`),
+      ADD KEY `coupon_code` (`coupon_code`) USING BTREE;
+
+    --
+    -- Indexes for table `monetization_coupons_users`
+    --
+    ALTER TABLE `monetization_coupons_users`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `user_id_coupon_id` (`user_id`,`coupon_id`) USING BTREE;
 
     --
     -- Indexes for table `monetization_payments`
@@ -6586,6 +6709,15 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `posts_articles` ADD FULLTEXT KEY `ft_tags` (`tags`);
 
     --
+    -- Indexes for table `posts_articles_references`
+    --
+    ALTER TABLE `posts_articles_references`
+      ADD PRIMARY KEY (`refrence_id`),
+      ADD KEY `post_id` (`post_id`),
+      ADD KEY `title_idx` (`title`) USING BTREE;
+    ALTER TABLE `posts_articles_references` ADD FULLTEXT KEY `ft_title` (`title`);
+
+    --
     -- Indexes for table `posts_audios`
     --
     ALTER TABLE `posts_audios`
@@ -6599,6 +6731,14 @@ if (isset($_POST['submit'])) {
       ADD PRIMARY KEY (`cache_id`),
       ADD KEY `user_id` (`user_id`),
       ADD KEY `post_id` (`post_id`) USING BTREE;
+
+    --
+    -- Indexes for table `posts_collaborative_users`
+    --
+    ALTER TABLE `posts_collaborative_users`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `post_id_user_id` (`post_id`,`user_id`) USING BTREE,
+      ADD KEY `user_post` (`user_id`,`post_id`);
 
     --
     -- Indexes for table `posts_colored_patterns`
@@ -7157,25 +7297,25 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `ads_campaigns`
     --
     ALTER TABLE `ads_campaigns`
-      MODIFY `campaign_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `campaign_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `ads_system`
     --
     ALTER TABLE `ads_system`
-      MODIFY `ads_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `ads_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `affiliates_payments`
     --
     ALTER TABLE `affiliates_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `announcements`
     --
     ALTER TABLE `announcements`
-      MODIFY `announcement_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `announcement_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `announcements_users`
@@ -7337,13 +7477,13 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `funding_payments`
     --
     ALTER TABLE `funding_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `games`
     --
     ALTER TABLE `games`
-      MODIFY `game_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `game_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `games_genres`
@@ -7421,19 +7561,19 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `log_commissions`
     --
     ALTER TABLE `log_commissions`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `log_payments`
     --
     ALTER TABLE `log_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `log_points`
     --
     ALTER TABLE `log_points`
-      MODIFY `log_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `log_sessions`
@@ -7445,7 +7585,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `log_subscriptions`
     --
     ALTER TABLE `log_subscriptions`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `market_categories`
@@ -7457,25 +7597,37 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `market_payments`
     --
     ALTER TABLE `market_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `merits_categories`
     --
     ALTER TABLE `merits_categories`
-      MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+      MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+    --
+    -- AUTO_INCREMENT for table `monetization_coupons`
+    --
+    ALTER TABLE `monetization_coupons`
+      MODIFY `coupon_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `monetization_coupons_users`
+    --
+    ALTER TABLE `monetization_coupons_users`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `monetization_payments`
     --
     ALTER TABLE `monetization_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `monetization_plans`
     --
     ALTER TABLE `monetization_plans`
-      MODIFY `plan_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `plan_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `movies`
@@ -7517,19 +7669,19 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `orders_items`
     --
     ALTER TABLE `orders_items`
-      MODIFY `id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `packages`
     --
     ALTER TABLE `packages`
-      MODIFY `package_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `package_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `packages_payments`
     --
     ALTER TABLE `packages_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `pages`
@@ -7571,7 +7723,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `points_payments`
     --
     ALTER TABLE `points_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `posts`
@@ -7586,6 +7738,12 @@ if (isset($_POST['submit'])) {
       MODIFY `article_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `posts_articles_references`
+    --
+    ALTER TABLE `posts_articles_references`
+      MODIFY `refrence_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `posts_audios`
     --
     ALTER TABLE `posts_audios`
@@ -7596,6 +7754,12 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `posts_cache`
       MODIFY `cache_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `posts_collaborative_users`
+    --
+    ALTER TABLE `posts_collaborative_users`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `posts_colored_patterns`
@@ -7811,7 +7975,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `shopping_cart`
     --
     ALTER TABLE `shopping_cart`
-      MODIFY `id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `sneak_peaks`
@@ -7889,7 +8053,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `system_options`
     --
     ALTER TABLE `system_options`
-      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15718;
+      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16213;
 
     --
     -- AUTO_INCREMENT for table `system_reactions`
@@ -8003,13 +8167,13 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `users_uploads`
     --
     ALTER TABLE `users_uploads`
-      MODIFY `id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `users_uploads_pending`
     --
     ALTER TABLE `users_uploads_pending`
-      MODIFY `id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `verification_requests`
@@ -8021,13 +8185,13 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `wallet_payments`
     --
     ALTER TABLE `wallet_payments`
-      MODIFY `payment_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `wallet_transactions`
     --
     ALTER TABLE `wallet_transactions`
-      MODIFY `transaction_id` int NOT NULL AUTO_INCREMENT;
+      MODIFY `transaction_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `widgets`

@@ -3,8 +3,8 @@
 /**
  * ajax -> posts -> course
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -28,7 +28,11 @@ if (!$system['courses_enabled']) {
 
 // check courses permission
 if (in_array($_GET['do'], ['create', 'publish', 'edit']) && !$user->_data['can_create_courses']) {
-  modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  if (!$user->check_module_package_permission("courses_permission")) {
+    return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
+  } else {
+    modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  }
 }
 
 try {

@@ -310,10 +310,16 @@
             <span class="ml5 d-none d-xxl-inline-block">{__("Reels")}</span>
           </a>
         {/if}
+        {if $profile['can_write_blogs']}
+          <a href="{$system['system_url']}/{$profile['user_name']}/blogs" {if $view == "blogs"}class="active" {/if}>
+            {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
+            <span class="ml5 d-none d-xxl-inline-block">{__("Blogs")}</span>
+          </a>
+        {/if}
         {if $profile['can_sell_products']}
           <a href="{$system['system_url']}/{$profile['user_name']}/products" {if $view == "products"}class="active" {/if}>
             {include file='__svg_icons.tpl' icon="products" class="main-icon mr5" width="24px" height="24px"}
-            <span class="ml5 d-none d-xxl-inline-block">{__("Products")}</span>
+            <span class="ml5 d-none d-xxl-inline-block">{__("Store")}</span>
           </a>
         {/if}
         {if $system['pages_enabled']}
@@ -512,7 +518,7 @@
             {if $user->_logged_in && $user->_data['user_id'] != $profile['user_id'] && $profile['has_subscriptions_plans']}
               <div class="d-grid">
                 <button class="btn btn-primary rounded rounded-pill mb20" data-toggle="modal" data-url="monetization/controller.php?do=get_plans&node_id={$profile['user_id']}&node_type=profile" data-size="large">
-                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE")} {__("STARTING FROM")} ({print_money($profile['user_monetization_min_price'])})
+                  <i class="fa fa-money-check-alt mr5"></i>{__("SUBSCRIBE FOR")} {if $profile['user_monetization_discount_enabled']}{print_money($profile['user_monetization_min_price'] * (1 - $profile['user_monetization_discount_percent'] / 100))}{/if}{if $profile['user_monetization_discount_enabled']}<span style="text-decoration: line-through;" class="ml5">{/if}{print_money($profile['user_monetization_min_price'])}{if $profile['user_monetization_discount_enabled']}</span>{/if}
                 </button>
               </div>
             {/if}
@@ -1155,7 +1161,6 @@
               {elseif $system['wall_posts_enabled'] && ( $profile['user_privacy_wall'] == 'friends' && $profile['we_friends'] || $profile['user_privacy_wall'] == 'public' )}
                 {include file='_publisher.tpl' _handle="user" _id=$profile['user_id'] _privacy=true}
               {/if}
-
             {/if}
             <!-- publisher -->
 
@@ -1508,7 +1513,7 @@
           <!-- photos -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <div class="card panel-photos">
                 <div class="card-header with-icon with-nav">
@@ -1558,7 +1563,7 @@
           <!-- albums -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <div class="card">
                 <div class="card-header with-icon with-nav">
@@ -1610,7 +1615,7 @@
           <!-- albums -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <div class="card panel-photos">
                 <div class="card-header with-icon with-nav">
@@ -1652,7 +1657,7 @@
           <!-- videos -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <div class="card panel-videos">
                 <div class="card-header with-icon with-nav">
@@ -1704,7 +1709,7 @@
           <!-- reels -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <div class="card panel-videos">
                 <div class="card-header with-icon with-nav">
@@ -1752,11 +1757,57 @@
           </div>
           <!-- reels -->
 
+        {elseif $view == "blogs"}
+          <!-- blogs -->
+          <div class="col-12">
+            {if $profile['needs_subscription']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
+            {else}
+              <!-- search -->
+              <div class="card">
+                <div class="card-header bg-transparent">
+                  {include file='__svg_icons.tpl' icon="search" class="main-icon mr5" width="24px" height="24px"}
+                  <strong>{__("Search")}</strong>
+                </div>
+                <div class="card-body">
+                  <form action="{$system['system_url']}/{$profile['user_name']}/search" method="get">
+                    <div class="input-group">
+                      <input type="text" name="query" class="form-control" placeholder="{__("Search")}">
+                      <input type="hidden" name="filter" value="article">
+                      <button type="submit" class="btn btn-primary">
+                        {__("Search")}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <!-- search -->
+
+              {if $posts}
+                <ul class="row">
+                  {foreach $posts as $blog}
+                    {include file='__feeds_blog.tpl' _tpl="featured" _iteration=$blog@iteration}
+                  {/foreach}
+                </ul>
+
+                <!-- see-more -->
+                <div class="alert alert-post see-more js_see-more" data-get="blogs_profile" data-id="{$profile['user_id']}">
+                  <span>{__("See More")}</span>
+                  <div class="loader loader_small x-hidden"></div>
+                </div>
+                <!-- see-more -->
+              {else}
+                {include file='_no_data.tpl'}
+              {/if}
+            {/if}
+          </div>
+          <!-- blogs -->
+
         {elseif $view == "products"}
           <!-- products -->
           <div class="col-12">
             {if $profile['needs_subscription']}
-              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price']}
+              {include file='_need_subscription.tpl' node_type='profile' node_id=$profile['user_id'] price=$profile['user_monetization_min_price'] discount_enabled=$profile['user_monetization_discount_enabled'] discount_percent=$profile['user_monetization_discount_percent']}
             {else}
               <!-- search -->
               <div class="card">

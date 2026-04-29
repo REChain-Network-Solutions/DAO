@@ -444,7 +444,7 @@
         {__("added reel")}
 
       {elseif $_post['post_type'] == "video"}
-        {__("added video")} {if $_post['video']['category_name']}<span class="badge rounded-pill badge-lg bg-info">{__($_post['video']['category_name'])}</span>{/if}
+        {__("added video")} {if $_post['video']['category_name']}<a href="{$system['system_url']}/watch/category/{$_post['video']['category_id']}/{$_post['video']['category_url']}" class="blog-category text-no-underline">{__($_post['video']['category_name'])}</a>{/if}
 
       {elseif $_post['post_type'] == "audio"}
         {__("added audio")}
@@ -476,6 +476,17 @@
         <span class="js_user-popover" data-type="user" data-uid="{$_post['wall_id']}">
           <a href="{$system['system_url']}/{$_post['wall_username']}">{$_post['wall_fullname']}</a>
         </span>
+      {elseif $_post['is_collaborative']}
+        <i class="fa fa-users ml5 mr5"></i>
+        {__("collaborated with")}
+        {foreach $_post['collaborative_users'] as $_user}
+          <span class="js_user-popover" data-type="user" data-uid="{$_user['user_id']}">
+            <a href="{$system['system_url']}/{$_user['user_name']}">{$_user['user_fullname']}</a>
+          </span>
+          {if !$_user@last}
+            <span class="text-muted">,</span>
+          {/if}
+        {/foreach}
       {/if}
     </span>
     <!-- post-title -->
@@ -1405,12 +1416,12 @@
 
 {else}
 
-  {if $_post['needs_payment']}
-    {include file='_need_payment.tpl' post_id=$_post['post_id'] price=$_post['post_price'] paid_text=$_post['paid_text'] paid_image=$_post['paid_image']}
-  {elseif $_post['needs_subscription']}
-    {include file='_need_subscription.tpl' node_type=$_post['needs_subscription_type'] node_id=$_post['needs_subscription_id'] price=$_post['needs_subscription_price'] subscriptions_image=$_post['subscriptions_image']}
-  {elseif $_post['needs_age_verification']}
+  {if $_post['needs_age_verification']}
     {include file='_need_age_verification.tpl'}
+  {elseif $_post['needs_payment']}
+    {include file='_need_payment.tpl' post_id=$_post['post_id'] price=$_post['post_price'] discounted_price=$_post['post_price_discounted'] paid_text=$_post['paid_text'] paid_image=$_post['paid_image']}
+  {elseif $_post['needs_subscription']}
+    {include file='_need_subscription.tpl' node_type=$_post['needs_subscription_type'] node_id=$_post['needs_subscription_id'] price=$_post['needs_subscription_price'] discount_enabled=$_post['needs_subscription_discount_enabled'] discount_percent=$_post['needs_subscription_discount_percent'] subscriptions_image=$_post['subscriptions_image']}
   {/if}
 
 {/if}

@@ -81,12 +81,16 @@
               </div>
               <div class="post-meta">
                 <div class="float-end">
-                  <a href="{$system['system_url']}/games" class="btn btn-sm btn-light d-none d-lg-block">
-                    <i class="fa fa-arrow-circle-left mr5"></i>{__("Go Back")}
+                  <!-- go back button -->
+                  <a href="{$system['system_url']}/games" class="btn btn-sm btn-light">
+                    <i class="fa fa-arrow-circle-left"></i><span class="d-none d-lg-inline ml5">{__("Go Back")}</span>
                   </a>
-                  <a href="{$system['system_url']}/games" class="btn btn-sm btn-icon btn-light d-block d-lg-none">
-                    <i class="fa fa-arrow-circle-left"></i>
-                  </a>
+                  <!-- go back button -->
+                  <!-- full screen button -->
+                  <button class="btn btn-sm btn-light js_game-fullscreen">
+                    <i class="fa fa-expand"></i><span class="d-none d-lg-inline ml5">{__("Full Screen")}</span>
+                  </button>
+                  <!-- full screen button -->
                 </div>
                 <div class="h6 mt5 mb0">{$game['title']}</div>
               </div>
@@ -94,7 +98,7 @@
           </div>
         </div>
         <div class="ratio ratio-16x9">
-          <iframe frameborder="0" src="{$game['source']}"></iframe>
+          <iframe frameborder="0" src="{$game['source']}" id="game-area"></iframe>
         </div>
       </div>
       <!-- content panel -->

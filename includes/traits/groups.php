@@ -3,8 +3,8 @@
 /**
  * trait -> groups
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait GroupsTrait
@@ -40,7 +40,7 @@ trait GroupsTrait
     $groups = [];
     $offset *= $results;
     /* prepare country statement */
-    if ($country && $system['newsfeed_location_filter_enabled'] && $country != "all") {
+    if ($country && $system['groups_location_filter_enabled'] && $country != "all") {
       $country_statement = sprintf(" AND group_country = %s ", secure($country, 'int'));
     }
     /* prepare language statement */
@@ -372,8 +372,23 @@ trait GroupsTrait
       case 'monetization':
         /* prepare */
         $args['group_monetization_enabled'] = (isset($args['group_monetization_enabled'])) ? '1' : '0';
+        $args['group_monetization_discount_enabled'] = (isset($args['group_monetization_discount_enabled'])) ? '1' : '0';
+        /* validate discount percent */
+        if (!is_numeric($args['group_monetization_discount_percent']) || $args['group_monetization_discount_percent'] < 1 || $args['group_monetization_discount_percent'] > 99) {
+          throw new Exception(__("Please enter a valid discount percent (min 1, max 99)"));
+        }
         /* update group */
-        $db->query(sprintf("UPDATE `groups` SET group_monetization_enabled = %s WHERE group_id = %s", secure($args['group_monetization_enabled']), secure($group_id, 'int')));
+        $db->query(sprintf(
+          "UPDATE `groups` SET 
+            group_monetization_enabled = %s, 
+            group_monetization_discount_enabled = %s, 
+            group_monetization_discount_percent = %s 
+          WHERE group_id = %s",
+          secure($args['group_monetization_enabled']),
+          secure($args['group_monetization_discount_enabled']),
+          secure($args['group_monetization_discount_percent'], 'float'),
+          secure($group_id, 'int')
+        ));
         /* update monetization plans */
         $this->update_monetization_plans($group_id, 'group');
         break;

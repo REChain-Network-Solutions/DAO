@@ -3,8 +3,8 @@
 /**
  * ajax -> posts -> story
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -24,6 +24,15 @@ if ($user->_data['user_demo']) {
 // check if stories enabled
 if (!$system['stories_enabled']) {
   modal("MESSAGE", __("Error"), __("This feature has been disabled by the admin"));
+}
+
+// check stories permission
+if (!$user->_data['can_add_stories']) {
+  if (!$user->check_module_package_permission("stories_permission")) {
+    return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
+  } else {
+    modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  }
 }
 
 try {

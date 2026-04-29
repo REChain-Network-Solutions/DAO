@@ -123,77 +123,73 @@
                     <div class="navbar-wrapper">
                       <ul>
                         {if $user->_logged_in}
-                          {if $user->_data['can_publish_posts'] || $user->_data['can_go_live'] || $user->_data['can_add_stories'] || $user->_data['can_write_blogs'] || $system['market_enabled'] || $user->_data['can_raise_funding'] || $user->_data['can_create_ads'] || $system['pages_enabled'] || $system['groups_enabled'] || $system['events_enabled']}
-                            <!-- add -->
-                            <li class="d-none d-xxl-block dropdown">
-                              <a href="#" data-bs-toggle="dropdown" data-display="static">
-                                {include file='__svg_icons.tpl' icon="header-plus" class="header-icon" width="24px" height="24px"}
-                              </a>
-                              <div class="dropdown-menu dropdown-menu-end">
-                                {if $user->_data['can_publish_posts']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/publisher.php">
-                                    {include file='__svg_icons.tpl' icon="newsfeed" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Post")}
-                                  </div>
-                                {/if}
-                                {if $user->_data['can_go_live']}
-                                  <a class="dropdown-item" href="{$system['system_url']}/live">
-                                    {include file='__svg_icons.tpl' icon="live" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Live")}
-                                  </a>
-                                {/if}
-                                {if $user->_data['can_add_stories']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/story.php?do=create">
-                                    {include file='__svg_icons.tpl' icon="24_hours" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Story")}
-                                  </div>
-                                {/if}
-                                {if $user->_data['can_write_blogs']}
-                                  <a class="dropdown-item" href="{$system['system_url']}/blogs/new">
-                                    {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
-                                  </a>
-                                {/if}
-                                {if $system['market_enabled']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/product.php?do=create">
-                                    {include file='__svg_icons.tpl' icon="products" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
-                                  </div>
-                                {/if}
-                                {if $user->_data['can_raise_funding']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/funding.php?do=create">
-                                    {include file='__svg_icons.tpl' icon="funding" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
-                                  </div>
-                                {/if}
-                                {if $user->_data['can_create_ads']}
-                                  <a class="dropdown-item" href="{$system['system_url']}/ads/new">
-                                    {include file='__svg_icons.tpl' icon="ads" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Ads")}
-                                  </a>
-                                {/if}
-                                {if $system['pages_enabled']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=page">
-                                    {include file='__svg_icons.tpl' icon="pages" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Page")}
-                                  </div>
-                                {/if}
-                                {if $system['groups_enabled']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=group">
-                                    {include file='__svg_icons.tpl' icon="groups" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Group")}
-                                  </div>
-                                {/if}
-                                {if $system['events_enabled']}
-                                  <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=event">
-                                    {include file='__svg_icons.tpl' icon="events" class="main-icon mr10" width="24px" height="24px"}
-                                    {__("Create Event")}
-                                  </div>
-                                {/if}
+                          <!-- add -->
+                          <li class="d-none d-xxl-block dropdown">
+                            <a href="#" data-bs-toggle="dropdown" data-display="static">
+                              {include file='__svg_icons.tpl' icon="header-plus" class="header-icon" width="24px" height="24px"}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                              <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/publisher.php">
+                                {include file='__svg_icons.tpl' icon="newsfeed" class="main-icon mr10" width="24px" height="24px"}
+                                {__("Create Post")}
                               </div>
-                            </li>
-                            <!-- add -->
-                          {/if}
+                              {if $system['live_enabled']}
+                                <a class="dropdown-item" href="{$system['system_url']}/live">
+                                  {include file='__svg_icons.tpl' icon="live" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Live")}
+                                </a>
+                              {/if}
+                              {if $system['stories_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/story.php?do=create">
+                                  {include file='__svg_icons.tpl' icon="24_hours" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Story")}
+                                </div>
+                              {/if}
+                              {if $system['blogs_enabled']}
+                                <a class="dropdown-item" href="{$system['system_url']}/blogs/new">
+                                  {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
+                                </a>
+                              {/if}
+                              {if $system['market_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/product.php?do=create">
+                                  {include file='__svg_icons.tpl' icon="products" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
+                                </div>
+                              {/if}
+                              {if $system['funding_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="posts/funding.php?do=create">
+                                  {include file='__svg_icons.tpl' icon="funding" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}
+                                </div>
+                              {/if}
+                              {if $system['ads_enabled']}
+                                <a class="dropdown-item" href="{$system['system_url']}/ads/new">
+                                  {include file='__svg_icons.tpl' icon="ads" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Ads")}
+                                </a>
+                              {/if}
+                              {if $system['pages_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=page">
+                                  {include file='__svg_icons.tpl' icon="pages" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Page")}
+                                </div>
+                              {/if}
+                              {if $system['groups_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=group">
+                                  {include file='__svg_icons.tpl' icon="groups" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Group")}
+                                </div>
+                              {/if}
+                              {if $system['events_enabled']}
+                                <div class="dropdown-item pointer" data-toggle="modal" data-url="modules/add.php?type=event">
+                                  {include file='__svg_icons.tpl' icon="events" class="main-icon mr10" width="24px" height="24px"}
+                                  {__("Create Event")}
+                                </div>
+                              {/if}
+                            </div>
+                          </li>
+                          <!-- add -->
 
                           <!-- friend requests -->
                           {if $system['friends_enabled']}

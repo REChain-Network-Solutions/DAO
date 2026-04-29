@@ -3,8 +3,8 @@
 /**
  * ajax -> posts -> blog
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -30,10 +30,7 @@ try {
   switch ($_GET['do']) {
     case 'create':
       // create blog
-      $_POST['tips_enabled'] = (isset($_POST['tips_enabled'])) ? '1' : '0';
-      $_POST['subscribers_only'] = (isset($_POST['subscribers_only'])) ? '1' : '0';
-      $_POST['paid_post'] = (isset($_POST['paid_post'])) ? '1' : '0';
-      $post_id = $user->post_blog($_POST['publish_to'], $_POST['page_id'], $_POST['group_id'], $_POST['event_id'], $_POST['title'], $_POST['text'], $_POST['cover'], $_POST['category'], $_POST['tags'], $_POST['tips_enabled'], $_POST['subscribers_only'], $_POST['paid_post'], $_POST['paid_post_price'], $_POST['paid_post_text']);
+      $post_id = $user->post_blog($_POST['publish_to'], $_POST['page_id'], $_POST['group_id'], $_POST['event_id'], $_POST['title'], $_POST['text'], $_POST['cover'], $_POST['category'], $_POST['tags'], $_POST['references'], $_POST['tips_enabled'], $_POST['subscribers_only'], $_POST['paid_post'], $_POST['paid_post_price'], $_POST['paid_post_text'], $_POST['collaborative_post'], $_POST['collaborative_users'], $_POST['collaborative_percent']);
 
       // return
       $return['path'] = $system['system_url'] . '/blogs/' . $post_id . '/' . get_url_text($_POST['title']);
@@ -46,10 +43,7 @@ try {
       }
 
       // edit blog
-      $_POST['tips_enabled'] = (isset($_POST['tips_enabled'])) ? '1' : '0';
-      $_POST['subscribers_only'] = (isset($_POST['subscribers_only'])) ? '1' : '0';
-      $_POST['paid_post'] = (isset($_POST['paid_post'])) ? '1' : '0';
-      $user->edit_blog($_GET['id'], $_POST['title'], $_POST['text'], $_POST['cover'], $_POST['category'], $_POST['tags'], $_POST['tips_enabled'], $_POST['subscribers_only'], $_POST['paid_post'], $_POST['paid_post_price'], $_POST['paid_post_text']);
+      $user->edit_blog($_GET['id'], $_POST['title'], $_POST['text'], $_POST['cover'], $_POST['category'], $_POST['tags'], $_POST['references'], $_POST['tips_enabled'], $_POST['subscribers_only'], $_POST['paid_post'], $_POST['paid_post_price'], $_POST['paid_post_text']);
 
       // return
       $return['path'] = $system['system_url'] . '/blogs/' . $_GET['id'] . '/' . get_url_text($_POST['title']);

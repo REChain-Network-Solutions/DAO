@@ -3,8 +3,8 @@
 /**
  * trait -> hashtags
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait HashtagsTrait
@@ -25,12 +25,32 @@ trait HashtagsTrait
     $hashtags = [];
     $where_query = "";
     if ($user_id) {
-      /* where hashtags_posts.post_id in (select post_id from posts where posts.user_id = $user_id and posts.user_type = 'user') */
       $where_query = " AND hashtags_posts.post_id IN (SELECT post_id FROM posts WHERE posts.user_id = " . secure($user_id, 'int') . " AND posts.user_type = 'user')";
     }
     $get_trending_hashtags = $db->query(sprintf("SELECT hashtags.hashtag, COUNT(hashtags_posts.id) AS frequency FROM hashtags INNER JOIN hashtags_posts ON hashtags.hashtag_id = hashtags_posts.hashtag_id WHERE hashtags_posts.created_at > DATE_SUB(CURDATE(), INTERVAL 1 %s) " . $where_query . "GROUP BY hashtags_posts.hashtag_id ORDER BY frequency DESC LIMIT %s", secure($system['trending_hashtags_interval'], "", false), secure($system['trending_hashtags_limit'], 'int', false)));
     if ($get_trending_hashtags->num_rows > 0) {
       while ($hashtag = $get_trending_hashtags->fetch_assoc()) {
+        $hashtag['hashtag'] = html_entity_decode($hashtag['hashtag'], ENT_QUOTES);
+        $hashtags[] = $hashtag;
+      }
+    }
+    return $hashtags;
+  }
+
+
+  /**
+   * get_hashtags
+   * 
+   * @param string $term
+   * @return array
+   */
+  public function get_hashtags($term)
+  {
+    global $system, $db;
+    $hashtags = [];
+    $get_hashtags = $db->query(sprintf("SELECT hashtags.hashtag, COUNT(hashtags_posts.id) AS frequency FROM hashtags INNER JOIN hashtags_posts ON hashtags.hashtag_id = hashtags_posts.hashtag_id WHERE hashtags_posts.created_at > DATE_SUB(CURDATE(), INTERVAL 1 %s) AND hashtags.hashtag LIKE %s GROUP BY hashtags_posts.hashtag_id ORDER BY frequency DESC LIMIT %s", secure($system['trending_hashtags_interval'], "", false), secure($term, 'search'), secure($system['trending_hashtags_limit'], 'int', false)));
+    if ($get_hashtags->num_rows > 0) {
+      while ($hashtag = $get_hashtags->fetch_assoc()) {
         $hashtag['hashtag'] = html_entity_decode($hashtag['hashtag'], ENT_QUOTES);
         $hashtags[] = $hashtag;
       }
@@ -50,6 +70,10 @@ trait HashtagsTrait
   function decode_hashtags($text, $trending_hashtags, $post_id)
   {
     if ($text) {
+      /* first decode html hashtags */
+      $pattern = '/<span class="mention"[^>]*data-denotation-char="#"[^>]*data-value="([^"]+)"[^>]*>.*?<\/span>\s*<\/span>/i';
+      $text = preg_replace($pattern, '#$1', $text);
+      /* then decode normal hashtags */
       $pattern = '/(\s|^)((#|\x{ff03}){1}([0-9_\p{L}&;]*[_\p{L}&;][0-9_\p{L}&;]*))/u';
       $text = preg_replace_callback($pattern, function ($matches) use ($trending_hashtags, $post_id) {
         global $system, $db, $date;

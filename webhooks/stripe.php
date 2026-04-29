@@ -3,8 +3,8 @@
 /**
  * webhooks -> stripe
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -103,7 +103,8 @@ try {
           /* subscribe to node */
           $node_link = $user->subscribe($_GET['plan_id']);
           /* log payment */
-          $user->log_payment($user->_data['user_id'], $monetization_plan['price'], 'stripe', 'subscribe');
+          $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+          $user->log_payment($user->_data['user_id'], $price, 'stripe', 'subscribe');
           /* redirect */
           redirect($node_link);
         }
@@ -127,7 +128,8 @@ try {
           /* unlock paid post */
           $post_link = $user->unlock_paid_post($_GET['post_id']);
           /* log payment */
-          $user->log_payment($user->_data['user_id'], $post['post_price'], 'stripe', 'paid_post');
+          $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
+          $user->log_payment($user->_data['user_id'], $price, 'stripe', 'paid_post');
           /* redirect */
           redirect($post_link);
         }

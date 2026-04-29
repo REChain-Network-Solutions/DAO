@@ -3,8 +3,8 @@
 /**
  * webhooks -> coinpayments
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -108,7 +108,8 @@ try {
           /* notify the user */
           $user->post_notification(['to_user_id' => $transaction['user_id'], 'system_notification' => true, 'action' => 'coinpayments_complete']);
           /* log payment */
-          $user->log_payment($transaction['user_id'], $monetization_plan['amount'], 'coinpayments', 'subscribe');
+          $price = (isset($monetization_plan['discounted_price']) && $monetization_plan['discounted_price'] > 0) ? $monetization_plan['discounted_price'] : $monetization_plan['price'];
+          $user->log_payment($transaction['user_id'], $price, 'coinpayments', 'subscribe');
         }
         break;
 
@@ -134,7 +135,8 @@ try {
           /* notify the user */
           $user->post_notification(['to_user_id' => $transaction['user_id'], 'system_notification' => true, 'action' => 'coinpayments_complete']);
           /* log payment */
-          $user->log_payment($transaction['user_id'], $post['paid_price'], 'coinpayments', 'paid_post');
+          $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
+          $user->log_payment($transaction['user_id'], $price, 'coinpayments', 'paid_post');
         }
         break;
 

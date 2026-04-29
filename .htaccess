@@ -159,7 +159,10 @@ RewriteRule ^scheduled/?$ index.php?view=scheduled [L,QSA]
 RewriteRule ^memories/?$ index.php?view=memories [L,QSA]
 
 # Watch
-RewriteRule ^watch/?$ index.php?view=watch [L,QSA]
+RewriteRule ^watch/?$ watch.php [L,QSA]
+RewriteRule ^watch/category/([^/]+)/?$ watch.php?view=category&category_id=$1 [L,QSA]
+RewriteRule ^watch/category/([^/]+)/([^/]+)/?$ watch.php?view=category&category_id=$1&category_url=$2 [L,QSA]
+RewriteRule ^watch/category/([^/]+)/([^/]+)/([^/]+)/?$ watch.php?view=category&category_id=$1&category_url=$2&page=$3 [L,QSA]
 
 # Ads
 RewriteRule ^ads/?$ ads.php [L,QSA]

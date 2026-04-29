@@ -3,8 +3,8 @@
 /**
  * search
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -26,9 +26,10 @@ try {
   // search
   if (isset($_GET['query'])) {
     /* get results */
-    $results = $user->search($_GET['query'], $_GET['tab']);
+    $results = $user->search($_GET['query'], $_GET['tab'], $_GET['type']);
     /* assign variables */
     $smarty->assign('query', htmlentities($_GET['query'], ENT_QUOTES, 'utf-8'));
+    $smarty->assign('type', $_GET['type']);
     $smarty->assign('hashtag', (isset($_GET['hashtag']) && $_GET['hashtag'] == '1') ? true : false);
     $smarty->assign('results', $results);
   }

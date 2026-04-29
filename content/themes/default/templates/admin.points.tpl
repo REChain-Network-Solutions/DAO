@@ -278,7 +278,7 @@
           <i class="fa fa-triangle-exclamation fa-2x"></i>
         </div>
         <div class="text pt5">
-          {__("PayPal & Moneypoolscash support automatic payout APIs so no need to make them manually")}.
+          {__("PayPal support automatic payout APIs so no need to make them manually")}.
         </div>
       </div>
 

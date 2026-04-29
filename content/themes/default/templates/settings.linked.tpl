@@ -153,26 +153,26 @@
     </div>
   {/if}
 
-  {if $system['Delus_login_enabled']}
+  {if $system['sngine_login_enabled']}
     <div class="form-table-row">
       <div class="avatar">
-        <img src="{$system['system_uploads']}/{$system['Delus_app_icon']}" width="40" height="40" alt="{__({$system['Delus_app_name']})}">
+        <img src="{$system['system_uploads']}/{$system['sngine_app_icon']}" width="40" height="40" alt="{__({$system['sngine_app_name']})}">
       </div>
       <div>
-        <div class="form-label h6 mb5">{__({$system['Delus_app_name']})}</div>
+        <div class="form-label h6 mb5">{__({$system['sngine_app_name']})}</div>
         <div class="form-text d-none d-sm-block">
-          {if $user->_data['Delus_connected']}
-            {__("Your account is connected to")} {__({$system['Delus_app_name']})}
+          {if $user->_data['sngine_connected']}
+            {__("Your account is connected to")} {__({$system['sngine_app_name']})}
           {else}
-            {__("Connect your account to")} {__({$system['Delus_app_name']})}
+            {__("Connect your account to")} {__({$system['sngine_app_name']})}
           {/if}
         </div>
       </div>
       <div class="text-end">
-        {if $user->_data['Delus_connected']}
-          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/Delus">{__("Disconnect")}</a>
+        {if $user->_data['sngine_connected']}
+          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/sngine">{__("Disconnect")}</a>
         {else}
-          <a class="btn btn-sm btn-primary" href="https://{$system['Delus_app_domain']}/api/oauth?app_id={$system['Delus_appid']}">{__("Connect")}</a>
+          <a class="btn btn-sm btn-primary" href="https://{$system['sngine_app_domain']}/api/oauth?app_id={$system['sngine_appid']}">{__("Connect")}</a>
         {/if}
       </div>
     </div>

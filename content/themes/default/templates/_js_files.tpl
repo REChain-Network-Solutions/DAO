@@ -107,11 +107,16 @@
       var chat_translation_enabled = {if $system['chat_translation_enabled']}true{else}false{/if};
       var voice_notes_durtaion = "{$system['voice_notes_durtaion']}";
       var voice_notes_encoding = "{$system['voice_notes_encoding']}";
+      /* AI */
+      {if $system['ai_text_credit_enabled'] || $system['ai_image_credit_enabled']}
+        var ai_credit_cost = "{$system['ai_credit_cost']}";
+      {/if}
     {/if}
   </script>
   <script>
     /* i18n for JS */
     var __ = [];
+    __['What is on your mind? #Hashtag.. @Mention.. Link..'] = `{__('What is on your mind? #Hashtag.. @Mention.. Link..')}`;
     __['Ask something'] = `{__('Ask something')}`;
     __['Add Friend'] = `{__('Add Friend')}`;
     __['Friends'] = `{__('Friends')}`; 
@@ -132,6 +137,7 @@
     __['Going'] = `{__('Going')}`;
     __['Interested'] = `{__('Interested')}`;
     __['Delete'] = `{__('Delete')}`;
+    __['Delete All'] = `{__('Delete All')}`;
     __['Delete Cover'] = `{__('Delete Cover')}`;
     __['Delete Picture'] = `{__('Delete Picture')}`;
     __['Delete Post'] = `{__('Delete Post')}`;
@@ -348,7 +354,7 @@
   <script src="{$system['system_url']}/node_modules/moment/min/moment-with-locales.min.js" {if !$user->_logged_in}defer{/if}>
     
   </script>
-  <script src="https://cdn.plyr.io/3.8.3/plyr.js" {if !$user->_logged_in}defer{/if}>
+  <script src="https://cdn.plyr.io/3.8.4/plyr.js" {if !$user->_logged_in}defer{/if}>
     
   </script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" {if !$user->_logged_in}defer{/if}>
@@ -414,6 +420,13 @@
     {/if}
     <!-- TinyMCE -->
 
+    <!-- Quill.js -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.bubble.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill-mention@6.1.1/dist/quill.mention.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill-mention@6.1.1/dist/quill.mention.min.css" rel="stylesheet">
+    <!-- Quill.js -->
+
     <!-- Stripe & 2Checkout & Razorpay & Shift4 & Cashfree & Epayco -->
     {if in_array($page, ["index", "packages", "ads", "wallet", "market", "profile", "page", "group", "post", "directory", "search", "movies"])}
       {if $system['creditcard_enabled'] || $system['alipay_enabled']}
@@ -440,7 +453,7 @@
     <!-- (Twillio|LiveKit) [Audio/Video Calls] -->
     {if $system['audio_call_enabled'] || $system['video_call_enabled']}
       {if $system['audio_video_provider'] == "twilio"}
-        <script src="https://sdk.twilio.com/js/video/releases/2.33.0/twilio-video.min.js" defer></script>
+        <script src="https://sdk.twilio.com/js/video/releases/2.34.0/twilio-video.min.js" defer></script>
       {/if}
       {if $system['audio_video_provider'] == "livekit"}
         <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js" defer></script>
@@ -450,7 +463,7 @@
 
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
     {if $system['live_enabled'] || $system['audio_video_provider'] == 'agora'}
-      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.0.js"></script>
+      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.3.js"></script>
     {/if}
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
 
@@ -461,18 +474,16 @@
     <!-- Easytimer -->
 
     <!-- Datatables -->
-    {if in_array($page, ["admin", "ads", "wallet", "developers", "settings"])}
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.5/css/dataTables.bootstrap5.min.css" defer />
-      <script src="https://cdn.datatables.net/2.3.5/js/dataTables.js" defer></script>
-      <script src="https://cdn.datatables.net/2.3.5/js/dataTables.bootstrap5.min.js" defer></script>
+    {if in_array($page, ["admin", "ads", "wallet", "developers", "settings", "page", "group"])}
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.7/css/dataTables.bootstrap5.min.css" defer />
+      <script src="https://cdn.datatables.net/2.3.7/js/dataTables.js" defer></script>
+      <script src="https://cdn.datatables.net/2.3.7/js/dataTables.bootstrap5.min.js" defer></script>
     {/if}
     <!-- Datatables -->
 
     <!-- Tagify -->
-    {if in_array($page, ["admin", "packages", "settings", "blogs"]) || ($system['merits_enabled'] && in_array($page, ['index', 'profile']))}
-      <script src="{$system['system_url']}/node_modules/@yaireo/tagify/dist/tagify.js" defer></script>
-      <link rel="stylesheet" type='text/css' href="{$system['system_url']}//node_modules/@yaireo/tagify/dist/tagify.css" defer>
-    {/if}
+    <script src="{$system['system_url']}/node_modules/@yaireo/tagify/dist/tagify.js" defer></script>
+    <link rel="stylesheet" type='text/css' href="{$system['system_url']}//node_modules/@yaireo/tagify/dist/tagify.css" defer>
     <!-- Tagify -->
 
     <!-- HTML2PDF -->
@@ -509,7 +520,6 @@
       {/if}
       <script src="{$system['system_url']}/includes/assets/js/core/chat.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/chat.js')}"></script>
     {/if}
-    <script src="{$system['system_url']}/includes/assets/js/core/ad_code.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/ad_code.js')}"></script>
     {if $system['live_enabled'] && $page == "live"}
       <script src="{$system['system_url']}/includes/assets/js/core/live.js?v={$system['system_version']}-{filemtime('includes/assets/js/core/live.js')}"></script>
     {/if}

@@ -3,8 +3,8 @@
 /**
  * ajax -> posts -> publisher
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -21,9 +21,13 @@ if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
 
-// check posts permissions
+// check posts permission
 if (!$user->_data['can_publish_posts']) {
-  modal("MESSAGE", __("Error"), __("You don't have the right permission to do this action"));
+  if (!$user->check_module_package_permission("posts_permission")) {
+    return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
+  } else {
+    modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
+  }
 }
 
 try {

@@ -1,10 +1,10 @@
 <?php
 
 /**
- * ajax -> payments -> verotel
+ * ajax -> payments -> verotel [Pre-Payment Integration]
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -51,12 +51,15 @@ try {
       }
 
       // get verotel link
-      $link = verotel("wallet", $_POST['price']);
+      $link = verotel("wallet", $_POST['price'], $_POST['price']);
       break;
 
     case 'donate':
       // valid inputs
       if (!isset($_POST['post_id']) || !is_numeric($_POST['post_id'])) {
+        _error(400);
+      }
+      if (!isset($_POST['price']) || !is_numeric($_POST['price'])) {
         _error(400);
       }
 
@@ -76,7 +79,7 @@ try {
         _error(400);
       }
 
-      // get plan
+      // get monetization plan
       $monetization_plan = $user->get_monetization_plan($_POST['plan_id'], true);
       if (!$monetization_plan) {
         _error(400);
@@ -84,6 +87,20 @@ try {
       /* check if user already subscribed to this node */
       if ($user->is_subscribed($monetization_plan['node_id'], $monetization_plan['node_type'])) {
         modal("SUCCESS", __("Subscribed"), __("You already subscribed to this") . " " . __($monetization_plan['node_type']));
+      }
+
+      // check if discount is enabled
+      if ($monetization_plan['discounted_price']) {
+        $monetization_plan['price'] = $monetization_plan['discounted_price'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $monetization_plan['price'] = $monetization_plan['price'] * (1 - $coupon['discount_percent'] / 100);
+          /* update coupon usage */
+          $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
+        }
       }
 
       // get verotel link
@@ -99,10 +116,24 @@ try {
       // get post
       $post = $user->get_post($_POST['post_id'], false, false, true);
       if (!$post) {
-        throw new Exception(__("This post is not available"));
+        _error(400);
       }
       if (!$post['needs_payment']) {
         throw new Exception(__("This post doesn't need payment"));
+      }
+
+      // check if discount is enabled
+      if ($post['post_price_discounted']) {
+        $post['post_price'] = $post['post_price_discounted'];
+      }
+      // check if promo code is valid
+      if ($_POST['promo_code']) {
+        $coupon = $user->check_monetization_coupon($_POST['promo_code']);
+        if ($coupon) {
+          $post['post_price'] = $post['post_price'] * (1 - $coupon['discount_percent'] / 100);
+          /* update coupon usage */
+          $user->update_monetization_coupon($_POST['promo_code'], $user->_data['user_id']);
+        }
       }
 
       // get verotel link
@@ -117,6 +148,9 @@ try {
 
       // get movie
       $movie = $user->get_movie($_POST['movie_id']);
+      if (!$movie) {
+        _error(400);
+      }
       /* check if user already paid to this movie */
       if ($movie['can_watch']) {
         modal("SUCCESS", __("Paid"), __("You already paid to this movie"));

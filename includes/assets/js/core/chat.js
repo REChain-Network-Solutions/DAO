@@ -1,8 +1,8 @@
 /**
  * chat js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -1131,9 +1131,9 @@ async function init_Agora(type, token, room_name, call_id) {
 
 // open_messenger_app
 function open_messenger_app() {
-  if (/Android|DelusAndroid/i.test(navigator.userAgent)) {
+  if (/Android|SngineAndroid/i.test(navigator.userAgent)) {
     window.location = messaging_app_android_link;
-  } else if (/iPhone|iPad|iPod|DelusIOS/i.test(navigator.userAgent)) {
+  } else if (/iPhone|iPad|iPod|SngineIOS/i.test(navigator.userAgent)) {
     window.location = messaging_app_ios_link;
   } else {
     window.location = site_path + "/messages";
@@ -1520,9 +1520,9 @@ $(function () {
         clearTimeout(chat_typing_timer);
         /* update typing status */
         if (chat_socket_enabled) {
-          chat_socket.emit('event_client_typing', { conversation_id: conversation_id, is_typing: false });
+          chat_socket.emit('event_client_typing', { conversation_id: response.conversation_id, is_typing: false });
         } else {
-          $.post(api['chat/actions'], { 'do': 'typing', 'is_typing': false, 'conversation_id': conversation_id }, function (response) {
+          $.post(api['chat/actions'], { 'do': 'typing', 'is_typing': false, 'conversation_id': response.conversation_id }, function (response) {
             if (response.callback) {
               eval(response.callback);
             }

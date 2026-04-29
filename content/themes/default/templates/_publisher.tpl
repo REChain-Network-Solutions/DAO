@@ -37,12 +37,9 @@
             <img class="publisher-avatar" src="{$user->_data['user_picture']}">
           {/if}
           <div class="colored-text-wrapper">
-            <textarea {if $_modal_mode}autofocus{/if} dir="auto" class="js_autosize js_mention js_publisher-scraper" data-init-placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}' placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}'>{if $url}{$url}{/if}</textarea>
-          </div>
-          <div class="publisher-emojis">
-            <div class="position-relative">
-              <i class="far fa-smile-wink fa-lg js_emoji-menu-toggle"></i>
-            </div>
+            <div class="quill-editor js_quill"></div>
+            <input type="hidden" class="js_publisher-hidden-editor" value="">
+            <textarea style="display: none;" {if $_modal_mode}autofocus{/if} dir="auto" class="js_autosize js_mentions js_publisher-scraper" data-init-placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}' placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}'>{if $url}{$url}{/if}</textarea>
           </div>
         </div>
         <!-- publisher-message -->
@@ -286,7 +283,7 @@
               {/if}
               {if $system['photos_enabled']}
                 <li class="col-md-6">
-                  <div class="publisher-tools-tab attach js_publisher-tab" data-tab="photos">
+                  <div class="publisher-tools-tab attach js_publisher-tab js_publisher-images-uploader" data-tab="photos">
                     <span class="js_x-uploader" data-handle="publisher" data-multiple="true">
                       {include file='__svg_icons.tpl' icon="camera" class="main-icon mr5" width="24px" height="24px"}
                     </span>
@@ -298,6 +295,26 @@
                     <div class="publisher-tools-tab js_publisher-tab" data-tab="album">
                       {include file='__svg_icons.tpl' icon="photos" class="main-icon mr5" width="24px" height="24px"}
                       {__("Create Album")}
+                    </div>
+                  </li>
+                {/if}
+              {/if}
+              {if !$_quick_mode}
+                {if $system['ai_images_enabled']}
+                  <li class="col-md-6">
+                    <div class="publisher-tools-tab link js_publisher-tab" data-tab="ai_image" data-toggle="modal" data-size="large" data-url="ai/modal.php?handle=image">
+                      {include file='__svg_icons.tpl' icon="ai_image" class="main-icon mr5" width="24px" height="24px"}
+                      <span class="text-gradient">{__("Generate Image")}</span>
+                      <span class="float-end">{include file='__svg_icons.tpl' icon="ai" class="main-icon" width="18px" height="18px"}</span>
+                    </div>
+                  </li>
+                {/if}
+                {if $system['ai_posts_enabled']}
+                  <li class="col-md-6">
+                    <div class="publisher-tools-tab link js_publisher-tab" data-tab="ai" data-toggle="modal" data-size="large" data-url="ai/modal.php?handle=post">
+                      {include file='__svg_icons.tpl' icon="ai_post" class="main-icon mr5" width="24px" height="24px"}
+                      <span class="text-gradient">{__("Generate Post")}</span>
+                      <span class="float-end">{include file='__svg_icons.tpl' icon="ai" class="main-icon" width="18px" height="18px"}</span>
                     </div>
                   </li>
                 {/if}
@@ -343,7 +360,7 @@
                     </div>
                   </li>
                 {/if}
-                {if $user->_data['can_write_blogs'] && in_array($_handle, ['me', 'page', 'group','event'])}
+                {if $system['blogs_enabled'] && in_array($_handle, ['me', 'page', 'group','event'])}
                   <li class="col-md-6">
                     <a class="publisher-tools-tab link js_publisher-tab" data-tab="blog" href='{$system['system_url']}/blogs/new{if $_handle == "page"}?page={$_id}{/if}{if $_handle == "group"}?group={$_id}{/if}{if $_handle == "event"}?event={$_id}{/if}'>
                       {include file='__svg_icons.tpl' icon="blogs" class="main-icon mr5" width="24px" height="24px"}
@@ -359,7 +376,7 @@
                     </div>
                   </li>
                 {/if}
-                {if $user->_data['can_raise_funding'] && $_handle == "me"}
+                {if $system['funding_enabled'] && $_handle == "me"}
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="funding" data-toggle="modal" data-url="posts/funding.php?do=create">
                       {include file='__svg_icons.tpl' icon="funding" class="main-icon mr5" width="24px" height="24px"}
@@ -383,7 +400,7 @@
                     </div>
                   </li>
                 {/if}
-                {if $user->_data['can_create_courses'] && in_array($_handle, ['me', 'page', 'group','event'])}
+                {if $system['courses_enabled'] && in_array($_handle, ['me', 'page', 'group','event'])}
                   <li class="col-md-6">
                     <div class="publisher-tools-tab link js_publisher-tab" data-tab="job" data-toggle="modal" data-url="posts/course.php?do=create{if $_handle == "page"}&page={$_id}{/if}{if $_handle == "group"}&group={$_id}{/if}{if $_handle == "event"}&event={$_id}{/if}">
                       {include file='__svg_icons.tpl' icon="courses" class="main-icon mr5" width="24px" height="24px"}
@@ -446,7 +463,7 @@
 
           <!-- publisher-footer -->
           <div class="publisher-footer">
-            {if $user->_data['can_schedule_posts'] || ($_handle == "me" && $user->_data['can_add_anonymous_posts']) ||  $system['adult_mode'] || ($_handle != "page" && $user->_data['can_receive_tip']) || (in_array($_handle, ['me', 'page', 'group']) && $_node_can_monetize_content && $_node_monetization_enabled && $_node_monetization_plans > 0) || (in_array($_handle, ['me', 'page', 'group','event']) && $user->_data['can_monetize_content'] && $user->_data['user_monetization_enabled']) }
+            {if $user->_data['can_schedule_posts'] || ($_handle == "me" && $user->_data['can_add_anonymous_posts']) ||  $system['adult_mode'] || ($_handle != "page" && $user->_data['can_receive_tip']) || (in_array($_handle, ['me', 'page', 'group']) && $_node_can_monetize_content && $_node_monetization_enabled && $_node_monetization_plans > 0) || (in_array($_handle, ['me', 'page', 'group','event']) && $user->_data['can_monetize_content'] && $user->_data['user_monetization_enabled']) || in_array($_handle, ['me', 'group','event']) && $user->_data['can_add_collaborative_posts']}
               <!-- publisher-options -->
               <div class="publisher-footer-options">
 
@@ -478,7 +495,7 @@
 
                 <!-- anonymous post -->
                 {if $_handle == "me" && $user->_data['can_add_anonymous_posts']}
-                  <div class="form-table-row mb10">
+                  <div class="form-table-row mb10" id="anonymous-toggle-wrapper">
                     <div class="avatar">
                       {include file='__svg_icons.tpl' icon="spy" class="main-icon" width="24px" height="24px"}
                     </div>
@@ -588,19 +605,21 @@
                       </label>
                     </div>
                   </div>
-                  <div class="form-table-row mb10 x-hidden" id="paid-lock-toggle-wrapper">
-                    <div class="avatar">
-                      <div style="width: 20px; height: 20px;"></div>
-                    </div>
-                    <div>
-                      <div class="form-label mb0">{__("Only Lock Attached File")}</div>
-                      <div class="form-text d-none d-sm-block mt0">{__("This option will lock the attached file and disable the preview")}</div>
-                    </div>
-                    <div class="text-end">
-                      <label class="switch" for="paid_post_lock">
-                        <input type="checkbox" name="paid_post_lock" id="paid_post_lock" class="js_publisher-paid-lock-toggle">
-                        <span class="slider round"></span>
-                      </label>
+                  <div class="x-hidden" id="paid-lock-toggle-wrapper">
+                    <div class="form-table-row mb10">
+                      <div class="avatar">
+                        <div style="width: 20px; height: 20px;"></div>
+                      </div>
+                      <div>
+                        <div class="form-label mb0">{__("Only Lock Attached File")}</div>
+                        <div class="form-text d-none d-sm-block mt0">{__("This option will lock the attached file and disable the preview")}</div>
+                      </div>
+                      <div class="text-end">
+                        <label class="switch" for="paid_post_lock">
+                          <input type="checkbox" name="paid_post_lock" id="paid_post_lock" class="js_publisher-paid-lock-toggle">
+                          <span class="slider round"></span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                   <div class="form-group x-hidden" id="paid-price-wrapper">
@@ -626,6 +645,40 @@
                   </div>
                 {/if}
                 <!-- paid post -->
+
+                <!-- collaborative post -->
+                {if in_array($_handle, ['me', 'group','event']) && $user->_data['can_add_collaborative_posts']}
+                  <div class="form-table-row mb10" id="collaborative-toggle-wrapper">
+                    <div class="avatar">
+                      {include file='__svg_icons.tpl' icon="collaborative" class="main-icon" width="24px" height="24px"}
+                    </div>
+                    <div>
+                      <div class="form-label mb0">{__("Collaborative Post")}</div>
+                      <div class="form-text d-none d-sm-block mt0">{__("Share your post with others")}</div>
+                    </div>
+                    <div class="text-end">
+                      <label class="switch" for="collaborative_post">
+                        <input type="checkbox" name="collaborative_post" id="collaborative_post" class="js_publisher-collaborative-toggle">
+                        <span class="slider round"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group x-hidden" id="collaborative-users-wrapper">
+                    <input type="text" class="js_tagify-ajax x-hidden" data-handle="collaborative_users" name="collaborative_users">
+                    <div class="form-text">
+                      {__("Enter the users to collaborate with")}
+                    </div>
+                  </div>
+                  {if $user->_data['can_monetize_content'] && $user->_data['user_monetization_enabled']}
+                    <div class="form-group x-hidden" id="collaborative-percent-wrapper">
+                      <input type="number" min="0" max="100" class="form-control" name="collaborative_percent">
+                      <div class="form-text">
+                        {__("Enter the % of the revenue that you want to give to the collaborators (only for paid posts)")}
+                      </div>
+                    </div>
+                  {/if}
+                {/if}
+                <!-- collaborative post -->
 
               </div>
             {/if}

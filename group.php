@@ -3,8 +3,8 @@
 /**
  * group
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -228,6 +228,16 @@ try {
       }
       break;
 
+    case 'blogs':
+      /* get content */
+      if (!$group['needs_subscription']) {
+        /* get posts (blogs) */
+        $posts = $user->get_posts(['get' => 'posts_group', 'id' => $group['group_id'], 'filter' => 'article']);
+        /* assign variables */
+        $smarty->assign('posts', $posts);
+      }
+      break;
+
     case 'products':
       /* get content */
       if (!$group['needs_subscription']) {
@@ -336,16 +346,38 @@ try {
           break;
 
         case 'monetization':
-          // check monetization permission (only group's super admin can do this)
+          /* check monetization permission (only group's super admin can do this) */
           if (!$user->_data['can_monetize_content']) {
             _error(404);
           }
 
-          // get monetozaion plans
-          $smarty->assign('monetization_plans', $user->get_monetization_plans($group['group_id'], 'group'));
+          /* get sub view content */
+          switch ($_GET['show']) {
+            case '':
+            case 'settings':
+              /* set the show if not set */
+              if (!isset($_GET['show'])) {
+                $_GET['show'] = 'settings';
+              }
 
-          // get subscribers count
-          $smarty->assign('subscribers_count', $user->get_subscribers_count($group['group_id'], 'group'));
+              /* get monetozaion plans */
+              $smarty->assign('monetization_plans', $user->get_monetization_plans($group['group_id'], 'group'));
+
+              /* get subscribers count */
+              $smarty->assign('subscribers_count', $user->get_subscribers_count($group['group_id'], 'group'));
+              break;
+
+            case 'coupons':
+              /* get coupons */
+              $smarty->assign('coupons', $user->get_monetization_coupons($group['group_id'], 'group'));
+              break;
+
+            default:
+              _error(404);
+              break;
+          }
+          /* assign variables */
+          $smarty->assign('show', $_GET['show']);
           break;
 
         case 'delete':

@@ -29,80 +29,76 @@
       <!-- watch -->
 
       <!-- add -->
-      {if $user->_data['can_publish_posts'] || $user->_data['can_go_live'] || $user->_data['can_add_stories'] || $user->_data['can_write_blogs'] || $system['market_enabled'] || $user->_data['can_raise_funding'] || $user->_data['can_create_ads'] || $system['pages_enabled'] || $system['groups_enabled'] || $system['events_enabled']}
-        <div class="link">
-          <a class="dropdown" href="#" data-bs-toggle="dropdown" data-display="static">
-            {include file='__svg_icons.tpl' icon="header-plus" class="header-icon" width="24px" height="24px"}
-            <div class="title">{__("Add")}</div>
-          </a>
-          <div class="dropdown-menu dropdown-widget">
-            <div class="js_scroller" data-slimScroll-height="360">
-              <div class="footer-quick-adds">
-                {if $user->_data['can_publish_posts']}
-                  <div class="add-quick-item full" data-toggle="modal" data-url="posts/publisher.php">
-                    {include file='__svg_icons.tpl' icon="newsfeed" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Post")}</div>
-                  </div>
-                {/if}
-                {if $user->_data['can_go_live']}
-                  <a class="add-quick-item" href="{$system['system_url']}/live">
-                    {include file='__svg_icons.tpl' icon="live" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Live")}</div>
-                  </a>
-                {/if}
-                {if $user->_data['can_add_stories']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="posts/story.php?do=create">
-                    {include file='__svg_icons.tpl' icon="24_hours" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Story")}</div>
-                  </div>
-                {/if}
-                {if $user->_data['can_write_blogs']}
-                  <a class="add-quick-item" href="{$system['system_url']}/blogs/new">
-                    {include file='__svg_icons.tpl' icon="blogs" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
-                  </a>
-                {/if}
-                {if $system['market_enabled']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="posts/product.php?do=create">
-                    {include file='__svg_icons.tpl' icon="products" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
-                  </div>
-                {/if}
-                {if $user->_data['can_raise_funding']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="posts/funding.php?do=create">
-                    {include file='__svg_icons.tpl' icon="funding" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
-                  </div>
-                {/if}
-                {if $user->_data['can_create_ads']}
-                  <a class="add-quick-item" href="{$system['system_url']}/ads/new">
-                    {include file='__svg_icons.tpl' icon="ads" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Ads")}</div>
-                  </a>
-                {/if}
-                {if $system['pages_enabled']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=page">
-                    {include file='__svg_icons.tpl' icon="pages" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Page")}</div>
-                  </div>
-                {/if}
-                {if $system['groups_enabled']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=group">
-                    {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Group")}</div>
-                  </div>
-                {/if}
-                {if $system['events_enabled']}
-                  <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=event">
-                    {include file='__svg_icons.tpl' icon="events" class="main-icon" width="24px" height="24px"}
-                    <div class="mt5">{__("Event")}</div>
-                  </div>
-                {/if}
+      <div class="link">
+        <a class="dropdown" href="#" data-bs-toggle="dropdown" data-display="static">
+          {include file='__svg_icons.tpl' icon="header-plus" class="header-icon" width="24px" height="24px"}
+          <div class="title">{__("Add")}</div>
+        </a>
+        <div class="dropdown-menu dropdown-widget">
+          <div class="js_scroller" data-slimScroll-height="360">
+            <div class="footer-quick-adds">
+              <div class="add-quick-item full" data-toggle="modal" data-url="posts/publisher.php">
+                {include file='__svg_icons.tpl' icon="newsfeed" class="main-icon" width="24px" height="24px"}
+                <div class="mt5">{__("Post")}</div>
               </div>
+              {if $system['live_enabled']}
+                <a class="add-quick-item" href="{$system['system_url']}/live">
+                  {include file='__svg_icons.tpl' icon="live" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Live")}</div>
+                </a>
+              {/if}
+              {if $system['stories_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="posts/story.php?do=create">
+                  {include file='__svg_icons.tpl' icon="24_hours" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Story")}</div>
+                </div>
+              {/if}
+              {if $system['blogs_enabled']}
+                <a class="add-quick-item" href="{$system['system_url']}/blogs/new">
+                  {include file='__svg_icons.tpl' icon="blogs" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Blog")} {if $system['paid_blogs_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
+                </a>
+              {/if}
+              {if $system['market_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="posts/product.php?do=create">
+                  {include file='__svg_icons.tpl' icon="products" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Product")} {if $system['paid_products_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
+                </div>
+              {/if}
+              {if $system['funding_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="posts/funding.php?do=create">
+                  {include file='__svg_icons.tpl' icon="funding" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Funding")} {if $system['paid_funding_enabled']}<span class="badge rounded-pill text-bg-danger">{__("Paid")}</span>{/if}</div>
+                </div>
+              {/if}
+              {if $system['ads_enabled']}
+                <a class="add-quick-item" href="{$system['system_url']}/ads/new">
+                  {include file='__svg_icons.tpl' icon="ads" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Ads")}</div>
+                </a>
+              {/if}
+              {if $system['pages_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=page">
+                  {include file='__svg_icons.tpl' icon="pages" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Page")}</div>
+                </div>
+              {/if}
+              {if $system['groups_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=group">
+                  {include file='__svg_icons.tpl' icon="groups" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Group")}</div>
+                </div>
+              {/if}
+              {if $system['events_enabled']}
+                <div class="add-quick-item" data-toggle="modal" data-url="modules/add.php?type=event">
+                  {include file='__svg_icons.tpl' icon="events" class="main-icon" width="24px" height="24px"}
+                  <div class="mt5">{__("Event")}</div>
+                </div>
+              {/if}
             </div>
           </div>
         </div>
-      {/if}
+      </div>
       <!-- add -->
 
       <!-- search -->

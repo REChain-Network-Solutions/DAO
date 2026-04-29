@@ -120,7 +120,7 @@
         <span>{__("Jobs")}</span>
         <div class="float-end">
           <!-- sort -->
-          <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+          <a href="#" data-bs-toggle="dropdown" class="countries-filter">
             {if !$sort || $sort == "latest"}
               <i class="fas fa-bars fa-fw"></i> {__("Latest")}
             {elseif $sort == "salary-high"}
@@ -137,7 +137,7 @@
           <!-- sort -->
           <!-- location filter -->
           {if $user->_logged_in && $system['location_finder_enabled']}
-            <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
+            <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
               <i class="fa fa-map-marker-alt mr5"></i>{__("Distance")}
             </a>
             <div class="dropdown-menu dropdown-menu-end">
@@ -168,26 +168,28 @@
           {/if}
           <!-- location filter -->
           <!-- country filter -->
-          <a href="#" data-bs-toggle="dropdown" class="countries-filter">
-            <i class="fa fa-globe fa-fw"></i>
-            {if $selected_country}
-              <span>{$selected_country['country_name']}</span>
-            {else}
-              <span>{__("All Countries")}</span>
-            {/if}
-          </a>
-          <div class="dropdown-menu dropdown-menu-end countries-dropdown">
-            <div class="js_scroller">
-              <a class="dropdown-item" href="?{if $distance}distance={$distance}{if $sort}&{/if}{/if}{if $sort}sort={$sort}{/if}">
-                {__("All Countries")}
-              </a>
-              {foreach $countries as $country}
-                <a class="dropdown-item" href="?country={$country['country_name_native']}{if $distance}&distance={$distance}{/if}{if $sort}&sort={$sort}{/if}">
-                  {$country['country_name']}
+          {if $system['newsfeed_location_filter_enabled']}
+            <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
+              <i class="fa fa-globe fa-fw"></i>
+              {if $selected_country}
+                <span>{$selected_country['country_name']}</span>
+              {else}
+                <span>{__("All Countries")}</span>
+              {/if}
+            </a>
+            <div class="dropdown-menu dropdown-menu-end countries-dropdown">
+              <div class="js_scroller">
+                <a class="dropdown-item" href="?{if $distance}distance={$distance}{if $sort}&{/if}{/if}{if $sort}sort={$sort}{/if}">
+                  {__("All Countries")}
                 </a>
-              {/foreach}
+                {foreach $countries as $country}
+                  <a class="dropdown-item" href="?country={$country['country_name_native']}{if $distance}&distance={$distance}{/if}{if $sort}&sort={$sort}{/if}">
+                    {$country['country_name']}
+                  </a>
+                {/foreach}
+              </div>
             </div>
-          </div>
+          {/if}
           <!-- country filter -->
         </div>
       </div>

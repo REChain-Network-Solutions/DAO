@@ -39,17 +39,17 @@
               </td>
               <td>
                 {if $row['handle'] == "packages"}
-                  {$row['package_name']} {__("Package")} = <strong>{print_money($row['package_price'])}</strong>
+                  {$row['package_name']} {__("Package")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['package_price'])})</small>
                 {elseif $row['handle'] == "wallet"}
-                  {__("Add Wallet Balance")} = <strong>{print_money($row['price'])}</strong>
+                  {__("Add Wallet Balance")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['price'])})</small>
                 {elseif $row['handle'] == "donate"}
-                  {__("Funding Donation")} = <strong>{print_money($row['price'])}</strong>
+                  {__("Funding Donation")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['price'])})</small>
                 {elseif $row['handle'] == "subscribe"}
-                  {__("Subscribe")} = <strong>{print_money($row['price'])}</strong>
+                  {__("Subscribe")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['price'])})</small>
                 {elseif $row['handle'] == "paid_post"}
-                  {__("Paid Post")} = <strong>{print_money($row['price'])}</strong>
+                  {__("Paid Post")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['price'])})</small>
                 {elseif $row['handle'] == "movies"}
-                  {__("Movies")} = <strong>{print_money($row['price'])}</strong>
+                  {__("Movies")} = <strong>{print_money($row['total'])}</strong> <small class="text-muted">({print_money($row['price'])})</small>
                 {/if}
               </td>
               <td>{$row['time']|date_format:"%e %B %Y"}</td>

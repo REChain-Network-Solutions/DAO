@@ -1,8 +1,8 @@
 /**
  * post js
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // initialize API URLs
@@ -11,13 +11,16 @@ api['live/reaction'] = ajax_path + "live/reaction.php";
 /* posts */
 api['comments/filter'] = ajax_path + "posts/filter.php?handle=comments";
 api['posts/filter'] = ajax_path + "posts/filter.php?handle=posts";
-api['posts/post'] = ajax_path + "posts/post.php";
+api['posts/hashtags'] = ajax_path + "posts/hashtags.php";
 api['posts/scraper'] = ajax_path + "posts/scraper.php";
+api['posts/post'] = ajax_path + "posts/post.php";
 api['posts/comment'] = ajax_path + "posts/comment.php";
 api['posts/reaction'] = ajax_path + "posts/reaction.php";
 api['posts/edit'] = ajax_path + "posts/edit.php";
 api['posts/product'] = ajax_path + "posts/product.php";
 api['posts/story'] = ajax_path + "posts/story.php";
+/* ai */
+api['ai/generate'] = ajax_path + "ai/generate.php";
 /* albums */
 api['albums/action'] = ajax_path + "albums/action.php";
 /* forums */
@@ -44,6 +47,101 @@ if (live_enabled) {
   var live_post_realtime_thread;
   var live_post_realtime_process = false;
   var live_post_streaming_process = false;
+}
+
+
+// quill publisher
+function quill_publisher() {
+  if (typeof Quill === "undefined" || $(".js_quill").length === 0) {
+    return;
+  }
+  $('.js_quill').each(function () {
+    var el = this;
+    if ($(el).hasClass('ql-container')) {
+      return;
+    }
+    var quill = new Quill(el, {
+      theme: 'bubble',
+      placeholder: __['What is on your mind? #Hashtag.. @Mention.. Link..'],
+      modules: {
+        toolbar: {
+          container: [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'indent': '-1' }, { 'indent': '+1' }],
+            [{ 'header': 1 }, { 'header': 2 }],
+          ],
+        },
+        mention: {
+          allowedChars: /^[a-zA-Z0-9_]*$|./u,
+          mentionDenotationChars: ["@", "#"],
+          source: function (searchTerm, renderList, mentionChar) {
+            if (mentionChar === "@" && searchTerm.length > 0) {
+              $.get(api['users/mentions'], { 'term': searchTerm }, function (response) {
+                const values = response.map(user => ({
+                  id: user.id,
+                  avatar: user.img,
+                  value: user.label.trim(),
+                  username: user.value
+                }));
+                renderList(values, mentionChar);
+              }, 'json');
+            } else if (mentionChar === "#" && searchTerm.length > 0 && !searchTerm.includes(" ")) {
+              $.get(api['posts/hashtags'], { 'term': searchTerm }, function (response) {
+                const values = response.map(hashtag => ({
+                  value: hashtag.hashtag
+                }));
+                renderList(values, mentionChar);
+              }, 'json');
+            }
+          },
+          renderItem: function (item, mentionChar) {
+            var wrap = document.createElement('div');
+            if (mentionChar === "@") {
+              wrap.innerHTML = render_template('#publisher-mention-item', { avatar: item.avatar, value: item.value });
+            } else if (mentionChar === "#") {
+              wrap.innerHTML = render_template('#publisher-hashtag-item', { value: item.value });
+            }
+            return wrap.firstElementChild;
+          },
+        }
+      }
+    });
+    /* remove the html from the clipboard */
+    const Delta = Quill.import('delta');
+    quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+      return new Delta().insert(node.innerText);
+    });
+    /* sync the quill with the publisher */
+    quill.on('text-change', function () {
+      var publisher = $(quill.root).closest('.publisher');
+      publisher.find('textarea.js_publisher-scraper').val(quill.getText()).trigger('input');
+      publisher.find('input.js_publisher-hidden-editor').val(quill.root.innerHTML);
+    });
+    $(el).data('quill', quill);
+  });
+}
+
+
+// reset quill editor
+function quill_editor_reset(quill) {
+  if (typeof Quill === 'undefined' || !quill) {
+    return;
+  }
+  quill.setText('');
+  quill.blur();
+}
+
+
+// update quill editor
+function update_quill_editor(quill, text) {
+  if (typeof Quill === 'undefined' || !quill) {
+    return;
+  }
+  quill.setText(text);
+  quill.focus();
+  quill.setSelection(quill.getLength(), 0);
 }
 
 
@@ -327,7 +425,6 @@ function initialize_scraper() {
   $(".js_publisher-scraper").trigger('keyup');
   $('body').addClass('publisher-focus');
   $('.publisher-slider').slideDown();
-  $('.publisher-emojis').fadeIn();
 }
 
 
@@ -433,7 +530,7 @@ $(function () {
   // run stories
   if ($("#stories").length > 0) {
     var stories = new Zuck('stories', {
-      skin: 'Delus',
+      skin: 'sngine',
       avatars: false,
       list: false,
       backNative: true,
@@ -495,14 +592,15 @@ $(function () {
 
 
   // run publisher
+  /* initialize quill publisher */
+  quill_publisher();
   /* publisher focus */
   $('body').on('click', function (e) {
     /* check if there is a publisher in the page */
     if ($(".publisher:not(.mini)").length > 0) {
-      if ($(e.target).parents(".publisher:not(.mini)").length > 0 || $(e.target).parents(".js_publisher-attachment-image-remover").length > 0 || $(e.target).parents(".js_publisher-gif-remover").length > 0 || $(e.target).parents(".js_publisher-scraper-remover").length > 0) {
+      if ($(e.target).parents(".publisher:not(.mini)").length > 0 || $(e.target).parents(".js_publisher-attachment-image-remover").length > 0 || $(e.target).parents(".js_publisher-gif-remover").length > 0 || $(e.target).parents(".js_publisher-scraper-remover").length > 0 || $(e.target).parents(".js_publisher-extender").length > 0) {
         $('body').addClass('publisher-focus');
         $('.publisher-slider').slideDown();
-        $('.publisher-emojis').fadeIn();
         /* check if publisher colored tab activated */
         if ($('.js_publisher-tab[data-tab="colored"]').hasClass('activated')) {
           var publisher = $('.publisher');
@@ -520,6 +618,7 @@ $(function () {
               publisher_message.css("backgroundImage", "url(" + uploads_path + "/" + active_pattern.data('background-image') + ")");
             }
             /* [3] add pattern text-color */
+            publisher_message.css("color", active_pattern.data('text-color'));
             publisher_textarea.css("color", active_pattern.data('text-color'));
             autosize.update(publisher_textarea);
           }
@@ -527,7 +626,6 @@ $(function () {
       } else {
         $('body').removeClass('publisher-focus');
         $('.publisher-slider').slideUp();
-        $('.publisher-emojis').fadeOut();
         /* check if publisher colored tab activated */
         if ($('.js_publisher-tab[data-tab="colored"]').hasClass('activated')) {
           var publisher = $('.publisher');
@@ -539,6 +637,7 @@ $(function () {
           publisher_message.css("backgroundImage", "");
           /* [3] remove pattern text-color */
           publisher_textarea.css("color", "");
+          publisher_message.css("color", "");
           autosize.update(publisher_textarea);
         }
       }
@@ -742,6 +841,7 @@ $(function () {
         publisher_message.css("backgroundImage", "url(" + uploads_path + "/" + _this.data('background-image') + ")");
       }
       /* [3] add pattern text-color */
+      publisher_message.css("color", _this.data('text-color'));
       publisher_textarea.css("color", _this.data('text-color'));
       autosize.update(publisher_textarea);
       /* [4] activate the publisher colored tab */
@@ -754,6 +854,7 @@ $(function () {
       /* [2] remove pattern background-image */
       publisher_message.css("backgroundImage", "");
       /* [3] remove pattern text-color */
+      publisher_message.css("color", "");
       publisher_textarea.css("color", "");
       autosize.update(publisher_textarea);
       /* [4] dectivate the publisher colored tab */
@@ -954,6 +1055,10 @@ $(function () {
     var id = publisher.data('id');
     /* get text */
     var textarea = publisher.find('textarea');
+    /* get editor */
+    var editor = publisher.find('.js_publisher-hidden-editor');
+    /* get quill */
+    var quill = publisher.find('.js_quill').first().data('quill');
     /* get link */
     var link = publisher.data('scraping');
     /* get photos */
@@ -1032,18 +1137,63 @@ $(function () {
     var paid_text_input = paid_text_wrapper.find('textarea');
     var paid_image_wrapper = publisher.find("#paid-image-wrapper")
     var paid_image_input = paid_image_wrapper.find('input.js_x-uploader-input');
+    /* get collaborative users */
+    var is_collaborative = publisher.find('.js_publisher-collaborative-toggle').is(":checked");
+    var collaborative_users_wrapper = publisher.find("#collaborative-users-wrapper");
+    var collaborative_users_input = collaborative_users_wrapper.find('input.js_tagify-ajax');
+    var collaborative_users = collaborative_users_input.val();
+    var collaborative_percent_wrapper = publisher.find("#collaborative-percent-wrapper");
+    var collaborative_percent_input = collaborative_percent_wrapper.find('input');
     /* get post_as_page from hidden input if exists */
     var post_as_page = publisher.find('input[name="post_as_page"]').val();
     /* get the error element */
     var error = publisher.find('.alert.alert-danger');
     /* return if no data to post */
-    if (is_empty(textarea.val()) && link === undefined && photos === undefined && feeling.val() == "" && location.val() == "" && voice_notes === undefined && poll_options === undefined && reel === undefined && video === undefined && audio === undefined && file === undefined) {
+    if (is_empty(editor.val()) && link === undefined && photos === undefined && feeling.val() == "" && location.val() == "" && voice_notes === undefined && poll_options === undefined && reel === undefined && video === undefined && audio === undefined && file === undefined) {
       return;
     }
     /* button loading */
     button_status(_this, "loading");
     posts_stream.data('loading', true);
-    $.post(api['posts/post'], { 'handle': handle, 'id': id, 'message': textarea.val(), 'link': JSON.stringify(link), 'photos': JSON.stringify(photos), 'album': album.val(), 'feeling_action': feeling.data('action'), 'feeling_value': feeling.val(), 'location': location.val(), 'colored_pattern': publisher.data('colored_pattern'), 'voice_notes': JSON.stringify(voice_notes), 'poll_options': JSON.stringify(poll_options), 'reel': JSON.stringify(reel), 'reel_thumbnail': reel_thumbnail, 'video': JSON.stringify(video), 'video_thumbnail': video_thumbnail, 'video_category': video_category, 'audio': JSON.stringify(audio), 'file': JSON.stringify(file), 'privacy': privacy, 'is_anonymous': is_anonymous, 'is_schedule': is_schedule, 'schedule_date': schedule_date, 'for_adult': for_adult, 'tips_enabled': tips_enabled, 'for_subscriptions': for_subscriptions, 'subscriptions_image': subscriptions_image_input.val(), 'is_paid': is_paid, 'is_paid_locked': is_paid_locked, 'post_price': paid_price_input.val(), 'paid_text': paid_text_input.val(), 'paid_image': paid_image_input.val(), 'post_as_page': post_as_page }, function (response) {
+    var payload = {
+      'handle': handle,
+      'id': id,
+      'message': editor.val(),
+      'link': JSON.stringify(link),
+      'photos': JSON.stringify(photos),
+      'album': album.val(),
+      'feeling_action': feeling.data('action'),
+      'feeling_value': feeling.val(),
+      'location': location.val(),
+      'colored_pattern': publisher.data('colored_pattern'),
+      'voice_notes': JSON.stringify(voice_notes),
+      'poll_options': JSON.stringify(poll_options),
+      'reel': JSON.stringify(reel),
+      'reel_thumbnail': reel_thumbnail,
+      'video': JSON.stringify(video),
+      'video_thumbnail': video_thumbnail,
+      'video_category': video_category,
+      'audio': JSON.stringify(audio),
+      'file': JSON.stringify(file),
+      'privacy': privacy,
+      'is_anonymous': is_anonymous,
+      'is_schedule': is_schedule,
+      'schedule_date': schedule_date,
+      'for_adult': for_adult,
+      'tips_enabled': tips_enabled,
+      'for_subscriptions': for_subscriptions,
+      'subscriptions_image': subscriptions_image_input.val(),
+      'is_paid': is_paid,
+      'is_paid_locked': is_paid_locked,
+      'post_price': paid_price_input.val(),
+      'paid_text': paid_text_input.val(),
+      'paid_image': paid_image_input.val(),
+      'is_collaborative': is_collaborative,
+      'collaborative_users': collaborative_users,
+      'collaborative_percent': collaborative_percent_input.val(),
+      'post_as_page': post_as_page
+    };
+    $.post(api['posts/post'], payload, function (response) {
       if (response.callback) {
         /* button reset */
         button_status(_this, "reset");
@@ -1060,8 +1210,12 @@ $(function () {
         /* prepare publisher */
         /* remove (active|activated|disabled) from all tabs */
         publisher.find('.js_publisher-tab').removeClass('active activated disabled');
-        textarea.val('').removeAttr('style');
+        /* empty textarea */
+        textarea.val('').removeAttr('style').hide();
         textarea.attr('placeholder', textarea.data('init-placeholder'));
+        /* empty quill editor */
+        quill_editor_reset(quill);
+        editor.val('');
         /* hide & empty album */
         album.val('');
         album_meta.hide();
@@ -1146,8 +1300,9 @@ $(function () {
         publisher.find('.js_publisher-paid-toggle').prop('disabled', false);
         publisher.find("#paid-toggle-wrapper").removeClass("disabled");
         /* reset paid lock toggle */
-        paid_locked_wrapper.toggleClass('x-hidden');
+        paid_locked_wrapper.hide();
         publisher.find('.js_publisher-paid-lock-toggle').prop('checked', false);
+        publisher.find('.js_publisher-paid-lock-toggle').prop('disabled', false);
         /* reset paid price */
         paid_price_wrapper.hide();
         paid_price_input.val('');
@@ -1158,13 +1313,20 @@ $(function () {
         paid_image_wrapper.find('.x-image').removeAttr("style");
         paid_image_wrapper.find('.js_x-image-remover').hide();
         paid_image_input.val('');
+        /* uncheck collaborative toggle */
+        publisher.find('.js_publisher-collaborative-toggle').prop('checked', false);
+        /* reset collaborative users */
+        collaborative_users_wrapper.hide();
+        collaborative_users_input.val('');
+        /* reset collaborative percentage */
+        collaborative_percent_wrapper.hide();
+        collaborative_percent_input.val('');
         /* reset privacy */
         publisher.find('.btn-group').show();
         publisher.find('.js_publisher-privacy-public').hide();
         /* collapse the publisher */
         $('body').removeClass('publisher-focus');
         publisher.find('.publisher-slider').slideUp();
-        publisher.find('.publisher-emojis').fadeOut();
         /* release the loading status */
         posts_stream.removeData('loading');
         if (response.approval) {
@@ -1191,37 +1353,47 @@ $(function () {
   });
   /* publisher schedule toggle */
   $('body').on('click', '.js_publisher-schedule-toggle', function () {
-    var _this = $(this);
     $("#schedule-toggle-wrapper").toggle();
   });
   /* publisher anonymous toggle */
   $('body').on('click', '.js_publisher-anonymous-toggle', function () {
-    var _this = $(this);
-    var publisher = _this.parents('.publisher');
+    var publisher = $(this).parents('.publisher');
     publisher_tab(publisher, "anonymous");
     publisher.find('.btn-group').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
   });
   /* publisher subscribers toggle */
   $('body').on('click', '.js_publisher-subscribers-toggle', function () {
-    var _this = $(this);
-    var publisher = _this.parents('.publisher');
+    var publisher = $(this).parents('.publisher');
     $("#paid-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-paid-toggle").prop("disabled", !$(".js_publisher-paid-toggle").prop("disabled"));
+    $("#collaborative-toggle-wrapper").toggleClass("disabled");
+    $(".js_publisher-collaborative-toggle").prop("disabled", !$(".js_publisher-collaborative-toggle").prop("disabled"));
     $("#subscriptions-image-wrapper").toggle();
     publisher.find('.btn-group').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
   });
   /* publisher paid toggle */
   $('body').on('click', '.js_publisher-paid-toggle', function () {
-    var _this = $(this);
-    var publisher = _this.parents('.publisher');
+    var publisher = $(this).parents('.publisher');
     $("#subscribers-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-subscribers-toggle").prop("disabled", !$(".js_publisher-subscribers-toggle").prop("disabled"));
-    $("#paid-lock-toggle-wrapper").toggleClass('x-hidden');
+    $("#paid-lock-toggle-wrapper").toggle();
     $("#paid-price-wrapper").toggle();
     $("#paid-text-wrapper").toggle();
     $("#paid-image-wrapper").toggle();
+    publisher.find('.btn-group').toggle();
+    publisher.find('.js_publisher-privacy-public').toggle();
+  });
+  /* publisher collaborative toggle */
+  $('body').on('click', '.js_publisher-collaborative-toggle', function () {
+    var publisher = $(this).parents('.publisher');
+    $("#anonymous-toggle-wrapper").toggleClass("disabled");
+    $(".js_publisher-anonymous-toggle").prop("disabled", !$(".js_publisher-anonymous-toggle").prop("disabled"));
+    $("#subscribers-toggle-wrapper").toggleClass("disabled");
+    $(".js_publisher-subscribers-toggle").prop("disabled", !$(".js_publisher-subscribers-toggle").prop("disabled"));
+    $("#collaborative-users-wrapper").toggle();
+    $("#collaborative-percent-wrapper").toggle();
     publisher.find('.btn-group').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
   });
@@ -1351,6 +1523,136 @@ $(function () {
         button_status(_this, "reset");
         show_error_modal();
       });
+  });
+
+
+  // handle AI
+  /* update AI credits cost */
+  $('body').on('change keyup', '.js_ai-credits-amount', function () {
+    var credits_amount = $(this).val();
+    var node_cost = $(this).data('node-cost');
+    if (credits_amount == 0) {
+      $('.js_ai-credits-cost-text').hide();
+      return;
+    }
+    var total_cost = (1 / parseFloat(ai_credit_cost)) * credits_amount;
+    $('.js_ai-credits-cost').text(total_cost);
+    $('.js_ai-credits-cost-text').show();
+  });
+  /* generate AI text */
+  $('body').on('submit', '.js_ai-generate-text', function (e) {
+    e.preventDefault();
+    var form = $(this);
+    var submit = form.find('button[type="submit"]');
+    var error = form.find('.alert.alert-danger');
+    button_status(submit, "loading");
+    /* get ajax response */
+    $.post(api['ai/generate'], form.serialize(), function (response) {
+      /* button reset */
+      button_status(submit, "reset");
+      /* handle response */
+      if (response.success) {
+        /* hide error */
+        error.hide();
+        /* update ai credits */
+        $('.js_ai-credits-balance').text(response.ai_credits);
+        /* update words balance */
+        $('.js_ai-words-balance').text(response.words_balance);
+        /* update generated title */
+        $('.js_ai-generated-title').val(response.generated_title);
+        /* update generated text */
+        $('.js_ai-generated-text').val(response.generated_text);
+        /* show generated text container */
+        $('.js_ai-generated-text-container').show();
+        /* show use generated text button */
+        $('.js_ai-use-generated-text').show();
+      } else if (response.error) {
+        error.html(response.message).slideDown();
+      } else if (response.callback) {
+        eval(response.callback);
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(submit, "reset");
+        /* handle error */
+        error.html(__['There is something that went wrong!']).slideDown();
+      });
+  });
+  /* use generated text */
+  $('body').on('click', '.js_ai-use-generated-text', function () {
+    var handle = $(this).data('handle');
+    /* close modal */
+    $('#modal').modal('hide');
+    /* check the handle */
+    if (handle == 'post') {
+      /* add generated text to publisher */
+      update_quill_editor($('.publisher').find('.js_quill').first().data('quill'), $('.js_ai-generated-text').val());
+    } else if (handle == 'blog') {
+      /* add generated title to blog title */
+      $('.js_blog-title').val($('.js_ai-generated-title').val());
+      /* add generated text to blog */
+      tinymce.get('blog-editor').setContent($('.js_ai-generated-text').val());
+    }
+  });
+  /* generate AI image */
+  $('body').on('submit', '.js_ai-generate-image', function (e) {
+    e.preventDefault();
+    var form = $(this);
+    var submit = form.find('button[type="submit"]');
+    var error = form.find('.alert.alert-danger');
+    button_status(submit, "loading");
+    /* get ajax response */
+    $.post(api['ai/generate'], form.serialize(), function (response) {
+      /* button reset */
+      button_status(submit, "reset");
+      /* handle response */
+      if (response.success) {
+        /* hide error */
+        error.hide();
+        /* update ai credits */
+        $('.js_ai-credits-balance').text(response.ai_credits);
+        /* update images balance */
+        $('.js_ai-images-balance').text(response.images_balance);
+        /* update generated image */
+        var imageSrc = 'data:image/png;base64,' + response.generated_image;
+        $('.js_ai-generated-image').attr('src', imageSrc);
+        /* show generated image container */
+        $('.js_ai-generated-image-container').show();
+        /* show use generated image button */
+        $('.js_ai-use-generated-image').show();
+      } else if (response.error) {
+        error.html(response.message).slideDown();
+      } else if (response.callback) {
+        eval(response.callback);
+      }
+    }, "json")
+      .fail(function () {
+        /* button reset */
+        button_status(submit, "reset");
+        /* handle error */
+        error.html(__['There is something that went wrong!']).slideDown();
+      });
+  });
+  /* use generated image */
+  $('body').on('click', '.js_ai-use-generated-image', function () {
+    /* close modal */
+    $('#modal').modal('hide');
+    /* get form */
+    var form = $('.js_publisher-images-uploader').find('form');
+    var input = form.find('input[type="file"]');
+    /* get base64 image */
+    var imageSrc = $('.js_ai-generated-image').attr('src');
+    if (!imageSrc) return;
+    /* convert base64 → File */
+    var file = base64ToFile(imageSrc, 'ai-image.png');
+    /* create DataTransfer */
+    var dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    /* assign files to input */
+    input[0].files = dataTransfer.files;
+    /* trigger upload */
+    input.trigger('change');
   });
 
 
@@ -2704,6 +3006,14 @@ $(function () {
           show_error_modal();
         });
     }
+  });
+
+
+  // handle blogs
+  /* add reference */
+  $('body').on('click', '.js_add-blog-reference', function () {
+    var index = $('#blog-references-list .auto-connect-node').length + 1;
+    $('#blog-references-list').append(render_template('#blog-reference', { index })).fadeIn();
   });
 
 

@@ -3,8 +3,8 @@
 /**
  * APIs -> index
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // set API_STACK & API_BASE
@@ -88,7 +88,7 @@ checkAPIRequest();
 // get system session hash
 $session_hash = get_system_session_hash($system['session_hash']);
 if (!$session_hash) {
-  apiError("Your session hash has been broken, Please contact Delus's support!");
+  apiError("Your session hash has been broken, Please contact Sngine's support!");
 }
 
 

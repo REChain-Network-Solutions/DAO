@@ -29,7 +29,9 @@
       </div>
       {if $_user['monetization_plan']}
         <div class="mt10">
-          <span class="badge bg-info">{print_money($_user['monetization_plan']['price'])} / {if $_user['monetization_plan']['period_num'] != '1'}{$_user['monetization_plan']['period_num']}{/if} {__($_user['monetization_plan']['period']|ucfirst)}</span>
+          <span class="badge bg-info">
+            {if $_user['monetization_plan']['discounted_price']}{print_money($_user['monetization_plan']['discounted_price'])}{/if}{if $_user['monetization_plan']['discounted_price']}<span style="text-decoration: line-through;" class="ml5">{/if}{print_money($_user['monetization_plan']['price'])}{if $_user['monetization_plan']['discounted_price']}</span>{/if} / {if $_user['monetization_plan']['period_num'] != '1'}{$_user['monetization_plan']['period_num']}{/if} {__($_user['monetization_plan']['period']|ucfirst)}
+          </span>
         </div>
       {/if}
       <div class="mt10">

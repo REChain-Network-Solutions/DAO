@@ -3,8 +3,8 @@
 /**
  * trait -> merits
  *
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 trait MeritsTrait

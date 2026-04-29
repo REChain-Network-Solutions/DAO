@@ -3,8 +3,8 @@
 /**
  * ajax -> payments -> trial
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootstrap
@@ -25,7 +25,7 @@ try {
         _error(400);
       }
 
-      // check package
+      // get package
       $package = $user->get_package($_POST['package_id']);
       if (!$package) {
         _error(400);
@@ -56,7 +56,7 @@ try {
         _error(400);
       }
 
-      // get plan
+      // get monetization plan
       $monetization_plan = $user->get_monetization_plan($_POST['plan_id'], true);
       if (!$monetization_plan) {
         _error(400);

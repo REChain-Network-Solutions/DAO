@@ -143,62 +143,62 @@
           </div>
         {/if}
 
-        {if $rows}
-          <div class="posts-filter">
-            <span>{__("Products")}</span>
-            <div class="float-end">
-              <!-- sort -->
-              <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
-                {if !$sort || $sort == "latest"}
-                  <i class="fas fa-bars fa-fw"></i> {__("Latest")}
-                {elseif $sort == "price-high"}
-                  <i class="fas fa-sort-amount-down fa-fw"></i> {__("Price High")}
-                {elseif $sort == "price-low"}
-                  <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Price Low")}
-                {/if}
+        <div class="posts-filter">
+          <span>{__("Products")}</span>
+          <div class="float-end">
+            <!-- sort -->
+            <a href="#" data-bs-toggle="dropdown" class="countries-filter">
+              {if !$sort || $sort == "latest"}
+                <i class="fas fa-bars fa-fw"></i> {__("Latest")}
+              {elseif $sort == "price-high"}
+                <i class="fas fa-sort-amount-down fa-fw"></i> {__("Price High")}
+              {elseif $sort == "price-low"}
+                <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Price Low")}
+              {/if}
+            </a>
+            <div class="dropdown-menu dropdown-menu-end">
+              <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
+              <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Price High")}</a>
+              <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Price Low")}</a>
+            </div>
+            <!-- sort -->
+            <!-- location filter -->
+            {if $user->_logged_in && $system['location_finder_enabled']}
+              <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
+                <i class="fa fa-map-marker-alt mr5"></i>
+                <span>{__("Distance")}</span>
               </a>
               <div class="dropdown-menu dropdown-menu-end">
-                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=latest" class="dropdown-item"><i class="fas fa-bars fa-fw mr10"></i>{__("Latest")}</a>
-                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-high" class="dropdown-item"><i class="fas fa-sort-amount-down fa-fw mr10"></i>{__("Price High")}</a>
-                <a href="?{if $location}location={$location}&{/if}{if $distance}distance={$distance}{if $location}&{else}?{/if}{/if}sort=price-low" class="dropdown-item"><i class="fas fa-sort-amount-down-alt fa-fw mr10"></i>{__("Price Low")}</a>
-              </div>
-              <!-- sort -->
-              <!-- location filter -->
-              {if $user->_logged_in && $system['location_finder_enabled']}
-                <a href="#" data-bs-toggle="dropdown" class="countries-filter">
-                  <i class="fa fa-map-marker-alt mr5"></i>
-                  <span>{__("Distance")}</span>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  <form class="ptb15 plr15" method="get" action="?">
-                    <div class="form-group">
-                      <label class="form-label">{__("Distance")}</label>
-                      <div>
-                        {if $location}
-                          <input type="hidden" name="location" value="{$location}">
-                        {/if}
-                        {if $sort}
-                          <input type="hidden" name="sort" value="{$sort}">
-                        {/if}
-                        <div class="d-grid mb10">
-                          <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
-                        </div>
-                        <div class="input-group">
-                          <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
-                          <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
-                        </div>
+                <form class="ptb15 plr15" method="get" action="?">
+                  <div class="form-group">
+                    <label class="form-label">{__("Distance")}</label>
+                    <div>
+                      {if $location}
+                        <input type="hidden" name="location" value="{$location}">
+                      {/if}
+                      {if $sort}
+                        <input type="hidden" name="sort" value="{$sort}">
+                      {/if}
+                      <div class="d-grid mb10">
+                        <input type="range" class="custom-range" min="1" max="5000" name="distance" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance_value.value=this.value">
+                      </div>
+                      <div class="input-group">
+                        <span class="input-group-text" id="basic-addon1">{if $system['system_distance'] == "mile"}{__("ML")}{else}{__("KM")}{/if}</span>
+                        <input disabled type="number" class="form-control" min="1" max="5000" name="distance_value" value="{if $distance}{$distance}{else}5000{/if}" oninput="this.form.distance.value=this.value">
                       </div>
                     </div>
-                    <div class="d-grid">
-                      <button type="submit" class="btn btn-md btn-primary">{__("Filter")}</button>
-                    </div>
-                  </form>
-                </div>
-              {/if}
-              <!-- location filter -->
-            </div>
+                  </div>
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-md btn-primary">{__("Filter")}</button>
+                  </div>
+                </form>
+              </div>
+            {/if}
+            <!-- location filter -->
           </div>
+        </div>
 
+        {if $rows}
           <div class="row">
             {foreach $rows as $post}
               {include file='__feeds_product.tpl'}
@@ -334,7 +334,7 @@
               {__("Total Price")}
               <p>
                 <span class="text-xxlg">
-                  {print_money(number_format($cart['total'], 2))}
+                  {print_money($cart['total'])}
                 </span>
               </p>
             </div>

@@ -3,8 +3,8 @@
 /**
  * live
  * 
- * @package Delus
- * @author Sorokin Dmitry Olegovich
+ * @package Sngine
+ * @author Zamblek
  */
 
 // fetch bootloader
@@ -13,20 +13,23 @@ require('bootloader.php');
 // user access
 user_access();
 
+// check demo account
+if ($user->_data['user_demo']) {
+  _error('PERMISSION', __("You can't do this with demo account"));
+}
 
 // live enabled
 if (!$system['live_enabled']) {
   _error(404);
 }
 
-// live permission
+// check live permission
 if (!$user->_data['can_go_live']) {
-  _error('PERMISSION');
-}
-
-// check demo account
-if ($user->_data['user_demo']) {
-  _error('PERMISSION');
+  if (!$user->check_module_package_permission("stories_permission")) {
+    redirect("/packages?highlight=true");
+  } else {
+    _error('PERMISSION');
+  }
 }
 
 // check approval system

@@ -140,7 +140,7 @@
                     </a>
                   </td>
                   <td>
-                    {print_money(number_format($row['amount']))}
+                    {print_money($row['amount'])}
                   </td>
                   <td>
                     <span class="badge rounded-pill badge-lg bg-primary">{$row['method']|capitalize}</span>
@@ -215,7 +215,7 @@
                     </a>
                   </td>
                   <td>
-                    {print_money(number_format($row['amount']))}
+                    {print_money($row['amount'])}
                   </td>
                   <td>
                     <span class="badge rounded-pill badge-lg bg-info">{$row['handle']|capitalize}</span>
@@ -338,7 +338,7 @@
                       {$row['title']}
                     </a>
                   </td>
-                  <td>{print_money(number_format($row['price']))}</td>
+                  <td>{print_money($row['price'])}</td>
                   <td>{$row['payment_time']}</td>
                 </tr>
               {/foreach}
@@ -418,7 +418,7 @@
                       {/if}
                     </span>
                   </td>
-                  <td>{print_money(number_format($row['amount']))}</td>
+                  <td>{print_money($row['amount'])}</td>
                   <td>{$row['date']}</td>
                 </tr>
               {/foreach}

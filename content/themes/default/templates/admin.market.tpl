@@ -398,7 +398,7 @@
                     {/if}
                   </td>
                   <td>
-                    {print_money(number_format($row['sub_total'], 2))}
+                    {print_money($row['sub_total'])}
                   </td>
                   <td><span class="js_moment" data-time="{$row['insert_time']}">{$row['insert_time']}</span></td>
                   <td>
@@ -586,7 +586,7 @@
           <i class="fa fa-triangle-exclamation fa-2x"></i>
         </div>
         <div class="text pt5">
-          {__("PayPal & Moneypoolscash support automatic payout APIs so no need to make them manually")}.
+          {__("PayPal support automatic payout APIs so no need to make them manually")}.
         </div>
       </div>
 

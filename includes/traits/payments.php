@@ -249,16 +249,20 @@ trait PaymentsTrait
    * @param string $handle
    * @param integer $handle_id
    * @param string $subscription_id
+   * @param integer $user_id
    * @return void
    */
-  public function insert_recurring_payments($payment_gateway, $handle, $handle_id, $subscription_id)
+  public function insert_recurring_payments($payment_gateway, $handle, $handle_id, $subscription_id, $user_id = null)
   {
     global $db, $date;
     /* check handle */
     if (!in_array($handle, ['packages', 'subscribe'])) {
       throw new Exception(__("Invalid handle"));
     }
-    $db->query(sprintf("INSERT INTO users_recurring_payments (user_id, payment_gateway, handle, handle_id, subscription_id, time) VALUES (%s, %s, %s, %s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($payment_gateway), secure($handle), secure($handle_id, 'int'), secure($subscription_id), secure($date)));
+    /* check user id */
+    $user_id = ($user_id == null) ? $this->_data['user_id'] : $user_id;
+    /* insert the recurring payment */
+    $db->query(sprintf("INSERT INTO users_recurring_payments (user_id, payment_gateway, handle, handle_id, subscription_id, time) VALUES (%s, %s, %s, %s, %s, %s)", secure($user_id, 'int'), secure($payment_gateway), secure($handle), secure($handle_id, 'int'), secure($subscription_id), secure($date)));
   }
 
 

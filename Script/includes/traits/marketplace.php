@@ -393,7 +393,7 @@ trait MarketplaceTrait
         }
         if (!$order['is_cash_on_delivery']) {
           /* update buyer's wallet balance */
-          $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($order['sub_total'], 'float'), secure($order['buyer_id'], 'int'))) or _error("SQL_ERROR_THROWEN");
+          $this->wallet_update_balance($order['sub_total'], '+', $order['buyer_id']);
           /* wallet transaction */
           $this->wallet_set_transaction($order['buyer_id'], 'market', 0, $order['sub_total'], 'in');
         }

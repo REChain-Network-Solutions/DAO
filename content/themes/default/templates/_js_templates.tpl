@@ -2142,6 +2142,69 @@
                 </div>
               </div>
             {/if}
+            {if $system['cashapp_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="cashapp">
+                    {include file='__svg_icons.tpl' icon="cashapp" class="mr5" width="20px" height="20px"}{__("Cashapp")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['blik_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="blik">
+                    {include file='__svg_icons.tpl' icon="blik" class="mr5" width="20px" height="20px"}{__("Blik")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['eps_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="eps">
+                    {include file='__svg_icons.tpl' icon="eps" class="mr5" width="20px" height="20px"}{__("EPS")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['ideal_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="ideal">
+                    {include file='__svg_icons.tpl' icon="ideal" class="mr5" width="20px" height="20px"}{__("iDEAL")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['bancontact_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="bancontact">
+                    {include file='__svg_icons.tpl' icon="bancontact" class="mr5" width="20px" height="20px"}{__("Bancontact")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['przelewy24_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="p24">
+                    {include file='__svg_icons.tpl' icon="przelewy24" class="mr5" width="20px" height="20px"}{__("Przelewy24")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['oxxo_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-stripe btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="oxxo">
+                    {include file='__svg_icons.tpl' icon="oxxo" class="mr5" width="20px" height="20px"}{__("OXXO")}
+                  </button>
+                </div>
+              </div>
+            {/if}
             {if $system['paystack_enabled']}
               <div class="col-12 col-sm-6 mb10">
                 <div class="d-grid">
@@ -2264,6 +2327,15 @@
                 <div class="d-grid">
                   <button class="js_payment-coinbase btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal}>
                     {include file='__svg_icons.tpl' icon="coinbase" class="mr10" width="20px" height="20px"}{__("Coinbase")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {if $system['ccbill_enabled']}
+              <div class="col-12 col-sm-6 mb10">
+                <div class="d-grid">
+                  <button class="js_payment-ccbill btn btn-md btn-payment" data-handle="{literal}{{handle}}{/literal}" {literal}{{#id}}{/literal} data-id="{literal}{{id}}{/literal}" {literal}{{/id}}{/literal} {literal}{{#price}}{/literal} data-price="{literal}{{price}}{/literal}" {literal}{{/price}}{/literal} {literal}{{#name}}{/literal} data-name="{literal}{{name}}{/literal}" {literal}{{/name}}{/literal} {literal}{{#img}}{/literal} data-img="{literal}{{img}}{/literal}" {literal}{{/img}}{/literal} data-method="ccbill">
+                    {include file='__svg_icons.tpl' icon="ccbill" class="mr5" width="20px" height="20px"}{__("CCBill")}
                   </button>
                 </div>
               </div>

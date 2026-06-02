@@ -3,26 +3,26 @@
   {__("Linked Accounts")}
 </div>
 <div class="card-body">
-  {if $system['facebook_login_enabled']}
+  {if $system['apple_login_enabled']}
     <div class="form-table-row">
-      <div class="avatar">
-        {include file='__svg_icons.tpl' icon="facebook" width="40px" height="40px"}
+      <div class="avatar d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+        <i class="fab fa-apple fa-2x"></i>
       </div>
       <div>
-        <div class="form-label h6 mb5">{__("Facebook")}</div>
+        <div class="form-label h6 mb5">{__("Apple")}</div>
         <div class="form-text d-none d-sm-block">
-          {if $user->_data['facebook_connected']}
-            {__("Your account is connected to")} {__("Facebook")}
+          {if $user->_data['apple_connected']}
+            {__("Your account is connected to")} {__("Apple")}
           {else}
-            {__("Connect your account to")} {__("Facebook")}
+            {__("Connect your account to")} {__("Apple")}
           {/if}
         </div>
       </div>
       <div class="text-end">
-        {if $user->_data['facebook_connected']}
-          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/facebook">{__("Disconnect")}</a>
+        {if $user->_data['apple_connected']}
+          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/apple">{__("Disconnect")}</a>
         {else}
-          <a class="btn btn-sm btn-primary" href="{$system['system_url']}/connect/facebook">{__("Connect")}</a>
+          <a class="btn btn-sm btn-primary" href="{$system['system_url']}/connect/apple">{__("Connect")}</a>
         {/if}
       </div>
     </div>
@@ -53,6 +53,31 @@
     </div>
   {/if}
 
+  {if $system['facebook_login_enabled']}
+    <div class="form-table-row">
+      <div class="avatar">
+        {include file='__svg_icons.tpl' icon="facebook" width="40px" height="40px"}
+      </div>
+      <div>
+        <div class="form-label h6 mb5">{__("Facebook")}</div>
+        <div class="form-text d-none d-sm-block">
+          {if $user->_data['facebook_connected']}
+            {__("Your account is connected to")} {__("Facebook")}
+          {else}
+            {__("Connect your account to")} {__("Facebook")}
+          {/if}
+        </div>
+      </div>
+      <div class="text-end">
+        {if $user->_data['facebook_connected']}
+          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/facebook">{__("Disconnect")}</a>
+        {else}
+          <a class="btn btn-sm btn-primary" href="{$system['system_url']}/connect/facebook">{__("Connect")}</a>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   {if $system['twitter_login_enabled']}
     <div class="form-table-row">
       <div class="avatar">
@@ -73,6 +98,31 @@
           <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/twitter">{__("Disconnect")}</a>
         {else}
           <a class="btn btn-sm btn-primary" href="{$system['system_url']}/connect/twitter">{__("Connect")}</a>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  {if $system['discord_login_enabled']}
+    <div class="form-table-row">
+      <div class="avatar">
+        {include file='__svg_icons.tpl' icon="discord" width="40px" height="40px"}
+      </div>
+      <div>
+        <div class="form-label h6 mb5">{__("Discord")}</div>
+        <div class="form-text d-none d-sm-block">
+          {if $user->_data['discord_connected']}
+            {__("Your account is connected to")} {__("Discord")}
+          {else}
+            {__("Connect your account to")} {__("Discord")}
+          {/if}
+        </div>
+      </div>
+      <div class="text-end">
+        {if $user->_data['discord_connected']}
+          <a class="btn btn-sm btn-danger" href="{$system['system_url']}/revoke/discord">{__("Disconnect")}</a>
+        {else}
+          <a class="btn btn-sm btn-primary" href="{$system['system_url']}/connect/discord">{__("Connect")}</a>
         {/if}
       </div>
     </div>

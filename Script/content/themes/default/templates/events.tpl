@@ -134,19 +134,21 @@
           <!-- type filter (in person or online) -->
           <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
             <i class="fa fa-table fa-fw"></i>
-            {if $selected_type}
-              {if $selected_type == "all"}
+            <span class="d-none d-md-inline-block">
+              {if $selected_type}
+                {if $selected_type == "all"}
+                  {__("All Types")}
+                {/if}
+                {if $selected_type == "in_person"}
+                  {__("In Person")}
+                {/if}
+                {if $selected_type == "online"}
+                  {__("Online")}
+                {/if}
+              {else}
                 {__("All Types")}
               {/if}
-              {if $selected_type == "in_person"}
-                {__("In Person")}
-              {/if}
-              {if $selected_type == "online"}
-                {__("Online")}
-              {/if}
-            {else}
-              {__("All Types")}
-            {/if}
+            </span>
           </a>
           <div class="dropdown-menu dropdown-menu-end countries-dropdown">
             <a class="dropdown-item" href="?type=all{if $selected_country}&country={$selected_country['country_name']}{/if}{if $selected_language}&language={$selected_language['code']}{/if}">
@@ -165,11 +167,13 @@
           {if $system['events_location_filter_enabled']}
             <a href="#" data-bs-toggle="dropdown" class="countries-filter mr10">
               <i class="fa fa-globe fa-fw"></i>
-              {if $selected_country}
-                <span>{$selected_country['country_name']}</span>
-              {else}
-                <span>{__("All Countries")}</span>
-              {/if}
+              <span class="d-none d-md-inline-block">
+                {if $selected_country}
+                  {$selected_country['country_name']}
+                {else}
+                  {__("All Countries")}
+                {/if}
+              </span>
             </a>
             <div class="dropdown-menu dropdown-menu-end countries-dropdown">
               <div class="js_scroller">
@@ -189,11 +193,13 @@
           <!-- language filter -->
           <a href="#" data-bs-toggle="dropdown" class="countries-filter">
             <i class="fa fa-language fa-fw"></i>
-            {if $selected_language}
-              <span>{$selected_language['title']}</span>
-            {else}
-              <span>{__("All Languages")}</span>
-            {/if}
+            <span class="d-none d-md-inline-block">
+              {if $selected_language}
+                {$selected_language['title']}
+              {else}
+                {__("All Languages")}
+              {/if}
+            </span>
           </a>
           <div class="dropdown-menu dropdown-menu-end countries-dropdown">
             <div class="js_scroller">

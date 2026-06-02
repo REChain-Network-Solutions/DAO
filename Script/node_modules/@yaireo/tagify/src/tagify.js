@@ -128,6 +128,7 @@ Tagify.prototype = {
         }
 
         var mergedDefaults = extend({}, DEFAULTS, (settings.mode == 'mix' ? mixModeDefaults : {}));
+        this.origSettings = extend({}, settings);
         var _s = this.settings = extend({}, mergedDefaults, settings)
 
         _s.disabled = input.hasAttribute('disabled')
@@ -1070,11 +1071,14 @@ Tagify.prototype = {
         this.settings.userInput = true;
         this.setContentEditable(!toggle)
 
+        // when readonly is toggled to false, re-bind all events and change back auto-modified settings
         if( !toggle ) {
             // first unbind all events
             this.events.binding.call(this, true)
             // re-bind all events
             this.events.binding.call(this)
+
+            _s.dropdown.enabled = this.origSettings.dropdown.enabled;
         }
     },
 
@@ -1784,7 +1788,7 @@ Tagify.prototype = {
             focus = options.focus !== undefined ? options.focus : !isReset;
 
         // mix-mode layout is not “tags + input siblings”; moving the input would corrupt the DOM
-        if( _s.mode == 'mix' )
+        if( _s.mode == 'mix' || this.state.dropdown.visible )
             return false;
 
         if( !input || !scope || parent != scope )

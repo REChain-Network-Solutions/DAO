@@ -56,7 +56,7 @@ try {
 
         case 'wallet':
           /* update user wallet balance */
-          $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($transfer_request['price']), secure($transfer_request['user_id'], 'int')));
+          $user->wallet_update_balance($transfer_request['price'], '+', $transfer_request['user_id']);
           /* wallet transaction */
           $user->wallet_set_transaction($transfer_request['user_id'], 'recharge', 0, $transfer_request['price'], 'in');
           /* log payment */

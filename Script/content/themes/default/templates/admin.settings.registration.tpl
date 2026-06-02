@@ -503,18 +503,18 @@
 
         <div class="divider"></div>
 
-        <!-- facebook -->
+        <!-- apple -->
         <div class="form-table-row">
-          <div class="avatar">
-            {include file='__svg_icons.tpl' icon="facebook" width="40px" height="40px"}
+          <div class="avatar d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            {include file='__svg_icons.tpl' icon="apple" width="40px" height="40px"}
           </div>
           <div>
-            <div class="form-label h6 mb5">{__("Facebook")}</div>
-            <div class="form-text d-none d-sm-block">{__("Turn registration/login via Facebook On and Off")}</div>
+            <div class="form-label h6 mb5">{__("Apple")}</div>
+            <div class="form-text d-none d-sm-block">{__("Turn registration/login via Sign in with Apple On and Off")}</div>
           </div>
           <div class="text-end">
-            <label class="switch" for="facebook_login_enabled">
-              <input type="checkbox" name="facebook_login_enabled" id="facebook_login_enabled" {if $system['facebook_login_enabled']}checked{/if}>
+            <label class="switch" for="apple_login_enabled">
+              <input type="checkbox" name="apple_login_enabled" id="apple_login_enabled" {if $system['apple_login_enabled']}checked{/if}>
               <span class="slider round"></span>
             </label>
           </div>
@@ -522,11 +522,25 @@
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Facebook App ID")}
+            {__("Apple Services ID")}
           </label>
           <div class="col-md-9">
             {if !$user->_data['user_demo']}
-              <input type="text" class="form-control" name="facebook_appid" value="{$system['facebook_appid']}">
+              <input type="text" class="form-control" name="apple_appid" value="{$system['apple_appid']}" placeholder="com.example.web">
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+            <div class="form-text">{__("The Services ID (client identifier) from your Apple Developer account")}</div>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Apple Team ID")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <input type="text" class="form-control" name="apple_team_id" value="{$system['apple_team_id']}">
             {else}
               <input type="password" class="form-control" value="*********">
             {/if}
@@ -535,17 +549,31 @@
 
         <div class="row form-group">
           <label class="col-md-3 form-label">
-            {__("Facebook App Secret")}
+            {__("Apple Key ID")}
           </label>
           <div class="col-md-9">
             {if !$user->_data['user_demo']}
-              <input type="text" class="form-control" name="facebook_secret" value="{$system['facebook_secret']}">
+              <input type="text" class="form-control" name="apple_key_id" value="{$system['apple_key_id']}">
             {else}
               <input type="password" class="form-control" value="*********">
             {/if}
           </div>
         </div>
-        <!-- facebook -->
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Apple Private Key")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <textarea class="form-control" name="apple_key_content" rows="6" placeholder="-----BEGIN PRIVATE KEY-----">{$system['apple_key_content']}</textarea>
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+            <div class="form-text">{__("Paste the contents of the .p8 key file created for Sign in with Apple")}</div>
+          </div>
+        </div>
+        <!-- apple -->
 
         <div class="divider"></div>
 
@@ -595,6 +623,52 @@
 
         <div class="divider"></div>
 
+        <!-- facebook -->
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="facebook" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6 mb5">{__("Facebook")}</div>
+            <div class="form-text d-none d-sm-block">{__("Turn registration/login via Facebook On and Off")}</div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="facebook_login_enabled">
+              <input type="checkbox" name="facebook_login_enabled" id="facebook_login_enabled" {if $system['facebook_login_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Facebook App ID")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <input type="text" class="form-control" name="facebook_appid" value="{$system['facebook_appid']}">
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Facebook App Secret")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <input type="text" class="form-control" name="facebook_secret" value="{$system['facebook_secret']}">
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+          </div>
+        </div>
+        <!-- facebook -->
+
+        <div class="divider"></div>
+
         <!-- X -->
         <div class="form-table-row">
           <div class="avatar">
@@ -638,6 +712,52 @@
           </div>
         </div>
         <!-- X -->
+
+        <div class="divider"></div>
+
+        <!-- discord -->
+        <div class="form-table-row">
+          <div class="avatar">
+            {include file='__svg_icons.tpl' icon="discord" width="40px" height="40px"}
+          </div>
+          <div>
+            <div class="form-label h6 mb5">{__("Discord")}</div>
+            <div class="form-text d-none d-sm-block">{__("Turn registration/login via Discord On and Off")}</div>
+          </div>
+          <div class="text-end">
+            <label class="switch" for="discord_login_enabled">
+              <input type="checkbox" name="discord_login_enabled" id="discord_login_enabled" {if $system['discord_login_enabled']}checked{/if}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Discord Application ID")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <input type="text" class="form-control" name="discord_appid" value="{$system['discord_appid']}">
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+          </div>
+        </div>
+
+        <div class="row form-group">
+          <label class="col-md-3 form-label">
+            {__("Discord Application Secret")}
+          </label>
+          <div class="col-md-9">
+            {if !$user->_data['user_demo']}
+              <input type="text" class="form-control" name="discord_secret" value="{$system['discord_secret']}">
+            {else}
+              <input type="password" class="form-control" value="*********">
+            {/if}
+          </div>
+        </div>
+        <!-- discord -->
 
         <div class="divider"></div>
 

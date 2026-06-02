@@ -14,7 +14,16 @@
   ],
   "homepage": "https://www.workerman.net",
   "license": "MIT",
+  "authors": [
+    {
+      "name": "walkor",
+      "email": "walkor@workerman.net",
+      "homepage": "https://www.workerman.net",
+      "role": "Developer"
+    }
+  ],
   "require": {
+    "php": ">=7.1",
     "workerman/workerman": "^4.0.0",
     "workerman/channel": ">=1.0.0",
     "ext-json": "*"

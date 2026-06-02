@@ -108,22 +108,40 @@ try {
 
     case 'react_post':
       // react post
-      $user->react_post($_POST['id'], $_POST['reaction']);
+      $post = $user->react_post($_POST['id'], $_POST['reaction']);
+      if ($post) {
+        $smarty->assign('post', $post);
+        $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+      }
       break;
 
     case 'unreact_post':
       // unreact post
-      $user->unreact_post($_POST['id'], $_POST['reaction']);
+      $post = $user->unreact_post($_POST['id'], $_POST['reaction']);
+      if ($post) {
+        $smarty->assign('post', $post);
+        $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+      }
       break;
 
     case 'react_photo':
       // react photo
-      $user->react_photo($_POST['id'], $_POST['reaction']);
+      $photo = $user->react_photo($_POST['id'], $_POST['reaction']);
+      if ($photo) {
+        $smarty->assign('post', $photo['post']);
+        $smarty->assign('photo', $photo);
+        $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+      }
       break;
 
     case 'unreact_photo':
       // unreact photo
-      $user->unreact_photo($_POST['id'], $_POST['reaction']);
+      $photo = $user->unreact_photo($_POST['id'], $_POST['reaction']);
+      if ($photo) {
+        $smarty->assign('post', $photo['post']);
+        $smarty->assign('photo', $photo);
+        $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+      }
       break;
 
     case 'hide_post':

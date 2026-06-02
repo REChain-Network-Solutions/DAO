@@ -394,9 +394,11 @@ try {
     case 'social_login':
       /* prepare */
       $_POST['social_login_enabled'] = (isset($_POST['social_login_enabled'])) ? '1' : '0';
-      $_POST['facebook_login_enabled'] = (isset($_POST['facebook_login_enabled'])) ? '1' : '0';
+      $_POST['apple_login_enabled'] = (isset($_POST['apple_login_enabled'])) ? '1' : '0';
       $_POST['google_login_enabled'] = (isset($_POST['google_login_enabled'])) ? '1' : '0';
+      $_POST['facebook_login_enabled'] = (isset($_POST['facebook_login_enabled'])) ? '1' : '0';
       $_POST['twitter_login_enabled'] = (isset($_POST['twitter_login_enabled'])) ? '1' : '0';
+      $_POST['discord_login_enabled'] = (isset($_POST['discord_login_enabled'])) ? '1' : '0';
       $_POST['linkedin_login_enabled'] = (isset($_POST['linkedin_login_enabled'])) ? '1' : '0';
       $_POST['vkontakte_login_enabled'] = (isset($_POST['vkontakte_login_enabled'])) ? '1' : '0';
       $_POST['wordpress_login_enabled'] = (isset($_POST['wordpress_login_enabled'])) ? '1' : '0';
@@ -404,15 +406,23 @@ try {
       /* update */
       update_system_options([
         'social_login_enabled' => secure($_POST['social_login_enabled']),
-        'facebook_login_enabled' => secure($_POST['facebook_login_enabled']),
-        'facebook_appid' => secure($_POST['facebook_appid']),
-        'facebook_secret' => secure($_POST['facebook_secret']),
+        'apple_login_enabled' => secure($_POST['apple_login_enabled']),
+        'apple_appid' => secure($_POST['apple_appid']),
+        'apple_team_id' => secure($_POST['apple_team_id']),
+        'apple_key_id' => secure($_POST['apple_key_id']),
+        'apple_key_content' => secure($_POST['apple_key_content']),
         'google_login_enabled' => secure($_POST['google_login_enabled']),
         'google_appid' => secure($_POST['google_appid']),
         'google_secret' => secure($_POST['google_secret']),
+        'facebook_login_enabled' => secure($_POST['facebook_login_enabled']),
+        'facebook_appid' => secure($_POST['facebook_appid']),
+        'facebook_secret' => secure($_POST['facebook_secret']),
         'twitter_login_enabled' => secure($_POST['twitter_login_enabled']),
         'twitter_appid' => secure($_POST['twitter_appid']),
         'twitter_secret' => secure($_POST['twitter_secret']),
+        'discord_login_enabled' => secure($_POST['discord_login_enabled']),
+        'discord_appid' => secure($_POST['discord_appid']),
+        'discord_secret' => secure($_POST['discord_secret']),
         'linkedin_login_enabled' => secure($_POST['linkedin_login_enabled']),
         'linkedin_appid' => secure($_POST['linkedin_appid']),
         'linkedin_secret' => secure($_POST['linkedin_secret']),
@@ -1064,6 +1074,13 @@ try {
       $_POST['paypal_payouts_enabled'] = (isset($_POST['paypal_payouts_enabled'])) ? '1' : '0';
       $_POST['creditcard_enabled'] = (isset($_POST['creditcard_enabled'])) ? '1' : '0';
       $_POST['alipay_enabled'] = (isset($_POST['alipay_enabled'])) ? '1' : '0';
+      $_POST['cashapp_enabled'] = (isset($_POST['cashapp_enabled'])) ? '1' : '0';
+      $_POST['blik_enabled'] = (isset($_POST['blik_enabled'])) ? '1' : '0';
+      $_POST['eps_enabled'] = (isset($_POST['eps_enabled'])) ? '1' : '0';
+      $_POST['ideal_enabled'] = (isset($_POST['ideal_enabled'])) ? '1' : '0';
+      $_POST['bancontact_enabled'] = (isset($_POST['bancontact_enabled'])) ? '1' : '0';
+      $_POST['przelewy24_enabled'] = (isset($_POST['przelewy24_enabled'])) ? '1' : '0';
+      $_POST['oxxo_enabled'] = (isset($_POST['oxxo_enabled'])) ? '1' : '0';
       $_POST['stripe_payment_element_enabled'] = (isset($_POST['stripe_payment_element_enabled'])) ? '1' : '0';
       $_POST['paystack_enabled'] = (isset($_POST['paystack_enabled'])) ? '1' : '0';
       $_POST['2checkout_enabled'] = (isset($_POST['2checkout_enabled'])) ? '1' : '0';
@@ -1079,6 +1096,7 @@ try {
       $_POST['plisio_enabled'] = (isset($_POST['plisio_enabled'])) ? '1' : '0';
       $_POST['coinpayments_enabled'] = (isset($_POST['coinpayments_enabled'])) ? '1' : '0';
       $_POST['coinbase_enabled'] = (isset($_POST['coinbase_enabled'])) ? '1' : '0';
+      $_POST['ccbill_enabled'] = (isset($_POST['ccbill_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'paypal_enabled' => secure($_POST['paypal_enabled']),
@@ -1089,6 +1107,13 @@ try {
         'paypal_webhook' => secure($_POST['paypal_webhook']),
         'creditcard_enabled' => secure($_POST['creditcard_enabled']),
         'alipay_enabled' => secure($_POST['alipay_enabled']),
+        'cashapp_enabled' => secure($_POST['cashapp_enabled']),
+        'blik_enabled' => secure($_POST['blik_enabled']),
+        'eps_enabled' => secure($_POST['eps_enabled']),
+        'ideal_enabled' => secure($_POST['ideal_enabled']),
+        'bancontact_enabled' => secure($_POST['bancontact_enabled']),
+        'przelewy24_enabled' => secure($_POST['przelewy24_enabled']),
+        'oxxo_enabled' => secure($_POST['oxxo_enabled']),
         'stripe_payment_element_enabled' => secure($_POST['stripe_payment_element_enabled']),
         'stripe_mode' => secure($_POST['stripe_mode']),
         'stripe_test_secret' => secure($_POST['stripe_test_secret']),
@@ -1144,6 +1169,14 @@ try {
         'coinpayments_ipn_secret' => secure($_POST['coinpayments_ipn_secret']),
         'coinbase_enabled' => secure($_POST['coinbase_enabled']),
         'coinbase_api_key' => secure($_POST['coinbase_api_key']),
+        'ccbill_enabled' => secure($_POST['ccbill_enabled']),
+        'ccbill_account_number' => secure($_POST['ccbill_account_number']),
+        'ccbill_recurring_subaccount_number' => secure($_POST['ccbill_recurring_subaccount_number']),
+        'ccbill_one_time_subaccount_number' => secure($_POST['ccbill_one_time_subaccount_number']),
+        'ccbill_flexform_id' => secure($_POST['ccbill_flexform_id']),
+        'ccbill_salt_key' => secure($_POST['ccbill_salt_key']),
+        'ccbill_datalink_username' => secure($_POST['ccbill_datalink_username']),
+        'ccbill_datalink_password' => secure($_POST['ccbill_datalink_password']),
       ]);
       break;
 
@@ -1172,12 +1205,6 @@ try {
       $_POST['censored_words_enabled'] = (isset($_POST['censored_words_enabled'])) ? '1' : '0';
       $_POST['censored_domains_enabled'] = (isset($_POST['censored_domains_enabled'])) ? '1' : '0';
       $_POST['html_richtext_enabled'] = (isset($_POST['html_richtext_enabled'])) ? '1' : '0';
-      $_POST['reCAPTCHA_enabled'] = (isset($_POST['reCAPTCHA_enabled'])) ? '1' : '0';
-      $_POST['turnstile_enabled'] = (isset($_POST['turnstile_enabled'])) ? '1' : '0';
-      /* validate */
-      if ($_POST['reCAPTCHA_enabled'] && $_POST['turnstile_enabled']) {
-        throw new Exception(__("You can't enable reCAPTCHA and Turnstile at the same time"));
-      }
       /* update */
       update_system_options([
         'unusual_login_enabled' => secure($_POST['unusual_login_enabled']),
@@ -1194,12 +1221,23 @@ try {
         'censored_domains_enabled' => secure($_POST['censored_domains_enabled']),
         'censored_domains' => secure($_POST['censored_domains']),
         'html_richtext_enabled' => secure($_POST['html_richtext_enabled']),
-        'reCAPTCHA_enabled' => secure($_POST['reCAPTCHA_enabled']),
+      ]);
+      break;
+
+    case 'captcha':
+      /* prepare */
+      $_POST['captcha_enabled'] = (isset($_POST['captcha_enabled'])) ? '1' : '0';
+      $_POST['captcha_provider'] = in_array($_POST['captcha_provider'] ?? '', ['recaptcha', 'turnstile', 'hcaptcha']) ? $_POST['captcha_provider'] : 'recaptcha';
+      /* update */
+      update_system_options([
+        'captcha_enabled' => secure($_POST['captcha_enabled']),
+        'captcha_provider' => secure($_POST['captcha_provider']),
         'reCAPTCHA_site_key' => secure($_POST['reCAPTCHA_site_key']),
         'reCAPTCHA_secret_key' => secure($_POST['reCAPTCHA_secret_key']),
-        'turnstile_enabled' => secure($_POST['turnstile_enabled']),
         'turnstile_site_key' => secure($_POST['turnstile_site_key']),
         'turnstile_secret_key' => secure($_POST['turnstile_secret_key']),
+        'hcaptcha_site_key' => secure($_POST['hcaptcha_site_key']),
+        'hcaptcha_secret_key' => secure($_POST['hcaptcha_secret_key']),
       ]);
       break;
 

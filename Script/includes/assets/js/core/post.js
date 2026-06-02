@@ -62,7 +62,7 @@ function quill_publisher() {
     }
     var quill = new Quill(el, {
       theme: 'bubble',
-      placeholder: __['What is on your mind? #Hashtag.. @Mention.. Link..'],
+      placeholder: __['What is on your mind?'],
       modules: {
         toolbar: {
           container: [
@@ -108,11 +108,20 @@ function quill_publisher() {
         }
       }
     });
+    /* apply the direction and alignment */
+    quill.format('align', system_langauge_dir == "rtl" ? 'right' : 'left');
+    quill.format('direction', system_langauge_dir == "rtl" ? 'rtl' : 'ltr');
     /* remove the html from the clipboard */
-    const Delta = Quill.import('delta');
-    quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-      return new Delta().insert(node.innerText);
-    });
+    quill.root.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = e.clipboardData.getData('text/plain');
+      if (text) {
+        const range = quill.getSelection();
+        quill.deleteText(range.index, range.length);
+        quill.insertText(range.index, text, 'user');
+        quill.setSelection(range.index + text.length);
+      }
+    }, true);
     /* sync the quill with the publisher */
     quill.on('text-change', function () {
       var publisher = $(quill.root).closest('.publisher');
@@ -2966,9 +2975,9 @@ $(function () {
       /* remove reactions-wrapper data-reaction */
       reactions_wrapper.data('reaction', '');
       /* change reaction-btn-name */
-      _parent.find('.reaction-btn-name:first').text(__['React']).removeClass('blue red yellow orange');
+      _parent.find('.reaction-btn-name:first').text(__['React']).removeAttr('style');
       /* change reaction-btn-icon */
-      _parent.find('.reaction-btn-icon:first').html('<i class="far fa-smile fa-lg fa-fw"></i>');
+      _parent.find('.reaction-btn-icon:first').html('<i class="far fa-smile fa-fw action-icon"></i>');
       /* hide reactions-container */
       _parent.find('.reactions-container:visible').removeAttr('style').hide();
       /* AJAX */
@@ -2976,6 +2985,9 @@ $(function () {
         /* check the response */
         if (response.callback) {
           eval(response.callback);
+        }
+        if (response.template && handle != 'comment') {
+          _parent.find('.js_post-reactions-stats:first').html(response.template);
         }
       }, 'json')
         .fail(function () {
@@ -3000,6 +3012,9 @@ $(function () {
         /* check the response */
         if (response.callback) {
           eval(response.callback);
+        }
+        if (response.template && handle != 'comment') {
+          _parent.find('.js_post-reactions-stats:first').html(response.template);
         }
       }, 'json')
         .fail(function () {
@@ -3304,9 +3319,11 @@ $(function () {
   $('body').on('keypress', function (key) {
     var target = key.target.tagName.toLowerCase();
     var key_value = parseInt(key.which, 10);
+    var $target = $(key.target);
+    var is_editable = $target.is('[contenteditable="true"]') || $target.closest('.ql-editor').length > 0;
     if (highlighted_post >= 0) {
       /* (J) next post */
-      if (key_value == 106 && target != 'input' && target != 'textarea') {
+      if (key_value == 106 && target != 'input' && target != 'textarea' && !is_editable) {
         var post = $('.js_posts_stream .post').eq(highlighted_post);
         if (post.length) {
           post.addClass('highlighted');
@@ -3320,7 +3337,7 @@ $(function () {
         highlighted_post++;
 
         /* (K) prev post */
-      } else if (key_value == 107 && target != 'input' && target != 'textarea') {
+      } else if (key_value == 107 && target != 'input' && target != 'textarea' && !is_editable) {
         if (highlighted_post == 0) return;
         highlighted_post--;
         var post = $('.js_posts_stream .post').eq(highlighted_post);

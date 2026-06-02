@@ -155,7 +155,7 @@ trait AdsTrait
           /* update campaign spend & views */
           $db->query(sprintf("UPDATE ads_campaigns SET campaign_views = campaign_views + 1, campaign_spend = campaign_spend + %s WHERE campaign_id = %s", secure($system['ads_cost_view']), secure($campaign['campaign_id'], 'int')));
           /* decrease campaign author wallet balance */
-          $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($system['ads_cost_view']), secure($campaign['campaign_user_id'], 'int')));
+          $this->wallet_update_balance($system['ads_cost_view'], '-', $campaign['campaign_user_id']);
         }
         /* get campaigns */
         $campaigns[] = $campaign;
@@ -762,7 +762,7 @@ trait AdsTrait
       /* update campaign spend & clicks */
       $db->query(sprintf("UPDATE ads_campaigns SET campaign_clicks = campaign_clicks + 1, campaign_spend = campaign_spend + %s WHERE campaign_id = %s", secure($system['ads_cost_click']), secure($campaign['campaign_id'], 'int')));
       /* decrease campaign author wallet balance */
-      $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($system['ads_cost_click']), secure($campaign['campaign_user_id'], 'int')));
+      $this->wallet_update_balance($system['ads_cost_click'], '-', $campaign['campaign_user_id']);
     }
   }
 

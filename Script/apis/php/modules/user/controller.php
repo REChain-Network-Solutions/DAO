@@ -55,3 +55,16 @@ function deleteUser($req, $res)
   $user->delete_user($user->_data['user_id']);
   apiResponse($res);
 }
+
+
+// getBlockedUsers
+function getBlockedUsers($req, $res)
+{
+  global $system, $user;
+  /* check demo account */
+  if ($user->_data['user_demo']) {
+    throw new AuthorizationException(__("You can't do this with demo account"));
+  }
+  $return = $user->get_blocked($req->query['offset']);
+  apiResponse($res, ['data' => $return['data'], 'has_more' => $return['has_more']]);
+}

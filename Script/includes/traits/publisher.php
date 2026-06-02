@@ -167,6 +167,7 @@ trait PublisherTrait
     }
 
     /* prepare post data */
+    $args['message'] = strip_tags($args['message'], '<p><br><b><strong><i><em><u><s><del><blockquote><ul><ol><li><h1><h2><span>');
     $post['text'] = $args['message'];
     $post['location'] = $args['location'];
     $post['privacy'] = $args['privacy'];
@@ -698,12 +699,7 @@ trait PublisherTrait
     }
 
     /* parse text */
-    $post['text_raw'] = $post['text'];
-    $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
-    $post['text_html'] = ($post['text_html']) ? preg_replace('/^<p>|<\/p>$/', '', $post['text_html']) : $post['text_html'];
-    $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
-    $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
-    $post['text'] = $this->parse(["text" => $post['text_html'], 'decode_emojis' => false, "trending_hashtags" => true, "post_id" => $post['post_id']]);
+    $this->prepare_post_text($post, true);
 
     /* get post colored pattern */
     $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
@@ -854,9 +850,14 @@ trait PublisherTrait
       'ssl_verify_host' => 1,
       'ssl_verify_peer' => 1,
       'follow_location' => true,
-      'user_agent' => 'Sngine',
+      'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     ]);
-    $embed = new Embed\Embed(new Embed\Http\Crawler($client));
+    $crawler = new Embed\Http\Crawler($client);
+    $crawler->addDefaultHeaders([
+      'Accept-Language' => 'en-US,en;q=0.9',
+      'Cookie' => 'CONSENT=YES+',
+    ]);
+    $embed = new Embed\Embed($crawler);
     $info = $embed->get($url);
     if ($info) {
       $return = [];
@@ -939,8 +940,32 @@ trait PublisherTrait
 
 
   /**
+   * prepare_post_text
+   *
+   * @param array $post
+   * @param boolean $trending_hashtags
+   * @return void
+   */
+  private function prepare_post_text(&$post, $trending_hashtags = false)
+  {
+    $post['text_raw'] = $post['text'];
+    $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
+    $post['text_html'] = ($post['text_html']) ? preg_replace(['/<\/p>\s*<p>/', '/^<p>/', '/<\/p>$/'], ["\n", '', ''], $post['text_html']) : $post['text_html'];
+    $post['text_html'] = ($post['text_html']) ? preg_replace('/(\s|<br\s*\/?>)+$/i', '', $post['text_html']) : $post['text_html'];
+    $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
+    $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
+    $parse_args = ["text" => $post['text_html'], 'decode_emojis' => false];
+    if ($trending_hashtags) {
+      $parse_args['trending_hashtags'] = true;
+      $parse_args['post_id'] = $post['post_id'];
+    }
+    $post['text'] = $this->parse($parse_args);
+  }
+
+
+  /**
    * parse
-   * 
+   *
    * @param array $args
    * @return string
    */
@@ -1022,7 +1047,12 @@ trait PublisherTrait
   public function check_censored_domains($url)
   {
     global $system;
+    /* check if censored domains is enabled */
     if (!$system['censored_domains_enabled']) {
+      return false;
+    }
+    /* check if $system['censored_domains'] is empty */
+    if (empty($system['censored_domains'])) {
       return false;
     }
     /* make a list from target usernames */

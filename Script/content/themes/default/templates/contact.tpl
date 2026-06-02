@@ -48,7 +48,7 @@
               <textarea class="form-control" name="message" rows="5"></textarea>
             </div>
 
-            {if $system['reCAPTCHA_enabled']}
+            {if $system['captcha_enabled'] && $system['captcha_provider'] == "recaptcha"}
               <div class="form-group">
                 <!-- reCAPTCHA -->
                 <script src='https://www.google.com/recaptcha/api.js' async defer></script>
@@ -57,12 +57,21 @@
               </div>
             {/if}
 
-            {if $system['turnstile_enabled']}
+            {if $system['captcha_enabled'] && $system['captcha_provider'] == "turnstile"}
               <div class="form-group">
                 <!-- Turnstile -->
                 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
                 <div class="cf-turnstile" data-sitekey="{$system['turnstile_site_key']}" data-callback="javascriptCallback"></div>
                 <!-- Turnstile -->
+              </div>
+            {/if}
+
+            {if $system['captcha_enabled'] && $system['captcha_provider'] == "hcaptcha"}
+              <div class="form-group">
+                <!-- hCaptcha -->
+                <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+                <div class="h-captcha" data-sitekey="{$system['hcaptcha_site_key']}"></div>
+                <!-- hCaptcha -->
               </div>
             {/if}
 

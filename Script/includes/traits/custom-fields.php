@@ -22,7 +22,7 @@ trait CustomFieldsTrait
    */
   public function get_custom_fields($args = [])
   {
-    global $db, $system;
+    global $db;
     $fields = [];
     /* prepare "for" [user|page|group|event|product|job|offer|course] - default -> user */
     $args['for'] = (isset($args['for'])) ? $args['for'] : "user";
@@ -78,6 +78,7 @@ trait CustomFieldsTrait
                 break;
 
               default:
+                $field['value_string'] = $field_value;
                 $field['value'] = nl2br($field_value);
                 break;
             }
@@ -105,7 +106,7 @@ trait CustomFieldsTrait
    */
   public function set_custom_fields($input_fields, $for = "user", $set = "registration", $node_id = null)
   {
-    global $db, $system;
+    global $db;
     $custom_fields = [];
     /* prepare "for" [user|page|group|event|product|job|offer|course] - default -> user */
     if (!in_array($for, ['user', 'page', 'group', 'event', 'product', 'job', 'offer', 'course'])) {
@@ -198,46 +199,52 @@ trait CustomFieldsTrait
    */
   public function search_custom_fields($input_fields)
   {
-    global $db, $system;
-    $query_statement = "";
-    /* check input_fields */
-    $prefix = "fld_";
-    $prefix_len = strlen($prefix);
+    global $db;
+    $conditions = [];
+    $field_prefix = "fld_";
+    $field_prefix_length = strlen($field_prefix);
+    /* check input fields */
     foreach ($input_fields as $key => $value) {
-      if (strpos($key, $prefix) === false) {
+      if (strpos($key, $field_prefix) !== 0) {
         continue;
       }
-      $field_id = substr($key, $prefix_len);
+      $field_id = substr($key, $field_prefix_length);
       $get_field = $db->query(sprintf("SELECT * FROM custom_fields WHERE field_for = 'user' AND in_search = '1' AND field_id = %s", secure($field_id, 'int')));
       if ($get_field->num_rows == 0) {
         continue;
       }
       $field = $get_field->fetch_assoc();
+      $condition = "";
       switch ($field['type']) {
         case 'textbox':
         case 'textarea':
           if ($value) {
-            $query_statement .= ($query_statement) ? " OR " : "";
-            $query_statement .= sprintf(" (cfv.field_id = %s AND cfv.value LIKE %s) ", secure($field['field_id'], 'int'), secure($value, 'search'));
+            $condition = sprintf("field_id = %s AND value LIKE %s", secure($field['field_id'], 'int'), secure($value, 'search'));
           }
           break;
-
         case 'selectbox':
           if ($value != "any") {
-            $query_statement .= ($query_statement) ? " OR " : "";
-            $query_statement .= sprintf(" (cfv.field_id = %s AND cfv.value = %s) ", secure($field['field_id'], 'int'), secure($value));
+            $condition = sprintf("field_id = %s AND value = %s", secure($field['field_id'], 'int'), secure($value));
           }
           break;
-
         case 'multipleselectbox':
           if ($value) {
-            $value = implode(",", $value);
-            $query_statement .= ($query_statement) ? " OR " : "";
-            $query_statement .= sprintf(" (cfv.field_id = %s AND cfv.value LIKE %s) ", secure($field['field_id'], 'int'), secure($value, 'search'));
+            $value_string = implode(",", $value);
+            $condition = sprintf("field_id = %s AND value LIKE %s", secure($field['field_id'], 'int'), secure($value_string, 'search'));
           }
           break;
       }
+      if ($condition) {
+        $conditions[] = $condition;
+      }
     }
-    return $query_statement;
+    if (empty($conditions)) {
+      return "";
+    }
+    $user_field_queries = [];
+    foreach ($conditions as $condition) {
+      $user_field_queries[] = "SELECT node_id FROM custom_fields_values WHERE node_type = 'user' AND " . $condition;
+    }
+    return " (user_id IN (" . implode(") AND user_id IN (", $user_field_queries) . ")) ";
   }
 }

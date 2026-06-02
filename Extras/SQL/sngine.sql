@@ -202,6 +202,24 @@ INSERT INTO `blogs_categories` (`category_id`, `category_parent_id`, `category_n
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `ccbill_payments`
+--
+
+CREATE TABLE `ccbill_payments` (
+  `payment_id` int UNSIGNED NOT NULL,
+  `payment_status` enum('pending','paid','failed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
+  `user_id` int UNSIGNED NOT NULL,
+  `handle` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `reference_id` int UNSIGNED DEFAULT NULL,
+  `amount` float NOT NULL,
+  `total_amount` float NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `coinpayments_transactions`
 --
 
@@ -4650,7 +4668,9 @@ INSERT INTO `system_currencies` (`currency_id`, `name`, `code`, `symbol`, `dir`,
 (22, 'Thailand Baht', 'THB', '฿', 'left', '0', '1'),
 (23, 'Turkey Lira', 'TRY', 'TRY', 'left', '0', '1'),
 (24, 'United States Dollar', 'USD', '$', 'left', '1', '1'),
-(25, 'India Rupee', 'INR', '₹', 'right', '0', '1');
+(25, 'India Rupee', 'INR', '₹', 'right', '0', '1'),
+(26, 'Mexican Pesos', 'MXN', '$', 'left', '0', '1'),
+(27, 'Chinese Yuan', 'CNY', '&yen;', 'left', '0', '0');
 
 -- --------------------------------------------------------
 
@@ -4876,8 +4896,8 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (153, 'brute_force_lockout_time', '10'),
 (154, 'two_factor_enabled', '1'),
 (155, 'two_factor_type', 'google'),
-(156, 'censored_words_enabled', '1'),
-(157, 'censored_words', '[{&quot;value&quot;:&quot;pussy&quot;},{&quot;value&quot;:&quot;fuck&quot;},{&quot;value&quot;:&quot;shit&quot;},{&quot;value&quot;:&quot;asshole&quot;},{&quot;value&quot;:&quot;dick&quot;},{&quot;value&quot;:&quot;tits&quot;},{&quot;value&quot;:&quot;boobs&quot;}]'),
+(156, 'censored_words_enabled', '0'),
+(157, 'censored_words', ''),
 (158, 'reCAPTCHA_enabled', '0'),
 (159, 'reCAPTCHA_site_key', ''),
 (160, 'reCAPTCHA_secret_key', ''),
@@ -4953,7 +4973,7 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (230, 'points_min_withdrawal', '50'),
 (231, 'points_money_transfer_enabled', '1'),
 (232, 'points_per_currency', '100'),
-(233, 'points_per_post', '5'),
+(233, 'points_per_post', '0'),
 (234, 'points_per_comment', '5'),
 (235, 'points_per_reaction', '5'),
 (236, 'points_limit_user', '1000'),
@@ -5067,7 +5087,7 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (359, 'newsfeed_results', '12'),
 (365, 'ads_approval_enabled', '0'),
 (407, 'uploads_cdn_url', ''),
-(592, 'affiliates_levels', '5'),
+(592, 'affiliates_levels', '10'),
 (692, 'voice_notes_durtaion', '120'),
 (693, 'voice_notes_encoding', 'wav'),
 (702, 'pages_results', '12'),
@@ -5113,8 +5133,8 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (1291, 'ffmpeg_enabled', '0'),
 (1292, 'ffmpeg_path', ''),
 (1293, 'ffmpeg_speed', 'medium'),
-(1294, 'reserved_usernames_enabled', '1'),
-(1295, 'reserved_usernames', '[{&quot;value&quot;:&quot;install&quot;},{&quot;value&quot;:&quot;static&quot;},{&quot;value&quot;:&quot;contact&quot;},{&quot;value&quot;:&quot;contacts&quot;},{&quot;value&quot;:&quot;sign&quot;},{&quot;value&quot;:&quot;signin&quot;},{&quot;value&quot;:&quot;login&quot;},{&quot;value&quot;:&quot;signup&quot;},{&quot;value&quot;:&quot;register&quot;},{&quot;value&quot;:&quot;signout&quot;},{&quot;value&quot;:&quot;logout&quot;},{&quot;value&quot;:&quot;reset&quot;},{&quot;value&quot;:&quot;activation&quot;},{&quot;value&quot;:&quot;connect&quot;},{&quot;value&quot;:&quot;revoke&quot;},{&quot;value&quot;:&quot;packages&quot;},{&quot;value&quot;:&quot;started&quot;},{&quot;value&quot;:&quot;search&quot;},{&quot;value&quot;:&quot;friends&quot;},{&quot;value&quot;:&quot;messages&quot;},{&quot;value&quot;:&quot;message&quot;},{&quot;value&quot;:&quot;notifications&quot;},{&quot;value&quot;:&quot;notification&quot;},{&quot;value&quot;:&quot;settings&quot;},{&quot;value&quot;:&quot;setting&quot;},{&quot;value&quot;:&quot;posts&quot;},{&quot;value&quot;:&quot;post&quot;},{&quot;value&quot;:&quot;photos&quot;},{&quot;value&quot;:&quot;photo&quot;},{&quot;value&quot;:&quot;create&quot;},{&quot;value&quot;:&quot;pages&quot;},{&quot;value&quot;:&quot;page&quot;},{&quot;value&quot;:&quot;groups&quot;},{&quot;value&quot;:&quot;group&quot;},{&quot;value&quot;:&quot;events&quot;},{&quot;value&quot;:&quot;event&quot;},{&quot;value&quot;:&quot;games&quot;},{&quot;value&quot;:&quot;game&quot;},{&quot;value&quot;:&quot;saved&quot;},{&quot;value&quot;:&quot;forums&quot;},{&quot;value&quot;:&quot;forum&quot;},{&quot;value&quot;:&quot;blogs&quot;},{&quot;value&quot;:&quot;blog&quot;},{&quot;value&quot;:&quot;articles&quot;},{&quot;value&quot;:&quot;article&quot;},{&quot;value&quot;:&quot;directory&quot;},{&quot;value&quot;:&quot;products&quot;},{&quot;value&quot;:&quot;product&quot;},{&quot;value&quot;:&quot;market&quot;},{&quot;value&quot;:&quot;admincp&quot;},{&quot;value&quot;:&quot;admin&quot;},{&quot;value&quot;:&quot;admins&quot;},{&quot;value&quot;:&quot;modcp&quot;},{&quot;value&quot;:&quot;moderator&quot;},{&quot;value&quot;:&quot;moderators&quot;},{&quot;value&quot;:&quot;moderatorcp&quot;},{&quot;value&quot;:&quot;chat&quot;},{&quot;value&quot;:&quot;ads&quot;},{&quot;value&quot;:&quot;wallet&quot;},{&quot;value&quot;:&quot;boosted&quot;},{&quot;value&quot;:&quot;people&quot;},{&quot;value&quot;:&quot;popular&quot;},{&quot;value&quot;:&quot;movies&quot;},{&quot;value&quot;:&quot;movie&quot;},{&quot;value&quot;:&quot;api&quot;},{&quot;value&quot;:&quot;apis&quot;},{&quot;value&quot;:&quot;oauth&quot;},{&quot;value&quot;:&quot;authorize&quot;},{&quot;value&quot;:&quot;anonymous&quot;},{&quot;value&quot;:&quot;jobs&quot;},{&quot;value&quot;:&quot;job&quot;}]'),
+(1294, 'reserved_usernames_enabled', '0'),
+(1295, 'reserved_usernames', ''),
 (1310, 'getting_started_profile_image_required', '0'),
 (1311, 'getting_started_location_required', '0'),
 (1312, 'getting_started_education_required', '0'),
@@ -5171,7 +5191,7 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (2573, 'market_payment_method_custom', ''),
 (2574, 'market_min_withdrawal', '50'),
 (2575, 'market_money_transfer_enabled', '1'),
-(2576, 'market_commission', '10'),
+(2576, 'market_commission', '0'),
 (2577, 'sms_limit', '3'),
 (2596, 'switch_accounts_enabled', '1'),
 (2597, 'wallet_max_transfer', '5'),
@@ -5256,8 +5276,8 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (3716, 'yandex_cloud_region', ''),
 (3717, 'yandex_cloud_key', ''),
 (3718, 'yandex_cloud_secret', ''),
-(3719, 'points_per_post_comment', '5'),
-(3720, 'points_per_post_reaction', '5'),
+(3719, 'points_per_post_comment', '6'),
+(3720, 'points_per_post_reaction', '6'),
 (3754, 'profile_posts_updates_disabled', '0'),
 (3844, 'monetization_max_paid_post_price', '0'),
 (3845, 'monetization_max_plan_price', '0'),
@@ -5298,8 +5318,8 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (4727, 'google_translation_key', ''),
 (4775, 'chat_translation_enabled', '0'),
 (4776, 'market_wallet_payment_enabled', '1'),
-(4784, 'censored_domains_enabled', '1'),
-(4785, 'censored_domains', '[{&quot;value&quot;:&quot;pornhub.com&quot;},{&quot;value&quot;:&quot;xvideos.com&quot;}]'),
+(4784, 'censored_domains_enabled', '0'),
+(4785, 'censored_domains', ''),
 (4786, 'mods_users_permission', '1'),
 (4793, 'mods_posts_permission', '1'),
 (4794, 'mods_pages_permission', '1'),
@@ -5391,7 +5411,7 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (7640, 'cronjob_undelivered_orders', '1'),
 (8259, 'system_api_key', ''),
 (8260, 'system_api_secret', ''),
-(8272, 'system_jwt_key', '9399793d85eca12df5a946e3d9f55113'),
+(8272, 'system_jwt_key', 'e7016ea7687a0093f90150d49181d0c9'),
 (8389, 'onesignal_messenger_notification_enabled', '0'),
 (8390, 'onesignal_messenger_app_id', ''),
 (8391, 'onesignal_messenger_api_key', ''),
@@ -5484,16 +5504,33 @@ INSERT INTO `system_options` (`option_id`, `option_name`, `option_value`) VALUES
 (13750, 'system_description_watch', 'Explore the latest videos'),
 (14159, 'openai_image_model', ''),
 (14460, 'ai_mode', 'live'),
-(14954, 'affiliates_per_user_6', ''),
-(14955, 'affiliates_percentage_6', ''),
-(14956, 'affiliates_per_user_7', ''),
-(14957, 'affiliates_percentage_7', ''),
-(14958, 'affiliates_per_user_8', ''),
-(14959, 'affiliates_percentage_8', ''),
-(14960, 'affiliates_per_user_9', ''),
-(14961, 'affiliates_percentage_9', ''),
-(14962, 'affiliates_per_user_10', ''),
-(14963, 'affiliates_percentage_10', '');
+(14616, 'captcha_enabled', '0'),
+(14617, 'captcha_provider', 'recaptcha'),
+(14618, 'hcaptcha_site_key', ''),
+(14619, 'hcaptcha_secret_key', ''),
+(14732, 'oxxo_enabled', '0'),
+(14870, 'blik_enabled', '0'),
+(14871, 'eps_enabled', '0'),
+(14951, 'ideal_enabled', '0'),
+(15205, 'cashapp_enabled', '0'),
+(15278, 'bancontact_enabled', '0'),
+(15417, 'przelewy24_enabled', '0'),
+(15627, 'ccbill_enabled', '0'),
+(15628, 'ccbill_account_number', ''),
+(15629, 'ccbill_recurring_subaccount_number', ''),
+(15630, 'ccbill_one_time_subaccount_number', ''),
+(15631, 'ccbill_flexform_id', ''),
+(15632, 'ccbill_salt_key', ''),
+(15633, 'ccbill_datalink_username', ''),
+(15634, 'ccbill_datalink_password', ''),
+(15716, 'apple_login_enabled', '0'),
+(15717, 'apple_appid', ''),
+(15718, 'apple_team_id', ''),
+(15719, 'apple_key_id', ''),
+(15720, 'apple_key_content', ''),
+(15746, 'discord_login_enabled', '0'),
+(15747, 'discord_appid', ''),
+(15748, 'discord_secret', '');
 
 -- --------------------------------------------------------
 
@@ -5641,7 +5678,7 @@ CREATE TABLE `users` (
   `user_privacy_poke` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
   `user_privacy_gifts` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
   `user_privacy_wall` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'friends',
-  `user_privacy_collaborative` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'friends',
+  `user_privacy_collaborative` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'me',
   `user_privacy_gender` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
   `user_privacy_birthdate` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
   `user_privacy_relationship` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
@@ -5669,14 +5706,16 @@ CREATE TABLE `users` (
   `email_admin_verifications` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
   `email_admin_post_approval` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
   `email_admin_user_approval` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-  `facebook_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-  `facebook_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `apple_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+  `apple_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `google_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
   `google_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `facebook_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+  `facebook_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `twitter_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
   `twitter_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `instagram_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-  `instagram_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `discord_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+  `discord_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `linkedin_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
   `linkedin_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `vkontakte_connected` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -6100,6 +6139,12 @@ ALTER TABLE `blacklist`
 ALTER TABLE `blogs_categories`
   ADD PRIMARY KEY (`category_id`),
   ADD KEY `category_parent_id` (`category_parent_id`);
+
+--
+-- Indexes for table `ccbill_payments`
+--
+ALTER TABLE `ccbill_payments`
+  ADD PRIMARY KEY (`payment_id`);
 
 --
 -- Indexes for table `coinpayments_transactions`
@@ -7028,7 +7073,6 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `twitter_id` (`twitter_id`),
   ADD UNIQUE KEY `linkedin_id` (`linkedin_id`),
   ADD UNIQUE KEY `vkontakte_id` (`vkontakte_id`),
-  ADD UNIQUE KEY `instagram_id` (`instagram_id`),
   ADD UNIQUE KEY `user_phone` (`user_phone`),
   ADD UNIQUE KEY `google_id` (`google_id`),
   ADD KEY `user_picture_id` (`user_picture_id`),
@@ -7250,6 +7294,12 @@ ALTER TABLE `blacklist`
 --
 ALTER TABLE `blogs_categories`
   MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `ccbill_payments`
+--
+ALTER TABLE `ccbill_payments`
+  MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `coinpayments_transactions`
@@ -7939,7 +7989,7 @@ ALTER TABLE `system_countries`
 -- AUTO_INCREMENT for table `system_currencies`
 --
 ALTER TABLE `system_currencies`
-  MODIFY `currency_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `currency_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `system_genders`
@@ -7957,7 +8007,7 @@ ALTER TABLE `system_languages`
 -- AUTO_INCREMENT for table `system_options`
 --
 ALTER TABLE `system_options`
-  MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16213;
+  MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16946;
 
 --
 -- AUTO_INCREMENT for table `system_reactions`
@@ -8103,3 +8153,7 @@ ALTER TABLE `wallet_transactions`
 ALTER TABLE `widgets`
   MODIFY `widget_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -39,7 +39,7 @@
           <div class="colored-text-wrapper">
             <div class="quill-editor js_quill"></div>
             <input type="hidden" class="js_publisher-hidden-editor" value="">
-            <textarea style="display: none;" {if $_modal_mode}autofocus{/if} dir="auto" class="js_autosize js_mentions js_publisher-scraper" data-init-placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}' placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}'>{if $url}{$url}{/if}</textarea>
+            <textarea style="display: none;" {if $_modal_mode}autofocus{/if} dir="auto" class="js_autosize js_mentions js_publisher-scraper" data-init-placeholder='{__("What is on your mind?")}' placeholder='{__("What is on your mind?")}'>{if $url}{$url}{/if}</textarea>
           </div>
         </div>
         <!-- publisher-message -->

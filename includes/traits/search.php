@@ -286,9 +286,7 @@ trait SearchTrait
     $distinct_query = "";
     $custom_fields_query = $this->search_custom_fields($_POST);
     if ($custom_fields_query) {
-      $where .= " AND (" . $custom_fields_query . ")";
-      $distinct_query = "DISTINCT";
-      $join_query = " LEFT JOIN custom_fields_values AS cfv ON cfv.node_type = 'user' AND cfv.node_id = users.user_id ";
+      $where .= " AND " . $custom_fields_query;
     }
     /* build query */
     if ($system['location_finder_enabled']) {

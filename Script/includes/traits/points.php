@@ -105,6 +105,7 @@ trait PointsTrait
 
           case 'follow':
             $db->query(sprintf("UPDATE followings SET points_earned = '1' WHERE following_id = %s AND user_id = %s", secure($user_id, 'int'), secure($node_id, 'int')));
+            break;
 
           case 'referred':
             $db->query(sprintf("UPDATE users SET points_earned = '1' WHERE user_referrer_id = %s AND user_id = %s", secure($user_id, 'int'), secure($node_id, 'int')));

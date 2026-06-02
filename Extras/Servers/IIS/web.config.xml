@@ -135,6 +135,10 @@
               <match url="^payment_status/([^/]+)/?$"  />
               <action type="Rewrite" url="/payment_status.php?view={R:1}"  appendQueryString="true" />
             </rule>
+            <rule name="rule 28e" stopProcessing="true">
+              <match url="^ccbill/status/?$"  />
+              <action type="Rewrite" url="/ccbill_status.php"  appendQueryString="true" />
+            </rule>
             <rule name="rule 29d" stopProcessing="true">
               <match url="^settings/?$"  />
               <action type="Rewrite" url="/settings.php"  appendQueryString="true" />

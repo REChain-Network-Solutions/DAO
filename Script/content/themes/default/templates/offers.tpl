@@ -159,11 +159,11 @@
           <!-- sort -->
           <a href="#" data-bs-toggle="dropdown" class="countries-filter">
             {if !$sort || $sort == "latest"}
-              <i class="fas fa-bars fa-fw"></i> {__("Latest")}
+              <i class="fas fa-bars fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Latest")}</span>
             {elseif $sort == "expire-soon"}
-              <i class="fas fa-sort-amount-down fa-fw"></i> {__("Expire Soon")}
+              <i class="fas fa-sort-amount-down fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Expire Soon")}</span>
             {elseif $sort == "expire-latest"}
-              <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Expire Latest")}
+              <i class="fas fa-sort-amount-down-alt fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Expire Latest")}</span>
             {/if}
           </a>
           <div class="dropdown-menu dropdown-menu-end">
@@ -175,7 +175,8 @@
           <!-- location filter -->
           {if $user->_logged_in && $system['location_finder_enabled']}
             <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
-              <i class="fa fa-map-marker-alt mr5"></i>{__("Distance")}
+              <i class="fa fa-map-marker-alt"></i>
+              <span class="d-none d-md-inline-block">{__("Distance")}</span>
             </a>
             <div class="dropdown-menu dropdown-menu-end">
               <form class="ptb15 plr15" method="get" action="?">
@@ -208,11 +209,13 @@
           {if $system['newsfeed_location_filter_enabled']}
             <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
               <i class="fa fa-globe fa-fw"></i>
-              {if $selected_country}
-                <span>{$selected_country['country_name']}</span>
-              {else}
-                <span>{__("All Countries")}</span>
-              {/if}
+              <span class="d-none d-md-inline-block">
+                {if $selected_country}
+                  {$selected_country['country_name']}
+                {else}
+                  {__("All Countries")}
+                {/if}
+              </span>
             </a>
             <div class="dropdown-menu dropdown-menu-end countries-dropdown">
               <div class="js_scroller">

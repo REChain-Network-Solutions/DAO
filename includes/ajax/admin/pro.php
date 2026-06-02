@@ -129,7 +129,7 @@ try {
       }
       /* Stripe billing plan */
       $stripe_billing_plan = $package['stripe_billing_plan'];
-      $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled']) && !is_empty($system['stripe_webhook']);
+      $stripe_recurring_enabled = $system['creditcard_enabled'] && !is_empty($system['stripe_webhook']);
       if ($stripe_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
         /* check if Stripe billing plan is not created */
         if (is_empty($stripe_billing_plan)) {
@@ -277,7 +277,7 @@ try {
       }
       /* Stripe billing plan */
       $stripe_billing_plan = '';
-      $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled']) && !is_empty($system['stripe_webhook']);
+      $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled'] || $system['blik_enabled'] || $system['eps_enabled'] || $system['ideal_enabled'] || $system['oxxo_enabled']) && !is_empty($system['stripe_webhook']);
       if ($stripe_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
         /* create Stripe billing plan */
         $stripe_billing_plan = stripe_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);

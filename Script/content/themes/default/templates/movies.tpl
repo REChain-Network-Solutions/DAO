@@ -135,7 +135,7 @@
                   </span>
                 </div>
                 <div class="d-grid">
-                  <button class="btn btn-info rounded rounded-pill mt20" data-toggle="modal" data-url="#payment" data-options='{ "handle": "movies", "id": {$movie['movie_id']}, "price": {$movie['price']}, "vat": "{get_payment_vat_value($movie['price'])}", "fees": "{get_payment_fees_value($movie['price'])}", "total": "{get_payment_total_value($movie['price'])}", "total_printed": "{get_payment_total_value($movie['price'], true)}" }'>
+                  <button class="btn btn-info rounded rounded-pill mt20 {if !$user->_logged_in}js_login{/if}" {if $user->_logged_in} data-toggle="modal" data-url="#payment" data-options='{ "handle": "movies", "id": {$movie['movie_id']}, "price": {$movie['price']}, "vat": "{get_payment_vat_value($movie['price'])}", "fees": "{get_payment_fees_value($movie['price'])}", "total": "{get_payment_total_value($movie['price'])}", "total_printed": "{get_payment_total_value($movie['price'], true)}" }' {/if}>
                     <i class="fa fa-money-check-alt mr5"></i>{__("PAY")} {print_money($movie['price'])} {__("TO WATCH FOR")} {$movie['available_for']} {__("DAYS")}
                   </button>
                 </div>
@@ -151,7 +151,7 @@
           {if {$movie['stars']}}
             <div>
               <strong>{__("Stars")}:</strong>
-              {foreach explode(',', $movie['stars']) as $_star}
+              {foreach split($movie['stars'], ',') as $_star}
                 <span class="text-primary">{$_star}</span>{if !$_star@last}, {/if}
               {/foreach}
             </div>

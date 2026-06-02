@@ -62,6 +62,11 @@ trait ReportsTrait
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_messages WHERE message_id = %s", secure($id, 'int')));
         break;
 
+      case 'conversation':
+        /* check the conversation */
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations WHERE conversation_id = %s", secure($id, 'int')));
+        break;
+
       case 'forum_thread':
         /* check the forum thread */
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM forums_threads WHERE thread_id = %s", secure($id, 'int')));

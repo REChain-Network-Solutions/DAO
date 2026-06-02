@@ -13,7 +13,7 @@ require('../bootloader.php');
 try {
 
   // check if stripe is enabled
-  if (!$system['creditcard_enabled'] && !$system['alipay_enabled']) {
+  if (!$system['creditcard_enabled']) {
     throw new Exception(__("Stripe is not enabled"));
   }
 

@@ -39,7 +39,7 @@
         {if $custom_field['type'] == "textbox"}
           <input class="form-control" type="text" name="fld_{$custom_field['field_id']}" value="{$custom_field['value']}" {if $custom_field['mandatory']}required{/if}>
         {elseif $custom_field['type'] == "textarea"}
-          <textarea class="form-control" name="fld_{$custom_field['field_id']}" {if $custom_field['mandatory']}required{/if}>{$custom_field['value']}</textarea>
+          <textarea class="form-control" name="fld_{$custom_field['field_id']}" {if $custom_field['mandatory']}required{/if}>{$custom_field['value_string']}</textarea>
         {elseif $custom_field['type'] == "selectbox"}
           <select class="form-select" name="fld_{$custom_field['field_id']}" {if $custom_field['mandatory']}required{/if}>
             <option {if $custom_field['value'] == ""}selected{/if} value="none">{__("Select")} {__($custom_field['label'])}</option>

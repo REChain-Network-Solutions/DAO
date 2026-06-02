@@ -2,7 +2,7 @@
 {include file='_header.tpl'}
 
 <!-- page content -->
-<div class="{if $system['fluid_design']}container-fluid{else}container{/if} mt20 sg-offcanvas {if $view == "" && $show_categories}active{/if}" {if $view == ""}style="min-height: 100%;" {/if}>
+<div class="{if $system['fluid_design']}container-fluid{else}container{/if} mt20 sg-offcanvas {if $view == "" && $show_categories}js_show_categories{/if}">
   <div class="row">
 
     <!-- left panel -->
@@ -151,7 +151,7 @@
             {/if}
 
             {if $system['social_login_enabled']}
-              {if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
+              {if $system['apple_login_enabled'] || $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['discord_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
                 <li {if $view == "linked"}class="active" {/if}>
                   <a href="{$system['system_url']}/settings/linked">
                     {include file='__svg_icons.tpl' icon="linked_accounts" class="main-icon mr10" width="24px" height="24px"}
@@ -411,3 +411,11 @@
 <!-- page content -->
 
 {include file='_footer.tpl'}
+
+<script>
+  $(function() {
+    if ($('.js_show_categories').length) {
+      $('.menu-icon[data-bs-toggle=sg-offcanvas]').trigger('click');
+    }
+  });
+</script>

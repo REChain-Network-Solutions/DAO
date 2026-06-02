@@ -30,9 +30,6 @@
 {__("Are you sure you want to reset your JWT key?")}
 {__("There is something that went wrong!")}
 {__("There is no more data to show")}
-{__("This website uses cookies to ensure you get the best experience on our website")}
-{__("Got It!")}
-{__("Learn More")}
 {__("No result found")}
 {__("You haved poked")}
 {__("Touch to unmute")}
@@ -143,6 +140,24 @@
 {__("Chart context menu")}
 <!-- /_js_files.tpl (Highcharts.js) -->
 
+<!-- _js_files.tpl (Cookies Consent) -->
+{__("We use cookies")}
+{__("We use cookies to improve your experience. You can accept, reject, or manage preferences.")}
+{__("Accept all")}
+{__("Reject non-essential")}
+{__("Manage preferences")}
+{__("Save preferences")}
+{__("Consent Preferences Center")}
+{__("Cookie Usage")}
+{__("Essential cookies are always on. Choose if you want analytics cookies too.")}
+{__("Strictly Necessary cookies")}
+{__("These cookies are essential for the proper functioning of the website and cannot be disabled.")}
+{__("Analytics cookies")}
+{__("These cookies collect information about how you use our website. All of the data is anonymized and cannot be used to identify you.")}
+{__("More information")}
+{__("For any queries in relation to my policy on cookies and your choices,")}
+<!-- /_js_files.tpl (Cookies Consent) -->
+
 <!-- database values -->
 {__("Share your memories, connect with others, make new friends")}
 {__("Cover Photos")}
@@ -151,7 +166,7 @@
 <!-- /database values -->
 
 <!-- placeholders & titles -->
-{__("What is on your mind? #Hashtag.. @Mention.. Link..")}
+{__("What is on your mind?")}
 {__("Write a comment")}
 {__("Shared with: Public")}
 {__("Shared with: Friends")}

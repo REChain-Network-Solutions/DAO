@@ -1,4 +1,37 @@
-﻿#== v4.3 == ( 08-04-2026 )
+﻿#== v4.4 == ( 31-05-2026 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
+
+- [Added] New Social Login [Apple]
+- [Added] New Social Login [Discord]
+- [Added] New Cookies Consent
+- [Added] hCaptcha Security Check
+- [Added] CCBill Payment Support
+- [Added] Cashapp Payment Support
+- [Added] Blik Payment Support
+- [Added] EPS Payment Support
+- [Added] iDEAL Payment Support
+- [Added] Bancontact Payment Support
+- [Added] Przelewy24 Payment Support
+- [Added] OXXO Payment Support
+- [Added] Revamped Emails Templates
+
+- [Fixed] Minor Bugs
+- [Fixed] Custom Fields Search
+- [Fixed] Highcharts Loading Issue
+- [Fixed] Compo Post Issue
+- [Fixed] Chat Text Non-Wrapping Issue
+- [Fixed] Schedule Post Listing Issue
+- [Fixed] Posts Reactions Update
+- [Fixed] Paid Movies Payment Link For Non-logged In Users
+- [Fixed] YouTube Shorts Scraping
+- [Fixed] RTL Publisher Issues
+- [Fixed] Blog Blockquote
+
+#== v4.3 == ( 08-04-2026 )
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization

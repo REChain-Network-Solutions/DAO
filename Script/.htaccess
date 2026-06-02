@@ -131,6 +131,9 @@ RewriteRule ^notifications/?$ notifications.php [L,QSA]
 # Payment Status
 RewriteRule ^payment_status/([^/]+)/?$ payment_status.php?view=$1 [L,QSA]
 
+# CCBill Status
+RewriteRule ^ccbill/status/?$ ccbill_status.php [L,QSA]
+
 # Settings
 RewriteRule ^settings/?$ settings.php [L,QSA]
 RewriteRule ^settings/([^/]+)/?$ settings.php?view=$1 [L,QSA]

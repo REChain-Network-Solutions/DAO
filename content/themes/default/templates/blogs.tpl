@@ -92,11 +92,13 @@
             <div class="float-end">
               <a href="#" data-bs-toggle="dropdown" class="countries-filter">
                 <i class="fa fa-globe fa-fw"></i>
-                {if $selected_country}
-                  <span>{$selected_country['country_name']}</span>
-                {else}
-                  <span>{__("All Countries")}</span>
-                {/if}
+                <span class="d-none d-md-inline-block">
+                  {if $selected_country}
+                    {$selected_country['country_name']}
+                  {else}
+                    {__("All Countries")}
+                  {/if}
+                </span>
               </a>
               <div class="dropdown-menu dropdown-menu-end countries-dropdown">
                 <div class="js_scroller">
@@ -156,11 +158,13 @@
                 <div class="float-end">
                   <a href="#" data-bs-toggle="dropdown" class="countries-filter">
                     <i class="fa fa-globe fa-fw"></i>
-                    {if $selected_country}
-                      <span>{$selected_country['country_name']}</span>
-                    {else}
-                      <span>{__("All Countries")}</span>
-                    {/if}
+                    <span class="d-none d-md-inline-block">
+                      {if $selected_country}
+                        {$selected_country['country_name']}
+                      {else}
+                        {__("All Countries")}
+                      {/if}
+                    </span>
                   </a>
                   <div class="dropdown-menu dropdown-menu-end countries-dropdown">
                     <div class="js_scroller">

@@ -29,3 +29,8 @@ $app->post('/user/onesignal', function ($req, $res) {
 $app->post('/user/delete', function ($req, $res) {
   deleteUser($req, $res);
 });
+
+# [get] blocked
+$app->get('/user/blocked', function ($req, $res) {
+  getBlockedUsers($req, $res);
+});

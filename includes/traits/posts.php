@@ -50,7 +50,7 @@ trait PostsTrait
     $offset *= $max_results;
     $get_all = !isset($args['get_all']) ? false : true;
     /* prepare query */
-    $order_query = "ORDER BY posts.post_id DESC";
+    $order_query = "ORDER BY posts.time DESC";
     $where_query = "";
     /* get posts */
     switch ($get) {
@@ -318,7 +318,8 @@ trait PostsTrait
       $where_query .= " AND (posts.post_type = '$filter')";
     }
     /* exclude banned users posts */
-    $author_join = " LEFT JOIN users AS user_post_author ON posts.user_type = 'user' AND posts.user_id = user_post_author.user_id AND user_post_author.user_banned = '0' LEFT JOIN pages AS page_post_author ON posts.user_type = 'page' AND posts.user_id = page_post_author.page_id ";
+    $author_join = " LEFT JOIN users AS user_post_author ON posts.user_type = 'user' AND posts.user_id = user_post_author.user_id LEFT JOIN pages AS page_post_author ON posts.user_type = 'page' AND posts.user_id = page_post_author.page_id ";
+    $where_query .= " AND (posts.user_type != 'user' OR IFNULL(user_post_author.user_banned, 0) = 0)";
     /* exclude processing posts */
     $where_query .= " AND (posts.processing != '1')";
     /* newsfeed location filter */
@@ -447,12 +448,7 @@ trait PostsTrait
 
     if ($post['can_get_details']) {
       /* parse text */
-      $post['text_raw'] = $post['text'];
-      $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
-      $post['text_html'] = ($post['text_html']) ? preg_replace('/^<p>|<\/p>$/', '', $post['text_html']) : $post['text_html'];
-      $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
-      $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
-      $post['text'] = $this->parse(["text" => $post['text_html'], 'decode_emojis' => false]);
+      $this->prepare_post_text($post);
 
       /* og-meta tags */
       $post['og_title'] .= ($post['text_plain'] != "") ? " - " . $post['text_plain'] : "";
@@ -818,8 +814,10 @@ trait PostsTrait
         /* get video */
         $get_video = $db->query(sprintf("SELECT posts_videos.*, posts_videos_categories.category_name FROM posts_videos LEFT JOIN posts_videos_categories ON posts_videos.category_id = posts_videos_categories.category_id WHERE posts_videos.post_id = %s", secure($post['post_id'], 'int')));
         /* check if video has been deleted */
-        if ($get_video->num_rows == 0 && $post['post_type'] != 'combo') {
-          return false;
+        if ($get_video->num_rows == 0) {
+          if ($post['post_type'] != 'combo') {
+            return false;
+          }
         } else {
           $post['video'] = $get_video->fetch_assoc();
           $post['video']['category_url'] = get_url_text($post['video']['category_name']);
@@ -846,8 +844,10 @@ trait PostsTrait
         /* get audio */
         $get_audio = $db->query(sprintf("SELECT * FROM posts_audios WHERE post_id = %s", secure($post['post_id'], 'int')));
         /* check if audio has been deleted */
-        if ($get_audio->num_rows == 0 && $post['post_type'] != 'combo') {
-          return false;
+        if ($get_audio->num_rows == 0) {
+          if ($post['post_type'] != 'combo') {
+            return false;
+          }
         } else {
           $post['audio'] = $get_audio->fetch_assoc();
         }
@@ -857,8 +857,10 @@ trait PostsTrait
         /* get file */
         $get_file = $db->query(sprintf("SELECT * FROM posts_files WHERE post_id = %s", secure($post['post_id'], 'int')));
         /* check if file has been deleted */
-        if ($get_file->num_rows == 0 && $post['post_type'] != 'combo') {
-          return false;
+        if ($get_file->num_rows == 0) {
+          if ($post['post_type'] != 'combo') {
+            return false;
+          }
         } else {
           $post['file'] = $get_file->fetch_assoc();
         }
@@ -2129,6 +2131,8 @@ trait PostsTrait
     if (!$post['manage_post']) {
       _error(403);
     }
+    /* sanitize message */
+    $message = strip_tags($message, '<p><br><b><strong><i><em><u><s><del><blockquote><ul><ol><li><h1><h2><span>');
     /* check post max length */
     if ($system['max_post_length'] > 0 && $this->_data['user_group'] >= 3) {
       if (strlen($message) >= $system['max_post_length']) {
@@ -2929,7 +2933,7 @@ trait PostsTrait
    * 
    * @param integer $post_id
    * @param string $reaction
-   * @return void
+   * @return array|false
    */
   public function react_post($post_id, $reaction)
   {
@@ -2970,6 +2974,8 @@ trait PostsTrait
     /* points balance */
     $this->points_balance("add", $post['author_id'], "post_reaction", $reaction_id);
     $this->points_balance("add", $this->_data['user_id'], "posts_reactions", $reaction_id);
+    /* return */
+    return $this->_check_post($post_id);
   }
 
 
@@ -2978,7 +2984,7 @@ trait PostsTrait
    * 
    * @param integer $post_id
    * @param string $reaction
-   * @return void
+   * @return array|false
    */
   public function unreact_post($post_id, $reaction)
   {
@@ -2998,6 +3004,7 @@ trait PostsTrait
     }
     /* unreact the post */
     if ($post['i_react']) {
+      /* remove the reaction */
       $db->query(sprintf("DELETE FROM posts_reactions WHERE user_id = %s AND post_id = %s", secure($this->_data['user_id'], 'int'), secure($post_id, 'int')));
       /* update post reaction counter */
       $reaction_field = "reaction_" . $reaction . "_count";
@@ -3005,9 +3012,13 @@ trait PostsTrait
       /* delete notification */
       $this->delete_notification($post['author_id'], 'react_' . $reaction, 'post', $post_id);
       /* points balance */
-      $this->points_balance("delete", $post['author_id'], "post_reaction", $reaction_id);
+      $this->points_balance("delete", $post['author_id'], "post_reaction");
       $this->points_balance("delete", $this->_data['user_id'], "posts_reactions");
+      /* get post */
+      $post = $this->_check_post($post_id);
     }
+    /* return */
+    return $post;
   }
 
 

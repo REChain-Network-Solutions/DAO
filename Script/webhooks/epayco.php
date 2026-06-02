@@ -68,7 +68,7 @@ try {
       if ($payment) {
         /* update user wallet balance */
         $_SESSION['wallet_replenish_amount'] = $_GET['price'];
-        $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($_SESSION['wallet_replenish_amount']), secure($user->_data['user_id'], 'int')));
+        $user->wallet_update_balance($_SESSION['wallet_replenish_amount'], '+', $user->_data['user_id']);
         /* wallet transaction */
         $user->wallet_set_transaction($user->_data['user_id'], 'recharge', 0, $_SESSION['wallet_replenish_amount'], 'in');
         /* log payment */

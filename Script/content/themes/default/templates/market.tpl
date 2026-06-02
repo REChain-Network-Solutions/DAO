@@ -149,11 +149,11 @@
             <!-- sort -->
             <a href="#" data-bs-toggle="dropdown" class="countries-filter">
               {if !$sort || $sort == "latest"}
-                <i class="fas fa-bars fa-fw"></i> {__("Latest")}
+                <i class="fas fa-bars fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Latest")}</span>
               {elseif $sort == "price-high"}
-                <i class="fas fa-sort-amount-down fa-fw"></i> {__("Price High")}
+                <i class="fas fa-sort-amount-down fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Price High")}</span>
               {elseif $sort == "price-low"}
-                <i class="fas fa-sort-amount-down-alt fa-fw"></i> {__("Price Low")}
+                <i class="fas fa-sort-amount-down-alt fa-fw"></i><span class="d-none d-md-inline-block ml5">{__("Price Low")}</span>
               {/if}
             </a>
             <div class="dropdown-menu dropdown-menu-end">
@@ -165,8 +165,8 @@
             <!-- location filter -->
             {if $user->_logged_in && $system['location_finder_enabled']}
               <a href="#" data-bs-toggle="dropdown" class="countries-filter ml10">
-                <i class="fa fa-map-marker-alt mr5"></i>
-                <span>{__("Distance")}</span>
+                <i class="fa fa-map-marker-alt"></i>
+                <span class="d-none d-md-inline-block">{__("Distance")}</span>
               </a>
               <div class="dropdown-menu dropdown-menu-end">
                 <form class="ptb15 plr15" method="get" action="?">

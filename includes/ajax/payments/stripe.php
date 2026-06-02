@@ -17,7 +17,7 @@ is_ajax();
 user_access(true, true);
 
 // check if Stripe enabled
-if (!$system['creditcard_enabled'] && !$system['alipay_enabled']) {
+if (!$system['creditcard_enabled']) {
   modal("MESSAGE", __("Error"), __("This feature has been disabled by the admin"));
 }
 

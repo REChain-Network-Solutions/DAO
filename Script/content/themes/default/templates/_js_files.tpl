@@ -8,6 +8,7 @@
     var ajax_path = site_path + "/includes/ajax/";
     var uploads_path = "{$system['system_uploads']}";
     var current_page = "{$page}";
+    var system_version = "{$system['system_version']}";
     var system_debugging_mode = {if $system['DEBUGGING']}true{else}false{/if};
     var smooth_infinite_scroll = {if $system['smooth_infinite_scroll']}true{else}false{/if};
     var newsfeed_results = "{$system['newsfeed_results']}";
@@ -116,7 +117,7 @@
   <script>
     /* i18n for JS */
     var __ = [];
-    __['What is on your mind? #Hashtag.. @Mention.. Link..'] = `{__('What is on your mind? #Hashtag.. @Mention.. Link..')}`;
+    __['What is on your mind?'] = `{__('What is on your mind?')}`;
     __['Ask something'] = `{__('Ask something')}`;
     __['Add Friend'] = `{__('Add Friend')}`;
     __['Friends'] = `{__('Friends')}`; 
@@ -208,9 +209,6 @@
     __['Are you sure you want to reset your JWT key?'] = `{__('Are you sure you want to reset your JWT key?')}`;
     __['There is something that went wrong!'] = `{__('There is something that went wrong!')}`;
     __['There is no more data to show'] = `{__('There is no more data to show')}`;
-    __['This website uses cookies to ensure you get the best experience on our website'] = `{__('This website uses cookies to ensure you get the best experience on our website')}`;
-    __['Got It!'] = `{__('Got It!')}`;
-    __['Learn More'] = `{__('Learn More')}`;
     __['No result found'] = `{__('No result found')}`;
     __['Turn on Commenting'] = `{__('Turn on Commenting')}`;
     __['Turn off Commenting'] = `{__('Turn off Commenting')}`;
@@ -322,6 +320,23 @@
     __['Download PDF'] = `{__('Download PDF')}`;
     __['Download SVG vector image'] = `{__('Download SVG vector image')}`;
     __['Chart context menu'] = `{__('Chart context menu')}`;
+    /* i18n for Cookies Consent */
+    __['We use cookies'] = `{__('We use cookies')}`;
+    __['We use cookies to improve your experience. You can accept, reject, or manage preferences.'] = `{__('We use cookies to improve your experience. You can accept, reject, or manage preferences.')}`;
+    __['Accept all'] = `{__('Accept all')}`;
+    __['Reject non-essential'] = `{__('Reject non-essential')}`;
+    __['Manage preferences'] = `{__('Manage preferences')}`;
+    __['Save preferences'] = `{__('Save preferences')}`;
+    __['Consent Preferences Center'] = `{__('Consent Preferences Center')}`;
+    __['Cookie Usage'] = `{__('Cookie Usage')}`;
+    __['Essential cookies are always on. Choose if you want analytics cookies too.'] = `{__('Essential cookies are always on. Choose if you want analytics cookies too.')}`;
+    __['Strictly Necessary cookies'] = `{__('Strictly Necessary cookies')}`;
+    __['These cookies are essential for the proper functioning of the website and cannot be disabled.'] = `{__('These cookies are essential for the proper functioning of the website and cannot be disabled.')}`;
+    __['Analytics cookies'] = `{__('Analytics cookies')}`;
+    __['These cookies collect information about how you use our website. All of the data is anonymized and cannot be used to identify you.'] = `{__('These cookies collect information about how you use our website. All of the data is anonymized and cannot be used to identify you.')}`;
+    __['More information'] = `{__('More information')}`;
+    __['For any queries in relation to my policy on cookies and your choices,'] = `{__('For any queries in relation to my policy on cookies and your choices,')}`;
+    __['Contact Us'] = `{__('Contact Us')}`;
   </script>
   <!-- Initialize -->
 
@@ -387,8 +402,7 @@
 
     <!-- Google Geocomplete -->
     {if $system['geolocation_enabled']}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/geocomplete/1.7.0/jquery.geocomplete.min.js" integrity="sha512-4bp4fE4hv0i/1jLM7d+gXDaCAhnXXfGBKdHrBcpGBgnz7OlFMjUgVH4kwB85YdumZrZyryaTLnqGKlbmBatCpQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-      <script src="https://maps.googleapis.com/maps/api/js?libraries=places&key={$system['geolocation_key']}&loading=async"></script>
+      <script src="https://maps.googleapis.com/maps/api/js?key={$system['geolocation_key']}&loading=async&v=beta"></script>
     {/if}
     <!-- Google Geocomplete -->
 
@@ -429,7 +443,7 @@
 
     <!-- Stripe & 2Checkout & Razorpay & Shift4 & Cashfree & Epayco -->
     {if in_array($page, ["index", "packages", "ads", "wallet", "market", "profile", "page", "group", "post", "directory", "search", "movies"])}
-      {if $system['creditcard_enabled'] || $system['alipay_enabled']}
+      {if $system['creditcard_enabled']}
         <script src="https://js.stripe.com/v3" defer></script>
       {/if}
       {if $system['2checkout_enabled']}
@@ -453,7 +467,7 @@
     <!-- (Twillio|LiveKit) [Audio/Video Calls] -->
     {if $system['audio_call_enabled'] || $system['video_call_enabled']}
       {if $system['audio_video_provider'] == "twilio"}
-        <script src="https://sdk.twilio.com/js/video/releases/2.34.0/twilio-video.min.js" defer></script>
+        <script src="https://sdk.twilio.com/js/video/releases/2.35.0/twilio-video.min.js" defer></script>
       {/if}
       {if $system['audio_video_provider'] == "livekit"}
         <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js" defer></script>
@@ -463,7 +477,7 @@
 
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
     {if $system['live_enabled'] || $system['audio_video_provider'] == 'agora'}
-      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.3.js"></script>
+      <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.24.4.js"></script>
     {/if}
     <!-- Agora [Live Streaming & Audio/Video Calls] -->
 
@@ -475,9 +489,9 @@
 
     <!-- Datatables -->
     {if in_array($page, ["admin", "ads", "wallet", "developers", "settings", "page", "group"])}
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.7/css/dataTables.bootstrap5.min.css" defer />
-      <script src="https://cdn.datatables.net/2.3.7/js/dataTables.js" defer></script>
-      <script src="https://cdn.datatables.net/2.3.7/js/dataTables.bootstrap5.min.js" defer></script>
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.3.8/css/dataTables.bootstrap5.min.css" defer />
+      <script src="https://cdn.datatables.net/2.3.8/js/dataTables.js" defer></script>
+      <script src="https://cdn.datatables.net/2.3.8/js/dataTables.bootstrap5.min.js" defer></script>
     {/if}
     <!-- Datatables -->
 
@@ -544,8 +558,8 @@
     <!-- System [JS] -->
 
     <!-- Admin Charts -->
-    <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="{$system['system_url']}/node_modules/highcharts/highcharts.js"></script>
+    <script src="{$system['system_url']}/node_modules/highcharts/modules/exporting.js"></script>
     {if $view == "dashboard"}
       <script>
         $(function() {
@@ -954,37 +968,83 @@
     <!-- Admin Code Editor -->
   {/if}
 
-  <!-- Cookies Policy -->
+  <!-- Cookies Consent -->
   {if $system['cookie_consent_enabled']}
-    <script src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.0.3/cookieconsent.min.js" {if !$user->_logged_in}defer{/if}>
+    <script src="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.1.0/dist/cookieconsent.umd.js" {if !$user->_logged_in}defer{/if}>
       
     </script>
-    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.0.3/cookieconsent.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.1.0/dist/cookieconsent.css" />
     <script>
       window.addEventListener("load", function() {
-        window.cookieconsent.initialise({
-          "palette": {
-            "popup": {
-              "background": "#1e2321",
-              "text": "#fff"
+        if (theme_mode_night) {
+          document.documentElement.classList.add('cc--darkmode');
+        }
+        CookieConsent.run({
+          categories: {
+            necessary: {
+              enabled: true,
+              readOnly: true
             },
-            "button": {
-              "background": "#5e72e4"
-            }
+            analytics: {}
           },
-          "theme": "edgeless",
-          "position": {if $system['language']['dir'] == 'LTR'}"bottom-left"{else}"bottom-right"{/if},
-          "content": {
-            "message": __['This website uses cookies to ensure you get the best experience on our website'],
-            "dismiss": __['Got It!'],
-            "link": __['Learn More'],
-            "href": site_path + "/static/privacy"
+          guiOptions: {
+            consentModal: {
+              layout: 'box',
+              position: (theme_dir_rtl) ? 'bottom left' : 'bottom right',
+              flipButtons: false,
+              equalWeightButtons: true
+            },
+            preferencesModal: {
+              layout: 'box',
+              flipButtons: false,
+              equalWeightButtons: true
+            },
+          },
+          language: {
+            default: system_langauge_code,
+            translations: {
+              [system_langauge_code]: {
+                consentModal: {
+                  title: '🍪 ' + __['We use cookies'],
+                  description: __['We use cookies to improve your experience. You can accept, reject, or manage preferences.'],
+                  acceptAllBtn: __['Accept all'],
+                  acceptNecessaryBtn: __['Reject non-essential'],
+                  showPreferencesBtn: __['Manage preferences']
+                },
+                preferencesModal: {
+                  title: __['Consent Preferences Center'],
+                  acceptAllBtn: __['Accept all'],
+                  acceptNecessaryBtn: __['Reject non-essential'],
+                  savePreferencesBtn: __['Save preferences'],
+                  closeIconLabel: __['Close'],
+                  sections: [{
+                      title: __['Cookie Usage'],
+                      description: __['Essential cookies are always on. Choose if you want analytics cookies too.']
+                    },
+                    {
+                      title: __['Strictly Necessary cookies'],
+                      description: __['These cookies are essential for the proper functioning of the website and cannot be disabled.'],
+                      linkedCategory: 'necessary'
+                    },
+                    {
+                      title: __['Analytics cookies'],
+                      description: __['These cookies collect information about how you use our website. All of the data is anonymized and cannot be used to identify you.'],
+                      linkedCategory: 'analytics'
+                    },
+                    {
+                      title: __['More information'],
+                      description: __['For any queries in relation to my policy on cookies and your choices,'] + ' <a href="' + site_path + '/contacts">' + __['Contact Us'] + '</a>'
+                    }
+                  ]
+                }
+              }
+            }
           }
-        })
+        });
       });
     </script>
   {/if}
-  <!-- Cookies Policy -->
+  <!-- Cookies Consent -->
 
   <!-- OneSignal Notifications -->
   {if $user->_logged_in && $page != "reels" && $system['onesignal_notification_enabled']}

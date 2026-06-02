@@ -26,11 +26,8 @@
       </ul>
       {if !$user->_is_admin && !$user->_is_moderator}
         <div class="mt10 float-end">
-          <a href="{$system['system_url']}/support/tickets/new" class="btn btn-md btn-primary d-none d-lg-block">
-            <i class="fa fa-plus-circle mr5"></i>{__("Create Ticket")}
-          </a>
-          <a href="{$system['system_url']}/support/tickets/new" class="btn btn-sm btn-icon btn-primary d-block d-lg-none">
-            <i class="fa fa-plus-circle"></i>
+          <a href="{$system['system_url']}/support/tickets/new" class="btn btn-md btn-primary">
+            <i class="fa fa-plus-circle"></i><span class="d-none d-xxl-inline-block ml5">{__("Create Ticket")}</span>
           </a>
         </div>
       {/if}

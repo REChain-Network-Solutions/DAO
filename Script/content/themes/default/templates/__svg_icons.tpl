@@ -1100,6 +1100,50 @@
 
     {include file='../images/svg/replicate.svg'}
 
+  {elseif $icon == "hcaptcha"}
+
+    {include file='../images/svg/hcaptcha.svg'}
+
+  {elseif $icon == "cashapp"}
+
+    {include file='../images/svg/cashapp.svg'}
+
+  {elseif $icon == "blik"}
+
+    {include file='../images/svg/blik.svg'}
+
+  {elseif $icon == "eps"}
+
+    {include file='../images/svg/eps.svg'}
+
+  {elseif $icon == "ideal"}
+
+    {include file='../images/svg/ideal.svg'}
+
+  {elseif $icon == "bancontact"}
+
+    {include file='../images/svg/bancontact.svg'}
+
+  {elseif $icon == "przelewy24"}
+
+    {include file='../images/svg/przelewy24.svg'}
+
+  {elseif $icon == "oxxo"}
+
+    {include file='../images/svg/oxxo.svg'}
+
+  {elseif $icon == "ccbill"}
+
+    {include file='../images/svg/ccbill.svg'}
+
+  {elseif $icon == "apple"}
+
+    {include file='../images/svg/apple.svg'}
+
+  {elseif $icon == "discord"}
+
+    {include file='../images/svg/discord.svg'}
+
   {/if}
 
 </div>

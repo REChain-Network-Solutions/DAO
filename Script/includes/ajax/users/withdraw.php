@@ -70,7 +70,7 @@ try {
       /* insert payment */
       $db->query(sprintf("INSERT INTO wallet_payments (user_id, amount, method, method_value, time, status) VALUES (%s, %s, %s, %s, %s, '0')", secure($user->_data['user_id'], 'int'), secure($_POST['amount']), secure($_POST['method']), secure($_POST['method_value']), secure($date)));
       /* update user balance */
-      $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance - %s WHERE user_id = %s", secure($_POST['amount']), secure($user->_data['user_id'], 'int')));
+      $user->wallet_update_balance($_POST['amount'], '-', $user->_data['user_id']);
       /* wallet transaction */
       $user->wallet_set_transaction($user->_data['user_id'], 'withdraw_wallet', 0, $_POST['amount'], 'out');
 

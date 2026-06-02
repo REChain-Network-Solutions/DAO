@@ -505,7 +505,7 @@ try {
 
     case 'blocks':
       /* get blocks */
-      $data = $user->get_blocked($_POST['offset']);
+      $data = $user->get_blocked($_POST['offset'])['data'];
       break;
 
     case 'affiliates':

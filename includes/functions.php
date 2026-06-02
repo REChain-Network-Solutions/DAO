@@ -22,7 +22,7 @@ function check_system_requirements()
   /* init errors */
   $errors = [];
   /* set required php version*/
-  $required_php_version = '8.2';
+  $required_php_version = '8.4';
   /* check php version */
   if (version_compare($required_php_version, PHP_VERSION, '>=')) {
     $errors['PHP'] = true;
@@ -97,7 +97,7 @@ function get_licence_key($code)
     throw new Exception("Error Processing Request");
   }
   $responseJson = json_decode($response, true);
-  if ($responseJson['error']) {
+  if (!empty($responseJson['error'])) {
     throw new Exception($responseJson['error']['message'] . ' Error Code #' . $responseJson['error']['code']);
   }
   return $responseJson['licence_key'];
@@ -371,6 +371,16 @@ function init_system_session()
   ini_set('session.cookie_httponly', 1);
   if (get_system_protocol() == "https") {
     ini_set('session.cookie_secure', 1);
+    /* Sign in with Apple (and similar) returns via cross-site POST; Lax session cookies are not sent on that POST, so Hybridauth loses OAuth state. */
+    if (PHP_VERSION_ID >= 70300) {
+      session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'None',
+      ]);
+    }
   }
   session_start();
   /* set session secret */
@@ -886,13 +896,15 @@ function set_cookie($cookie_name, $cookie_value, $is_expired = false, $is_httpon
   $secured = (get_system_protocol() == "https") ? true : false;
   $expire_time = ($is_expired) ?  0 : time() + 2592000;
   $httponly = ($is_httponly) ? true : false;
+  /* None on HTTPS so cookies are sent on cross-site POST (e.g. Sign in with Apple callback); Lax would omit them and the user looks logged out. */
+  $samesite = ($secured && PHP_VERSION_ID >= 70300) ? 'None' : 'Lax';
   $options = [
     'expires' => $expire_time,
     'path' => '/',
     'domain' => '',
     'secure' => $secured,
     'httponly' => $httponly,
-    'samesite' => 'Lax'
+    'samesite' => $samesite
   ];
   setcookie($cookie_name, $cookie_value, $options);
 }
@@ -906,7 +918,16 @@ function set_cookie($cookie_name, $cookie_value, $is_expired = false, $is_httpon
  */
 function unset_cookie($cookie_name)
 {
-  setcookie($cookie_name, "", -1, '/');
+  $secured = (get_system_protocol() == "https") ? true : false;
+  $samesite = ($secured && PHP_VERSION_ID >= 70300) ? 'None' : 'Lax';
+  setcookie($cookie_name, '', [
+    'expires' => time() - 3600,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $secured,
+    'httponly' => true,
+    'samesite' => $samesite,
+  ]);
 }
 
 
@@ -2029,6 +2050,48 @@ function google_vision_check($image_source)
       return false;
     }
   } catch (Exception $e) {
+    return false;
+  }
+}
+
+
+
+/* ------------------------------- */
+/* hCaptcha */
+/* ------------------------------- */
+
+/**
+ * check_hcaptcha
+ *
+ * @param string $token
+ * @return boolean
+ */
+function check_hcaptcha($token)
+{
+  global $system;
+  $payload = http_build_query([
+    "secret" => $system['hcaptcha_secret_key'],
+    "response" => $token,
+    "remoteip" => get_user_ip(),
+    "sitekey" => $system['hcaptcha_site_key'],
+  ]);
+  $ctx = stream_context_create([
+    "http" => [
+      "method" => "POST",
+      "header" => "Content-type: application/x-www-form-urlencoded\r\n",
+      "content" => $payload,
+      "timeout" => 5,
+    ],
+  ]);
+  $raw = file_get_contents(
+    "https://api.hcaptcha.com/siteverify",
+    false,
+    $ctx
+  );
+  $response = json_decode($raw, true);
+  if (!empty($response["success"])) {
+    return true;
+  } else {
     return false;
   }
 }
@@ -3742,7 +3805,6 @@ function cloudflare_r2_test()
  * @param string $content_type
  * @return void
  */
-
 function cloudflare_r2_upload($file_source, $file_name, $content_type = "")
 {
   global $system;
@@ -3750,20 +3812,26 @@ function cloudflare_r2_upload($file_source, $file_name, $content_type = "")
     'version'     => 'latest',
     'endpoint'    => $system['cloudflare_r2_endpoint'],
     'region' => 'auto',
+    'use_path_style_endpoint' => true,
+    'use_aws_shared_config_files' => false,
     'credentials' => [
       'key'     => $system['cloudflare_r2_key'],
       'secret'  => $system['cloudflare_r2_secret'],
-    ]
+    ],
   ]);
   $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['cloudflare_r2_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
+  $params = [
     'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
+  ];
+  if ($content_type !== '') {
+    $params['ContentType'] = $content_type;
+  }
+  $uploader = new Aws\S3\MultipartUploader($s3Client, $file_source, [
+    'bucket' => $system['cloudflare_r2_bucket'],
+    'key'    => $Key,
+    'params' => $params,
   ]);
+  $uploader->upload();
   /* remove local file */
   gc_collect_cycles();
   if ($s3Client->doesObjectExist($system['cloudflare_r2_bucket'], $Key)) {
@@ -5521,7 +5589,7 @@ function stripe_payment_session($method, $handle, $price, $id = null, $bypass_su
       _error(400);
       break;
   }
-  $method = ($method == 'credit') ? 'card' : 'alipay';
+  $method = ($method == 'credit') ? 'card' : $method;
   /* Stripe */
   $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
   if ($system['stripe_payment_element_enabled']) {
@@ -5572,7 +5640,7 @@ function stripe_subscription_session($method, $handle, $id, $billing_plan_id)
 {
   global $system, $user;
   /* prepare method */
-  $method = ($method == 'credit') ? 'card' : 'alipay';
+  $method = ($method == 'credit') ? 'card' : $method;
   /* prepare handle */
   switch ($handle) {
     case 'packages':
@@ -7087,6 +7155,285 @@ function plisio_check($txn_id)
     }
   }
   return false;
+}
+
+
+
+/* ------------------------------- */
+/* CCBill */
+/* ------------------------------- */
+
+/**
+ * ccbill
+ *
+ * @param string $handle
+ * @param string $price
+ * @param integer $id
+ * @return string
+ */
+function ccbill($handle, $price, $id = null)
+{
+  global $system, $user, $db, $date;
+  /* prepare */
+  $total = get_payment_total_value($price);
+  $is_recurring = false;
+  $initial_period = '2';
+  $initial_price  = number_format($total, 2, '.', '');
+  $numRebills = 99;
+  /* CCBill numeric currency codes (ISO 4217) */
+  $currency_map = [
+    'USD' => '840',
+    'EUR' => '978',
+    'GBP' => '826',
+    'CAD' => '124',
+    'AUD' => '036',
+    'JPY' => '392',
+    'CHF' => '756',
+    'DKK' => '208',
+    'NOK' => '578',
+    'SEK' => '752',
+    'NZD' => '554',
+    'ZAR' => '710',
+  ];
+  $currency_code = $currency_map[$system['system_currency']] ?? '840';
+  /* check if the handle is valid */
+  if (!in_array($handle, ['packages', 'wallet', 'donate', 'subscribe', 'paid_post', 'movies', 'marketplace'])) {
+    throw new Exception(__('Invalid payment handle'));
+  }
+  /* check if the handle is recurring */
+  if ($handle == 'packages') {
+    /* get the package */
+    $package = $user->get_package($id);
+    if (!$package) {
+      throw new Exception(__('Invalid package'));
+    }
+    switch ($package['period']) {
+      case 'day':
+        $is_recurring = true;
+        $initial_period = 1;
+        break;
+
+      case 'week':
+        $is_recurring = false;
+        $initial_period = $package['period_num'] * 7;
+        break;
+
+      case 'month':
+        $is_recurring = (in_array($package['period_num'], [1, 2, 3])) ? true : false;
+        $initial_period = $package['period_num'] * 30;
+        break;
+
+      case 'year':
+        $is_recurring = ($package['period_num'] == 1) ? true : false;
+        $initial_period = $package['period_num'] * 365;
+        break;
+
+      case 'life':
+        $is_recurring = false;
+        $initial_period = '2';
+        break;
+    }
+  } else if ($handle == 'subscribe') {
+    /* get the monetization plan */
+    $monetization_plan = $user->get_monetization_plan($id, true);
+    if (!$monetization_plan) {
+      throw new Exception(__('Invalid monetization plan'));
+    }
+    switch ($monetization_plan['period']) {
+      case 'minute':
+      case 'hour':
+        $is_recurring = false;
+        $initial_period = 2;
+        break;
+
+      case 'day':
+        $is_recurring = true;
+        $initial_period = $monetization_plan['period_num'];
+        break;
+
+      case 'week':
+        $is_recurring = false;
+        $initial_period = $monetization_plan['period_num'] * 7;
+        break;
+
+      case 'month':
+        $is_recurring = (in_array($monetization_plan['period_num'], [1, 2, 3])) ? true : false;
+        $initial_period = $monetization_plan['period_num'] * 30;
+        break;
+
+      case 'year':
+        $is_recurring = ($monetization_plan['period_num'] == 1) ? true : false;
+        $initial_period = $monetization_plan['period_num'] * 365;
+        break;
+    }
+  }
+  /* get the subaccount number */
+  $subaccount = str_pad(
+    $is_recurring ? $system['ccbill_recurring_subaccount_number'] : $system['ccbill_one_time_subaccount_number'],
+    4,
+    '0',
+    STR_PAD_LEFT
+  );
+  /* create pending payment */
+  $db->query(sprintf("INSERT INTO ccbill_payments (user_id, handle, reference_id, amount, total_amount, created_at) VALUES (%s, %s, %s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($handle), secure($id, 'int'), secure($price, 'float'), secure($total, 'float'), secure($date)));
+  $payment_id = $db->insert_id;
+  /* form digest */
+  if ($is_recurring) {
+    /* md5(initialPrice . initialPeriod . recurringPrice . recurringPeriod . numRebills . currencyCode . saltKey) */
+    $form_digest = md5($initial_price . $initial_period . $initial_price . $initial_period . $numRebills . $currency_code . $system['ccbill_salt_key']);
+  } else {
+    /* md5(initialPrice . initialPeriod . currencyCode . saltKey) */
+    $form_digest = md5($initial_price . $initial_period . $currency_code . $system['ccbill_salt_key']);
+  }
+  /* build CCBill FlexForms URL */
+  $params = [
+    'clientSubacc'        => $subaccount,
+    'initialPrice'        => $initial_price,
+    'initialPeriod'       => $initial_period,
+    'currencyCode'        => $currency_code,
+    'formDigest'          => $form_digest,
+    'email'               => $user->_data['user_email'],
+    'X-user-id'           => $user->_data['user_id'],
+    'X-handle'            => $handle,
+    'X-reference-id'      => $id,
+    'X-payment-id'        => $payment_id
+  ];
+  if ($is_recurring) {
+    $params['recurringPeriod'] = $initial_period;
+    $params['recurringPrice'] = $initial_price;
+    $params['numRebills'] = $numRebills;
+  }
+  return 'https://api.ccbill.com/wap-frontflex/flexforms/' . $system['ccbill_flexform_id'] . '?' . http_build_query($params);
+}
+
+
+/**
+ * ccbill_get_payment
+ *
+ * @return array | Exception
+ */
+function ccbill_get_payment()
+{
+  global $db, $user;
+  /* get the x-data from the request query */
+  $x_user_id = $_GET['X-user-id'];
+  $x_handle = $_GET['X-handle'];
+  $x_reference_id = $_GET['X-reference-id'];
+  $x_payment_id = $_GET['X-payment-id'];
+  /* if x-user-id is not the same as the user id, return false */
+  if ($x_user_id != $user->_data['user_id']) {
+    throw new Exception(__('Invalid user'));
+  }
+  /* get the payment */
+  $get_payment = $db->query(sprintf("SELECT * FROM ccbill_payments WHERE user_id = %s AND handle = %s AND reference_id = %s AND payment_id = %s", secure($x_user_id, 'int'), secure($x_handle), secure($x_reference_id, 'int'), secure($x_payment_id, 'int')));
+  if ($get_payment->num_rows == 0) {
+    throw new Exception(__('Invalid payment'));
+  }
+  $payment = $get_payment->fetch_assoc();
+  /* check if the payment details are valid */
+  if ($payment['handle'] != $x_handle) {
+    throw new Exception(__('Invalid payment handle or amount'));
+  }
+  if ($x_reference_id != null && $x_reference_id != $payment['reference_id']) {
+    throw new Exception(__('Invalid payment reference id'));
+  }
+  /* get the final redirect url */
+  switch ($payment['handle']) {
+    case 'packages':
+      $payment['success_url'] = $system['system_url'] . "/upgraded";
+      break;
+
+    case 'wallet':
+      $payment['success_url'] = $system['system_url'] . "/wallet?wallet_replenish_succeed";
+      break;
+
+    case 'donate':
+      $payment['success_url'] = $system['system_url'] . "/posts/" . $payment['reference_id'];
+      break;
+
+    case 'subscribe':
+      /* get monetization node url */
+      $monetization_plan = $user->get_monetization_plan($payment['reference_id'], true);
+      if (!$monetization_plan) {
+        throw new Exception(__('Invalid monetization plan'));
+      }
+      $payment['success_url'] = $monetization_plan['node_url'];
+      break;
+
+    case 'paid_post':
+      $payment['success_url'] = $system['system_url'] . "/posts/" . $payment['reference_id'];
+      break;
+
+    case 'movies':
+      $payment['success_url'] = $system['system_url'] . "/movies/" . $payment['reference_id'];
+      break;
+
+    case 'marketplace':
+      $payment['success_url'] = $system['system_url'] . "/market/orders";
+      break;
+
+    default:
+      throw new Exception(__('Invalid payment handle'));
+      break;
+  }
+  /* return the payment */
+  return $payment;
+}
+
+
+/**
+ * ccbill_get_payment_by_payment_id
+ *
+ * @param integer $payment_id
+ * @return array | Exception
+ */
+function ccbill_get_payment_by_id($payment_id)
+{
+  global $db;
+  $get_payment = $db->query(sprintf("SELECT * FROM ccbill_payments WHERE payment_id = %s", secure($payment_id, 'int')));
+  if ($get_payment->num_rows == 0) {
+    return false;
+  }
+  return $get_payment->fetch_assoc();
+}
+
+
+/**
+ * ccbill_update_payment_status
+ *
+ * @param integer $payment_id
+ * @param string $status
+ * @return void
+ */
+function ccbill_update_payment_status($payment_id, $status)
+{
+  global $db, $date;
+  $db->query(sprintf("UPDATE ccbill_payments SET payment_status = %s, updated_at = %s WHERE payment_id = %s", secure($status), secure($date), secure($payment_id, 'int')));
+}
+
+
+/**
+ * ccbill_log
+ *
+ * @param string $level
+ * @param string $message
+ * @param array  $context
+ * @return void
+ */
+function ccbill_log($level, $message, array $context = [])
+{
+  if (!DEBUGGING) return;
+  $log_dir  = ABSPATH . 'logs';
+  $log_file = $log_dir . '/ccbill.log';
+  if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0755, true);
+  }
+  $line = '[' . date('Y-m-d H:i:s') . '] [' . strtoupper($level) . '] ' . $message;
+  if (!empty($context)) {
+    $line .= ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  }
+  $line .= PHP_EOL;
+  file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
 }
 
 

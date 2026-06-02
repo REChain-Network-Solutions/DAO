@@ -436,7 +436,7 @@
     // Holds the placeholder & the tags input
     &__input{
         $placeholder-width : 110px;
-        flex-grow: 1;
+
         display: inline-block;
         margin: $tagMargin;
         padding: var(--tag-pad);
@@ -454,6 +454,7 @@
         }
 
         &:last-child {
+            flex-grow: 1;
             min-width: $placeholder-width;
 
             &:focus{
@@ -489,6 +490,10 @@
                     }
                 }
             }
+
+            &::before{
+                content: attr(data-placeholder);
+            }
         }
 
         &:empty{
@@ -500,7 +505,6 @@
         }
 
         &::before{
-            content: attr(data-placeholder);
             width: 100%;
             height: 100%;
             margin: auto 0;

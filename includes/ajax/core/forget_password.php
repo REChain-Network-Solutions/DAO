@@ -26,7 +26,7 @@ if ($_SESSION['secret'] != $_POST['secret']) {
 try {
 
   // forget password
-  $user->forget_password($_POST['email'], $_POST['g-recaptcha-response'], $_POST['cf-turnstile-response'], true);
+  $user->forget_password($_POST['email'], $_POST['g-recaptcha-response'], $_POST['cf-turnstile-response'], $_POST['h-captcha-response'], true);
 
   // return
   modal("#forget-password-confirm", "{email: '" . $_POST['email'] . "'}");

@@ -1,10 +1,15 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * This is a PHP library that handles calling reCAPTCHA.
  *
  * BSD 3-Clause License
+ *
  * @copyright (c) 2019, Google Inc.
- * @link https://www.google.com/recaptcha
+ *
+ * @see https://www.google.com/recaptcha
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,56 +42,31 @@ namespace ReCaptcha;
 /**
  * Stores and formats the parameters for the request to the reCAPTCHA service.
  */
-class RequestParameters
+readonly class RequestParameters
 {
-    /**
-     * The shared key between your site and reCAPTCHA.
-     * @var string
-     */
-    private $secret;
-
-    /**
-     * The user response token provided by reCAPTCHA, verifying the user on your site.
-     * @var string
-     */
-    private $response;
-
-    /**
-     * Remote user's IP address.
-     * @var string
-     */
-    private $remoteIp;
-
-    /**
-     * Client version.
-     * @var string
-     */
-    private $version;
-
     /**
      * Initialise parameters.
      *
-     * @param string $secret Site secret.
-     * @param string $response Value from g-captcha-response form field.
-     * @param string $remoteIp User's IP address.
-     * @param string $version Version of this client library.
+     * @param string      $secret   site secret
+     * @param string      $response value from g-captcha-response form field
+     * @param null|string $remoteIp user's IP address
+     * @param null|string $version  version of this client library
      */
-    public function __construct($secret, $response, $remoteIp = null, $version = null)
-    {
-        $this->secret = $secret;
-        $this->response = $response;
-        $this->remoteIp = $remoteIp;
-        $this->version = $version;
-    }
+    public function __construct(
+        private string $secret,
+        private string $response,
+        private ?string $remoteIp = null,
+        private ?string $version = null,
+    ) {}
 
     /**
      * Array representation.
      *
-     * @return array Array formatted parameters.
+     * @return array<string, string> array formatted parameters
      */
-    public function toArray()
+    public function toArray(): array
     {
-        $params = array('secret' => $this->secret, 'response' => $this->response);
+        $params = ['secret' => $this->secret, 'response' => $this->response];
 
         if (!is_null($this->remoteIp)) {
             $params['remoteip'] = $this->remoteIp;
@@ -102,9 +82,9 @@ class RequestParameters
     /**
      * Query string representation for HTTP request.
      *
-     * @return string Query string formatted parameters.
+     * @return string query string formatted parameters
      */
-    public function toQueryString()
+    public function toQueryString(): string
     {
         return http_build_query($this->toArray(), '', '&');
     }

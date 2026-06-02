@@ -8,8 +8,7 @@
   <div class="post 
                 {if $_get == "posts_profile" && $user->_data['user_id'] == $post['author_id'] && ($post['is_hidden'] || $post['is_anonymous'])}is_hidden{/if} 
                 {if $boosted}boosted{/if} 
-                {if ($post['still_scheduled']) OR ($post['is_pending']) OR ($post['in_group'] && !$post['group_approved']) OR ($post['in_event'] && !$post['event_approved'])}pending{/if}
-            " data-id="{$post['post_id']}">
+                {if ($post['still_scheduled']) OR ($post['is_pending']) OR ($post['in_group'] && !$post['group_approved']) OR ($post['in_event'] && !$post['event_approved'])}pending{/if}" data-id="{$post['post_id']}" {if $post['is_schedule']}data-schedule="true" {/if}>
 
     {if ($post['is_pending']) OR ($post['in_group'] && !$post['group_approved']) OR ($post['in_event'] && !$post['event_approved'])}
       <div class="pending-icon" data-bs-toggle="tooltip" title="{__("Pending Post")}">
@@ -70,26 +69,7 @@
         <!-- post stats -->
         <div class="post-stats clearfix">
           <!-- reactions stats -->
-          {if $post['reactions_total_count'] > 0}
-            <div class="float-start mr10" data-toggle="modal" data-url="posts/who_reacts.php?post_id={$post['post_id']}">
-              <div class="reactions-stats">
-                {foreach $post['reactions'] as $reaction_type => $reaction_count}
-                  {if $reaction_count > 0}
-                    <div class="reactions-stats-item">
-                      <div class="inline-emoji no_animation">
-                        {include file='__reaction_emojis.tpl' _reaction=$reaction_type}
-                      </div>
-                    </div>
-                  {/if}
-                {/foreach}
-                <!-- reactions count -->
-                <span>
-                  {$post['reactions_total_count_formatted']}
-                </span>
-                <!-- reactions count -->
-              </div>
-            </div>
-          {/if}
+          {include file='__feeds_post.reactions_stats.tpl'}
           <!-- reactions stats -->
 
           <!-- comments & shares & views & plays & donations -->
@@ -258,4 +238,5 @@
   </div>
   <!-- post -->
   {if !$standalone}
-</li>{/if}
+  </li>
+{/if}

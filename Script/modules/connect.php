@@ -26,8 +26,8 @@ try {
 
       // check provider
       switch ($_REQUEST['provider']) {
-        case 'facebook':
-          if (!$system['facebook_login_enabled']) {
+        case 'apple':
+          if (!$system['apple_login_enabled']) {
             _error(404);
           }
           break;
@@ -38,8 +38,20 @@ try {
           }
           break;
 
+        case 'facebook':
+          if (!$system['facebook_login_enabled']) {
+            _error(404);
+          }
+          break;
+
         case 'twitter':
           if (!$system['twitter_login_enabled']) {
+            _error(404);
+          }
+          break;
+
+        case 'discord':
+          if (!$system['discord_login_enabled']) {
             _error(404);
           }
           break;
@@ -76,6 +88,7 @@ try {
       // set provider
       $provider = $_REQUEST["provider"];
       $provider = ($provider == "linkedin") ? "LinkedInOpenID" : $provider;
+      $hybridauth_provider = ($provider == "apple") ? "Apple" : $provider;
 
       if ($provider != "sngine") {
 
@@ -83,24 +96,35 @@ try {
         $config = [
           'callback' => $system['system_url'] . "/connect/" . $_REQUEST["provider"],
           "providers" => [
+            "Apple" => [
+              "enabled" => true,
+              "keys"    => [
+                "id" => $system['apple_appid'],
+                "team_id" => $system['apple_team_id'],
+                "key_id" => $system['apple_key_id'],
+                "key_content" => html_entity_decode($system['apple_key_content'], ENT_QUOTES, 'UTF-8'),
+              ],
+              "scope" => "name email",
+              "verifyTokenSignature" => true
+            ],
+            "Google" => [
+              "enabled" => true,
+              "keys"    => ["key" => $system['google_appid'], "secret" => $system['google_secret']],
+            ],
             "Facebook" => [
               "enabled" => true,
               "keys"    => ["id" => $system['facebook_appid'], "secret" => $system['facebook_secret']],
               "scope"   => "email, public_profile",
               "trustForwarded" => false
             ],
-            "Google" => [
-              "enabled" => true,
-              "keys"    => ["key" => $system['google_appid'], "secret" => $system['google_secret']],
-            ],
             "Twitter" => [
               "enabled" => true,
               "keys"    => ["key" => $system['twitter_appid'], "secret" => $system['twitter_secret']],
               "includeEmail" => true
             ],
-            "Instagram" => [
+            "Discord" => [
               "enabled" => true,
-              "keys"    => ["id" => $system['instagram_appid'], "secret" => $system['instagram_secret']],
+              "keys"    => ["id" => $system['discord_appid'], "secret" => $system['discord_secret']],
             ],
             "LinkedInOpenID" => [
               "enabled" => true,
@@ -121,13 +145,13 @@ try {
         $hybridauth = new Hybridauth\Hybridauth($config);
 
         // try to authenticate with the selected provider
-        $adapter = $hybridauth->authenticate($provider);
+        $adapter = $hybridauth->authenticate($hybridauth_provider);
 
         // then grab the user profile
         $user_profile = $adapter->getUserProfile();
 
         // socail login
-        $user->social_signin($provider, $user_profile);
+        $user->social_signin($_REQUEST["provider"], $user_profile);
 
         // disconnect
         $adapter->disconnect();
@@ -171,7 +195,7 @@ try {
         $user_profile['username'] = $user_info['user_name'];
         $user_profile['displayName'] = $user_info['user_firstname'] . " " . $user_info['user_lastname'];
         $user_profile['email'] = $user_info['user_email'];
-        $user_profile['photoURL'] = $user_info['profile_picture'];
+        $user_profile['photoURL'] = get_picture($user_info['user_picture']);
         $user_profile = (object) $user_profile;
 
         // socail login
@@ -185,9 +209,9 @@ try {
 
       // check provider
       switch ($_REQUEST['provider']) {
-        case 'facebook':
-          $social_id = "facebook_id";
-          $social_connected = "facebook_connected";
+        case 'apple':
+          $social_id = "apple_id";
+          $social_connected = "apple_connected";
           break;
 
         case 'google':
@@ -195,14 +219,19 @@ try {
           $social_connected = "google_connected";
           break;
 
+        case 'facebook':
+          $social_id = "facebook_id";
+          $social_connected = "facebook_connected";
+          break;
+
         case 'twitter':
           $social_id = "twitter_id";
           $social_connected = "twitter_connected";
           break;
 
-        case 'instagram':
-          $social_id = "instagram_id";
-          $social_connected = "instagram_connected";
+        case 'discord':
+          $social_id = "discord_id";
+          $social_connected = "discord_connected";
           break;
 
         case 'linkedin':

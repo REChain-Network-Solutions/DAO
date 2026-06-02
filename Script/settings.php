@@ -246,7 +246,7 @@ try {
       page_header(__("Settings") . " &rsaquo; " . __("Blocking"));
 
       // get blocks
-      $blocks = $user->get_blocked();
+      $blocks = $user->get_blocked()['data'];
       /* assign variables */
       $smarty->assign('blocks', $blocks);
       break;
@@ -266,7 +266,7 @@ try {
       if (!$system['social_login_enabled']) {
         _error(404);
       }
-      if (!$system['facebook_login_enabled'] && !$system['twitter_login_enabled'] && !$system['google_login_enabled'] && !$system['linkedin_login_enabled'] && !$system['vkontakte_login_enabled'] && !$system['wordpress_login_enabled'] && !$system['sngine_login_enabled']) {
+      if (!$system['apple_login_enabled'] && !$system['google_login_enabled'] && !$system['facebook_login_enabled'] && !$system['twitter_login_enabled'] && !$system['discord_login_enabled'] && !$system['linkedin_login_enabled'] && !$system['vkontakte_login_enabled'] && !$system['wordpress_login_enabled'] && !$system['sngine_login_enabled']) {
         _error(404);
       }
 

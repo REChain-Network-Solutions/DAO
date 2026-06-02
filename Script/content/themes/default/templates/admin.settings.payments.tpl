@@ -241,7 +241,7 @@
             </div>
             <div>
               <div class="form-label h6">{__("Stripe Enabled")}</div>
-              <div class="form-text d-none d-sm-block">{__("Enable payments via Credit Card")}</div>
+              <div class="form-text d-none d-sm-block">{__("Enable payments via Credit Card, Apple Pay, Google Pay, Amazon Pay")}</div>
             </div>
             <div class="text-end">
               <label class="switch" for="creditcard_enabled">
@@ -262,6 +262,118 @@
             <div class="text-end">
               <label class="switch" for="alipay_enabled">
                 <input type="checkbox" name="alipay_enabled" id="alipay_enabled" {if $system['alipay_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="cashapp" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Cashapp Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("Cashapp is a payment method that supports instant transfers")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="cashapp_enabled">
+                <input type="checkbox" name="cashapp_enabled" id="cashapp_enabled" {if $system['cashapp_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="blik" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Blik Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("Blik is a Polish payment method that supports instant transfers")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="blik_enabled">
+                <input type="checkbox" name="blik_enabled" id="blik_enabled" {if $system['blik_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="eps" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("EPS Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("EPS is a bank transfer payment method used in Austria")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="eps_enabled">
+                <input type="checkbox" name="eps_enabled" id="eps_enabled" {if $system['eps_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="ideal" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("iDEAL Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("iDEAL is a payment method commonly used in the Netherlands")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="ideal_enabled">
+                <input type="checkbox" name="ideal_enabled" id="ideal_enabled" {if $system['ideal_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="bancontact" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Bancontact Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("Bancontact is a Belgian payment method used for local transactions")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="bancontact_enabled">
+                <input type="checkbox" name="bancontact_enabled" id="bancontact_enabled" {if $system['bancontact_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="przelewy24" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("Przelewy24 Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("Przelewy24 is a Polish payment method supporting multiple banks")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="przelewy24_enabled">
+                <input type="checkbox" name="przelewy24_enabled" id="przelewy24_enabled" {if $system['przelewy24_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="oxxo" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("OXXO Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("OXXO is a cash-based payment method in Mexico")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="oxxo_enabled">
+                <input type="checkbox" name="oxxo_enabled" id="oxxo_enabled" {if $system['oxxo_enabled']}checked{/if}>
                 <span class="slider round"></span>
               </label>
             </div>
@@ -1155,6 +1267,119 @@
           </div>
         </div>
         <!-- Coinbase -->
+
+        <div class="divider"></div>
+
+        <!-- CCBill -->
+        <div>
+          <div class="form-table-row">
+            <div class="avatar">
+              {include file='__svg_icons.tpl' icon="ccbill" width="40px" height="40px"}
+            </div>
+            <div>
+              <div class="form-label h6">{__("CCBill Enabled")}</div>
+              <div class="form-text d-none d-sm-block">{__("Enable payments via CCBill")}</div>
+            </div>
+            <div class="text-end">
+              <label class="switch" for="ccbill_enabled">
+                <input type="checkbox" name="ccbill_enabled" id="ccbill_enabled" {if $system['ccbill_enabled']}checked{/if}>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Account Number")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_account_number" value="{$system['ccbill_account_number']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Recurring Subaccount")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_recurring_subaccount_number" value="{$system['ccbill_recurring_subaccount_number']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("One-Time Subaccount")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_one_time_subaccount_number" value="{$system['ccbill_one_time_subaccount_number']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("FlexForm ID")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_flexform_id" value="{$system['ccbill_flexform_id']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Salt Key")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_salt_key" value="{$system['ccbill_salt_key']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Datalink Username")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_datalink_username" value="{$system['ccbill_datalink_username']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+
+          <div class="row form-group">
+            <label class="col-md-3 form-label">
+              {__("Datalink Password")}
+            </label>
+            <div class="col-md-9">
+              {if !$user->_data['user_demo']}
+                <input type="text" class="form-control" name="ccbill_datalink_password" value="{$system['ccbill_datalink_password']}">
+              {else}
+                <input type="password" class="form-control" value="*********">
+              {/if}
+            </div>
+          </div>
+        </div>
+        <!-- CCBill -->
 
         <!-- success -->
         <div class="alert alert-success mt15 mb0 x-hidden"></div>

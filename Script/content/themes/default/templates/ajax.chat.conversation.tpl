@@ -8,7 +8,7 @@
     <div class="row">
       <div class="col-lg-6 mb-2 mb-lg-0">
         {if $conversation['node_id']}
-          <a href="{$system['system_url']}/{$conversation['link']}" class="text-dark">{$conversation['name']}</a>
+          <a href="{$system['system_url']}/{$conversation['link']}">{$conversation['name']}</a>
         {else}
           {if !$conversation['multiple_recipients']}
             {$conversation['name_html']}

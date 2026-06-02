@@ -69,7 +69,7 @@ try {
       // pager config
       require('includes/class-pager.php');
       $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-      $total = $db->query("SELECT COUNT(*) as count FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
+      $total = $db->query("SELECT COUNT(*) as count FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND (posts.user_type != 'user' OR IFNULL(users.user_banned, 0) = 0) AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
       $params['total_items'] = $total->fetch_assoc()['count'];
       $params['items_per_page'] = $system['max_results'];
       $params['url'] = $system['system_url'] . '/directory/' . 'posts' . '/%s';
@@ -78,7 +78,7 @@ try {
 
       // get posts
       $rows = [];
-      $get_rows = $db->query("SELECT posts.post_id FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) " . $limit_query);
+      $get_rows = $db->query("SELECT posts.post_id FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND (posts.user_type != 'user' OR IFNULL(users.user_banned, 0) = 0) AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) " . $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row = $user->get_post($row['post_id']);
         if ($row) {

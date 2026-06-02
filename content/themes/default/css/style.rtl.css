@@ -44,7 +44,7 @@
 /* ------------------------------- */
 
 :root {
-  --body-font-family: Tajawal, Helvetica, "sans-serif";
+  --body-font-family: Poppins, Helvetica, "sans-serif";
   --body-bg-color: #f0f2f5;
   --body-bg-color-dark: #1E252B;
   --body-color: #111;
@@ -1977,6 +1977,8 @@ body.night-mode .tagify__dropdown__item--active {
   font-size: 16px !important;
   line-height: 24px !important;
   padding: 4px 0px !important;
+  direction: rtl !important;
+  text-align: right !important;
 }
 
 .ql-editor.ql-blank::before {
@@ -2115,6 +2117,11 @@ body.night-mode .ql-mention-list-item img {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+/* == [JS Plugin] CookieConsent == */
+#cc-main {
+  font-family: var(--body-font-family) !important;
 }
 
 /* == */
@@ -6284,6 +6291,16 @@ body.night-mode .blog-wrapper {
   width: 100% !important;
 }
 
+.blog-text blockquote {
+  border-right: 2px solid #ccc;
+  margin-right: 1.5rem;
+  padding-right: 1rem;
+}
+
+body.night-mode .blog-text blockquote {
+  border-right-color: var(--card-dark-divider);
+}
+
 .blog-tags {
   margin-top: 20px;
 }
@@ -7304,6 +7321,7 @@ body.night-mode .chat-colors-menu .item:hover {
   border-bottom-right-radius: 0;
   word-break: initial;
   word-wrap: break-word;
+  max-width: 100%;
 }
 
 body.night-mode .conversation-body .text {

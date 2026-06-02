@@ -1168,12 +1168,14 @@ class User
     $get_blocks = $db->query(sprintf('SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users_blocks INNER JOIN users ON users_blocks.blocked_id = users.user_id WHERE users_blocks.user_id = %s LIMIT %s, %s', secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
     if ($get_blocks->num_rows > 0) {
       while ($block = $get_blocks->fetch_assoc()) {
+        $block['user_fullname'] = ($system['show_usernames_enabled']) ? $block['user_name'] : $block['user_firstname'] . " " . $block['user_lastname'];
         $block['user_picture'] = get_picture($block['user_picture'], $block['user_gender']);
         $block['connection'] = 'blocked';
         $blocks[] = $block;
       }
     }
-    return $blocks;
+    $has_more = (count($blocks) == $system['max_results']) ? true : false;
+    return ['data' => $blocks, 'has_more' => $has_more];
   }
 
 
@@ -2546,6 +2548,10 @@ class User
       $db->query(sprintf('DELETE FROM followings WHERE user_id = %1$s OR following_id = %1$s', secure($user_id, 'int')));
       /* delete all user messages */
       $db->query(sprintf('DELETE FROM conversations_messages WHERE user_id = %s', secure($user_id, 'int')));
+      /* delete all user notifications to the user */
+      $db->query(sprintf('DELETE FROM notifications WHERE to_user_id = %s', secure($user_id, 'int')));
+      /* delete all user notifications from the user */
+      $db->query(sprintf('DELETE FROM notifications WHERE from_user_id = %s AND from_user_type = "user"', secure($user_id, 'int')));
     }
   }
 
@@ -3557,7 +3563,7 @@ class User
     /* set custom fields */
     $custom_fields = $this->set_custom_fields($args);
     /* check reCAPTCHA */
-    if ($system['reCAPTCHA_enabled'] && $args['from_web']) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "recaptcha" && $args['from_web']) {
       $recaptcha = new \ReCaptcha\ReCaptcha($system['reCAPTCHA_secret_key'], new \ReCaptcha\RequestMethod\CurlPost());
       $resp = $recaptcha->verify($args['g-recaptcha-response'], get_user_ip());
       if (!$resp->isSuccess()) {
@@ -3565,8 +3571,14 @@ class User
       }
     }
     /* check Turnstile */
-    if ($system['turnstile_enabled'] && $args['from_web']) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "turnstile" && $args['from_web']) {
       if (!check_cf_turnstile($args['cf-turnstile-response'])) {
+        throw new ValidationException(__("The security check is incorrect. Please try again"));
+      }
+    }
+    /* check hCaptcha */
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "hcaptcha" && $args['from_web']) {
+      if (!check_hcaptcha($args['h-captcha-response'])) {
         throw new ValidationException(__("The security check is incorrect. Please try again"));
       }
     }
@@ -4225,9 +4237,9 @@ class User
   {
     global $db, $system, $smarty;
     switch ($provider) {
-      case 'facebook':
-        $social_id = "facebook_id";
-        $social_connected = "facebook_connected";
+      case 'apple':
+        $social_id = "apple_id";
+        $social_connected = "apple_connected";
         break;
 
       case 'google':
@@ -4235,14 +4247,19 @@ class User
         $social_connected = "google_connected";
         break;
 
+      case 'facebook':
+        $social_id = "facebook_id";
+        $social_connected = "facebook_connected";
+        break;
+
       case 'twitter':
         $social_id = "twitter_id";
         $social_connected = "twitter_connected";
         break;
 
-      case 'instagram':
-        $social_id = "instagram_id";
-        $social_connected = "instagram_connected";
+      case 'discord':
+        $social_id = "discord_id";
+        $social_connected = "discord_connected";
         break;
 
       case 'linkedin':
@@ -4314,9 +4331,9 @@ class User
     global $db, $system, $date;
     /* check provider */
     switch ($args['provider']) {
-      case 'facebook':
-        $social_id = "facebook_id";
-        $social_connected = "facebook_connected";
+      case 'apple':
+        $social_id = "apple_id";
+        $social_connected = "apple_connected";
         break;
 
       case 'google':
@@ -4324,14 +4341,19 @@ class User
         $social_connected = "google_connected";
         break;
 
+      case 'facebook':
+        $social_id = "facebook_id";
+        $social_connected = "facebook_connected";
+        break;
+
       case 'twitter':
         $social_id = "twitter_id";
         $social_connected = "twitter_connected";
         break;
 
-      case 'instagram':
-        $social_id = "instagram_id";
-        $social_connected = "instagram_connected";
+      case 'discord':
+        $social_id = "discord_id";
+        $social_connected = "discord_connected";
         break;
 
       case 'linkedin':
@@ -4614,10 +4636,11 @@ class User
    * @param string $email
    * @param string $recaptcha_response
    * @param string $turnstile_response
+   * @param string $hcaptcha_response
    * @param bool $from_web
    * @return void
    */
-  public function forget_password($email, $recaptcha_response = null, $turnstile_response = null, $from_web = false)
+  public function forget_password($email, $recaptcha_response = null, $turnstile_response = null, $hcaptcha_response = null, $from_web = false)
   {
     global $db, $system;
     if (!valid_email($email)) {
@@ -4627,7 +4650,7 @@ class User
       throw new ValidationException(__("Sorry, it looks like") . " " . $email . " " . __("doesn't belong to any account"));
     }
     /* check reCAPTCHA */
-    if ($system['reCAPTCHA_enabled'] && $from_web) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "recaptcha" && $from_web) {
       $recaptcha = new \ReCaptcha\ReCaptcha($system['reCAPTCHA_secret_key'], new \ReCaptcha\RequestMethod\CurlPost());
       $resp = $recaptcha->verify($recaptcha_response, get_user_ip());
       if (!$resp->isSuccess()) {
@@ -4635,8 +4658,14 @@ class User
       }
     }
     /* check Turnstile */
-    if ($system['turnstile_enabled'] && $from_web) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "turnstile" && $from_web) {
       if (!check_cf_turnstile($turnstile_response)) {
+        throw new ValidationException(__("The security check is incorrect. Please try again"));
+      }
+    }
+    /* check hCaptcha */
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "hcaptcha" && $from_web) {
+      if (!check_hcaptcha($hcaptcha_response)) {
         throw new ValidationException(__("The security check is incorrect. Please try again"));
       }
     }

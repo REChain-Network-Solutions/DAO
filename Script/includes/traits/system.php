@@ -380,10 +380,11 @@ trait SystemTrait
    * @param string $message
    * @param string $recaptcha_response
    * @param string $turnstile_response
+   * @param string $hcaptcha_response
    * @param bool $from_web
    * @return array
    */
-  public function contact_us($name, $email, $user_subject, $message, $recaptcha_response = null, $turnstile_response = null, $from_web = false)
+  public function contact_us($name, $email, $user_subject, $message, $recaptcha_response = null, $turnstile_response = null, $hcaptcha_response = null, $from_web = false)
   {
     global $system;
     /* valid inputs */
@@ -394,7 +395,7 @@ trait SystemTrait
       throw new ValidationException(__("Please enter a valid email address"));
     }
     /* check reCAPTCHA */
-    if ($system['reCAPTCHA_enabled'] && $from_web) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "recaptcha" && $from_web) {
       $recaptcha = new \ReCaptcha\ReCaptcha($system['reCAPTCHA_secret_key'], new \ReCaptcha\RequestMethod\CurlPost());
       $resp = $recaptcha->verify($_POST['g-recaptcha-response'], get_user_ip());
       if (!$resp->isSuccess()) {
@@ -402,8 +403,14 @@ trait SystemTrait
       }
     }
     /* check Turnstile */
-    if ($system['turnstile_enabled'] && $from_web) {
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "turnstile" && $from_web) {
       if (!check_cf_turnstile($turnstile_response)) {
+        throw new ValidationException(__("The security check is incorrect. Please try again"));
+      }
+    }
+    /* check hCaptcha */
+    if ($system['captcha_enabled'] && $system['captcha_provider'] == "hcaptcha" && $from_web) {
+      if (!check_hcaptcha($hcaptcha_response)) {
         throw new ValidationException(__("The security check is incorrect. Please try again"));
       }
     }

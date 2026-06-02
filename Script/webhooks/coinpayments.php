@@ -54,7 +54,7 @@ try {
         $payment = $user->check_coinpayments_payment($transaction['transaction_id']);
         if ($payment && isset($_SESSION['wallet_replenish_amount'])) {
           /* update user wallet balance */
-          $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($transaction['amount']), secure($transaction['user_id'], 'int')));
+          $user->wallet_update_balance($transaction['amount'], '+', $transaction['user_id']);
           /* wallet transaction */
           $user->wallet_set_transaction($transaction['user_id'], 'recharge', 0, $transaction['amount'], 'in');
           /* update coinpayments transaction */

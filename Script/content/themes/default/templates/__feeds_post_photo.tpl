@@ -80,26 +80,7 @@
   <!-- post stats -->
   <div class="post-stats clearfix">
     <!-- reactions stats -->
-    {if $photo['reactions_total_count'] > 0}
-      <div class="float-start" data-toggle="modal" data-url="posts/who_reacts.php?{if $photo['is_single']}post_id={$post['post_id']}{else}photo_id={$photo['photo_id']}{/if}">
-        <div class="reactions-stats">
-          {foreach $photo['reactions'] as $reaction_type => $reaction_count}
-            {if $reaction_count > 0}
-              <div class="reactions-stats-item">
-                <div class="inline-emoji no_animation">
-                  {include file='__reaction_emojis.tpl' _reaction=$reaction_type}
-                </div>
-              </div>
-            {/if}
-          {/foreach}
-          <!-- reactions count -->
-          <span>
-            {$photo['reactions_total_count_formatted']}
-          </span>
-          <!-- reactions count -->
-        </div>
-      </div>
-    {/if}
+    {include file='__feeds_post.reactions_stats.tpl'}
     <!-- reactions stats -->
 
     <!-- comments & shares -->

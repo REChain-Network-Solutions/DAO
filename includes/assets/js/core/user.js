@@ -44,16 +44,87 @@ api['developers/app'] = ajax_path + "developers/app.php";
 
 
 // init geocomplete
-function init_geocomplete() {
+async function init_geocomplete() {
   if (!geolocation_enabled) {
     return;
   }
-  if (typeof $.fn.geocomplete === "function" && typeof google !== "undefined" && google.maps && google.maps.places) {
-    $(".js_geocomplete").geocomplete({
-      details: "form",
-      detailsAttribute: "data-geo"
-    });
+  if (typeof google === "undefined" || !google.maps || typeof google.maps.importLibrary !== "function") {
+    return;
   }
+  const { AutocompleteSuggestion, AutocompleteSessionToken } = await google.maps.importLibrary("places");
+  document.querySelectorAll(".js_geocomplete:not([data-geocomplete-init])").forEach(function (input) {
+    input.setAttribute("data-geocomplete-init", "1");
+    var sessionToken = new AutocompleteSessionToken();
+    var debounceTimer;
+    var dropdown = document.createElement("ul");
+    dropdown.className = "list-group position-absolute w-100 shadow-sm";
+    dropdown.style.cssText = "z-index:9999;display:none;top:100%;left:0;max-height:220px;overflow-y:auto;";
+    var parent = input.parentNode;
+    if (getComputedStyle(parent).position === "static") {
+      parent.style.position = "relative";
+    }
+    parent.appendChild(dropdown);
+    function closeDropdown() {
+      dropdown.style.display = "none";
+      dropdown.innerHTML = "";
+    }
+    input.addEventListener("input", function () {
+      clearTimeout(debounceTimer);
+      var val = input.value.trim();
+      if (!val) { closeDropdown(); return; }
+      debounceTimer = setTimeout(async function () {
+        try {
+          var response = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: val,
+            sessionToken: sessionToken
+          });
+          dropdown.innerHTML = "";
+          response.suggestions.forEach(function (suggestion) {
+            var li = document.createElement("li");
+            li.className = "list-group-item list-group-item-action py-2";
+            li.style.cursor = "pointer";
+            li.textContent = suggestion.placePrediction.text.text;
+            li.addEventListener("mousedown", async function (e) {
+              e.preventDefault();
+              var place = suggestion.placePrediction.toPlace();
+              await place.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
+              input.value = place.displayName || place.formattedAddress || suggestion.placePrediction.text.text;
+              closeDropdown();
+              sessionToken = new AutocompleteSessionToken();
+              var form = input.closest("form");
+              if (form && place.location) {
+                var latEl = form.querySelector("[data-geo='lat']");
+                var lngEl = form.querySelector("[data-geo='lng']");
+                if (latEl) latEl.value = place.location.lat();
+                if (lngEl) lngEl.value = place.location.lng();
+              }
+            });
+            dropdown.appendChild(li);
+          });
+          dropdown.style.display = response.suggestions.length ? "block" : "none";
+        } catch (e) { closeDropdown(); }
+      }, 300);
+    });
+    input.addEventListener("blur", function () {
+      setTimeout(closeDropdown, 200);
+    });
+    input.addEventListener("keydown", function (e) {
+      var active = dropdown.querySelector(".active");
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (active) { active.classList.remove("active"); if (active.nextElementSibling) active.nextElementSibling.classList.add("active"); }
+        else if (dropdown.firstChild) dropdown.firstChild.classList.add("active");
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (active) { active.classList.remove("active"); if (active.previousElementSibling) active.previousElementSibling.classList.add("active"); }
+      } else if (e.key === "Enter" && active) {
+        e.preventDefault();
+        active.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      } else if (e.key === "Escape") {
+        closeDropdown();
+      }
+    });
+  });
 }
 
 
@@ -213,7 +284,7 @@ function data_heartbeat() {
     )
     && posts_stream.data('loading') === undefined
   ) {
-    data['last_post'] = posts_stream_staging.find("li:first .post").data('id') || posts_stream.find("li:first .post").data('id') || 0;
+    data['last_post'] = posts_stream_staging.find("li .post:not([data-schedule])").first().data('id') || posts_stream.find("li .post:not([data-schedule])").first().data('id') || 0;
     data['get'] = posts_stream.data('get');
     data['filter'] = posts_stream.data('filter');
     data['category'] = posts_stream.data('category');
@@ -556,12 +627,7 @@ $(function () {
 
   // init geocomplete plugin
   if (geolocation_enabled) {
-    let googleMapsCheckInterval = setInterval(() => {
-      if (typeof google !== "undefined" && google.maps && google.maps.places) {
-        clearInterval(googleMapsCheckInterval);
-        init_geocomplete();
-      }
-    }, 100);
+    init_geocomplete();
   }
 
 
@@ -2955,13 +3021,13 @@ $(function () {
     $(window).on('load', function () {
       $.get('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', function () {
       }).fail(function () {
-    if ($(".adblock-warning-message").length > 0) {
-      $(".adblock-warning-message").slideDown();
-      return;
-    }
+        if ($(".adblock-warning-message").length > 0) {
+          $(".adblock-warning-message").slideDown();
+          return;
+        }
         if (typeof adblock_detector !== 'undefined' && adblock_detector) {
-      $(render_template("#adblock-detector")).appendTo('body').show();
-    }
+          $(render_template("#adblock-detector")).appendTo('body').show();
+        }
       });
     });
   }

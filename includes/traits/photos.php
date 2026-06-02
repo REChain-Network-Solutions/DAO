@@ -817,7 +817,7 @@ trait PhotosTrait
    * 
    * @param integer $photo_id
    * @param string $reaction
-   * @return void
+   * @return array|false
    */
   public function react_photo($photo_id, $reaction)
   {
@@ -836,8 +836,7 @@ trait PhotosTrait
     if ($post['user_type'] == "user" && $this->blocked($post['author_id'])) {
       _error(403);
     }
-
-    /* reaction the post */
+    /* react the photo */
     if ($photo['i_react']) {
       /* remove any previous reaction */
       $db->query(sprintf("DELETE FROM posts_photos_reactions WHERE user_id = %s AND photo_id = %s", secure($this->_data['user_id'], 'int'), secure($photo_id, 'int')));
@@ -846,6 +845,8 @@ trait PhotosTrait
       $db->query(sprintf("UPDATE posts_photos SET $reaction_field = IF($reaction_field=0,0,$reaction_field-1) WHERE photo_id = %s", secure($photo_id, 'int')));
       /* delete notification */
       $this->delete_notification($post['author_id'], 'react_' . $photo['i_reaction'], 'photo', $photo_id);
+      /* points balance */
+      $this->points_balance("delete", $this->_data['user_id'], "posts_photos_reactions");
     }
     $db->query(sprintf("INSERT INTO posts_photos_reactions (user_id, photo_id, reaction, reaction_time) VALUES (%s, %s, %s, %s)", secure($this->_data['user_id'], 'int'), secure($photo_id, 'int'), secure($reaction), secure($date)));
     $reaction_id = $db->insert_id;
@@ -856,6 +857,8 @@ trait PhotosTrait
     $this->post_notification(['to_user_id' => $post['author_id'], 'action' => 'react_' . $reaction, 'node_type' => 'photo', 'node_url' => $photo_id]);
     /* points balance */
     $this->points_balance("add", $this->_data['user_id'], "posts_photos_reactions", $reaction_id);
+    /* return */
+    return $this->get_photo($photo_id);
   }
 
 
@@ -864,26 +867,41 @@ trait PhotosTrait
    * 
    * @param integer $photo_id
    * @param string $reaction
-   * @return void
+   * @return array|false
    */
   public function unreact_photo($photo_id, $reaction)
   {
     global $db;
+    /* check reation */
+    if (!in_array($reaction, ['like', 'love', 'haha', 'yay', 'wow', 'sad', 'angry'])) {
+      _error(403);
+    }
     /* (check|get) photo */
     $photo = $this->get_photo($photo_id);
     if (!$photo) {
       _error(403);
     }
     $post = $photo['post'];
+    /* check blocking */
+    if ($post['user_type'] == "user" && $this->blocked($post['author_id'])) {
+      _error(403);
+    }
     /* unreact the photo */
-    $db->query(sprintf("DELETE FROM posts_photos_reactions WHERE user_id = %s AND photo_id = %s", secure($this->_data['user_id'], 'int'), secure($photo_id, 'int')));
-    /* update photo reaction counter */
-    $reaction_field = "reaction_" . $photo['i_reaction'] . "_count";
-    $db->query(sprintf("UPDATE posts_photos SET $reaction_field = IF($reaction_field=0,0,$reaction_field-1) WHERE photo_id = %s", secure($photo_id, 'int')));
-    /* delete notification */
-    $this->delete_notification($post['author_id'], 'react_' . $reaction, 'photo', $photo_id);
-    /* points balance */
-    $this->points_balance("delete", $this->_data['user_id'], "posts_photos_reactions");
+    if ($photo['i_react']) {
+      /* remove the reaction */
+      $db->query(sprintf("DELETE FROM posts_photos_reactions WHERE user_id = %s AND photo_id = %s", secure($this->_data['user_id'], 'int'), secure($photo_id, 'int')));
+      /* update photo reaction counter */
+      $reaction_field = "reaction_" . $photo['i_reaction'] . "_count";
+      $db->query(sprintf("UPDATE posts_photos SET $reaction_field = IF($reaction_field=0,0,$reaction_field-1) WHERE photo_id = %s", secure($photo_id, 'int')));
+      /* delete notification */
+      $this->delete_notification($post['author_id'], 'react_' . $reaction, 'photo', $photo_id);
+      /* points balance */
+      $this->points_balance("delete", $this->_data['user_id'], "posts_photos_reactions");
+      /* get photo */
+      $photo = $this->get_photo($photo_id);
+    }
+    /* return */
+    return $photo;
   }
 
 

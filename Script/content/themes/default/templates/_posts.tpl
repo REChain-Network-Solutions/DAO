@@ -37,11 +37,13 @@
       {if $system['newsfeed_location_filter_enabled'] && in_array($page, ['index', 'group', 'event']) && !in_array($view, ['scheduled', 'boosted_posts']) && !$_filter}
         <a href="#" data-bs-toggle="dropdown" class="dropdown-toggle countries-filter">
           <i class="fa fa-globe fa-fw"></i>
-          {if $selected_country}
-            <span>{$selected_country['country_name']}</span>
-          {else}
-            <span>{__("All Countries")}</span>
-          {/if}
+          <span class="d-none d-md-inline-block">
+            {if $selected_country}
+              {$selected_country['country_name']}
+            {else}
+              {__("All Countries")}
+            {/if}
+          </span>
         </a>
         <div class="dropdown-menu dropdown-menu-end countries-dropdown">
           <div class="js_scroller">
@@ -61,7 +63,7 @@
       {if $user->_logged_in && !$_filter && !$_query}
         <div class="btn-group btn-group-sm js_posts-filter ml10" data-value="all" title='{__("All")}'>
           <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" data-display="static">
-            <i class="btn-group-icon fa fa-bars fa-fw"></i> <span class="btn-group-text">{__("All")}</span>
+            <i class="btn-group-icon fa fa-bars fa-fw"></i> <span class="btn-group-text d-none d-md-inline-block">{__("All")}</span>
           </button>
           <div class="dropdown-menu dropdown-menu-end">
             <div class="js_scroller">

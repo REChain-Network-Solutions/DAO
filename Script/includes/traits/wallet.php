@@ -15,6 +15,25 @@ trait WalletTrait
   /* ------------------------------- */
 
   /**
+   * wallet_update_balance
+   * 
+   * @param float $amount
+   * @param boolean $increase
+   * @param integer $user_id
+   * @return void
+   */
+  public function wallet_update_balance($amount, $operation = '+', $user_id = null)
+  {
+    global $db;
+    $user_id = $user_id ?? $this->_data['user_id'];
+    if ($operation == '+') {
+      $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($user_id, 'int')));
+    } else {
+      $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($user_id, 'int')));
+    }
+  }
+
+  /**
    * wallet_transfer
    * 
    * @param integer $user_id
@@ -55,11 +74,11 @@ trait WalletTrait
       throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'user', $user_id, $amount, 'out');
     /* increase target user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($user_id, 'int')));
+    $this->wallet_update_balance($amount, '+', $user_id);
     /* send notification (money sent) to the target user */
     $this->post_notification(['to_user_id' => $user_id, 'action' => 'money_sent', 'node_type' => $amount]);
     /* wallet transaction */
@@ -116,11 +135,11 @@ trait WalletTrait
       throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'tip', $user_id, $amount, 'out');
     /* increase target user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($user_id, 'int')));
+    $this->wallet_update_balance($amount, '+', $user_id);
     /* send notification (money sent) to the target user */
     $this->post_notification(['to_user_id' => $user_id, 'action' => 'tip_sent', 'node_type' => $amount]);
     /* wallet transaction */
@@ -156,7 +175,7 @@ trait WalletTrait
     /* decrease viewer user affiliate balance */
     $db->query(sprintf('UPDATE users SET user_affiliate_balance = IF(user_affiliate_balance-%1$s=0,0,user_affiliate_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
     /* increase viewer user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '+', $this->_data['user_id']);
     /* wallet transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'withdraw_affiliates', 0, $amount, 'in');
     $_SESSION['wallet_withdraw_affiliates_amount'] = $amount;
@@ -196,7 +215,7 @@ trait WalletTrait
     $balance = $this->_data['user_points'] - ($system['points_per_currency'] * $_POST['amount']);
     $db->query(sprintf("UPDATE users SET user_points = %s WHERE user_id = %s", secure($balance), secure($this->_data['user_id'], 'int')));
     /* increase viewer user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '+', $this->_data['user_id']);
     /* wallet transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'withdraw_points', 0, $amount, 'in');
     $_SESSION['wallet_withdraw_points_amount'] = $amount;
@@ -231,7 +250,7 @@ trait WalletTrait
     /* decrease viewer user market balance */
     $db->query(sprintf('UPDATE users SET user_market_balance = IF(user_market_balance-%1$s=0,0,user_market_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
     /* increase viewer user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '+', $this->_data['user_id']);
     /* wallet transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'withdraw_market', 0, $amount, 'in');
     $_SESSION['wallet_withdraw_market_amount'] = $amount;
@@ -266,7 +285,7 @@ trait WalletTrait
     /* decrease viewer user funding balance */
     $db->query(sprintf('UPDATE users SET user_funding_balance = IF(user_funding_balance-%1$s=0,0,user_funding_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
     /* increase viewer user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '+', $this->_data['user_id']);
     /* wallet transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'withdraw_funding', 0, $amount, 'in');
     $_SESSION['wallet_withdraw_funding_amount'] = $amount;
@@ -301,7 +320,7 @@ trait WalletTrait
     /* decrease viewer user monetization balance */
     $db->query(sprintf('UPDATE users SET user_monetization_balance = IF(user_monetization_balance-%1$s=0,0,user_monetization_balance-%1$s) WHERE user_id = %2$s', secure($amount), secure($this->_data['user_id'], 'int')));
     /* increase viewer user wallet balance */
-    $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($amount), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($amount, '+', $this->_data['user_id']);
     /* wallet transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'withdraw_monetization', 0, $amount, 'in');
     $_SESSION['wallet_withdraw_monetization_amount'] = $amount;
@@ -397,7 +416,7 @@ trait WalletTrait
       modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($package['price']), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($package['price'], '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'package_payment', $package['package_id'], $package['price'], 'out');
     /* update user package */
@@ -437,7 +456,7 @@ trait WalletTrait
       modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($orders_collection['total']), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($orders_collection['total'], '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'market_payment', $orders_collection['orders_collection_id'], $orders_collection['total'], 'out');
     /* mark orders collection as paid */
@@ -489,7 +508,7 @@ trait WalletTrait
       modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($monetization_plan['price'], 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($monetization_plan['price'], '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'subscribe_' . $monetization_plan['node_type'], $monetization_plan['node_id'], $monetization_plan['price'], 'out');
     if ($promo_code) {
@@ -544,7 +563,7 @@ trait WalletTrait
       modal("ERROR", __("Sorry"), __("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($post['post_price'], 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($post['post_price'], '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'paid_post', $post_id, $post['post_price'], 'out');
     if ($promo_code) {
@@ -598,7 +617,7 @@ trait WalletTrait
     /* send notification to the post author */
     $this->post_notification(['to_user_id' => $post['author_id'], 'action' => 'funding_donation', 'node_type' => $donation_amount_net, 'node_url' => $post_id]);
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($donation_amount, 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($donation_amount, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'donate', $post_id, $donation_amount, 'out');
     $_SESSION['wallet_donate_amount'] = $donation_amount;
@@ -624,7 +643,7 @@ trait WalletTrait
       throw new ValidationException(__("This message will cost you") . " " . print_money($chat_price) . " " . __("and you have") . " " . print_money($this->_data['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue"));
     }
     /* decrease viewer user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($chat_price, 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($chat_price, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'paid_chat_message', null, $chat_price, 'out');
     /* loop through the paid recipients */
@@ -664,7 +683,7 @@ trait WalletTrait
       throw new Exception(__("This call will cost you") . " " . print_money($call_price) . " " . __("and you have") . " " . print_money($from_user['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease from_user_id wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($call_price, 'float'), secure($from_user_id, 'int')));
+    $this->wallet_update_balance($call_price, '-', $from_user_id);
     /* log this transaction */
     $this->wallet_set_transaction($from_user_id, 'paid_call', $to_user_id, $call_price, 'out');
     /* prepare commission */
@@ -724,7 +743,7 @@ trait WalletTrait
       throw new Exception(__("This") . " " . $post_type . " " . __("will cost you") . " " . print_money($module_price) . " " . __("and you have") . " " . print_money($this->_data['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($module_price, 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($module_price, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], $module . '_module_payment', 0, $module_price, 'out');
   }
@@ -754,7 +773,7 @@ trait WalletTrait
       throw new ValidationException(__("This amount of credits will cost you") . " " . print_money($credits_cost) . " " . __("and you have") . " " . print_money($this->_data['user_wallet_balance']) . " " . __("in your wallet, Recharge your wallet to continue") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
     }
     /* decrease user wallet balance */
-    $db->query(sprintf('UPDATE users SET user_wallet_balance = IF(user_wallet_balance-%1$s<=0,0,user_wallet_balance-%1$s) WHERE user_id = %2$s', secure($credits_cost, 'float'), secure($this->_data['user_id'], 'int')));
+    $this->wallet_update_balance($credits_cost, '-', $this->_data['user_id']);
     /* log this transaction */
     $this->wallet_set_transaction($this->_data['user_id'], 'ai_credits_payment', null, $credits_cost, 'out');
     /* increase user ai credits balance */

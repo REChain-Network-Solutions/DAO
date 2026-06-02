@@ -19,10 +19,10 @@ services:
  # PHP-FPM
  # ----------------------
  php:
-  restart: always
   build:
    context: .
    dockerfile: php/dockerfile
+  restart: always
   volumes:
    - ../.:/var/www/html
   depends_on:

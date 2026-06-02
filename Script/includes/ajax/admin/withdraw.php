@@ -54,7 +54,7 @@ try {
           /* decline request */
           $db->query(sprintf("UPDATE wallet_payments SET status = '-1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* update user balance */
-          $db->query(sprintf("UPDATE users SET user_wallet_balance = user_wallet_balance + %s WHERE user_id = %s", secure($withdrawal_request['amount']), secure($withdrawal_request['user_id'], 'int')));
+          $user->wallet_update_balance($withdrawal_request['amount'], '+', $withdrawal_request['user_id']);
           /* send notification to request author */
           $user->post_notification(['to_user_id' => $withdrawal_request['user_id'], 'action' => 'wallet_withdrawal_declined']);
           break;

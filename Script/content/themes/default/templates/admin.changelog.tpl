@@ -14,6 +14,40 @@
     </div>
 
     <!-- Changelog -->
+    <h3>Version <span class="badge bg-warning rounded-pill">4.4</span></h3>
+    <blockquote>Release Date: 31st May 2026</blockquote>
+    <ul class="change-log-list mb20">
+      <li>[Updated] Documentation</li>
+      <li>[Updated] System Security</li>
+      <li>[Updated] System Optimization</li>
+      <li>[Updated] Sngine PHP Dependencies</li>
+      <li>[Updated] Sngine JS Dependencies</li>
+      <li>[Added] New Social Login [Apple]</li>
+      <li>[Added] New Social Login [Discord]</li>
+      <li>[Added] New Cookies Consent</li>
+      <li>[Added] hCaptcha Security Check</li>
+      <li>[Added] CCBill Payment Support</li>
+      <li>[Added] Cashapp Payment Support</li>
+      <li>[Added] Blik Payment Support</li>
+      <li>[Added] EPS Payment Support</li>
+      <li>[Added] iDEAL Payment Support</li>
+      <li>[Added] Bancontact Payment Support</li>
+      <li>[Added] Przelewy24 Payment Support</li>
+      <li>[Added] OXXO Payment Support</li>
+      <li>[Added] Revamped Emails Templates</li>
+      <li>[Fixed] Minor Bugs</li>
+      <li>[Fixed] Custom Fields Search</li>
+      <li>[Fixed] Highcharts Loading Issue</li>
+      <li>[Fixed] Compo Post Issue</li>
+      <li>[Fixed] Chat Text Non-Wrapping Issue</li>
+      <li>[Fixed] Schedule Post Listing Issue</li>
+      <li>[Fixed] Posts Reactions Update</li>
+      <li>[Fixed] Paid Movies Payment Link For Non-logged In Users</li>
+      <li>[Fixed] YouTube Shorts Scraping</li>
+      <li>[Fixed] RTL Publisher Issues</li>
+      <li>[Fixed] Blog Blockquote</li>
+    </ul>
+
     <h3>Version <span class="badge bg-warning rounded-pill">4.3</span></h3>
     <blockquote>Release Date: 8th April 2026</blockquote>
     <ul class="change-log-list mb20">

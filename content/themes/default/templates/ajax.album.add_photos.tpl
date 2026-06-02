@@ -9,7 +9,7 @@
 
     <!-- publisher-message -->
     <div class="publisher-message no-avatar">
-      <textarea dir="auto" class="js_autosize js_mentions" placeholder='{__("What is on your mind? #Hashtag.. @Mention.. Link..")}'></textarea>
+      <textarea dir="auto" class="js_autosize js_mentions" placeholder='{__("What is on your mind?")}'></textarea>
       <div class="publisher-emojis" style="display: block;">
         <div class="position-relative">
           <span class="js_emoji-menu-toggle">

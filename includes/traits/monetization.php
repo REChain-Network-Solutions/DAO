@@ -109,6 +109,8 @@ trait MonetizationTrait
         }
         /* get user monetization discount */
         $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $user['user_monetization_discount_percent'] / 100);
+        /* get monetization node url */
+        $monetization_plan['node_url'] = $system['system_url'] . "/" . $user['user_name'];
         break;
 
       case 'page':
@@ -125,6 +127,8 @@ trait MonetizationTrait
         }
         /* get page monetization discount */
         $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $page['page_monetization_discount_percent'] / 100);
+        /* get monetization node url */
+        $monetization_plan['node_url'] = $system['system_url'] . "/pages/" . $page['page_name'];
         break;
 
       case 'group':
@@ -141,6 +145,8 @@ trait MonetizationTrait
         }
         /* get group monetization discount */
         $monetization_plan['discounted_price'] = $monetization_plan['price'] * (1 - $group['group_monetization_discount_percent'] / 100);
+        /* get monetization node url */
+        $monetization_plan['node_url'] = $system['system_url'] . "/groups/" . $group['group_name'];
         break;
     }
     return $monetization_plan;
@@ -230,7 +236,7 @@ trait MonetizationTrait
     }
     /* Stripe billing plan */
     $stripe_billing_plan = '';
-    $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled']) && !is_empty($system['stripe_webhook']);
+    $stripe_recurring_enabled = $system['creditcard_enabled'] && !is_empty($system['stripe_webhook']);
     if ($stripe_recurring_enabled && $price > 0 && !in_array($period, ['minute', 'hour'])) {
       /* create Stripe billing plan */
       $stripe_billing_plan = stripe_create_billing_plan($title, $custom_description, $period_num, $period, $price);
@@ -326,7 +332,7 @@ trait MonetizationTrait
     }
     /* Stripe billing plan */
     $stripe_billing_plan = $monetization_plan['stripe_billing_plan'];
-    $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled']) && !is_empty($system['stripe_webhook']);
+    $stripe_recurring_enabled = $system['creditcard_enabled'] && !is_empty($system['stripe_webhook']);
     if ($stripe_recurring_enabled && $price > 0 && !in_array($period, ['minute', 'hour'])) {
       /* check if Stripe billing plan is not created */
       if (is_empty($stripe_billing_plan)) {

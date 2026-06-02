@@ -1,5 +1,8 @@
 {__("Hi")},
 
-{__("This is a test email")}
+{__("This is a test email from")} {__($system['system_title'])}. {__("If you received this, your email configuration is working correctly.")}
 
-{__($system['system_title'])} {__("Team")}
+{__("No action is required.")}
+
+---
+{__($system['system_title'])} — {$system['system_url']}

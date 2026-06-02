@@ -94,7 +94,7 @@
                       <span class="visible-xs-inline-block">({$_forum['total_threads']} {__("Threads")} / {$_forum['total_replies']} {__("Replies")})</span>
                     </div>
                     <div class="mb5">
-                      {__($_forum['forum_description'])}
+                      {__($_forum['forum_description'])|nl2br}
                     </div>
                     {if $_forum['childs']}
                       <div class="mb5"><strong>{__("Sub-Forums")}:</strong></div>
@@ -219,7 +219,7 @@
                   <span class="visible-xs-inline-block">({$_forum['total_threads']} {__("Threads")} / {$_forum['total_replies']} {__("Replies")})</span>
                 </div>
                 <div class="mb5">
-                  {__($_forum['forum_description'])}
+                  {__($_forum['forum_description'])|nl2br}
                 </div>
                 {if $_forum['childs']}
                   <div class="mb5"><strong>{__("Sub-Forums")}:</strong></div>

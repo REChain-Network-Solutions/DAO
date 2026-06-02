@@ -1,4 +1,4 @@
-{if $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
+{if $system['apple_login_enabled'] || $system['facebook_login_enabled'] || $system['google_login_enabled'] || $system['discord_login_enabled'] || $system['twitter_login_enabled'] || $system['linkedin_login_enabled'] || $system['vkontakte_login_enabled'] || $system['wordpress_login_enabled'] || $system['sngine_login_enabled']}
   {if $_or_pos != 'bottom'}
     <div class="hr-heading mt5 mb10">
       <div class="hr-heading-text">
@@ -6,10 +6,10 @@
       </div>
     </div>
   {/if}
-  {if $system['facebook_login_enabled']}
-    <a href="{$system['system_url']}/connect/facebook" class="d-block mb5 btn btn-social">
-      {include file='__svg_icons.tpl' icon="facebook" class="mr5" width="24px" height="24px"}
-      {__("Sign in with Facebook")}
+  {if $system['apple_login_enabled']}
+    <a href="{$system['system_url']}/connect/apple" class="d-block mb5 btn btn-social">
+      {include file='__svg_icons.tpl' icon="apple" class="mr5" width="24px" height="24px"}
+      {__("Sign in with Apple")}
     </a>
   {/if}
   {if $system['google_login_enabled']}
@@ -18,10 +18,22 @@
       {__("Sign in with Google")}
     </a>
   {/if}
+  {if $system['facebook_login_enabled']}
+    <a href="{$system['system_url']}/connect/facebook" class="d-block mb5 btn btn-social">
+      {include file='__svg_icons.tpl' icon="facebook" class="mr5" width="24px" height="24px"}
+      {__("Sign in with Facebook")}
+    </a>
+  {/if}
   {if $system['twitter_login_enabled']}
     <a href="{$system['system_url']}/connect/twitter" class="d-block mb5 btn btn-social">
       {include file='__svg_icons.tpl' icon="x" class="mr5" width="24px" height="24px"}
       {__("Sign in with X")}
+    </a>
+  {/if}
+  {if $system['discord_login_enabled']}
+    <a href="{$system['system_url']}/connect/discord" class="d-block mb5 btn btn-social">
+      {include file='__svg_icons.tpl' icon="discord" class="mr5" width="24px" height="24px"}
+      {__("Sign in with Discord")}
     </a>
   {/if}
   {if $system['linkedin_login_enabled']}

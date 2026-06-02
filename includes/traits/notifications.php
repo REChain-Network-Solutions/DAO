@@ -810,6 +810,25 @@ trait NotificationsTrait
             $notification['url'] = $system['system_url'] . '/support/tickets/' . $notification['node_url'];
             $notification['message'] = __("Your ticket has a new reply");
             break;
+
+          case 'ccbill_complete':
+            $notification['system_notification'] = true;
+            $notification['icon'] = "fa fa-bell";
+            $notification['user_picture'] = get_picture("", "system");
+            $notification['name'] = __("System") . " " . __("Message");
+            $notification['icon'] = "fa fa-dollar-sign";
+            $notification['url'] = $system['system_url'];
+            $notification['message'] = __("Your CCBill payment has been completed");
+            break;
+
+          case 'ccbill_failed':
+            $notification['system_notification'] = true;
+            $notification['icon'] = "fa fa-bell";
+            $notification['user_picture'] = get_picture("", "system");
+            $notification['name'] = __("System") . " " . __("Message");
+            $notification['url'] = $system['system_url'];
+            $notification['message'] = __("Your CCBill payment has been failed");
+            break;
         }
         /* prepare message */
         $notification['full_message'] = html_entity_decode($notification['name'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
@@ -1448,6 +1467,16 @@ trait NotificationsTrait
           $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
           $notification['message'] = __("Your ticket has a new reply");
           break;
+
+        case 'ccbill_complete':
+          $notification['url'] = $system['system_url'];
+          $notification['message'] = __("Your CCBill payment has been completed");
+          break;
+
+        case 'ccbill_failed':
+          $notification['url'] = $system['system_url'];
+          $notification['message'] = __("Your CCBill payment has been failed");
+          break;
       }
       /* prepare notification for web */
       $notification['full_message'] = html_entity_decode($this->_data['user_fullname'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
@@ -1708,6 +1737,16 @@ trait NotificationsTrait
           }
           $notification['url'] = $system['system_url'] . '/support/tickets/' . $node_url;
           $notification['message'] = __("Your ticket has a new reply");
+          break;
+
+        case 'ccbill_complete':
+          $notification['url'] = $system['system_url'];
+          $notification['message'] = __("Your CCBill payment has been completed");
+          break;
+
+        case 'ccbill_failed':
+          $notification['url'] = $system['system_url'];
+          $notification['message'] = __("Your CCBill payment has been failed");
           break;
 
         default:

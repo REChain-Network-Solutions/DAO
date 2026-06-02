@@ -757,6 +757,26 @@ required          | <pre lang=html>`<input required>`</pre> | Adds a `required` 
 List of questions & scenarios which might come up during development with Tagify:
 
 <details>
+  <summary><strong>Single-row tags with horizontal scrollbar</strong></summary>
+
+By default Tagify renders multiline tags which flex wrapping. This can be easily changed
+so te tags render in a single row with a scrollbar ([live demo](https://jsbin.com/magocim/edit?html,css,output)):
+
+
+```css
+.tagify {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  width: 100%;
+  max-width: 500px;
+  scrollbar-width: thin;
+}
+```
+</details>
+
+---
+
+<details>
   <summary><strong>Dynamic whitelist</strong></summary>
 The whitelist initial value is set like so:
 

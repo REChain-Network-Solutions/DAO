@@ -22,12 +22,22 @@ trait PhotosTrait
    * @param integer $offset
    * @param boolean $pass_check
    * @param boolean $get_pinned
+   * @param string $cursor
+   * @param integer $results
    * @return array
    */
-  public function get_photos($id, $type = 'user', $offset = 0, $pass_check = true, $get_pinned = false)
+  public function get_photos($id, $type = 'user', $offset = 0, $pass_check = true, $get_pinned = false, $cursor = null, $results = null)
   {
     global $db, $system;
     $photos = [];
+    $schedule_query = ($system['posts_schedule_enabled']) ? " AND posts.time <= NOW()" : "";
+    /* pages after the first continue from a cursor (the last photo id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = ($get_pinned) ? null : cursor_decode($cursor, ['int']);
+    if ($cursor) {
+      $schedule_query .= " AND " . cursor_where(['posts_photos.photo_id'], $cursor);
+      $offset = 0;
+    }
     switch ($type) {
       case 'album':
         $offset *= $system['max_results_even'];
@@ -55,6 +65,7 @@ trait PhotosTrait
                 AND posts.is_anonymous = '0'
                 AND posts.is_paid = '0'
                 AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+                $schedule_query
               ORDER BY posts_photos.photo_id DESC 
               LIMIT %s, %s",
             secure($id, 'int'),
@@ -64,6 +75,7 @@ trait PhotosTrait
         );
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            $last_read_id = $photo['photo_id'];
             /* check if photo is for adult */
             if ($system['adult_mode'] && $photo['for_adult']) {
               if (!$this->_logged_in) {
@@ -122,7 +134,8 @@ trait PhotosTrait
           }
         }
         /* get all user photos (except photos from groups, events, anonymous posts & paid posts) */
-        $offset *= $system['min_results_even'];
+        $results = ($results) ? $results : $system['min_results_even'];
+        $offset *= $results;
         $order_statement = ($get_pinned) ? "posts_photos.pinned DESC, posts_photos.photo_id DESC" : "posts_photos.photo_id DESC";
         $get_photos = $db->query(sprintf(
           "SELECT 
@@ -143,14 +156,16 @@ trait PhotosTrait
                 AND posts.is_anonymous = '0' 
                 AND posts.is_paid = '0' 
                 AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+                $schedule_query
             ORDER BY $order_statement 
             LIMIT %s, %s",
           secure($id, 'int'),
           secure($offset, 'int', false),
-          secure($system['min_results_even'], 'int', false)
+          secure($results, 'int', false)
         ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            $last_read_id = $photo['photo_id'];
             /* check if photo is for adult */
             if ($system['adult_mode'] && $photo['for_adult']) {
               if (!$this->_logged_in) {
@@ -207,6 +222,7 @@ trait PhotosTrait
               AND posts.user_type = 'page'
               AND posts.is_paid = '0'
               AND (posts.pre_approved = '1' OR posts.has_approved = '1')
+              $schedule_query
             ORDER BY posts_photos.photo_id DESC
             LIMIT %s, %s",
           secure($id, 'int'),
@@ -215,6 +231,7 @@ trait PhotosTrait
         ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            $last_read_id = $photo['photo_id'];
             /* check if photo is for adult */
             if ($system['adult_mode'] && $photo['for_adult']) {
               if (!$this->_logged_in) {
@@ -277,6 +294,7 @@ trait PhotosTrait
                 AND posts.in_group = '1' 
                 AND posts.is_paid = '0' 
                 AND (posts.pre_approved = '1' OR posts.has_approved = '1') 
+                $schedule_query
             ORDER BY 
                 posts_photos.photo_id DESC 
             LIMIT %s, %s",
@@ -286,6 +304,7 @@ trait PhotosTrait
         ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            $last_read_id = $photo['photo_id'];
             /* check if photo is for adult */
             if ($system['adult_mode'] && $photo['for_adult']) {
               if (!$this->_logged_in) {
@@ -349,6 +368,7 @@ trait PhotosTrait
                posts.pre_approved = '1'
                OR posts.has_approved = '1'
              )
+             $schedule_query
            ORDER BY
              posts_photos.photo_id DESC
            LIMIT %s, %s",
@@ -358,6 +378,7 @@ trait PhotosTrait
         ));
         if ($get_photos->num_rows > 0) {
           while ($photo = $get_photos->fetch_assoc()) {
+            $last_read_id = $photo['photo_id'];
             /* check if photo is for adult */
             if ($system['adult_mode'] && $photo['for_adult']) {
               if (!$this->_logged_in) {
@@ -383,6 +404,7 @@ trait PhotosTrait
         }
         break;
     }
+    $this->_cursor = ($get_pinned || !isset($last_read_id)) ? null : cursor_encode([$last_read_id]);
     return $photos;
   }
 
@@ -396,22 +418,23 @@ trait PhotosTrait
    */
   public function get_photos_count($node_id, $node_type)
   {
-    global $db;
+    global $db, $system;
+    $schedule_query = ($system['posts_schedule_enabled']) ? " AND posts.time <= NOW()" : "";
     switch ($node_type) {
       case 'user':
-        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'user' AND posts.in_group = '0' AND posts.in_event = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1')", secure($node_id, 'int')));
+        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'user' AND posts.in_group = '0' AND posts.in_event = '0' AND (posts.pre_approved = '1' OR posts.has_approved = '1')" . $schedule_query, secure($node_id, 'int')));
         break;
 
       case 'page':
-        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'page' AND (posts.pre_approved = '1' OR posts.has_approved = '1')", secure($node_id, 'int')));
+        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.user_id = %s AND posts.user_type = 'page' AND (posts.pre_approved = '1' OR posts.has_approved = '1')" . $schedule_query, secure($node_id, 'int')));
         break;
 
       case 'group':
-        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.group_id = %s AND posts.in_group = '1' AND (posts.pre_approved = '1' OR posts.has_approved = '1')", secure($node_id, 'int')));
+        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.group_id = %s AND posts.in_group = '1' AND (posts.pre_approved = '1' OR posts.has_approved = '1')" . $schedule_query, secure($node_id, 'int')));
         break;
 
       case 'event':
-        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.event_id = %s AND posts.in_event = '1' AND (posts.pre_approved = '1' OR posts.has_approved = '1')", secure($node_id, 'int')));
+        $get_photos = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts.event_id = %s AND posts.in_event = '1' AND (posts.pre_approved = '1' OR posts.has_approved = '1')" . $schedule_query, secure($node_id, 'int')));
         break;
 
       default:
@@ -449,6 +472,10 @@ trait PhotosTrait
     /* get post */
     $post = $this->_check_post($photo['post_id'], false, $full_details);
     if (!$post) {
+      return false;
+    }
+    /* check if post is still scheduled */
+    if ($post['still_scheduled'] && !$post['manage_post']) {
       return false;
     }
 
@@ -539,9 +566,10 @@ trait PhotosTrait
 
     /* get gallery */
     if ($get_gallery) {
+      $schedule_query = ($system['posts_schedule_enabled']) ? " AND posts.time <= NOW()" : "";
       switch ($context) {
         case 'post':
-          $get_post_photos = $db->query(sprintf("SELECT photo_id, source FROM posts_photos WHERE post_id = %s ORDER BY photo_id ASC", secure($post['post_id'], 'int')));
+          $get_post_photos = $db->query(sprintf("SELECT photo_id, source FROM posts_photos WHERE post_id = %s ORDER BY sort_order ASC, photo_id ASC", secure($post['post_id'], 'int')));
           while ($post_photo = $get_post_photos->fetch_assoc()) {
             $post_photos[$post_photo['photo_id']] = $post_photo;
           }
@@ -561,7 +589,8 @@ trait PhotosTrait
              FROM 
                 posts_photos 
              INNER JOIN posts ON posts_photos.post_id = posts.post_id 
-             WHERE posts_photos.album_id = %s",
+             WHERE posts_photos.album_id = %s
+             $schedule_query",
             secure($photo['album_id'], 'int')
           ));
           while ($album_photo = $get_album_photos->fetch_assoc()) {
@@ -624,7 +653,8 @@ trait PhotosTrait
               FROM posts_photos 
               INNER JOIN posts ON posts_photos.post_id = posts.post_id 
               WHERE posts.in_group = '1' 
-                AND posts.group_id = %s",
+                AND posts.group_id = %s
+                $schedule_query",
               secure($post['group_id'], 'int')
             ));
           } elseif ($post['in_event']) {
@@ -639,7 +669,8 @@ trait PhotosTrait
               FROM posts_photos 
               INNER JOIN posts ON posts_photos.post_id = posts.post_id 
               WHERE posts.in_event = '1' 
-                AND posts.event_id = %s",
+                AND posts.event_id = %s
+                $schedule_query",
               secure($post['event_id'], 'int')
             ));
           } elseif ($post['user_type'] == "page") {
@@ -654,7 +685,8 @@ trait PhotosTrait
               FROM posts_photos 
               INNER JOIN posts ON posts_photos.post_id = posts.post_id 
               WHERE posts.user_type = 'page' 
-                AND posts.user_id = %s",
+                AND posts.user_id = %s
+                $schedule_query",
               secure($post['user_id'], 'int')
             ));
           } elseif ($post['user_type'] == "user") {
@@ -669,7 +701,8 @@ trait PhotosTrait
               FROM posts_photos 
               INNER JOIN posts ON posts_photos.post_id = posts.post_id 
               WHERE posts.user_type = 'user' 
-                AND posts.user_id = %s",
+                AND posts.user_id = %s
+                $schedule_query",
               secure($post['user_id'], 'int')
             ));
           }
@@ -756,6 +789,11 @@ trait PhotosTrait
     /* check if photo can be deleted */
     if (!$photo['can_delete']) {
       throw new Exception(__("This photo can't be deleted as it maybe your current profile image or cover"));
+    }
+    /* delete the post if it's the last photo */
+    if ($photo['is_single'] && in_array($post['post_type'], ['photos', 'album', 'profile_picture', 'profile_cover', 'page_picture', 'page_cover', 'group_picture', 'group_cover', 'event_cover'])) {
+      $this->delete_post($post['post_id']);
+      return;
     }
     /* delete the photo */
     $db->query(sprintf("DELETE FROM posts_photos WHERE photo_id = %s", secure($photo_id, 'int')));
@@ -913,37 +951,44 @@ trait PhotosTrait
    * @param integer $offset
    * @return array
    */
-  public function get_albums($id, $type = 'user', $offset = 0)
+  public function get_albums($id, $type = 'user', $offset = 0, $cursor = null)
   {
     global $db, $system;
     /* initialize vars */
     $albums = [];
     $offset *= $system['max_results_even'];
+    /* newest albums first; pages after the first continue from a cursor (the last album id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['album_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
     switch ($type) {
       case 'user':
-        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE user_type = 'user' AND user_id = %s AND in_group = '0' AND in_event = '0' LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE user_type = 'user' AND user_id = %s AND in_group = '0' AND in_event = '0'" . $cursor_statement . " ORDER BY album_id DESC " . $limit_statement, secure($id, 'int')));
         break;
 
       case 'page':
-        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE user_type = 'page' AND user_id = %s LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE user_type = 'page' AND user_id = %s" . $cursor_statement . " ORDER BY album_id DESC " . $limit_statement, secure($id, 'int')));
         break;
 
       case 'group':
-        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE in_group = '1' AND group_id = %s LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE in_group = '1' AND group_id = %s" . $cursor_statement . " ORDER BY album_id DESC " . $limit_statement, secure($id, 'int')));
         break;
 
       case 'event':
-        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE in_event = '1' AND event_id = %s LIMIT %s, %s", secure($id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_albums = $db->query(sprintf("SELECT album_id FROM posts_photos_albums WHERE in_event = '1' AND event_id = %s" . $cursor_statement . " ORDER BY album_id DESC " . $limit_statement, secure($id, 'int')));
         break;
     }
     if ($get_albums->num_rows > 0) {
       while ($album = $get_albums->fetch_assoc()) {
+        $last_read_id = $album['album_id'];
         $album = $this->get_album($album['album_id'], false); /* $full_details = false */
         if ($album) {
           $albums[] = $album;
         }
       }
     }
+    $this->_cursor = (isset($last_read_id)) ? cursor_encode([$last_read_id]) : null;
     return $albums;
   }
 
@@ -958,6 +1003,7 @@ trait PhotosTrait
   public function get_album($album_id, $full_details = true)
   {
     global $db, $system;
+    $schedule_query = ($system['posts_schedule_enabled']) ? " AND posts.time <= NOW()" : "";
     $get_album = $db->query(sprintf(
       "SELECT 
             posts_photos_albums.*, 
@@ -1049,6 +1095,7 @@ trait PhotosTrait
          INNER JOIN posts ON posts_photos.post_id = posts.post_id 
          WHERE %s posts_photos.album_id = %s 
          AND posts.is_paid = '0' 
+         $schedule_query
          ORDER BY photo_id DESC 
          LIMIT 1",
         $where_statement,
@@ -1056,7 +1103,7 @@ trait PhotosTrait
       )
     );
     if ($get_cover->num_rows == 0) {
-      $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+      $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank/blank_album.png';
       $album['cover']['blur'] = 0;
     } else {
       $cover = $get_cover->fetch_assoc();
@@ -1065,19 +1112,19 @@ trait PhotosTrait
       /* check if cover photo is for adult */
       if ($system['adult_mode'] && $cover['for_adult']) {
         if (!$this->_logged_in) {
-          $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+          $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank/blank_album.png';
           $album['cover']['blur'] = 0;
         } else {
           /* check if the viewer is not (admin || moderator) && not the author of the post */
           if ($this->_data['user_group'] == 3 && $album['author_id'] != $this->_data['user_id']) {
             /* user not adult */
             if (!$this->_data['user_adult']) {
-              $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+              $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank/blank_album.png';
               $album['cover']['blur'] = 0;
             } else {
               /* user adult but not verified */
               if ($system['verification_for_adult_content'] && !$this->_data['user_verified']) {
-                $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_album.png';
+                $album['cover']['source'] = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank/blank_album.png';
                 $album['cover']['blur'] = 0;
               }
             }
@@ -1086,7 +1133,7 @@ trait PhotosTrait
       }
     }
     /* get album total photos count */
-    $get_album_photos_count = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos WHERE album_id = %s", secure($album_id, 'int')));
+    $get_album_photos_count = $db->query(sprintf("SELECT COUNT(*) as count FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id WHERE posts_photos.album_id = %s" . $schedule_query, secure($album_id, 'int')));
     $album['photos_count'] = $get_album_photos_count->fetch_assoc()['count'];
     /* check if viewer can manage album [Edit|Update|Delete] */
     $album['is_page_admin'] = $this->check_page_adminship($this->_data['user_id'], $album['page_id']);
@@ -1181,6 +1228,15 @@ trait PhotosTrait
     }
     /* edit the album */
     $db->query(sprintf("UPDATE posts_photos_albums SET title = %s WHERE album_id = %s", secure($title), secure($album_id, 'int')));
+    /* update album posts search */
+    $get_posts = $db->query(sprintf("SELECT DISTINCT posts.post_id FROM posts_photos INNER JOIN posts ON posts_photos.post_id = posts.post_id AND posts.post_type = 'album' WHERE posts_photos.album_id = %s", secure($album_id, 'int')));
+    foreach (array_chunk(array_column($get_posts->fetch_all(MYSQLI_ASSOC), 'post_id'), 500) as $posts_ids) {
+      try {
+        $this->refresh_posts_search($posts_ids);
+      } catch (Throwable $e) {
+        error_log('Post search index: ' . $e->getMessage());
+      }
+    }
   }
 
 
@@ -1231,12 +1287,14 @@ trait PhotosTrait
       }
     }
     /* insert the post */
-    $db->query(sprintf("INSERT INTO posts (user_id, user_type, in_group, group_id, in_event, event_id, post_type, time, location, privacy, text, feeling_action, feeling_value) VALUES (%s, %s, %s, %s, %s, %s, 'album', %s, %s, %s, %s, %s, %s)", secure($user_id, 'int'), secure($album['user_type']), secure($album['in_group']), secure($album['group_id'], 'int'), secure($album['in_event']), secure($album['event_id'], 'int'), secure($date), secure($args['location']), secure($args['privacy']), secure($args['message']), secure($post['feeling_action']), secure($post['feeling_value'])));
+    $has_coordinates = !is_empty($args['location']) && valid_location($args['latitude'] ?? null, $args['longitude'] ?? null);
+    $db->query(sprintf("INSERT INTO posts (user_id, user_type, in_group, group_id, in_event, event_id, post_type, time, location, location_latitude, location_longitude, privacy, text, feeling_action, feeling_value) VALUES (%s, %s, %s, %s, %s, %s, 'album', %s, %s, %s, %s, %s, %s, %s, %s)", secure($user_id, 'int'), secure($album['user_type']), secure($album['in_group']), secure($album['group_id'], 'int'), secure($album['in_event']), secure($album['event_id'], 'int'), secure($date), secure($args['location']), secure($has_coordinates ? round((float) $args['latitude'], 7) : 'null'), secure($has_coordinates ? round((float) $args['longitude'], 7) : 'null'), secure($args['privacy']), secure($args['message']), secure($post['feeling_action']), secure($post['feeling_value'])));
     $post_id = $db->insert_id;
     /* insert new photos */
     foreach ($args['photos'] as $photo) {
       $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($args['album_id'], 'int'), secure($photo['source']), secure($photo['blur'])));
     }
+    $this->refresh_post_search($post_id);
     /* remove pending uploads */
     remove_pending_uploads(array_column($args['photos'], 'source'));
     /* post mention notifications */

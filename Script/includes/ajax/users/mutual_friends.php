@@ -34,7 +34,7 @@ try {
   $smarty->assign('total_mutual_friends', $user->get_mutual_friends_count($_GET['uid']));
   /* return */
   $return['mutual_friends'] = $smarty->fetch("ajax.mutual_friends.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.mutual_friends);";
+  $return['callback'] = "modal_content(response.mutual_friends);";
 
   // return & exit
   return_json($return);

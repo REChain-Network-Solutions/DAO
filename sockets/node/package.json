@@ -1,0 +1,21 @@
+{
+ "name": "sngine-sockets",
+ "version": "1.0.0",
+ "description": "Sngine NodeJS socket.io chat server",
+ "author": "Zamblek",
+ "private": true,
+ "type": "commonjs",
+ "main": "socket.js",
+ "scripts": {
+  "start": "node socket.js start",
+  "start:daemon": "node socket.js start -d",
+  "stop": "node socket.js stop",
+  "status": "node socket.js status"
+ },
+ "dependencies": {
+  "ioredis": "^5.4.1",
+  "jsonwebtoken": "^9.0.2",
+  "mysql2": "^3.11.5",
+  "socket.io": "^4.8.1"
+ }
+}

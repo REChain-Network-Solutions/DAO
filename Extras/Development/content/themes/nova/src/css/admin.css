@@ -1,0 +1,3873 @@
+/* ==========================================================================
+   AdminCP / ModCP — isolated admin design system.
+
+   Admin owns its fixed admin/admin-dark tokens and shares no app.css styles.
+   Files remain hosted in Nova until the shared admin migration. Placeholder
+   themes intentionally contain no copies of these assets.
+
+   Built by Vite as the `admin` entry. The admin shell (_admin_head.tpl)
+   sets <html data-theme="admin"> so none of the frontend theme applies.
+   ========================================================================== */
+
+@import "tailwindcss" source(none);
+@plugin "flyonui" {
+  themes: false;
+}
+@import "flyonui/variants.css";
+@import "flyonui/src/vendor/datatables.css";
+
+/* Tabler icons via Iconify — powers the icon-[tabler--name] utilities
+   used by the FlyonUI blocks. Tailwind only emits the icons actually used. */
+@plugin "@iconify/tailwind4";
+
+@import "./_scrollbar.css";
+
+/* Admin scans only the admin surface — the frontend templates are not
+   part of this bundle, which is what keeps admin.css small and portable. */
+@source "../../templates/admin*.tpl";
+@source "../../templates/__licence_lock.tpl";
+@source "../../templates/__admin_theme_landing.tpl";
+@source "../../templates/__admin_offset_pad.tpl";
+@source "../../templates/__admin_theme_landing_option.tpl";
+@source "../../templates/__categories.recursive_rows.tpl";
+@source "../../templates/__tree_toggle.tpl";
+@source "../../templates/__monetization_plans.tpl";
+@source "../../templates/__svg_icons.tpl";
+@source "../../templates/_admin_*.tpl";
+@source "../../templates/__feeds_user.tpl";
+@source "../../templates/__connection_button.tpl";
+@source "../../templates/__modal_see_more.tpl";
+@source "../../templates/__feeds_conversation.tpl";
+@source "../../templates/__feeds_notification.tpl";
+@source "../../templates/__reaction_emojis.tpl";
+@source "../../templates/_no_data.tpl";
+/* modules icons */
+@source "../../../../../includes/functions-design.php";
+/* client-side templates rendered by core.js carry their own markup */
+@source "../../templates/_js_templates.core.tpl";
+@source "../../templates/_js_templates.uploader.tpl";
+@source "../../templates/__x_image.tpl";
+@source "../../templates/_js_templates.chat.tpl";
+@source "../../templates/__chat_call.tpl";
+@source "../../templates/_js_templates.admin.tpl";
+@source "../../templates/__connected_accounts.tpl";
+@source "../../templates/ajax.monetization.*.tpl";
+@source "../../templates/ajax.orders.*.tpl";
+@source "../../templates/ajax.reports.message.tpl";
+@source "../../templates/ajax.who_referred.tpl";
+@source "../../../../../includes/assets/js/core/admin.js";
+@source "../../../../../includes/functions.php";
+@source "../../../../../includes/assets/js/core/core.js";
+@source "../../../../../includes/assets/js/core/chat.js";
+@source "../../../../../includes/assets/js/core/user.js";
+@source "../../../../../includes/class-pager.php";
+@source "../../../../../includes/ajax/admin/tools.php";
+@source "../../../../../includes/traits/notifications.php";
+/* admin-layout.js assigns class strings at runtime (open_flyout(), and the
+   command palette rows), so it has to be scanned like the templates are. */
+@source "../../js/admin-layout.js";
+@source "../../../../../node_modules/flyonui/flyonui.js";
+@import "./_safelist.admin.css";
+
+@plugin "flyonui/theme" {
+  name: "admin";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(98.5% 0 0);
+  --color-base-300: oklch(92.2% 0 0);
+  --color-base-content: oklch(14.5% 0 0);
+
+  --color-primary: oklch(20.5% 0 0);
+  --color-primary-content: oklch(98.5% 0 0);
+  --color-secondary: oklch(97% 0 0);
+  --color-secondary-content: oklch(20.5% 0 0);
+  --color-accent: oklch(97% 0 0);
+  --color-accent-content: oklch(20.5% 0 0);
+  --color-neutral: oklch(20.5% 0 0);
+  --color-neutral-content: oklch(98.5% 0 0);
+
+  --color-info: oklch(64% 0.145 233);
+  --color-info-content: oklch(98% 0.014 233);
+  --color-success: oklch(63% 0.152 155);
+  --color-success-content: oklch(98% 0.017 155);
+  --color-warning: oklch(74% 0.160 68);
+  --color-warning-content: oklch(26% 0.055 68);
+  --color-error: oklch(57.7% 0.245 27.3);
+  --color-error-content: oklch(98.5% 0 0);
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "flyonui/theme" {
+  name: "admin-dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(20.5% 0 0);
+  --color-base-200: oklch(14.5% 0 0);
+  --color-base-300: oklch(26.9% 0 0);
+  --color-base-content: oklch(98.5% 0 0);
+
+  --color-primary: oklch(92.2% 0 0);
+  --color-primary-content: oklch(20.5% 0 0);
+  --color-secondary: oklch(26.9% 0 0);
+  --color-secondary-content: oklch(98.5% 0 0);
+  --color-accent: oklch(26.9% 0 0);
+  --color-accent-content: oklch(98.5% 0 0);
+  --color-neutral: oklch(26.9% 0 0);
+  --color-neutral-content: oklch(98.5% 0 0);
+
+  --color-info: oklch(71% 0.128 233);
+  --color-info-content: oklch(16% 0.030 233);
+  --color-success: oklch(71% 0.140 155);
+  --color-success-content: oklch(16% 0.033 155);
+  --color-warning: oklch(79% 0.148 68);
+  --color-warning-content: oklch(18% 0.040 68);
+  --color-error: oklch(70.4% 0.191 22.2);
+  --color-error-content: oklch(14.5% 0 0);
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+[dir="rtl"] {
+  --font-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Admin shell dimensions are independent of the site's fluid_design setting. */
+.admin-shell {
+  --admin-sidebar-width: 256px;
+  --admin-header-height: 4rem;
+}
+
+.admin-sidebar,
+.admin-sidebar .drawer-body {
+  overflow: visible;
+}
+
+.admin-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 80;
+  width: min(var(--admin-sidebar-width), 90vw);
+  /* .drawer-start ships transition-property:all, which animates the width on
+     collapse and drags the icons across the rail */
+  transition-property: translate;
+}
+
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  height: var(--admin-header-height);
+  min-height: var(--admin-header-height);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.admin-sidebar-logo {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.admin-sidebar-logo-dark {
+  display: none;
+}
+
+[data-theme="admin-dark"] .admin-sidebar-logo-light {
+  display: none;
+}
+
+[data-theme="admin-dark"] .admin-sidebar-logo-dark {
+  display: block;
+}
+
+.admin-sidebar-brand-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-sidebar-brand-name {
+  overflow: hidden;
+  color: var(--color-base-content);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-brand-sub {
+  overflow: hidden;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-account {
+  position: relative;
+  margin-top: auto;
+  padding: 12px 16px;
+  overflow: visible;
+}
+
+.admin-sidebar-account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  color: inherit;
+  text-align: start;
+}
+
+.admin-sidebar-account-trigger:hover {
+  background: var(--color-base-200);
+}
+
+.admin-sidebar-account-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.admin-sidebar-account-meta {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-sidebar-account-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-account-email {
+  overflow: hidden;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-account-selector {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.admin-sidebar-account .dropdown-menu {
+  position: absolute !important;
+  inset-inline-start: calc(100% - 12px) !important;
+  inset-inline-end: auto !important;
+  top: auto !important;
+  bottom: 12px !important;
+  z-index: 80;
+  width: 16rem !important;
+  min-width: 16rem;
+  margin: 0 !important;
+  padding: 4px;
+  transform: none !important;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.admin-sidebar-account-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 8px;
+  color: inherit;
+}
+
+.admin-sidebar-account-header:hover {
+  background: var(--color-base-200);
+}
+
+.admin-sidebar-account-header .admin-sidebar-account-name {
+  font-size: 13px;
+}
+
+.admin-sidebar-account-header .admin-sidebar-account-email {
+  font-size: 12px;
+}
+
+.admin-sidebar-account .dropdown-item {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: var(--radius-field);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.admin-sidebar-account .dropdown-divider {
+  display: block;
+  height: 0;
+  margin-block: 6px;
+  border: 0;
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-sidebar-account-value {
+  margin-inline-start: auto;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account .dropdown-menu {
+    inset-inline-start: calc(100% - 4px) !important;
+    bottom: 12px !important;
+  }
+}
+
+#admin-nav > li.admin-nav-heading {
+  margin-top: 1rem;
+  padding: 0 8px 4px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: none;
+  pointer-events: none;
+}
+
+#admin-nav > li.admin-nav-heading:first-child {
+  margin-top: 0.5rem;
+}
+
+.admin-topbar {
+  height: var(--admin-header-height);
+  box-sizing: border-box;
+}
+
+.admin-topbar,
+.admin-topbar .navbar {
+  overflow: visible;
+}
+
+.admin-topbar-title {
+  display: none;
+  min-width: 0;
+  max-width: min(28rem, 42vw);
+  overflow: hidden;
+  color: var(--color-base-content);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .admin-topbar-title {
+    display: inline-block;
+  }
+}
+
+/* user.js toggles counters with jQuery .show()/.hide(); no !important so inline display wins. */
+.x-hidden {
+  display: none;
+}
+
+.admin-topbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 2rem;
+  padding-inline: 10px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-field);
+  background: var(--color-base-100);
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-topbar-search:hover {
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+}
+
+.admin-topbar-search-label {
+  min-width: 8rem;
+  text-align: start;
+}
+
+.admin-topbar-search-kbd {
+  margin-inline-start: auto;
+}
+
+/* below sm the pill collapses to the square icon button the chrome uses */
+@media (max-width: 639px) {
+  .admin-topbar-search {
+    padding-inline: 0;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    color: var(--color-base-content);
+  }
+
+  .admin-topbar-search-label,
+  .admin-topbar-search-kbd {
+    display: none;
+  }
+}
+
+.admin-topbar-chrome {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-topbar-icon {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-field);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  box-shadow: none;
+}
+
+.admin-topbar-icon:hover {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+}
+
+.admin-topbar-chrome .counter {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--color-base-100);
+  border-radius: 9999px;
+  background: var(--color-error);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+}
+
+.admin-topbar-chrome .dropdown-menu {
+  z-index: 1060;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.admin-topbar-chrome .dropdown-menu.dropdown-widget {
+  width: 22rem;
+  max-width: min(22rem, calc(100vw - 1.5rem));
+  overflow: hidden;
+}
+
+.admin-topbar-chrome .dropdown-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.admin-topbar-chrome .dropdown-widget-header .title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.admin-topbar-chrome .dropdown-widget-header a {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.admin-topbar-chrome .dropdown-widget-header a:hover {
+  color: var(--color-base-content);
+}
+
+.admin-topbar-chrome-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-topbar-chrome .dropdown-widget-body {
+  padding: 0;
+}
+
+.admin-topbar-chrome .dropdown-widget-body .js_scroller {
+  max-height: 20rem;
+}
+
+.admin-topbar-chrome .dropdown-widget-body ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-topbar-chrome .dropdown-widget-footer {
+  display: block;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-base-300);
+  color: var(--color-base-content);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.admin-topbar-chrome .dropdown-widget-footer:hover {
+  background: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+}
+
+.admin-topbar-chrome .verified-badge,
+.admin-topbar-chrome .pro-badge {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.admin-topbar-chrome .dropdown-item {
+  display: flex;
+  align-items: center;
+}
+
+.admin-footer-bar {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.admin-footer-language {
+  --placement: top-start;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-footer-language-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: auto;
+  min-height: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-field);
+  background: var(--color-base-200);
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1.25;
+}
+
+.admin-footer-language-trigger:hover {
+  background: var(--color-base-300);
+}
+
+.admin-footer-theme-trigger {
+  justify-content: center;
+  padding-inline: 7px;
+}
+
+.admin-theme-sun {
+  display: none;
+}
+
+[data-theme$="-dark"] .admin-theme-sun {
+  display: inline-block;
+}
+
+[data-theme$="-dark"] .admin-theme-moon {
+  display: none;
+}
+
+.admin-footer-language:not(.open) .dropdown-menu {
+  display: none;
+}
+
+.admin-footer-language .dropdown-menu {
+  position: absolute !important;
+  inset-inline-start: 0 !important;
+  inset-inline-end: auto !important;
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
+  z-index: 80;
+  width: 16rem !important;
+  min-width: 16rem;
+  margin: 0 !important;
+  padding: 4px;
+  transform: none !important;
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.admin-footer-language .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: var(--radius-field);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.admin-footer-language .dropdown-item.dropdown-active {
+  background: transparent;
+}
+
+.admin-footer-language .dropdown-item:hover,
+.admin-footer-language .dropdown-item.dropdown-active:hover {
+  background: var(--color-base-200);
+}
+
+.admin-footer-language-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-footer-language-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  opacity: 0.55;
+}
+
+.admin-footer-language-flag {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-field);
+}
+
+.admin-footer-language-trigger .admin-footer-language-flag {
+  width: 20px;
+  height: 20px;
+}
+
+@media (min-width: 1024px) {
+  .admin-topbar,
+  .admin-workspace {
+    padding-inline-start: var(--admin-sidebar-width);
+  }
+
+  .admin-sidebar {
+    width: var(--admin-sidebar-width);
+  }
+
+  /* The rail and the content edge run off the same variable, so they need the
+     same duration and easing or the content snaps ahead of the sidebar. */
+  .admin-sidebar,
+  .admin-topbar,
+  .admin-workspace {
+    transition-property: width, padding-inline-start;
+    transition-duration: 200ms;
+    transition-timing-function: linear;
+  }
+
+  /* 24px lead + 18px icon + 24px trail — the lead matches the expanded nav and
+     item padding, so the icons keep their x when the rail closes. */
+  [data-admin-sidebar="collapsed"] .admin-shell {
+    --admin-sidebar-width: 66px;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account-trigger {
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account-trigger:hover {
+    background: transparent;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-sidebar-brand-text,
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account-meta,
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account-selector,
+  [data-admin-sidebar="collapsed"] #admin-nav > li:not(:has(> a, > button)),
+  [data-admin-sidebar="collapsed"] #admin-nav > li > :is(a, button) > .grow,
+  [data-admin-sidebar="collapsed"] #admin-nav > li > :is(a, button) > span:last-child {
+    display: none;
+  }
+
+  /* HSAccordion writes display:block inline and animates the height over 300ms,
+     which outlasts the collapse — !important is what keeps a section that is
+     still closing from being drawn inside the rail */
+  [data-admin-sidebar="collapsed"] #admin-nav > li > .accordion-content {
+    display: none !important;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-sidebar-brand,
+  [data-admin-sidebar="collapsed"] .admin-sidebar-account-trigger,
+  [data-admin-sidebar="collapsed"] #admin-nav > li > :is(a, button) {
+    justify-content: flex-start;
+  }
+
+  [data-admin-sidebar="collapsed"] .admin-sidebar-brand,
+  [data-admin-sidebar="collapsed"] #admin-nav > li > :is(a, button) {
+    overflow: hidden;
+  }
+
+  /* square: 8px + the 18px icon + 8px, on both axes. It cannot be centred
+     instead, because the width animates and would drag the icon across. */
+  [data-admin-sidebar="collapsed"] #admin-nav > li > :is(a, button) {
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 8px;
+  }
+
+  /* .rail-current stands in for .active on the section the rail closed */
+  [data-admin-sidebar="collapsed"] #admin-nav > :is(.active, .rail-current) > button {
+    color: var(--color-primary);
+    background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  }
+}
+
+.admin-rail-flyout,
+.admin-rail-tooltip {
+  position: fixed;
+  z-index: 90;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  box-shadow: 0 8px 24px #0002;
+}
+
+.admin-rail-flyout {
+  width: min(288px, calc(100vw - 88px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-rail-flyout-title {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-base-300);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-rail-flyout a {
+  white-space: normal;
+}
+
+.admin-rail-tooltip {
+  padding: 8px 12px;
+  max-width: 240px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* AdminCP command palette (⌘K). */
+.admin-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+}
+
+/* No opacity transition on purpose. HSOverlay's close() defers re-adding
+   .hidden until a transitionend fires on this element; with no transition it
+   restores the class synchronously instead. Without that, a transitionend that
+   never arrives (throttled background tab) leaves the overlay without .hidden,
+   and HSOverlay.open() no-ops unless .hidden is present — the palette would
+   silently refuse to reopen. The open fade never ran anyway: .hidden flips
+   display none->flex in the same frame as .open. */
+
+.admin-palette.hidden {
+  display: none;
+}
+
+.admin-palette:not(.open) {
+  pointer-events: none;
+}
+
+.admin-palette.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* own scrim: HSOverlay's backdrop is appended to <body> with no z-index and
+   would fall behind the sticky z-50 topbar, so it is disabled in the markup */
+.admin-palette::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #00000073;
+}
+
+[data-theme="admin-dark"] .admin-palette::before {
+  background: #000000a6;
+}
+
+.admin-palette-dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(640px, calc(100vw - 2rem));
+  max-height: min(560px, calc(100dvh - 8rem));
+  margin-block-start: 12vh;
+  overflow: hidden;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  box-shadow: 0 24px 48px #00000026;
+}
+
+[data-theme="admin-dark"] .admin-palette-dialog {
+  box-shadow: 0 24px 48px #00000073;
+}
+
+.admin-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-block-end: 1px solid var(--color-base-300);
+}
+
+.admin-palette-search-icon {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+/* the dialog frame is the field, so the input carries no chrome of its own */
+.admin-palette-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  outline: none;
+}
+
+/* iOS zooms into focused fields under 16px */
+@media (max-width: 767px) {
+  .admin-palette-input {
+    font-size: 1rem;
+  }
+}
+
+.admin-palette-input::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.admin-palette-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  cursor: pointer;
+}
+
+.admin-palette-clear:hover {
+  color: var(--color-base-content);
+}
+
+.admin-palette-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-palette-group + .admin-palette-group {
+  margin-block-start: 8px;
+}
+
+/* matches #admin-nav > li.admin-nav-heading so groups read the same as the sidebar */
+.admin-palette-heading {
+  padding: 6px 10px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.admin-palette-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-palette-clear-all {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.admin-palette-clear-all:hover {
+  color: var(--color-base-content);
+}
+
+.admin-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-field);
+  color: var(--color-base-content);
+  font-size: 14px;
+  line-height: 1.3;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* neutral tint, not a colour accent: the admin theme's primary is near-black */
+.admin-palette-item.is-active,
+.admin-palette-item:hover {
+  background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+}
+
+/* recents pair the row with a dismiss button that overlays its trailing edge */
+.admin-palette-row {
+  position: relative;
+}
+
+.admin-palette-row .admin-palette-item {
+  padding-inline-end: 34px;
+}
+
+.admin-palette-remove {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: auto 0;
+  border-radius: var(--radius-selector);
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-palette-row:hover .admin-palette-remove,
+.admin-palette-row:has(.is-active) .admin-palette-remove {
+  opacity: 1;
+}
+
+.admin-palette-remove:hover {
+  background: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  color: var(--color-base-content);
+}
+
+/* coarse pointers get no hover, so keep it visible there */
+@media (hover: none) {
+  .admin-palette-remove {
+    opacity: 1;
+  }
+}
+
+.admin-palette-item-icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.admin-palette-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-palette-item.is-current .admin-palette-item-label {
+  font-weight: 600;
+}
+
+.admin-palette-crumb {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  font-size: 12px;
+}
+
+.admin-palette-badge {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-error);
+  color: var(--color-error-content);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-palette-empty {
+  padding: 28px 12px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 14px;
+  text-align: center;
+}
+
+.admin-palette-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-block-start: 1px solid var(--color-base-300);
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 12px;
+}
+
+.admin-palette-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* FlyonUI kbd on zinc reads as an empty pill/circle: --radius-field is
+   half the key and the stock 20% base-200 fill disappears on white.
+   Rebuild the docs look — filled rounded-square + 1px key ledge. */
+.admin-palette-footer .kbd,
+.admin-topbar-search-kbd {
+  --radius-field: 0.25rem;
+  --size: 1.25rem;
+  padding-inline: 0.4em;
+  background-color: color-mix(in oklab, var(--color-base-content) 6%, var(--color-base-100));
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+  border-bottom-width: 2px;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.admin-palette-hint-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .admin-palette-dialog {
+    margin-block-start: 4vh;
+  }
+
+  .admin-palette-crumb,
+  .admin-palette-hint-group {
+    display: none;
+  }
+}
+
+.svg-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.svg-container svg {
+  display: block;
+  width: inherit;
+  height: inherit;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Outlined field shape across AdminCP — matches Shadcn inputs. */
+:is(.input, .select, .textarea) {
+  background-color: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  box-shadow: none;
+}
+
+:is(.input, .select, .textarea):focus,
+:is(.input, .select, .textarea):focus-visible {
+  border-color: var(--color-base-content);
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 20%, transparent);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+/* the inner <select> is transparent; Windows paints its option list from that */
+.select option,
+.select optgroup {
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+/* base-300 sits too close to the field fill on admin-dark */
+[data-theme="admin-dark"] :is(.input, .select, .textarea, .file-input) {
+  border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+}
+
+[data-theme="admin-dark"] .switch:not(:checked) {
+  --input-color: color-mix(in oklab, var(--color-base-content) 22%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 85%, transparent);
+}
+
+[data-theme="admin-dark"] .admin-settings-color-swatch,
+[data-theme="admin-dark"] .admin-settings-page .CodeMirror {
+  border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+}
+
+[data-theme="admin-dark"] .admin-settings-page .tagify {
+  --tags-border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+}
+
+.btn:not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-xl) {
+  font-size: 14px;
+  line-height: 1.25;
+  --btn-p: 0.75rem;
+  --size: 2.25rem;
+  height: var(--size);
+}
+
+/* FlyonUI btn-text defaults to --color-neutral (a surface token here). */
+.btn-text {
+  color: var(--btn-color, var(--color-base-content));
+}
+
+/* same for btn-outline: neutral is near-black, unreadable on the dark ground */
+[data-theme="admin-dark"] .btn-outline:not(.btn-primary, .btn-secondary, .btn-accent, .btn-info, .btn-success, .btn-warning, .btn-error) {
+  --btn-color: var(--color-base-content);
+  --btn-border: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+}
+
+/* same for badge-soft without a colour: it mixes from --color-neutral */
+[data-theme="admin-dark"] .badge-soft {
+  --color-neutral: var(--color-base-content);
+}
+
+.admin-settings-buttons .btn {
+  gap: 8px;
+}
+
+.admin-settings-buttons .btn :is(i, [class*="icon-["]) {
+  margin-inline: 0;
+  width: 1rem;
+  height: 1rem;
+  font-size: 1rem;
+}
+
+/* Shared presentation for all admin settings routes. */
+.admin-settings-heading {
+  margin-bottom: 24px;
+}
+
+.admin-settings-heading h1 {
+  letter-spacing: -0.02em;
+}
+
+.admin-settings-page:has(> .admin-settings-nav) {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-settings-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 2px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.admin-settings-nav.tabs {
+  flex-wrap: nowrap;
+  height: auto;
+  border: 0;
+  background: transparent;
+}
+
+.admin-settings-nav.tabs > .tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: start;
+  box-shadow: none;
+}
+
+.admin-settings-nav.tabs > .tab:hover {
+  background: color-mix(in oklab, var(--color-base-content) 5%, transparent);
+  color: var(--color-base-content);
+}
+
+.admin-settings-nav.tabs > .tab.active,
+.admin-settings-nav.tabs > .tab.tab-active,
+.admin-settings-nav.tabs > .tab[aria-selected="true"] {
+  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+
+.admin-settings-nav.tabs > .tab.active:hover,
+.admin-settings-nav.tabs > .tab.tab-active:hover,
+.admin-settings-nav.tabs > .tab[aria-selected="true"]:hover {
+  background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .admin-settings-page:has(> .admin-settings-nav) {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+
+  .admin-settings-page:has(> .admin-settings-nav) > .admin-settings-heading {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .admin-settings-nav {
+    grid-column: 1;
+    grid-row: 2;
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+    flex-direction: column;
+    width: 14rem;
+    margin-bottom: 0;
+    overflow: visible;
+  }
+
+  .admin-settings-nav.tabs > .tab {
+    width: 100%;
+  }
+
+  .admin-settings-page:has(> .admin-settings-nav) > .admin-settings-panel,
+  .admin-settings-page:has(> .admin-settings-nav) > .tab-content {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+}
+
+.admin-settings-card {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
+.admin-settings-card > .card-header,
+.admin-settings-section > .card-header {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.admin-settings-card > .card-body,
+.admin-settings-section > .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0;
+}
+
+.admin-settings-section + .admin-settings-section {
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-setting-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--color-base-300);
+}
+
+.admin-setting-control:has(> .admin-settings-choice-inline) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-setting-control:has(> .admin-settings-choice-inline) > :not(.admin-settings-choice-inline) {
+  flex: 1 1 100%;
+}
+
+.admin-setting-field > .label-text {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.admin-setting-help {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  overflow-wrap: anywhere;
+}
+
+.admin-setting-help a {
+  color: var(--color-base-content);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.admin-setting-switch,
+.admin-setting-field {
+  scroll-margin-top: calc(var(--admin-header-height) + 16px);
+}
+
+/* the setting the palette jumped to — a highlighter pen that fades out.
+   the rows carry no padding, so the wash is drawn by a pseudo-element inset
+   outwards: it can sit off the row's edges without shifting any layout.
+   z-index:0 is load-bearing — it makes the row a stacking context, so the
+   z-index:-1 wash lands above the card's background instead of behind it */
+.setting-highlight {
+  position: relative;
+  z-index: 0;
+}
+
+.setting-highlight::before {
+  content: "";
+  position: absolute;
+  inset: -6px -12px;
+  z-index: -1;
+  border-radius: var(--radius-box);
+  pointer-events: none;
+  animation: admin-setting-flash 2s ease-out;
+}
+
+@keyframes admin-setting-flash {
+  0%, 35% {
+    background-color: color-mix(in oklab, var(--color-warning) 32%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setting-highlight::before {
+    animation: none;
+    background-color: color-mix(in oklab, var(--color-warning) 32%, transparent);
+  }
+
+  .admin-sidebar,
+  .admin-topbar,
+  .admin-workspace {
+    transition: none;
+  }
+}
+
+.admin-setting-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.admin-setting-switch:has(> .admin-setting-icon) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.admin-setting-switch + .admin-setting-switch {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-settings-section-plain .admin-setting-switch + .admin-setting-switch {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-setting-switch .switch {
+  margin-top: 2px;
+}
+
+.switch {
+  border-radius: 9999px;
+}
+
+.switch::before {
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+.admin-setting-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+}
+
+.admin-setting-icon .svg-container,
+.admin-setting-icon .svg-container svg,
+.admin-setting-icon img {
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  object-fit: contain;
+}
+
+.admin-setting-icon .admin-setting-glyph,
+.admin-setting-icon .admin-setting-glyph * {
+  color: inherit !important;
+  fill: currentColor !important;
+}
+
+.admin-settings-section + .admin-settings-actions,
+.admin-settings-card > .admin-settings-actions:not(:first-child) {
+  border-top: 1px solid var(--color-base-300);
+  padding-top: 20px;
+}
+
+.admin-settings-actions > .btn {
+  align-self: flex-end;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.admin-settings-buttons > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-settings-provider-actions {
+  margin: 0;
+  padding: 0 24px 24px;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.admin-settings-page form > .alert {
+  margin-bottom: 16px;
+}
+
+.admin-settings-page .admin-settings-feedback .alert,
+.admin-settings-page .admin-settings-form > .alert {
+  margin-bottom: 0;
+}
+
+.admin-settings-notice > .icon {
+  display: none;
+}
+
+.admin-settings-notice > .text {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-settings-page .alert {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E");
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-field);
+  background-image: none;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.admin-settings-page .alert[style*="display: none"] {
+  display: none !important;
+}
+
+.admin-settings-page .alert::before {
+  content: "";
+  flex: 0 0 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  background: currentColor;
+  mask: var(--alert-icon) center / contain no-repeat;
+}
+
+.admin-settings-page .alert-success {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9 12l2 2l4 -4'/%3E%3C/svg%3E");
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 10%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-success) 22%, var(--color-base-300));
+}
+
+.admin-settings-page .alert-error,
+.admin-settings-page .alert-danger {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M10 10l4 4'/%3E%3Cpath d='M14 10l-4 4'/%3E%3C/svg%3E");
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-error) 22%, var(--color-base-300));
+}
+
+.admin-settings-page .alert-warning {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3Cpath d='M10.24 3.96l-8.1 14.02A2 2 0 0 0 3.9 21h16.2a2 2 0 0 0 1.76 -3.02l-8.1 -14.02a2 2 0 0 0 -3.52 0z'/%3E%3C/svg%3E");
+  color: color-mix(in oklab, var(--color-warning) 55%, var(--color-base-content));
+  background-color: color-mix(in oklab, var(--color-warning) 12%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-warning) 28%, var(--color-base-300));
+}
+
+.admin-settings-page .alert-info {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 8h.01'/%3E%3Cpath d='M11 12h1v4h1'/%3E%3C/svg%3E");
+  color: var(--color-info);
+  background-color: color-mix(in oklab, var(--color-info) 10%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-info) 22%, var(--color-base-300));
+}
+
+.admin-settings-feedback .alert {
+  margin: 0;
+}
+
+.admin-settings-choice :is(.checkbox, .radio) {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.admin-settings-choice .label-text {
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.admin-settings-split-control > .input {
+  flex: 2 1 0;
+  min-width: 0;
+}
+
+.admin-settings-split-control > .select {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+}
+
+.admin-settings-provider-card {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto;
+  min-width: 7.5rem;
+  max-width: 11rem;
+  padding: 16px 24px;
+  overflow: visible;
+  border: 1px solid var(--color-base-300);
+  border-radius: 0.5rem;
+  background: var(--color-base-100);
+  box-shadow: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-base-content);
+  text-align: center;
+}
+
+.admin-settings-provider-card:hover {
+  border-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+.admin-settings-provider-card:has(:checked) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.admin-settings-provider-card > .label-text {
+  margin-top: 12px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.admin-settings-provider-card input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  appearance: none;
+  pointer-events: none;
+}
+
+.admin-settings-provider-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-base-200);
+}
+
+.admin-settings-provider-logo .svg-container {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.admin-settings-provider-logo .svg-container svg,
+.admin-settings-provider-logo img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  object-fit: contain;
+}
+
+.admin-settings-page .tagify {
+  --tags-border-color: var(--color-base-300);
+  --tags-hover-border-color: var(--color-base-content);
+  --tags-focus-border-color: var(--color-base-content);
+  --tag-bg: var(--color-base-200);
+  --tag-hover: var(--color-base-300);
+  --tag-text-color: var(--color-base-content);
+  --tag-remove-btn-color: var(--color-base-content);
+  --placeholder-color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --input-color: var(--color-base-content);
+  width: 100%;
+  min-height: 40px;
+  height: auto;
+  border-radius: var(--radius-field);
+}
+
+.admin-settings-page .x-hidden {
+  display: none;
+}
+
+.admin-settings-colorpicker {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.admin-settings-colorpicker > .input {
+  min-width: 0;
+  flex: 1;
+  height: calc(var(--size-field) * 10);
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.admin-settings-color-swatch {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: calc(var(--size-field) * 10);
+  height: calc(var(--size-field) * 10);
+  padding: 4px;
+  border: 1px solid var(--color-base-300);
+  border-inline-start: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--radius-field);
+  border-end-end-radius: var(--radius-field);
+  background: var(--color-base-100);
+  cursor: pointer;
+}
+
+.admin-settings-color-swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.admin-settings-color-swatch::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-field) - 4px);
+}
+
+.admin-settings-color-swatch::-moz-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-field) - 4px);
+}
+
+.admin-settings-page .CodeMirror {
+  height: 16rem;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-field);
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.admin-settings-page .CodeMirror-gutters {
+  border-inline-end: 1px solid var(--color-base-300);
+  background: var(--color-base-200);
+}
+
+.admin-settings-page .CodeMirror-cursor {
+  border-left-color: var(--color-base-content);
+}
+
+[data-theme="admin-dark"] .admin-settings-page .CodeMirror {
+  background: var(--color-base-200);
+}
+
+[data-theme="admin-dark"] .admin-settings-page .CodeMirror-gutters {
+  background: color-mix(in oklab, var(--color-base-300) 80%, var(--color-base-200));
+}
+
+/* Admin list pages (Themes, Languages) */
+.admin-list-heading .admin-settings-heading,
+.admin-themes-heading .admin-settings-heading {
+  margin-bottom: 0;
+}
+
+.admin-settings-page:not(.flex) > .admin-list-heading {
+  margin-bottom: 24px;
+}
+
+.admin-list-heading > div:not(.admin-list-heading-actions),
+.admin-themes-heading > div:not(.admin-list-heading-actions) {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.admin-list-heading h1,
+.admin-list-heading p,
+.admin-themes-heading h1,
+.admin-themes-heading p {
+  margin: 0;
+}
+
+.admin-list-heading h1,
+.admin-themes-heading h1 {
+  letter-spacing: -0.02em;
+}
+
+.admin-list-heading > .btn,
+.admin-themes-heading > .btn,
+.admin-list-heading-actions {
+  flex: 0 0 auto;
+}
+
+.admin-list-table-card > .admin-settings-section {
+  padding: 16px 20px 0;
+}
+
+.admin-list-group-title {
+  letter-spacing: -0.01em;
+}
+
+.admin-list-group-title > [class*="icon-"] {
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+}
+
+.admin-list-group-note {
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+}
+
+.admin-list-icon {
+  color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+}
+
+.admin-list-inline > [class*="icon-"] {
+  flex: 0 0 auto;
+}
+
+.admin-list-table-card {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
+.admin-list-table {
+  width: 100% !important;
+  min-width: 700px;
+  margin: 0 !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-list-table > :not(caption) > * > * {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-base-300);
+  background: transparent;
+  vertical-align: middle;
+}
+
+.admin-list-table > thead > tr > th {
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.admin-list-table > tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.admin-list-table > tbody > tr {
+  transition: background-color 150ms ease;
+}
+
+.admin-list-table > tbody > tr:hover {
+  background: color-mix(in oklab, var(--color-base-content) 3%, transparent);
+}
+
+.admin-themes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .admin-themes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .admin-themes-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.admin-theme-card.card {
+  --admin-theme-card-radius: 14px;
+  --admin-theme-landing-accent: oklch(54% 0.213 275);
+
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 0;
+  overflow: visible;
+  border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  border-radius: var(--admin-theme-card-radius);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 4%),
+    0 12px 28px -18px rgb(0 0 0 / 22%);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition:
+    border-color 150ms ease,
+    outline-color 150ms ease;
+}
+
+[data-theme="admin-dark"] .admin-theme-card.card {
+  --admin-theme-landing-accent: oklch(72% 0.155 275);
+}
+
+.admin-theme-card.card:hover {
+  border-color: var(--admin-theme-landing-accent);
+}
+
+.admin-theme-card.card:focus-within {
+  outline-color: var(--admin-theme-landing-accent);
+}
+
+.admin-theme-card.card.is-default {
+  border-color: color-mix(in oklab, var(--color-success) 55%, var(--color-base-300));
+  outline-color: var(--color-success);
+}
+
+.admin-theme-card-visual {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: visible;
+}
+
+.admin-theme-card-hero {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: calc(var(--admin-theme-card-radius) - 1px) calc(var(--admin-theme-card-radius) - 1px) 0 0;
+  background: var(--color-base-200);
+}
+
+.admin-theme-card-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1);
+  transition: transform 600ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.admin-theme-card:hover .admin-theme-card-media {
+  transform: scale(1.04);
+}
+
+.admin-theme-card-media-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 10px,
+      color-mix(in oklab, var(--color-base-content) 4%, transparent) 10px 11px
+    ),
+    var(--color-base-200);
+}
+
+.admin-theme-card-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--admin-theme-card-radius) - 1px) calc(var(--admin-theme-card-radius) - 1px) 0 0;
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 24%) 0%,
+    rgb(0 0 0 / 6%) 22%,
+    rgb(0 0 0 / 10%) 40%,
+    rgb(0 0 0 / 44%) 66%,
+    rgb(0 0 0 / 82%) 100%
+  );
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 8%);
+  transition: opacity 220ms ease;
+}
+
+.admin-theme-card-overlay {
+  pointer-events: none;
+  position: absolute;
+  right: 16px;
+  bottom: 15px;
+  left: 16px;
+  z-index: 2;
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.admin-theme-card-id {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+}
+
+.admin-theme-card-id-bar {
+  flex: 0 0 auto;
+  width: 3px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 45%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 18%);
+}
+
+.admin-theme-card-id-bar.is-default {
+  background: var(--color-success);
+}
+
+.admin-theme-card-id-bar.is-selectable {
+  background: var(--color-info);
+}
+
+.admin-theme-card-title {
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+  white-space: nowrap;
+}
+
+.admin-theme-card-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.admin-theme-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.admin-theme-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 9px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 40%);
+  color: rgb(255 255 255 / 72%);
+  backdrop-filter: blur(10px) saturate(140%);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.admin-theme-card-chip::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 38%);
+}
+
+.admin-theme-card-chip.is-on {
+  border-color: color-mix(in oklab, var(--color-success) 42%, transparent);
+  color: color-mix(in oklab, var(--color-success) 40%, white);
+}
+
+.admin-theme-card-chip.is-on::before {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-success) 22%, transparent);
+}
+
+.admin-theme-card-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.admin-theme-card-action.btn {
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
+  gap: 6px;
+  border-color: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  color: var(--color-base-content);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-theme-card-action.btn:hover:not(:disabled),
+.admin-theme-card-action.btn:focus-visible:not(:disabled) {
+  border-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+}
+
+.admin-theme-card-action-delete.btn:hover:not(:disabled),
+.admin-theme-card-action-delete.btn:focus-visible:not(:disabled) {
+  border-color: color-mix(in oklab, var(--color-error) 45%, transparent);
+  background: color-mix(in oklab, var(--color-error) 8%, transparent);
+  color: var(--color-error);
+}
+
+.admin-theme-card-action.btn:disabled {
+  border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  background: transparent;
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+  cursor: not-allowed;
+}
+
+[data-theme="admin-dark"] .admin-theme-card.card {
+  border-color: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 24%),
+    0 14px 30px -18px rgb(0 0 0 / 60%);
+}
+
+[data-theme="admin-dark"] .admin-theme-card.card.is-default {
+  border-color: color-mix(in oklab, var(--color-success) 55%, var(--color-base-300));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-theme-card-media,
+  .admin-theme-card:hover .admin-theme-card-media {
+    transform: none;
+    transition: none;
+  }
+}
+
+.admin-theme-landing-option {
+  --admin-theme-landing-radius: 14px;
+  --admin-theme-landing-accent: oklch(54% 0.213 275);
+
+  overflow: visible;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--admin-theme-landing-radius);
+  background: var(--color-base-100);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    outline-color 150ms ease;
+}
+
+[data-theme="admin-dark"] .admin-theme-landing-option {
+  --admin-theme-landing-accent: oklch(72% 0.155 275);
+}
+
+.admin-theme-landing-option:hover {
+  border-color: var(--admin-theme-landing-accent);
+}
+
+.admin-theme-landing-option:has(:focus-visible) {
+  outline-color: var(--admin-theme-landing-accent);
+}
+
+.admin-theme-landing-option:has(:checked) {
+  border-color: color-mix(in oklab, var(--color-success) 55%, var(--color-base-300));
+  outline-color: var(--color-success);
+}
+
+.admin-theme-landing-option-media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3840 / 1926;
+  border-radius: calc(var(--admin-theme-landing-radius) - 1px) calc(var(--admin-theme-landing-radius) - 1px) 0 0;
+  background: var(--color-base-200);
+}
+
+.admin-theme-landing-thumbs-select {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  cursor: pointer;
+}
+
+.admin-theme-landing-thumbs-track {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  height: 100%;
+  transform: translateX(0);
+  transition: transform 280ms ease;
+}
+
+.admin-theme-landing-option-media[data-thumb-mode="dark"] .admin-theme-landing-thumbs-track {
+  transform: translateX(-100%);
+}
+
+.admin-theme-landing-thumb-slide {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.admin-theme-landing-thumb-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1);
+  transition: transform 600ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.admin-theme-landing-option:hover .admin-theme-landing-thumb-slide img {
+  transform: scale(1.06);
+}
+
+.admin-theme-landing-thumb-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+.admin-theme-landing-thumb-mode {
+  position: absolute;
+  top: 0.5rem;
+  z-index: 3;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  inset-inline-end: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-base-200) 88%, transparent);
+  color: var(--admin-theme-landing-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+  cursor: pointer;
+  place-items: center;
+}
+
+.admin-theme-landing-thumb-mode:hover {
+  background: var(--color-base-100);
+}
+
+[data-theme="admin-dark"] .admin-theme-landing-thumb-mode {
+  background: color-mix(in oklab, var(--color-base-300) 82%, transparent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 32%);
+}
+
+[data-theme="admin-dark"] .admin-theme-landing-thumb-mode:hover {
+  background: var(--color-base-200);
+}
+
+.admin-theme-landing-thumb-sun {
+  display: none;
+}
+
+.admin-theme-landing-option-media[data-thumb-mode="dark"] .admin-theme-landing-thumb-sun {
+  display: block;
+}
+
+.admin-theme-landing-option-media[data-thumb-mode="dark"] .admin-theme-landing-thumb-moon {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-theme-landing-thumbs-track {
+    transition: none;
+  }
+
+  .admin-theme-landing-thumb-slide img,
+  .admin-theme-landing-option:hover .admin-theme-landing-thumb-slide img {
+    transform: none;
+    transition: none;
+  }
+}
+
+.admin-language-flag,
+.admin-list-avatar {
+  background: var(--color-base-200);
+}
+
+.admin-language-flag-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+}
+
+.admin-list-id {
+  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+}
+
+/* DataTables stamps its own measured widths on the header cells, so these have
+   to win for a plain table and a datatable to line up side by side */
+.admin-list-type-column {
+  width: 30% !important;
+}
+
+.admin-list-perms-column {
+  width: 50% !important;
+}
+
+.admin-list-count-column {
+  width: 12% !important;
+}
+
+.admin-list-actions-column .dropdown {
+  text-align: start;
+}
+
+.admin-list-actions-menu {
+  min-width: 12rem;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
+}
+
+.admin-list-actions-menu .dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.admin-list-actions-menu .dropdown-item > [class*="icon-"] {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.admin-list-action-note {
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+}
+
+.admin-list-empty-icon,
+.admin-themes-empty-icon {
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+}
+
+.admin-list-empty h2,
+.admin-list-empty h3,
+.admin-themes-empty h2 {
+  margin: 0;
+  color: var(--color-base-content);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.admin-list-empty p,
+.admin-themes-empty p {
+  max-width: 28rem;
+  margin: 6px 0 18px;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.js-flyonui-datatable-toolbar .input,
+.js-flyonui-datatable-toolbar .select {
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.js-flyonui-datatable-toolbar .select {
+  width: 4.5rem;
+  padding-inline: 0.625rem 1.5rem;
+}
+
+.js-flyonui-datatable-toolbar .admin-list-range-inline .input {
+  width: auto;
+  max-width: 10.5rem;
+}
+
+.js-flyonui-datatable-toolbar .admin-list-filters-inline .input {
+  width: auto;
+  max-width: 15rem;
+}
+
+.js-flyonui-datatable-toolbar .admin-list-filters-inline .select {
+  width: auto;
+  max-width: 11rem;
+  padding-inline: 0.75rem 2rem;
+}
+
+@media (max-width: 767px) {
+  .js-flyonui-datatable-toolbar,
+  .js-flyonui-datatable-toolbar .admin-list-filters-inline { flex-direction: column; align-items: stretch; }
+  .js-flyonui-datatable-toolbar > *,
+  .js-flyonui-datatable-toolbar > .input,
+  .js-flyonui-datatable-toolbar .admin-list-filters-inline > *,
+  .js-flyonui-datatable-toolbar .admin-list-filters-inline .input,
+  .js-flyonui-datatable-toolbar .admin-list-filters-inline .select,
+  .js-flyonui-datatable-toolbar .admin-list-range-inline .input { width: 100%; max-width: none; }
+  .js-flyonui-datatable-toolbar .admin-list-range-inline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .js-flyonui-datatable-toolbar .admin-list-range-inline .btn { grid-column: 1 / -1; }
+}
+
+.admin-shell .chat-sidebar,
+.admin-shell .chat-widget,
+.admin-shell .toast-container {
+  display: none !important;
+}
+
+@media (max-width: 767.98px) {
+  .admin-list-heading,
+  .admin-themes-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-list-heading > .btn,
+  .admin-themes-heading > .btn,
+  .admin-list-heading-actions {
+    width: 100%;
+  }
+
+  .admin-list-heading-actions > .btn {
+    flex: 1 1 auto;
+  }
+
+  .admin-users-edit-heading {
+    align-items: flex-start;
+    flex-direction: row;
+  }
+
+  .admin-users-edit-heading .admin-list-heading-actions {
+    width: auto;
+  }
+
+  .admin-users-edit-heading .admin-list-heading-actions > .btn {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .admin-list-table {
+    min-width: 620px;
+  }
+
+  .admin-theme-card-title {
+    font-size: 18px;
+  }
+
+  .admin-settings-section {
+    padding: 20px;
+  }
+
+  .admin-settings-actions {
+    padding-inline: 20px;
+  }
+}
+
+.admin-dashboard-heading h1 {
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.admin-dashboard-heading p {
+  margin: 0;
+}
+
+.admin-dashboard-kpi {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
+.admin-dashboard-kpi-icon {
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.admin-dashboard-panel-icon {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.admin-dashboard-kpi-label {
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.admin-dashboard-kpi-prev {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.admin-dashboard-kpi-delta {
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.admin-dashboard-kpi-delta.is-up { color: var(--color-success); }
+.admin-dashboard-kpi-delta.is-down { color: var(--color-error); }
+
+.admin-dashboard-kpi-note {
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+.admin-stat {
+  border: 1px solid color-mix(in oklab, var(--color-base-300) 70%, transparent);
+  border-radius: var(--radius-box);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--color-base-content) 6%, transparent);
+}
+
+.admin-stat-icon.is-info { color: var(--color-info); }
+.admin-stat-icon.is-success { color: var(--color-success); }
+.admin-stat-icon.is-warning { color: var(--color-warning); }
+.admin-stat-icon.is-error { color: var(--color-error); }
+.admin-stat-icon.is-neutral { color: color-mix(in oklab, var(--color-base-content) 60%, transparent); }
+
+.admin-stat-label {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.admin-stat-value {
+  letter-spacing: -0.025em;
+}
+
+
+.admin-dashboard-panel {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
+.admin-dashboard-panel-hint {
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.admin-dashboard-growth-panel .admin-dashboard-panel-head {
+  justify-content: space-between;
+}
+
+.admin-dashboard-chart-legend {
+  display: none;
+  align-items: center;
+  gap: 20px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  font-size: 12px;
+}
+
+.admin-dashboard-chart-legend span,
+.admin-dashboard-breakdown-legend span,
+.admin-dashboard-breakdown-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-dashboard-chart-legend i,
+.admin-dashboard-breakdown-legend i,
+.admin-dashboard-breakdown-name i {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.admin-dashboard-chart-legend .is-users,
+.admin-dashboard-segments .is-pages,
+.admin-dashboard-breakdown-legend .is-pages,
+.admin-dashboard-breakdown-name .is-pages {
+  background: var(--color-primary);
+}
+
+.admin-dashboard-chart-legend .is-posts,
+.admin-dashboard-segments .is-groups,
+.admin-dashboard-breakdown-legend .is-groups,
+.admin-dashboard-breakdown-name .is-groups {
+  background: var(--color-info);
+}
+
+.admin-dashboard-segments .is-events,
+.admin-dashboard-breakdown-legend .is-events,
+.admin-dashboard-breakdown-name .is-events {
+  background: var(--color-warning);
+}
+
+@media (min-width: 640px) {
+  .admin-dashboard-chart-legend {
+    display: flex;
+  }
+}
+
+.admin-dashboard-breakdown-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-dashboard-breakdown-total strong {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-dashboard-breakdown-total span {
+  font-size: 13px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.admin-dashboard-segments {
+  display: flex;
+  gap: 4px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.admin-dashboard-segments > span {
+  flex-basis: 0;
+  min-width: 0;
+}
+
+.admin-dashboard-segments > span:first-child {
+  border-start-start-radius: 999px;
+  border-end-start-radius: 999px;
+}
+
+.admin-dashboard-segments > span:last-child {
+  border-start-end-radius: 999px;
+  border-end-end-radius: 999px;
+}
+
+.admin-dashboard-segments .is-empty {
+  flex-basis: auto;
+  width: 100%;
+  background: var(--color-base-200);
+}
+
+.admin-dashboard-breakdown-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 14px 0 22px;
+  font-size: 12px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.admin-dashboard-breakdown-list,
+.admin-dashboard-queue {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-dashboard-breakdown-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-dashboard-breakdown-list li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-dashboard-breakdown-list strong {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-dashboard-breakdown-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-attention {
+  padding-bottom: 8px;
+}
+
+.admin-dashboard-queue li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-dashboard-queue li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-dashboard-queue-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--color-base-200);
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.admin-dashboard-queue-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-queue-count {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+@media (max-width: 639px) {
+  .admin-settings-section { padding: 16px; }
+  .admin-settings-actions { padding: 16px; }
+  .admin-settings-section + .admin-settings-actions,
+  .admin-settings-card > .admin-settings-actions:not(:first-child) { padding-top: 16px; }
+  .admin-settings-feedback:not(:has(> .alert:not([style*="display: none"]))) { display: none; }
+  .admin-settings-buttons,
+  .admin-settings-buttons > div { flex-direction: column; align-items: stretch; width: 100%; }
+  .admin-settings-buttons .btn { width: 100%; }
+  .admin-settings-provider-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-settings-provider-card { width: 100%; min-width: 0; max-width: none; padding: 12px; }
+  .admin-settings-provider-card > .label-text { margin-top: 8px; font-size: 13px; }
+  .admin-settings-provider-logo { width: 48px; height: 48px; }
+  .admin-settings-provider-logo .svg-container { width: 32px !important; height: 32px !important; }
+  .admin-settings-actions > .btn { align-self: stretch; width: 100%; }
+  .admin-settings-provider-actions { padding: 0 16px 16px; }
+}
+
+.admin-list-table-card .js-flyonui-datatable-toolbar,
+.admin-list-table-card .js-flyonui-datatable-footer {
+  border-color: var(--color-base-300);
+}
+
+.admin-list-pager {
+  border-top: 1px solid var(--color-base-300);
+  padding-inline: 12px;
+}
+
+.admin-user-edit-nav,
+.admin-group-edit-nav {
+  position: static;
+  flex-direction: row;
+  width: 100%;
+  margin-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.admin-user-edit-nav.tabs > .tab,
+.admin-group-edit-nav.tabs > .tab {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* tabs that live inside a form card instead of beside the page heading */
+.admin-form-tabs {
+  position: static;
+  flex-direction: row;
+  width: 100%;
+  margin-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.admin-form-tabs.tabs > .tab {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.admin-user-hero,
+.admin-group-hero {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.admin-user-hero-identity,
+.admin-group-hero-identity {
+  min-width: 0;
+}
+
+.admin-user-hero-identity > .min-w-0,
+.admin-group-hero-identity > .min-w-0 {
+  flex: 1 1 auto;
+}
+
+.admin-user-hero h1,
+.admin-group-hero h1 {
+  letter-spacing: -0.025em;
+}
+
+.admin-user-hero-actions .btn,
+.admin-user-hero > .admin-user-hero-identity > .btn,
+.admin-group-hero-actions .btn,
+.admin-group-hero > .admin-group-hero-identity > .btn {
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .admin-user-hero,
+  .admin-group-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .admin-user-hero-actions,
+  .admin-group-hero-actions {
+    justify-self: end;
+  }
+}
+
+/* Pages */
+.admin-category-description {
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+}
+
+.admin-user-edit-main,
+.admin-group-edit-main {
+  grid-area: main;
+}
+
+.admin-user-edit,
+.admin-group-edit {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "main"
+    "aside";
+}
+
+.admin-user-edit-aside,
+.admin-group-edit-aside {
+  grid-area: aside;
+  align-self: start;
+}
+
+.admin-user-danger,
+.admin-group-danger {
+  border: 1px solid color-mix(in oklab, var(--color-error) 22%, var(--color-base-300));
+  border-radius: var(--radius-box);
+}
+
+.admin-user-sidebar-heading,
+.admin-group-sidebar-heading {
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.admin-user-sidebar-heading-icon,
+.admin-group-sidebar-heading-icon {
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+}
+
+.admin-user-sidebar-heading-icon.is-danger,
+.admin-group-sidebar-heading-icon.is-danger {
+  border-color: color-mix(in oklab, var(--color-error) 28%, var(--color-base-300));
+  color: var(--color-error);
+}
+
+a.admin-list-identity {
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-user-summary,
+.admin-group-summary {
+  border-radius: var(--radius-box);
+}
+
+.admin-user-summary > .admin-settings-section-title,
+.admin-user-summary-list,
+.admin-group-summary > .admin-settings-section-title,
+.admin-group-summary-list {
+  width: 100%;
+}
+
+.admin-user-summary-handle,
+.admin-group-summary-handle {
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.admin-user-copy-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-field);
+  background: var(--color-base-200);
+  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+}
+
+.admin-user-copy-button:hover {
+  background: var(--color-base-300);
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+}
+
+.admin-user-copy-button:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.admin-user-hero-badge,
+.admin-group-hero-badge {
+  border-width: 1px;
+  font-weight: 600;
+}
+
+.admin-user-hero-badge.is-active {
+  border-color: color-mix(in oklab, var(--color-success) 34%, transparent);
+  background: color-mix(in oklab, var(--color-success) 15%, var(--color-base-100));
+  color: var(--color-success);
+}
+
+.admin-user-hero-badge.is-verified {
+  border-color: color-mix(in oklab, var(--color-info) 38%, transparent);
+  background: color-mix(in oklab, var(--color-info) 16%, var(--color-base-100));
+  color: var(--color-info);
+}
+
+.admin-user-summary-actions .admin-user-danger-action,
+.admin-group-summary-actions .admin-group-danger-action {
+  border-color: transparent;
+  background: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+  color: var(--color-error);
+  box-shadow: none;
+}
+
+.admin-user-summary-actions .admin-user-danger-action:hover,
+.admin-group-summary-actions .admin-group-danger-action:hover {
+  border-color: transparent;
+  background: color-mix(in oklab, var(--color-error) 16%, var(--color-base-100));
+  color: var(--color-error);
+}
+
+.admin-user-summary-actions .admin-user-danger-action:focus-visible,
+.admin-group-summary-actions .admin-group-danger-action:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-error) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.admin-user-summary-photo img,
+.admin-group-summary-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-user-summary-list,
+.admin-group-summary-list {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+}
+
+.admin-user-summary-list li,
+.admin-group-summary-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-user-summary-label,
+.admin-group-summary-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  font-size: 13px;
+}
+
+.admin-user-summary-label > span,
+.admin-group-summary-label > span {
+  flex-shrink: 0;
+  color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+}
+
+.admin-user-summary-value,
+.admin-group-summary-value {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  color: var(--color-base-content);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: end;
+}
+
+.admin-user-summary-value a,
+.admin-group-summary-value a {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  color: inherit;
+}
+
+.admin-user-summary-value .admin-user-referrer,
+.admin-group-summary-value .admin-user-referrer {
+  max-width: 100%;
+  gap: 6px;
+  padding: 2px;
+  padding-inline-end: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-field);
+  background: var(--color-base-100);
+  font-size: 12px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.admin-user-referrer:hover {
+  background: var(--color-base-200);
+}
+
+.admin-user-referrer > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-settings-section-title,
+.admin-setting-label-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-settings-section-title > span,
+.admin-setting-label-icon > span {
+  flex-shrink: 0;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.admin-membership-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+}
+
+.admin-membership-summary-item {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+}
+
+.admin-membership-summary-item + .admin-membership-summary-item {
+  border-top: 1px solid var(--color-base-300);
+}
+
+.admin-membership-summary-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 10px;
+  background: var(--color-base-200);
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+}
+
+.admin-membership-summary-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-membership-summary-content strong {
+  overflow-wrap: anywhere;
+  color: var(--color-base-content);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .admin-membership-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-membership-summary-item + .admin-membership-summary-item {
+    border-top: 0;
+    border-inline-start: 1px solid var(--color-base-300);
+  }
+}
+
+.admin-membership-usage {
+  padding-top: 4px;
+}
+
+.admin-user-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 9px;
+  color: var(--color-base-content);
+  font-size: 13px;
+}
+
+.admin-user-progress-label strong {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-user-progress-track {
+  position: relative;
+  container-type: inline-size;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+  background-image: repeating-linear-gradient(to right, var(--color-base-300) 0 calc(2.5cqw - 4px), transparent calc(2.5cqw - 4px) 2.5cqw);
+}
+
+.admin-user-progress-track > span {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  max-width: 100%;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(to right, var(--color-success) 0 calc(2.5cqw - 4px), transparent calc(2.5cqw - 4px) 2.5cqw);
+}
+
+.admin-affiliate-level {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-base-200) 35%, transparent);
+}
+
+.admin-affiliate-level legend {
+  width: auto;
+  margin: 0 0 12px;
+  padding: 0 6px;
+  color: var(--color-base-content);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .admin-user-edit,
+  .admin-group-edit {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    grid-template-areas: "main aside";
+  }
+}
+
+@media (max-width: 639px) {
+  .admin-user-hero-actions,
+  .admin-user-hero-actions .btn,
+  .admin-group-hero-actions,
+  .admin-group-hero-actions .btn {
+    width: 100%;
+  }
+
+  .admin-user-hero-actions .btn,
+  .admin-group-hero-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .admin-user-hero-identity,
+  .admin-group-hero-identity {
+    align-items: flex-start;
+  }
+
+  .admin-user-summary-photo,
+  .admin-group-summary-photo {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+/* tools */
+.admin-tools-steps {
+  padding-inline-start: 20px;
+  list-style: decimal;
+  color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+}
+
+.admin-tools-steps > li::marker {
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  font-weight: 600;
+}
+
+.admin-tools-code {
+  padding: 10px 14px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-base-200) 50%, transparent);
+  overflow-x: auto;
+}
+
+.admin-tools-code > code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--color-base-content);
+  white-space: pre;
+}
+/* tools */
+
+/* verification */
+.admin-verification-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-verification-row {
+  padding: 16px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-base-200) 35%, transparent);
+}
+
+.admin-verification-node {
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.admin-verification-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-box);
+  object-fit: cover;
+}
+
+.admin-verification-node a {
+  color: var(--color-base-content);
+}
+
+.admin-verification-node a:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.admin-verification-meta {
+  min-width: 110px;
+}
+
+.admin-verification-docs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+.admin-verification-thumb {
+  padding: 0;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  overflow: hidden;
+  line-height: 0;
+}
+
+.admin-verification-thumb img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+}
+
+.admin-verification-thumb:hover {
+  border-color: var(--color-primary);
+}
+
+.admin-verification-message {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--color-base-content);
+  opacity: 0.7;
+}
+
+.admin-verification-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.admin-verification-doc {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  overflow: hidden;
+  background: var(--color-base-100);
+}
+
+.admin-verification-doc-label {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-base-300);
+  background: color-mix(in oklab, var(--color-base-200) 50%, transparent);
+}
+
+.admin-verification-doc-image {
+  display: block;
+  padding: 10px;
+  text-align: center;
+}
+
+.admin-verification-info {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-base-200) 35%, transparent);
+}
+
+.admin-verification-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-verification-info-item + .admin-verification-info-item {
+  margin-top: 12px;
+}
+
+.admin-verification-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-base-content);
+  opacity: 0.6;
+}
+
+.admin-verification-info-message {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* verification */
+
+/* license */
+.admin-license-mono,
+.admin-license-key,
+.admin-license-fact-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.admin-license-badge {
+  gap: 6px;
+}
+
+.admin-license-active .admin-license-badge {
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 12%, var(--color-base-100));
+}
+
+.admin-license-support_ended .admin-license-badge,
+.admin-license-cancelled .admin-license-badge,
+.admin-license-unreachable .admin-license-badge {
+  color: color-mix(in oklab, var(--color-warning) 55%, var(--color-base-content));
+  background-color: color-mix(in oklab, var(--color-warning) 12%, var(--color-base-100));
+}
+
+.admin-license-lapsed .admin-license-badge,
+.admin-license-invalid .admin-license-badge {
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 12%, var(--color-base-100));
+}
+
+.admin-license-missing .admin-license-badge {
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  background-color: var(--color-base-200);
+}
+
+.admin-license-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-license-timeline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 28px 8px 36px;
+}
+
+.admin-license-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-200));
+}
+
+.admin-license-track-elapsed {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: 99px;
+  background: color-mix(in oklab, var(--color-base-content) 28%, var(--color-base-300));
+}
+
+.admin-license-lapsed .admin-license-track {
+  background: color-mix(in oklab, var(--color-error) 16%, var(--color-base-200));
+}
+
+.admin-license-lapsed .admin-license-track-elapsed {
+  background: color-mix(in oklab, var(--color-error) 32%, var(--color-base-300));
+}
+
+.admin-license-tick {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--color-base-content) 28%, var(--color-base-300));
+  transform: rotate(45deg);
+}
+
+.admin-license-today {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  margin-inline-start: -7px;
+  border: 4px solid var(--color-warning);
+  border-radius: 50%;
+  background: var(--color-base-100);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-warning) 18%, transparent);
+}
+
+.admin-license-today span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  color: var(--color-warning);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-license-today-end {
+  margin-inline-start: -14px;
+}
+
+.admin-license-lapsed .admin-license-today {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-error) 16%, transparent);
+}
+
+.admin-license-lapsed .admin-license-today span {
+  color: var(--color-error);
+}
+
+.admin-license-forever {
+  display: flex;
+  align-items: center;
+  flex: 0 0 22%;
+  min-width: 110px;
+}
+
+.admin-license-forever-line {
+  flex: 1;
+  height: 0;
+  border-top: 2px dashed color-mix(in oklab, var(--color-base-content) 22%, var(--color-base-300));
+}
+
+.admin-license-forever-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-inline-start: 6px;
+}
+
+.admin-license-inf {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.admin-license-forever-label {
+  margin-top: 6px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-license-fact-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-license-fact-value {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.admin-license-fact-value.is-alert {
+  color: var(--color-warning);
+}
+
+.admin-license-lapsed .admin-license-fact-value.is-alert {
+  color: var(--color-error);
+}
+
+.admin-license-fact-sub {
+  margin-top: 4px;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 13px;
+}
+
+.admin-license-action + .admin-license-action {
+  border-top: 1px solid var(--color-base-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-license-today {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-license-timeline-perpetual {
+    flex-wrap: wrap;
+  }
+
+  .admin-license-forever {
+    flex: 1 1 100%;
+    min-width: 0;
+    margin-top: 10px;
+  }
+
+  .admin-license-foot > div + div {
+    border-inline-start: 0;
+    border-top: 1px solid var(--color-base-300);
+  }
+
+  .admin-license-action .btn {
+    width: 100%;
+  }
+}
+/* license */
+
+/* licence lock */
+.admin-licence-lock {
+  position: relative;
+  min-height: 22rem;
+  overflow: hidden;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+}
+
+.admin-licence-lock-mini {
+  min-height: 0;
+  overflow: visible;
+}
+
+.admin-licence-lock-backdrop {
+  pointer-events: none;
+  user-select: none;
+  padding: 8px 24px 24px;
+  opacity: 0.55;
+  filter: blur(5px);
+  mask-image: linear-gradient(to bottom, #000 42%, transparent);
+}
+
+.admin-licence-lock-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.admin-licence-lock-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--color-base-300);
+}
+
+.admin-licence-lock-lines {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-licence-lock-line {
+  height: 8px;
+  width: 220px;
+  max-width: 70%;
+  border-radius: 999px;
+  background: var(--color-base-300);
+}
+
+.admin-licence-lock-line.short {
+  width: 140px;
+  margin-top: 8px;
+}
+
+.admin-licence-lock-toggle {
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  border-radius: 999px;
+  background: var(--color-base-300);
+}
+
+.admin-licence-lock-message {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+  background: color-mix(in oklab, var(--color-base-100) 72%, transparent);
+}
+
+.admin-licence-lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+}
+
+.admin-licence-lock-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 14px;
+  background: var(--color-base-200);
+  color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+}
+
+.admin-licence-lock-error .admin-licence-lock-icon {
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 12%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-error) 22%, var(--color-base-300));
+}
+
+.admin-licence-lock-success .admin-licence-lock-icon {
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 12%, var(--color-base-100));
+  border-color: color-mix(in oklab, var(--color-success) 22%, var(--color-base-300));
+}
+
+.admin-licence-lock-card h2 {
+  margin: 0;
+  color: var(--color-base-content);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-licence-lock-card p {
+  margin: 6px 0 0;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-licence-lock-actions {
+  margin-top: 18px;
+}
+
+.admin-licence-lock-actions .btn {
+  gap: 8px;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-message {
+  position: relative;
+  inset: auto;
+  padding: 16px 20px;
+  text-align: start;
+  background: transparent;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-card {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 20px;
+  width: 100%;
+  max-width: none;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-icon > span {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-body {
+  flex: 1;
+  min-width: 12rem;
+  text-align: start;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-card h2 {
+  font-size: 14px;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-card p {
+  margin-top: 4px;
+}
+
+.admin-licence-lock-mini .admin-licence-lock-actions {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .admin-licence-lock-mini .admin-licence-lock-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .admin-licence-lock-mini .admin-licence-lock-icon {
+    align-self: center;
+  }
+
+  .admin-licence-lock-mini .admin-licence-lock-body {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .admin-licence-lock-mini .admin-licence-lock-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 575px) {
+  .admin-licence-lock-message {
+    padding: 24px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-licence-lock-backdrop {
+    filter: none;
+    opacity: 0.38;
+  }
+}
+/* licence lock */

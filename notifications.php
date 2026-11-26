@@ -18,11 +18,14 @@ page_header(__("Notifications"));
 
 try {
 
+  // get notifications
+  $user->_data['notifications'] = $user->get_notifications();
+
   // reset real-time counters
   $user->reset_realtime_counters('notifications');
 
   // get ads campaigns
-  $ads_campaigns = $user->ads_campaigns();
+  $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : [];
   /* assign variables */
   $smarty->assign('ads_campaigns', $ads_campaigns);
 

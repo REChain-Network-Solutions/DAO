@@ -30,7 +30,9 @@ trait EventsTrait
     $type = !isset($args['type']) ? null : $args['type'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $random = !isset($args['random']) ? false : true;
+    $sort = !isset($args['sort']) ? null : $args['sort'];
+    $active_only = !isset($args['active_only']) ? false : $args['active_only'];
+    $random = filter_var($args['random'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $get_all = !isset($args['get_all']) ? false : true;
     $offset = !isset($args['offset']) ? 0 : $args['offset'];
     $results = !isset($args['results']) ? $system['events_results'] : $args['results'];
@@ -39,9 +41,19 @@ trait EventsTrait
     $suggested = !isset($args['suggested']) ? false : true;
     $managed = !isset($args['managed']) ? false : true;
     $filter = !isset($args['filter']) ? "admin" : $args['filter'];
+    $count = !isset($args['count']) ? false : true;
     /* initialize vars */
     $events = [];
+    $this->_cursor = null;
+    if ($count) {
+      $offset = 0;
+      $results = PHP_INT_MAX;
+    }
     $offset *= $results;
+    /* prepare query (wrapped as a count when requested) */
+    $query = function ($sql) use ($db, $count) {
+      return $db->query(($count) ? "SELECT COUNT(*) AS count FROM (" . $sql . ") AS results" : $sql);
+    };
     /* prepare is_online statement */
     $type_statement = "";
     if ($type) {
@@ -59,45 +71,84 @@ trait EventsTrait
     if ($language && $language != "all") {
       $language_statement = sprintf(" AND event_language = %s ", secure($language, 'int'));
     }
+    /* pages after the first continue from a cursor (the last event id) instead of an offset */
+    $use_cursor = !$count && !$get_all && !$promoted && !($suggested && $random) && !$managed && !($suggested && $sort == 'upcoming');
+    $cursor = ($use_cursor) ? cursor_decode($args['cursor'] ?? null, ['int']) : null;
+    $language_statement = ($language_statement ?? "") . (($cursor) ? " AND " . cursor_where(['`events`.event_id'], $cursor) : "");
+    if ($cursor) {
+      $offset = 0;
+    }
+    /* upcoming events stop after 50 pages (their order can't be read from an index) */
+    if ($suggested && $sort == 'upcoming' && !$count && ($args['offset'] ?? 0) > 50) {
+      return $events;
+    }
     /* prepare limit statement */
     $limit_statement = ($get_all) ? "" : sprintf(" LIMIT %s, %s ", secure($offset, 'int', false), secure($results, 'int', false));
     /* prepare date filter to exclude past events */
     $date_filter = " AND event_end_date >= NOW() ";
     if ($promoted) {
       /* get promoted events */
-      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_boosted = '1' " . $type_statement . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false)));
+      $residual_statement = ($active_only ? $date_filter : "") . $type_statement . ($country_statement ?? "") . ($language_statement ?? "");
+      if ($count) {
+        $get_events = $query("SELECT event_id FROM `events` WHERE event_boosted = '1' " . $residual_statement);
+      } else {
+        $filter = ($residual_statement) ? function ($ids) use ($db, $residual_statement) {
+          return array_column($db->query(sprintf("SELECT event_id FROM `events` WHERE event_id IN (%s) " . $residual_statement, implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'event_id');
+        } : null;
+        $events_ids = sample_ids('events', 'event_id', "event_boosted = '1'", $results, ['pool' => 200, 'filter' => $filter, 'shared' => 'promoted_events']);
+        $rows = ($events_ids) ? $db->query(sprintf("SELECT * FROM `events` WHERE event_id IN (%s)", implode(',', $events_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_events = new PrefetchedResult(rows_by_ids($rows, 'event_id', $events_ids));
+      }
     } elseif ($boosted) {
       /* get the "viewer" boosted events */
-      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_boosted = '1' AND event_boosted_by = %s " . $type_statement . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+      $get_events = $query(sprintf("SELECT * FROM `events` WHERE event_boosted = '1' AND event_boosted_by = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } elseif ($suggested) {
       /* get suggested events */
-      $where_statement = sprintf(" AND event_id NOT IN (%s) ", $this->spread_ids($this->get_events_ids()));
       $category_statement = ($category_id) ? sprintf(" AND event_category = %s ", secure($category_id, 'int')) : "";
-      $sort_statement = ($random) ? " ORDER BY RAND() " : " ORDER BY event_id DESC ";
-      $get_events = $db->query("SELECT * FROM `events` WHERE event_privacy != 'secret'" . $where_statement . $type_statement . $country_statement . $language_statement . $category_statement . $date_filter . $sort_statement . $limit_statement);
+      if ($random && $sort != 'upcoming' && !$count) {
+        /* random events among the 200 live events ending soonest */
+        $joined_events = array_fill_keys(array_map('intval', $this->get_events_ids()), true);
+        $events_ids = [];
+        foreach ($db->query("SELECT event_id FROM `events` WHERE event_end_date >= NOW() ORDER BY event_end_date ASC LIMIT 200")->fetch_all(MYSQLI_ASSOC) as $event) {
+          if (!isset($joined_events[(int) $event['event_id']])) {
+            $events_ids[] = (int) $event['event_id'];
+          }
+        }
+        if ($events_ids) {
+          $events_ids = array_column($db->query(sprintf("SELECT event_id FROM `events` WHERE event_id IN (%s) AND event_privacy != 'secret'" . $type_statement . ($country_statement ?? "") . ($language_statement ?? "") . $category_statement, implode(',', $events_ids)))->fetch_all(MYSQLI_ASSOC), 'event_id');
+          shuffle($events_ids);
+          $events_ids = array_slice($events_ids, 0, $results);
+        }
+        $rows = ($events_ids) ? $db->query(sprintf("SELECT * FROM `events` WHERE event_id IN (%s)", implode(',', $events_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_events = new PrefetchedResult(rows_by_ids($rows, 'event_id', $events_ids));
+      } else {
+        $where_statement = sprintf(" AND event_id NOT IN (%s) ", $this->spread_ids($this->get_events_ids()));
+        $sort_statement = ($sort == 'upcoming') ? " ORDER BY CASE WHEN event_start_date <= NOW() THEN 0 ELSE 1 END, CASE WHEN event_start_date <= NOW() THEN event_end_date ELSE event_start_date END, event_id ASC " : " ORDER BY event_id DESC ";
+        $get_events = $query("SELECT * FROM `events` WHERE event_privacy != 'secret'" . $where_statement . $type_statement . $country_statement . $language_statement . $category_statement . $date_filter . $sort_statement . $limit_statement);
+      }
     } elseif ($managed) {
       /* get the "taget" all events who admin */
-      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_admin = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC", secure($user_id, 'int')));
+      $get_events = $query(sprintf("SELECT * FROM `events` WHERE event_admin = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC", secure($user_id, 'int')));
     } elseif ($page_id != null) {
       /* get events that managed by target page */
-      $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_page_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($page_id, 'int')));
+      $get_events = $query(sprintf("SELECT * FROM `events` WHERE event_page_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($page_id, 'int')));
     } elseif ($user_id == null) {
       /* get the "viewer" events who (going|interested|invited|admin) */
       switch ($filter) {
         case 'going':
-          $get_events = $db->query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_going = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
+          $get_events = $query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_going = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
           break;
 
         case 'interested':
-          $get_events = $db->query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_interested = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
+          $get_events = $query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_interested = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
           break;
 
         case 'invited':
-          $get_events = $db->query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_invited = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
+          $get_events = $query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE events_members.is_invited = '1' AND events_members.user_id = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($this->_data['user_id'], 'int')));
           break;
 
         default:
-          $get_events = $db->query(sprintf("SELECT * FROM `events` WHERE event_admin = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
+          $get_events = $query(sprintf("SELECT * FROM `events` WHERE event_admin = %s " . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
           break;
       }
     } else {
@@ -107,20 +158,26 @@ trait EventsTrait
       $privacy = $get_privacy->fetch_assoc();
       /* check the target user's privacy */
       if (!$this->check_privacy($privacy['user_privacy_events'], $user_id)) {
-        return $events;
+        return ($count) ? 0 : $events;
       }
       /* if the viewer not the target exclude secret groups */
       $where_statement = ($this->_data['user_id'] == $user_id) ? "" : " AND `events`.event_privacy != 'secret' ";
-      $get_events = $db->query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE (events_members.is_going = '1' OR events_members.is_interested = '1') AND events_members.user_id = %s" . $where_statement . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($user_id, 'int')));
+      $get_events = $query(sprintf("SELECT `events`.* FROM `events` INNER JOIN events_members ON `events`.event_id = events_members.event_id WHERE (events_members.is_going = '1' OR events_members.is_interested = '1') AND events_members.user_id = %s" . $where_statement . $type_statement . $country_statement . $language_statement . " ORDER BY event_id DESC" . $limit_statement, secure($user_id, 'int')));
+    }
+    if ($count) {
+      return (int) $get_events->fetch_assoc()['count'];
     }
     if ($get_events->num_rows > 0) {
-      while ($event = $get_events->fetch_assoc()) {
+      $rows = $get_events->fetch_all(MYSQLI_ASSOC);
+      $this->preload_memberships('events', array_column($rows, 'event_id'));
+      foreach ($rows as $event) {
         $event['event_picture'] = get_picture($event['event_cover'], 'event');
         /* check if the viewer joined the event */
         $event['i_joined'] = $this->check_event_membership($this->_data['user_id'], $event['event_id']);;
         $events[] = $event;
       }
     }
+    $this->_cursor = ($use_cursor && !empty($rows)) ? cursor_encode([end($rows)['event_id']]) : null;
     return $events;
   }
 
@@ -607,8 +664,12 @@ trait EventsTrait
     }
     /* delete event */
     $db->query(sprintf("DELETE FROM `events` WHERE event_id = %s", secure($event_id, 'int')));
+    /* delete event translations */
+    $this->delete_translations('event', $event_id);
     /* delete event members */
     $db->query(sprintf("DELETE FROM `events_members` WHERE event_id = %s", secure($event_id, 'int')));
+    /* delete event shortcuts */
+    $this->delete_shortcuts($event_id, 'event');
     /* check if the event has chatbox */
     if ($event['chatbox_conversation_id']) {
       /* delete the chatbox */
@@ -625,11 +686,18 @@ trait EventsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_event_members($event_id, $handle, $offset = 0)
+  public function get_event_members($event_id, $handle, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $members = [];
     $offset *= $system['max_results_even'];
+    /* friends & followings first, then everyone else (a page of users ids, read through the index) */
+    $this->_cursor = null;
+    $page_ids = [];
+    $next_cursor = null;
+    if (in_array($handle, ['going', 'interested', 'invited'])) {
+      [$page_ids, $next_cursor] = $this->get_friends_first_page('events_members', 'user_id', sprintf("events_members.is_%s = '1' AND events_members.event_id = %s", $handle, secure($event_id, 'int')), $offset, $system['max_results_even'], $cursor);
+    }
     switch ($handle) {
       case 'going':
         $get_members = $db->query(sprintf(
@@ -642,16 +710,15 @@ trait EventsTrait
             users.user_gender, 
             users.user_picture, 
             users.user_subscribed, 
+            packages.name as package_name, 
             users.user_verified 
           FROM events_members 
           INNER JOIN users ON events_members.user_id = users.user_id 
+          LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id 
           WHERE events_members.is_going = '1' 
             AND events_members.event_id = %s 
-            " . $this->get_sql_order_by_friends_followings() . "
-          LIMIT %s, %s",
-          secure($event_id, 'int'),
-          secure($offset, 'int', false),
-          secure($system['max_results_even'], 'int', false)
+            AND users.user_id IN (" . $this->spread_ids($page_ids) . ")",
+          secure($event_id, 'int')
         ));
         break;
 
@@ -666,16 +733,15 @@ trait EventsTrait
             users.user_gender, 
             users.user_picture, 
             users.user_subscribed, 
+            packages.name as package_name, 
             users.user_verified 
           FROM events_members 
           INNER JOIN users ON events_members.user_id = users.user_id 
+          LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id 
           WHERE events_members.is_interested = '1' 
             AND events_members.event_id = %s 
-            " . $this->get_sql_order_by_friends_followings() . "
-          LIMIT %s, %s",
-          secure($event_id, 'int'),
-          secure($offset, 'int', false),
-          secure($system['max_results_even'], 'int', false)
+            AND users.user_id IN (" . $this->spread_ids($page_ids) . ")",
+          secure($event_id, 'int')
         ));
         break;
 
@@ -690,16 +756,15 @@ trait EventsTrait
             users.user_gender, 
             users.user_picture, 
             users.user_subscribed, 
+            packages.name as package_name, 
             users.user_verified 
           FROM events_members 
           INNER JOIN users ON events_members.user_id = users.user_id 
+          LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id 
           WHERE events_members.is_invited = '1' 
             AND events_members.event_id = %s 
-            " . $this->get_sql_order_by_friends_followings() . "
-          LIMIT %s, %s",
-          secure($event_id, 'int'),
-          secure($offset, 'int', false),
-          secure($system['max_results_even'], 'int', false)
+            AND users.user_id IN (" . $this->spread_ids($page_ids) . ")",
+          secure($event_id, 'int')
         ));
         break;
 
@@ -707,6 +772,7 @@ trait EventsTrait
         _error(400);
         break;
     }
+    $get_members = new PrefetchedResult(rows_by_ids($get_members->fetch_all(MYSQLI_ASSOC), 'user_id', $page_ids));
     if ($get_members->num_rows > 0) {
       while ($member = $get_members->fetch_assoc()) {
         $member['user_picture'] = get_picture($member['user_picture'], $member['user_gender']);
@@ -715,6 +781,7 @@ trait EventsTrait
         $members[] = $member;
       }
     }
+    $this->_cursor = $next_cursor;
     return $members;
   }
 
@@ -746,18 +813,25 @@ trait EventsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_event_invites($event_id, $offset = 0)
+  public function get_event_invites($event_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $friends = [];
     $offset *= $system['max_results_even'];
-    $get_friends = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users LEFT JOIN events_members ON users.user_id = events_members.user_id AND events_members.event_id = %s WHERE users.user_id IN (%s) AND events_members.id IS NULL LIMIT %s, %s", secure($event_id, 'int'), $this->spread_ids($this->_data['friends_ids']), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last user id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_friends = $db->query(sprintf("SELECT users.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users LEFT JOIN events_members ON users.user_id = events_members.user_id AND events_members.event_id = %s LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_id IN (%s) AND events_members.id IS NULL" . $cursor_statement . " ORDER BY users.user_id DESC " . $limit_statement, secure($event_id, 'int'), $this->spread_ids($this->friends_ids())));
+    [$get_friends, $next_cursor] = cursor_result($get_friends);
     while ($friend = $get_friends->fetch_assoc()) {
       $friend['user_picture'] = get_picture($friend['user_picture'], $friend['user_gender']);
       $friend['connection'] = 'event_invite';
       $friend['node_id'] = $event_id;
       $friends[] = $friend;
     }
+    $this->_cursor = $next_cursor ?? null;
     return $friends;
   }
 
@@ -772,7 +846,7 @@ trait EventsTrait
   public function check_event_adminship($user_id, $event_id)
   {
     global $db;
-    if ($this->_logged_in) {
+    if ($this->_logged_in && $event_id) {
       $check = $db->query(sprintf("SELECT COUNT(*) as count FROM `events` WHERE event_admin = %s AND event_id = %s", secure($user_id, 'int'), secure($event_id, 'int')));
       if ($check->fetch_assoc()['count'] > 0) {
         return true;
@@ -792,6 +866,14 @@ trait EventsTrait
   public function check_event_membership($user_id, $event_id)
   {
     global $db;
+    /* loaded with a page of posts by prefetch_posts() */
+    if ($this->_logged_in && $user_id == $this->_data['user_id'] && isset($this->_posts_prefetch['event_membership']) && array_key_exists($event_id, $this->_posts_prefetch['event_membership'])) {
+      return $this->_posts_prefetch['event_membership'][$event_id];
+    }
+    /* loaded with its list by preload_memberships() */
+    if ($this->_logged_in && $user_id == $this->_data['user_id'] && isset($this->_connections_ids['event_membership']) && array_key_exists((int) $event_id, $this->_connections_ids['event_membership'])) {
+      return $this->_connections_ids['event_membership'][(int) $event_id];
+    }
     if ($this->_logged_in) {
       $get_membership = $db->query(sprintf("SELECT is_invited, is_interested, is_going FROM events_members WHERE user_id = %s AND event_id = %s", secure($user_id, 'int'), secure($event_id, 'int')));
       if ($get_membership->num_rows > 0) {

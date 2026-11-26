@@ -20,7 +20,7 @@ user_access();
 
 // check ads permission
 if (!$user->_data['can_create_ads']) {
-  if (!$user->check_module_package_permission("ads_permission")) {
+  if ($user->check_module_package_permission("ads_permission")) {
     redirect("/packages?highlight=true");
   }
   _error(404);
@@ -35,7 +35,20 @@ try {
       page_header(__("Ads Manager") . ' | ' . __($system['system_title']));
 
       // get campaigns
-      $smarty->assign('campaigns', $user->get_campaigns());
+      $campaigns = $user->get_campaigns();
+      $campaigns_stats = ['active' => 0, 'spend' => 0, 'clicks' => 0, 'views' => 0];
+      foreach ($campaigns as &$campaign) {
+        $campaign['campaign_spend_percent'] = ($campaign['campaign_budget'] > 0) ? min(100, round(($campaign['campaign_spend'] / $campaign['campaign_budget']) * 100)) : 0;
+        if ($campaign['campaign_is_approved'] && $campaign['campaign_is_active'] && !$campaign['campaign_is_declined']) {
+          $campaigns_stats['active']++;
+        }
+        $campaigns_stats['spend'] += $campaign['campaign_spend'];
+        $campaigns_stats['clicks'] += $campaign['campaign_clicks'];
+        $campaigns_stats['views'] += $campaign['campaign_views'];
+      }
+      unset($campaign);
+      $smarty->assign('campaigns', $campaigns);
+      $smarty->assign('campaigns_stats', $campaigns_stats);
       break;
 
     case 'new':

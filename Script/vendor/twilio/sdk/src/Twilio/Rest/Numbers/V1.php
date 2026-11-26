@@ -29,6 +29,9 @@ use Twilio\Rest\Numbers\V1\PortingWebhookConfigurationList;
 use Twilio\Rest\Numbers\V1\PortingWebhookConfigurationDeleteList;
 use Twilio\Rest\Numbers\V1\SenderIdRegistrationList;
 use Twilio\Rest\Numbers\V1\SigningRequestConfigurationList;
+use Twilio\Rest\Numbers\V1\SmsVerificationList;
+use Twilio\Rest\Numbers\V1\SmsVerificationCheckList;
+use Twilio\Rest\Numbers\V1\VoiceVerificationList;
 use Twilio\Rest\Numbers\V1\WebhookList;
 use Twilio\Version;
 
@@ -44,6 +47,9 @@ use Twilio\Version;
  * @property PortingWebhookConfigurationDeleteList $portingWebhookConfigurationsDelete
  * @property SenderIdRegistrationList $senderIdRegistrations
  * @property SigningRequestConfigurationList $signingRequestConfigurations
+ * @property SmsVerificationList $smsVerifications
+ * @property SmsVerificationCheckList $smsVerificationChecks
+ * @property VoiceVerificationList $voiceVerifications
  * @property WebhookList $webhook
  * @method \Twilio\Rest\Numbers\V1\BulkEligibilityContext bulkEligibilities(string $requestId)
  * @method \Twilio\Rest\Numbers\V1\PortingPortInContext portingPortIns(string $portInRequestSid)
@@ -64,6 +70,9 @@ class V1 extends Version
     protected $_portingWebhookConfigurationsDelete;
     protected $_senderIdRegistrations;
     protected $_signingRequestConfigurations;
+    protected $_smsVerifications;
+    protected $_smsVerificationChecks;
+    protected $_voiceVerifications;
     protected $_webhook;
 
     /**
@@ -163,6 +172,30 @@ class V1 extends Version
             $this->_signingRequestConfigurations = new SigningRequestConfigurationList($this);
         }
         return $this->_signingRequestConfigurations;
+    }
+
+    protected function getSmsVerifications(): SmsVerificationList
+    {
+        if (!$this->_smsVerifications) {
+            $this->_smsVerifications = new SmsVerificationList($this);
+        }
+        return $this->_smsVerifications;
+    }
+
+    protected function getSmsVerificationChecks(): SmsVerificationCheckList
+    {
+        if (!$this->_smsVerificationChecks) {
+            $this->_smsVerificationChecks = new SmsVerificationCheckList($this);
+        }
+        return $this->_smsVerificationChecks;
+    }
+
+    protected function getVoiceVerifications(): VoiceVerificationList
+    {
+        if (!$this->_voiceVerifications) {
+            $this->_voiceVerifications = new VoiceVerificationList($this);
+        }
+        return $this->_voiceVerifications;
     }
 
     protected function getWebhook(): WebhookList

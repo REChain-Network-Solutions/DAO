@@ -23,6 +23,9 @@ if ($user->_data['user_privacy_chat'] == "me") {
 
 try {
 
+  // get conversations
+  $user->_data['conversations'] = $user->get_conversations()['data'];
+
   // check the view
   $view = (!isset($_GET['view'])) ? 'message' : 'new';
 
@@ -32,8 +35,7 @@ try {
     if (!isset($_GET['cid'])) {
       $sub_view = 'all';
       if ($user->_data['conversations']) {
-        $conversation = $user->_data['conversations'][0];
-        $conversation['messages'] = $user->get_conversation_messages($conversation['conversation_id'])['messages'];
+        $conversation = $user->check_mutual_conversation($user->_data['conversations'][0]['conversation_id']);
       }
     } else {
       $sub_view = 'conversation';
@@ -41,13 +43,36 @@ try {
       if (is_empty($_GET['cid']) || !is_numeric($_GET['cid'])) {
         _error(404);
       }
-      $conversation = $user->get_conversation($_GET['cid']);
-      $conversation['messages'] = $user->get_conversation_messages($conversation['conversation_id'])['messages'];
+      $conversation = $user->check_mutual_conversation($_GET['cid']);
+    }
+    /* update the opened conversation as seen in the threads list */
+    if ($conversation) {
+      foreach ($user->_data['conversations'] as &$_conversation) {
+        if ($_conversation['conversation_id'] == $conversation['conversation_id']) {
+          $_conversation['seen'] = '1';
+        }
+      }
+      unset($_conversation);
     }
     // assign variables
     $smarty->assign('sub_view', $sub_view);
     $smarty->assign('conversation', $conversation);
+    $smarty->assign('conversation_profile', $user->get_conversation_profile($conversation));
   } elseif ($view == 'new') {
+
+    /* get recipient page */
+    if (isset($_GET['page_id']) && is_numeric($_GET['page_id'])) {
+      $page_conversation_id = $user->get_page_conversation_id($_GET['page_id'], $user->_data['user_id']);
+      if ($page_conversation_id) {
+        redirect('/messages/' . $page_conversation_id);
+      }
+      $recipient_page = $user->get_chat_page($_GET['page_id']);
+      if (!$recipient_page || !$system['pages_enabled'] || !$system['pages_messages_enabled'] || !$recipient_page['page_messages_enabled'] || $user->check_page_adminship($user->_data['user_id'], $recipient_page['page_id'])) {
+        _error(404);
+      }
+      /* assign variables */
+      $smarty->assign('recipient_page', $recipient_page);
+    }
 
     /* get recipient */
     if (isset($_GET['uid'])) {

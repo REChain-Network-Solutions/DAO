@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Behind the status bar and navigation bar. Start as system_bar_background, then follow
+         the page's top and bottom colors (SngineConfig.SYSTEM_BARS_FOLLOW_PAGE). Sized in MainActivity. -->
+    <View
+        android:id="@+id/status_bar_fill"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:background="@color/system_bar_background" />
+
+    <View
+        android:id="@+id/navigation_bar_fill"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="bottom"
+        android:background="@color/system_bar_background" />
+
+    <!-- Padded by system bar / keyboard insets in MainActivity. -->
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- The WebView is added here from code so it can be rebuilt if its renderer dies. -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_refresh"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/page_background" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:visibility="invisible"
+            app:hideAnimationBehavior="outward"
+            app:indicatorColor="@color/brand_primary"
+            app:trackColor="@android:color/transparent"
+            app:trackThickness="3dp" />
+
+        <include
+            android:id="@+id/offline"
+            layout="@layout/view_offline"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- Full-screen video is shown here, outside the inset padding. -->
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:visibility="gone" />
+
+</FrameLayout>

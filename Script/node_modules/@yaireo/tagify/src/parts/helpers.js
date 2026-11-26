@@ -263,7 +263,7 @@ export function getCaretGlobalPosition(){
  */
 export function injectAtCaret(content, range){
     var selection = window.getSelection();
-    range = range || selection.getRangeAt(0)
+    range = range || (selection.rangeCount ? selection.getRangeAt(0) : null)
 
     if( typeof content == 'string' )
         content = document.createTextNode(content)
@@ -298,17 +298,14 @@ export function getSetTagData(tagElm, data, override){
 export function placeCaretAfterNode( node ){
     if( !node || !node.parentNode ) return
 
-    var nextSibling = node,
-        sel = window.getSelection(),
-        range = sel.getRangeAt(0);
+    var sel = window.getSelection()
+    if( !sel ) return
 
-    if (sel.rangeCount) {
-        range.setStartAfter(nextSibling);
-        range.collapse(true)
-        // range.setEndBefore(nextSibling || node);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
+    var range = document.createRange()
+    range.setStartAfter(node)
+    range.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(range)
 }
 
 /**

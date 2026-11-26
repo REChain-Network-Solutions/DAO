@@ -15,6 +15,131 @@ trait MarketplaceTrait
   /* ------------------------------- */
 
   /**
+   * get_promoted_products
+   * 
+   * @return array
+   */
+  public function get_promoted_products()
+  {
+    return $this->get_promoted_posts('product', 'posts_products', ['available' => true, 'in_groups_events' => true]);
+  }
+
+
+  /**
+   * get_products
+   * 
+   * @param array $args
+   * @return array
+   */
+  public function get_products($args = [])
+  {
+    global $db, $system;
+    $category = $args['category'] ?? null;
+    $query = $args['query'] ?? null;
+    $managed = !empty($args['managed']);
+    $user_id = $args['user_id'] ?? null;
+    $sort = $args['sort'] ?? '';
+    $country = $args['country'] ?? null;
+    $distance = null;
+    $order_query = "";
+    $country_query = "";
+    $where_query = "";
+    $selected_country = null;
+    $url = $args['url'] ?? '';
+
+    if ($query) {
+      $where_query .= " AND " . $this->posts_search_clause($query, sprintf('(posts.text LIKE %1$s OR posts_products.name LIKE %1$s)', secure($query, 'search')));
+    }
+    if ($category) {
+      $where_query .= sprintf("AND posts_products.category_id = %s", secure($category, 'int'));
+    }
+    if ($user_id) {
+      $where_query .= sprintf(" AND posts.user_type = 'user' AND posts.user_id = %s", secure($user_id, 'int'));
+    }
+
+    if ($this->_logged_in && $system['location_finder_enabled'] && isset($args['distance']) && is_numeric($args['distance'])) {
+      $distance = ($args['distance'] && is_numeric($args['distance']) && $args['distance'] > 0) ? $args['distance'] : 25;
+    }
+
+    $order_query .= ($order_query) ? "," : " ORDER BY ";
+    switch ($sort) {
+      case '':
+      case 'latest':
+        $order_query .= " posts.post_id DESC ";
+        break;
+
+      case 'price-high':
+        $order_query .= " posts_products.price DESC ";
+        break;
+
+      case 'price-low':
+        $order_query .= " posts_products.price ASC ";
+        break;
+
+      default:
+        _error(404);
+        break;
+    }
+
+    if ($system['newsfeed_location_filter_enabled'] && $country && $country != "all") {
+      $selected_country = $this->get_country_by_name($country);
+      if ($selected_country) {
+        $country_query .= sprintf(" AND ( (posts.user_type = 'user' AND user_post_author.user_country = %s) OR (posts.user_type = 'page' AND page_post_author.page_country = %s) )", secure($selected_country['country_id'], 'int'), secure($selected_country['country_id'], 'int'));
+      }
+    }
+
+    require_once(ABSPATH . 'includes/class-pager.php');
+    $params['selected_page'] = (!isset($args['page']) || (int) $args['page'] == 0) ? 1 : $args['page'];
+    $author_join = " LEFT JOIN users AS user_post_author ON posts.user_type = 'user' AND posts.user_id = user_post_author.user_id AND user_post_author.user_banned = '0' LEFT JOIN pages AS page_post_author ON posts.user_type = 'page' AND posts.user_id = page_post_author.page_id ";
+    $approval_query = ($managed) ? "" : " AND (posts.pre_approved = '1' OR posts.has_approved = '1')";
+    $available_query = ($managed) ? "" : " AND posts_products.available = '1'";
+    $from_query = " FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id " . $author_join . " WHERE posts.post_type = 'product'" . $available_query . $approval_query . $where_query . $country_query;
+    /* around the viewer when a distance is set */
+    $listing_ids = ($distance) ? $this->get_nearby_listing_ids('product', $distance, $from_query, $order_query) : null;
+    $params['total_items'] = ($listing_ids !== null) ? count($listing_ids) : $db->query("SELECT COUNT(*) as count" . $from_query)->fetch_assoc()['count'];
+    $params['items_per_page'] = $system['marketplace_results'];
+    $params['url'] = $system['system_url'] . '/market' . $url . '/%s';
+    $url_params = [];
+    if ($selected_country) {
+      $url_params[] = "country=" . urlencode($selected_country['country_name']);
+    }
+    if ($distance) {
+      $url_params[] = "distance=" . urlencode($distance);
+    }
+    if ($sort !== '') {
+      $url_params[] = "sort=" . urlencode($sort);
+    }
+    if ($url_params) {
+      $params['url'] .= "?" . implode("&", $url_params);
+    }
+    $pager = new Pager($params);
+    $limit_query = $pager->getLimitSql();
+
+    $rows = [];
+    if ($listing_ids !== null) {
+      $posts_ids = array_slice($listing_ids, $pager->getOffset(), $params['items_per_page']);
+    } else {
+      $posts_ids = array_column($db->query("SELECT posts.post_id" . $from_query . $order_query . $limit_query)->fetch_all(MYSQLI_ASSOC), 'post_id');
+    }
+    foreach ($posts_ids as $post_id) {
+      $row = $this->get_post($post_id);
+      if ($row) {
+        $rows[] = $row;
+      }
+    }
+
+    return [
+      'rows' => $rows,
+      'total' => $params['total_items'],
+      'pager' => $pager->getPager(),
+      'sort' => $sort,
+      'distance' => ($distance) ? htmlentities($distance, ENT_QUOTES, 'utf-8') : '',
+      'selected_country' => $selected_country,
+    ];
+  }
+
+
+  /**
    * get_cart
    * 
    * @return array
@@ -282,13 +407,20 @@ trait MarketplaceTrait
     if ($query) {
       $where_query .= sprintf(" AND order_hash LIKE %s", secure($query, 'search'));
     }
-    $limit_statement = sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    /* pages after the first continue from a cursor (the last order id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($args['cursor'] ?? null, ['int']);
+    if ($cursor) {
+      $where_query .= " AND " . cursor_where(['orders.order_id'], $cursor);
+    }
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
     $get_orders = $db->query("SELECT orders.*, users_addresses.*, users.user_name, users.user_firstname, users.user_lastname FROM orders INNER JOIN users_addresses ON orders.buyer_address_id = users_addresses.address_id INNER JOIN users ON orders.buyer_id = users.user_id WHERE $where_query AND orders.is_payment_done = '1' ORDER BY orders.order_id DESC " . $limit_statement) or _error("SQL_ERROR_THROWEN");
     if ($get_orders->num_rows > 0) {
       $order['items'] = [];
       $order['total_commission'] = 0;
       $order['final_price'] = 0;
       while ($order = $get_orders->fetch_assoc()) {
+        $last_read_id = $order['order_id'];
         /* prepare buyer's name */
         $order['buyer_fullname'] = ($system['show_usernames_enabled']) ? $order['user_name'] : $order['user_firstname'] . ' ' . $order['user_lastname'];
         /* prepare total commission */
@@ -310,6 +442,7 @@ trait MarketplaceTrait
         $orders[] = $order;
       }
     }
+    $this->_cursor = (isset($last_read_id)) ? cursor_encode([$last_read_id]) : null;
     return $orders;
   }
 
@@ -391,7 +524,7 @@ trait MarketplaceTrait
         foreach ($order['items'] as $item) {
           $db->query(sprintf("UPDATE posts_products SET quantity = quantity + %s WHERE product_id = %s", secure($item['quantity'], 'int'), secure($item['post']['product']['product_id'], 'int'))) or _error("SQL_ERROR_THROWEN");
         }
-        if (!$order['is_cash_on_delivery']) {
+        if (!$order['is_cash_on_delivery'] && method_exists($this, 'wallet_update_balance')) {
           /* update buyer's wallet balance */
           $this->wallet_update_balance($order['sub_total'], '+', $order['buyer_id']);
           /* wallet transaction */

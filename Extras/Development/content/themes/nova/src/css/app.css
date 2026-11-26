@@ -1,0 +1,346 @@
+/* ==========================================================================
+   Nova — frontend stylesheet
+   Tailwind CSS v4 + FlyonUI. Built by Vite: `npm run build:nova`.
+   Self-contained: nothing here may reference another theme's files.
+   ========================================================================== */
+
+@import "tailwindcss" source(none);
+
+@plugin "flyonui" {
+  themes: false;
+  /* built-in themes off — Nova declares its own below */
+}
+
+@import "flyonui/variants.css";
+
+/* dark: follows Nova's own switch (<html data-theme="…-dark">), not prefers-color-scheme */
+@custom-variant dark (&:where([data-theme$=-dark], [data-theme$=-dark] *));
+
+@import "flyonui/src/vendor/datatables.css";
+
+/* Tabler icons via Iconify — powers the icon-[tabler--name] utilities
+   used by the FlyonUI blocks. Tailwind only emits the icons actually used. */
+@plugin "@iconify/tailwind4";
+
+@import "./_scrollbar.css";
+@import "./_layout.css";
+
+@utility corner-squircle {
+  corner-shape: squircle;
+}
+
+/* --------------------------------------------------------------------------
+   Class sources. `source(none)` above disables auto-detection, so every
+   surface that can emit a class name has to be listed explicitly.
+   Repo root from this file is ../../../../../
+   -------------------------------------------------------------------------- */
+@source "../../templates/**/*.tpl";
+@source "../../js/*.js";
+@source "../../../../../includes/assets/js/core/*.js";
+@source "../../../../../includes/class-pager.php";
+@source "../../../../../includes/functions.php";
+@source "../../../../../includes/functions-system.php";
+@source "../../../../../includes/traits/*.php";
+@source "../../../../../includes/ajax/admin/tools.php";
+@source "../../../../../sockets/node/libs/templates/*.js";
+@source "../../../../../node_modules/flyonui/flyonui.js";
+@import "./_safelist.app.css";
+
+/* --------------------------------------------------------------------------
+   Theme tokens. Day/night is driven by <html data-theme="nova|nova-dark">,
+   set in _head.tpl from $system['theme_mode_night'] and flipped client-side
+   by the .js_theme-mode handler in core.js.
+   -------------------------------------------------------------------------- */
+@plugin "flyonui/theme" {
+  name: "nova";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f5f5f5;
+  --color-base-300: #ececf3;
+  --color-base-content: #11142d;
+
+  --color-primary: #523ae2;
+  --color-primary-content: #ffffff;
+  --color-secondary: #a0d7e7;
+  --color-secondary-content: #11142d;
+  --color-accent: #ff754c;
+  --color-accent-content: #ffffff;
+  --color-neutral: #11142d;
+  --color-neutral-content: #ffffff;
+
+  --color-info: #3f8cff;
+  --color-info-content: #ffffff;
+  --color-success: #4fbf67;
+  --color-success-content: #ffffff;
+  --color-warning: #ffce73;
+  --color-warning-content: #11142d;
+  --color-error: #ff5c5c;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "flyonui/theme" {
+  name: "nova-dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(20.5% 0 0);
+  --color-base-200: oklch(14.5% 0 0);
+  --color-base-300: oklch(26.9% 0 0);
+  --color-base-content: oklch(98.5% 0 0);
+
+  --color-primary: #7c69f2;
+  --color-primary-content: #ffffff;
+  --color-secondary: #a0d7e7;
+  --color-secondary-content: #11142d;
+  --color-accent: #ff754c;
+  --color-accent-content: #ffffff;
+  --color-neutral: oklch(26.9% 0 0);
+  --color-neutral-content: oklch(98.5% 0 0);
+
+  --color-info: oklch(71% 0.128 233);
+  --color-info-content: oklch(16% 0.030 233);
+  --color-success: oklch(71% 0.140 155);
+  --color-success-content: oklch(16% 0.033 155);
+  --color-warning: oklch(79% 0.148 68);
+  --color-warning-content: oklch(18% 0.040 68);
+  --color-error: oklch(70.4% 0.191 22.2);
+  --color-error-content: oklch(14.5% 0 0);
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Typography. Inter/Vazirmatn are loaded by _head.fonts.tpl.
+   -------------------------------------------------------------------------- */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --shadow-surface: 0 2px 4px 0 rgb(0 0 0 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 0 1px 0 rgb(0 0 0 / 0.06);
+  --animate-blink: blink 1s steps(1) infinite;
+  --animate-shimmer: shimmer 3s linear infinite;
+  --animate-reaction-in: reaction-in 0.3s cubic-bezier(0.49, 0, 0.46, 1) both;
+  --animate-reaction-bounce: reaction-bounce 1.3s both infinite;
+  --animate-reaction-heartbeat: reaction-heartbeat 1.3s ease-in-out both infinite;
+  --animate-reaction-swing: reaction-swing 1.3s ease-in-out both infinite;
+  --animate-reaction-pulse: reaction-pulse 1.3s ease-in-out both infinite;
+  --animate-reaction-fade-down: reaction-fade-down 1.3s both infinite;
+  --animate-reaction-head-shake: reaction-head-shake 1.3s ease-in-out both infinite;
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: 150% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
+  }
+
+  /* reactions */
+  @keyframes reaction-in {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes reaction-bounce {
+    from, 20%, 53%, to {
+      animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+      transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+      animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+      transform: translate3d(0, -2px, 0) scaleY(1.1);
+    }
+    70% {
+      animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+      transform: translate3d(0, -1px, 0) scaleY(1.05);
+    }
+    80% {
+      transform: translate3d(0, 0, 0) scaleY(0.95);
+    }
+    90% {
+      transform: translate3d(0, -1px, 0) scaleY(1.02);
+    }
+  }
+
+  @keyframes reaction-heartbeat {
+    0%, 28%, 70% {
+      transform: scale(1);
+    }
+    14%, 42% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes reaction-swing {
+    20% {
+      transform: rotate(2deg);
+    }
+    40%, 80% {
+      transform: rotate(-2deg);
+    }
+    60%, to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes reaction-pulse {
+    from, to {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes reaction-fade-down {
+    from {
+      transform: translate3d(0, -5%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes reaction-head-shake {
+    0%, 50% {
+      transform: translateX(0);
+    }
+    6.5% {
+      transform: translateX(-2px) rotateY(-9deg);
+    }
+    18.5% {
+      transform: translateX(1px) rotateY(7deg);
+    }
+    31.5% {
+      transform: translateX(-1px) rotateY(-5deg);
+    }
+    43.5% {
+      transform: translateX(1px) rotateY(3deg);
+    }
+  }
+}
+
+/* RTL needs no mirrored stylesheet — Tailwind emits logical properties and
+   dir="rtl" on <html> does the rest. Only the font differs. */
+[dir="rtl"] {
+  --font-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* buttons */
+.btn {
+  --text-base: var(--text-sm);
+  --text-base--line-height: var(--text-sm--line-height);
+}
+
+.btn-sm {
+  --text-sm: 0.8125rem;
+}
+
+.btn-lg {
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5;
+}
+
+.btn,
+.btn:hover,
+.btn:focus-visible {
+  --btn-shadow: 0 0 #0000;
+}
+
+/* badges */
+.badge {
+  --text-sm: var(--text-xs);
+  --text-sm--line-height: var(--text-xs--line-height);
+}
+
+.badge-xs {
+  --text-xs: 0.625rem;
+}
+
+.badge-sm {
+  --text-xs: 0.6875rem;
+}
+
+.badge-lg {
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+}
+
+/* dropdowns: FlyonUI mixes the item hover from --color-neutral, which is a
+   surface colour on dark themes and leaves the hover invisible there */
+.dropdown-menu,
+.advance-select-menu {
+  --color-neutral: var(--color-base-content);
+}
+
+/* dropdowns: same border + shadow as the header menus, unless the menu sets its own */
+.dropdown-menu:not([class*="border"]),
+.advance-select-menu:not([class*="border"]) {
+  @apply border border-base-content/15;
+}
+
+.dropdown-menu:not([class*="shadow-"]),
+.advance-select-menu:not([class*="shadow-"]) {
+  @apply shadow-lg shadow-black/10 dark:shadow-black/25;
+}
+
+/* buttons + badges: soft / outline / text variants without a colour fall back
+   to --color-neutral, which disappears on dark themes too */
+.btn-soft,
+.btn-outline,
+.btn-text,
+.badge-soft {
+  --color-neutral: var(--color-base-content);
+}
+
+/* switches: the off track is mixed from --color-neutral and the thumb from
+   base-100, both surface colours on dark themes */
+[data-theme$="-dark"] .switch {
+  color: var(--color-base-content);
+}
+
+[data-theme$="-dark"] .switch:not(:checked) {
+  --input-color: color-mix(in oklab, var(--color-base-content) 22%, transparent);
+}
+
+.js-flyonui-datatable-toolbar .input,
+.js-flyonui-datatable-toolbar .select {
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.js-flyonui-datatable-toolbar .select {
+  width: 4.5rem;
+  padding-inline: 0.625rem 1.5rem;
+}

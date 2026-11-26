@@ -7,6 +7,9 @@
  * @author Zamblek
  */
 
+// this request only reads the session
+define('SESSION_READ_ONLY', true);
+
 // fetch bootstrap
 require('../../../bootstrap.php');
 
@@ -41,7 +44,9 @@ try {
   // [2] check for new requests
   /* check if last friend reuqest deleted already */
   if ($system['friends_enabled']) {
-    if ($_POST['last_request'] != "0" && $user->check_last_friend_request($_POST['last_request'])) {
+    if ($_POST['last_request'] == $user->_data['user_live_requests_lastid']) {
+      /* the page already shows the newest pending request */
+    } elseif ($_POST['last_request'] != "0" && $user->check_last_friend_request($_POST['last_request'])) {
       /* return */
       $return['delete_last_request'] = true;
     } else {
@@ -66,8 +71,8 @@ try {
     $return['conversations'] = $smarty->fetch("ajax.live.conversations.tpl");
   }
 
-  // [4] check for new notifications
-  $notifications = $user->get_notifications(0, $_POST['last_notification']);
+  // [4] check for new notifications (none newer than the page's newest one)
+  $notifications = ($_POST['last_notification'] >= $user->_data['user_live_notifications_lastid']) ? [] : $user->get_notifications(0, $_POST['last_notification']);
   if ($notifications) {
     /* assign variables */
     $smarty->assign('notifications', $notifications);
@@ -89,6 +94,11 @@ try {
       $return['posts_count'] = count($posts);
     }
   }
+
+  // the newest ids the page now has (it sends them back with the next poll)
+  $return['last_request_id'] = max((int) $user->_data['user_live_requests_lastid'], (int) max(array_column($requests ?? [], 'id') ?: [0]));
+  $return['last_notification_id'] = max((int) $user->_data['user_live_notifications_lastid'], (int) max(array_column($notifications ?? [], 'notification_id') ?: [0]));
+  $return['last_message_id'] = (int) $user->_data['user_live_messages_lastid'];
 
   // return & exit
   return_json($return);

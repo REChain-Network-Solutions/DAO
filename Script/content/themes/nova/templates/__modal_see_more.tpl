@@ -1,0 +1,4 @@
+<button type="button" class="see-more js_see-more group/more flex w-full cursor-pointer items-center gap-3 py-1 text-sm font-semibold before:h-px before:flex-1 before:bg-base-300 after:h-px after:flex-1 after:bg-base-300" data-get="{$_get}"{if $_id} data-id="{$_id}"{/if}{if $_uid} data-uid="{$_uid}"{/if}{if $_filter} data-filter="{$_filter}"{/if}{if $_type} data-type="{$_type}"{/if}{if $_tpl} data-tpl="{$_tpl}"{/if}{if $_query != ''} data-query="{$_query|escape}"{/if} data-remove="true">
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-base-200 py-1.5 ps-4 pe-3 transition-colors group-hover/more:bg-primary/10 group-hover/more:text-primary">{__("See More")}<span class="icon-[tabler--chevron-down] size-4" aria-hidden="true"></span></span>
+  <i class="loading loading-spinner loading-sm hidden" aria-hidden="true"></i>
+</button>

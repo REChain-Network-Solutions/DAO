@@ -35,7 +35,7 @@ try {
       }
 
       // create reply
-      $reply = $user->post_forum_reply($_GET['id'], $_POST['text']);
+      $reply = $user->post_forum_reply($_GET['id'], $_POST['text'], (isset($_POST['reply_to_id']) && is_numeric($_POST['reply_to_id'])) ? $_POST['reply_to_id'] : null);
 
       // return
       $return['path'] = $system['system_url'] . '/forums/thread/' . $reply['thread']['thread_id'] . '/' . $reply['thread']['title_url'] . "#reply-" . $reply['reply_id'];

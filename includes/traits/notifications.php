@@ -21,21 +21,27 @@ trait NotificationsTrait
    * @param integer $last_notification_id
    * @return array
    */
-  public function get_notifications($offset = 0, $last_notification_id = null)
+  public function get_notifications($offset = 0, $last_notification_id = null, $cursor = null)
   {
     global $db, $system, $control_panel;
+    $this->_cursor = null;
     if (!isset($control_panel)) {
       $control_panel['url'] = ($this->_is_admin) ? "admincp" : "modcp";
     }
     $offset *= $system['max_results'];
     $notifications = [];
+    /* pages after the first continue from a cursor (the last notification id) instead of an offset */
+    $cursor = ($last_notification_id !== null) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['notifications.notification_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
     if ($last_notification_id !== null) {
-      $get_notifications = $db->query(sprintf("SELECT notifications.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified, pages.page_id, pages.page_title, pages.page_picture FROM notifications LEFT JOIN users ON notifications.from_user_id = users.user_id AND notifications.from_user_type = 'user' LEFT JOIN pages ON notifications.from_user_id = pages.page_id AND notifications.from_user_type = 'page' WHERE notifications.action != 'chat_message' AND (notifications.to_user_id = %s OR notifications.to_user_id = '0') AND notifications.notification_id > %s ORDER BY notifications.notification_id DESC", secure($this->_data['user_id'], 'int'), secure($last_notification_id, 'int')));
+      $get_notifications = $db->query(sprintf("SELECT notifications.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified, pages.page_id, pages.page_title, pages.page_picture FROM notifications LEFT JOIN users ON notifications.from_user_id = users.user_id AND notifications.from_user_type = 'user' LEFT JOIN pages ON notifications.from_user_id = pages.page_id AND notifications.from_user_type = 'page' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE notifications.action != 'chat_message' AND (notifications.to_user_id = %s OR notifications.to_user_id = '0') AND notifications.notification_id > %s ORDER BY notifications.notification_id DESC", secure($this->_data['user_id'], 'int'), secure($last_notification_id, 'int')));
     } else {
-      $get_notifications = $db->query(sprintf("SELECT notifications.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified, pages.page_id, pages.page_title, pages.page_picture FROM notifications LEFT JOIN users ON notifications.from_user_id = users.user_id AND notifications.from_user_type = 'user' LEFT JOIN pages ON notifications.from_user_id = pages.page_id AND notifications.from_user_type = 'page' WHERE notifications.action != 'chat_message' AND notifications.to_user_id = %s OR notifications.to_user_id = '0' ORDER BY notifications.notification_id DESC LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+      $get_notifications = $db->query(sprintf("SELECT notifications.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified, pages.page_id, pages.page_title, pages.page_picture FROM notifications LEFT JOIN users ON notifications.from_user_id = users.user_id AND notifications.from_user_type = 'user' LEFT JOIN pages ON notifications.from_user_id = pages.page_id AND notifications.from_user_type = 'page' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE notifications.action != 'chat_message' AND (notifications.to_user_id = %s OR notifications.to_user_id = '0')" . $cursor_statement . " ORDER BY notifications.notification_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
     }
     if ($get_notifications->num_rows > 0) {
       while ($notification = $get_notifications->fetch_assoc()) {
+        $last_read_id = $notification['notification_id'];
         /* prepare notification name & picture */
         if ($notification['from_user_type'] == "user") {
           $notification['user_picture'] = get_picture($notification['user_picture'], $notification['user_gender']);
@@ -55,7 +61,7 @@ trait NotificationsTrait
         switch ($notification['action']) {
           case 'mass_notification':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $notification['node_url'];
@@ -63,58 +69,76 @@ trait NotificationsTrait
             break;
 
           case 'friend_add':
-            $notification['icon'] = "fa fa-user-plus";
+            $notification['icon'] = "icon-[tabler--user-plus]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("sent you a friend request");
             break;
 
           case 'friend_accept':
-            $notification['icon'] = "fa fa-user-plus";
+            $notification['icon'] = "icon-[tabler--user-plus]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("accepted your friend request");
             break;
 
           case 'follow':
-            $notification['icon'] = "fa fa-rss";
+            $notification['icon'] = "icon-[tabler--rss]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("now following you");
             break;
 
           case 'poke':
-            $notification['icon'] = "fa fa-hand-point-right";
+            $notification['icon'] = "icon-[tabler--hand-finger-right]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("poked you");
             break;
 
+          case 'dating_match':
+            $notification['icon'] = "icon-[tabler--heart-handshake]";
+            $notification['url'] = $system['system_url'] . '/dating/matches';
+            $notification['message'] = __("matched with you in dating");
+            break;
+
+          case 'dating_priority_message':
+            $notification['icon'] = "icon-[tabler--message-heart]";
+            $notification['url'] = $system['system_url'] . '/dating/likes';
+            $notification['message'] = __("sent you a message in dating");
+            break;
+
           case 'gift':
-            $notification['icon'] = "fa fa-gift";
+            $notification['icon'] = "icon-[tabler--gift]";
             $notification['url'] = $system['system_url'] . '/' . $this->_data['user_name'] . '?gift=' . $notification['node_url'];
             $notification['message'] = __("Sent you a gift");
             break;
 
           case 'subscribe_user':
           case 'subscribe_profile':
-            $notification['icon'] = "fa fa-rss";
+            $notification['icon'] = "icon-[tabler--rss]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("subscribed to your profile");
             break;
 
           case 'subscribe_page':
-            $notification['icon'] = "fa fa-rss";
+            $notification['icon'] = "icon-[tabler--rss]";
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'];
             $notification['message'] = __("subscribed to your page") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'subscribe_group':
-            $notification['icon'] = "fa fa-rss";
+            $notification['icon'] = "icon-[tabler--rss]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("subscribed to your group") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'paid_post':
-            $notification['icon'] = "fa fa-dollar-sign";
+            $notification['icon'] = "icon-[tabler--currency-dollar]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("bought your post");
+            break;
+
+          case 'paid_message':
+            $notification['icon'] = "icon-[tabler--currency-dollar]";
+            $notification['url'] = $system['system_url'] . '/messages/' . $notification['node_url'];
+            $notification['message'] = __("bought your paid message");
             break;
 
           case 'react_like':
@@ -143,11 +167,14 @@ trait NotificationsTrait
             } elseif ($notification['node_type'] == "photo_reply") {
               $notification['url'] = $system['system_url'] . '/photos/' . $notification['node_url'] . $notification['notify_id'];
               $notification['message'] = __("reacted to your reply");
+            } elseif ($notification['node_type'] == "story") {
+              $notification['url'] = $system['system_url'] . '/?story=' . $notification['node_url'];
+              $notification['message'] = __("reacted to your story");
             }
             break;
 
           case 'comment':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             if ($notification['node_type'] == "post") {
               $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'] . $notification['notify_id'];
               $notification['message'] = __("commented on your post");
@@ -158,7 +185,7 @@ trait NotificationsTrait
             break;
 
           case 'reply':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             if ($notification['node_type'] == "post") {
               $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'] . $notification['notify_id'];
             } elseif ($notification['node_type'] == "photo") {
@@ -168,19 +195,19 @@ trait NotificationsTrait
             break;
 
           case 'share':
-            $notification['icon'] = "fa fa-share";
+            $notification['icon'] = "icon-[tabler--share-3]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("shared your post");
             break;
 
           case 'vote':
-            $notification['icon'] = "fa fa-check-circle";
-            $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
+            $notification['icon'] = "icon-[tabler--circle-check]";
+            $notification['url'] = ($notification['node_type'] == "story") ? $system['system_url'] . '/?story=' . $notification['node_url'] : $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("voted on your poll");
             break;
 
           case 'mention':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             switch ($notification['node_type']) {
               case 'post':
                 $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
@@ -206,140 +233,151 @@ trait NotificationsTrait
                 $notification['url'] = $system['system_url'] . '/photos/' . $notification['node_url'] . $notification['notify_id'];
                 $notification['message'] = __("mentioned you in a reply");
                 break;
+
+              case 'story':
+                $notification['url'] = $system['system_url'] . '/?story=' . $notification['node_url'];
+                $notification['message'] = __("mentioned you in a story");
+                break;
             }
             break;
 
           case 'profile_visit':
-            $notification['icon'] = "fa fa-eye";
+            $notification['icon'] = "icon-[tabler--eye]";
             $notification['url'] = $system['system_url'] . '/' . $notification['user_name'];
             $notification['message'] = __("visited your profile");
             break;
 
           case 'wall':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("posted on your wall");
             break;
 
           case 'collaborative_post':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("collaborated with you on a post");
             break;
 
           case 'page_invitation':
-            $notification['icon'] = "fa fa-flag";
+            $notification['icon'] = "icon-[tabler--flag]";
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'];
             $notification['message'] = __("invite you to like a page") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'page_admin_addation':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'];
             $notification['message'] = __("added you as admin to") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "' " . __("page");
             break;
 
+          case 'page_message':
+            $notification['icon'] = "icon-[tabler--messages]";
+            $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'];
+            $notification['message'] = __("sent a message to your page") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
+            break;
+
           case 'page_event':
-            $notification['icon'] = "fa fa-calendar";
+            $notification['icon'] = "icon-[tabler--calendar]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'];
             $notification['message'] = __("created new event");
             break;
 
           case 'group_join':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'] . '/settings/requests';
             $notification['message'] = __("asked to join your group") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'group_add':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("added you to") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "' " . __("group");
             break;
 
           case 'group_accept':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("accepted your request to join") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "' " . __("group");
             break;
 
           case 'group_invitation':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("invite you to join a group") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'group_admin_addation':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("added you as admin to") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "' " . __("group");
             break;
 
           case 'group_post_pending':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'] . '?pending';
             $notification['message'] = __("added pending post in your group") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'group_post_approval':
-            $notification['icon'] = "fa fa-users";
+            $notification['icon'] = "icon-[tabler--users]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'];
             $notification['message'] = __("approved your your pending post in group") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'event_invitation':
-            $notification['icon'] = "fa fa-calendar";
+            $notification['icon'] = "icon-[tabler--calendar]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'];
             $notification['message'] = __("invite you to join an event") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'event_post_pending':
-            $notification['icon'] = "fa fa-calendar";
+            $notification['icon'] = "icon-[tabler--calendar]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'] . '?pending';
             $notification['message'] = __("added pending post in your event") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'event_post_approval':
-            $notification['icon'] = "fa fa-calendar";
+            $notification['icon'] = "icon-[tabler--calendar]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'];
             $notification['message'] = __("approved your your pending post in event") . " '" . html_entity_decode($notification['node_type'], ENT_QUOTES) . "'";
             break;
 
           case 'forum_reply':
-            $notification['icon'] = "fa fa-comment";
+            $notification['icon'] = "icon-[tabler--message]";
             $notification['url'] = $system['system_url'] . '/forums/thread/' . $notification['node_url'];
             $notification['message'] = __("replied to your thread");
             break;
 
           case 'money_sent':
-            $notification['icon'] = "fa fa-gift";
+            $notification['icon'] = "icon-[tabler--gift]";
             $notification['url'] = $system['system_url'] . '/wallet';
             $notification['message'] = __("sent you") . " " . print_money($notification['node_type']);
             break;
 
           case 'tip_sent':
-            $notification['icon'] = "fa fa-dollar-sign";
+            $notification['icon'] = "icon-[tabler--currency-dollar]";
             $notification['url'] = $system['system_url'] . '/wallet';
             $notification['message'] = __("Tip you with") . " " . print_money($notification['node_type']);
             break;
 
           case 'coinpayments_complete':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['url'] = $system['system_url'] . '/settings/coinpayments';
             $notification['message'] = __("Your CoinPayments transaction complete successfully");
             break;
 
           case 'bank_transfer':
-            $notification['icon'] = "fa fa-university";
+            $notification['icon'] = "icon-[tabler--building-bank]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/bank';
             $notification['message'] = __("Sent new bank transfer");
             break;
 
           case 'bank_transfer_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/bank';
@@ -348,7 +386,7 @@ trait NotificationsTrait
 
           case 'bank_transfer_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/bank';
@@ -356,14 +394,14 @@ trait NotificationsTrait
             break;
 
           case 'wallet_withdrawal':
-            $notification['icon'] = "fa fa-exchange-alt";
+            $notification['icon'] = "icon-[tabler--arrows-exchange]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/wallet/payments';
             $notification['message'] = __("Sent new wallet withdrawal request");
             break;
 
           case 'wallet_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/wallet/payments';
@@ -372,7 +410,7 @@ trait NotificationsTrait
 
           case 'wallet_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/wallet/payments';
@@ -380,14 +418,14 @@ trait NotificationsTrait
             break;
 
           case 'affiliates_withdrawal':
-            $notification['icon'] = "fa fa-exchange-alt";
+            $notification['icon'] = "icon-[tabler--arrows-exchange]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/affiliates/payments';
             $notification['message'] = __("Sent new affiliates withdrawal request");
             break;
 
           case 'affiliates_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/affiliates/payments';
@@ -396,7 +434,7 @@ trait NotificationsTrait
 
           case 'affiliates_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/affiliates/payments';
@@ -404,14 +442,14 @@ trait NotificationsTrait
             break;
 
           case 'points_withdrawal':
-            $notification['icon'] = "fa fa-piggy-bank";
+            $notification['icon'] = "icon-[tabler--pig-money]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/points/payments';
             $notification['message'] = __("Sent new points withdrawal request");
             break;
 
           case 'points_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/points/payments';
@@ -420,7 +458,7 @@ trait NotificationsTrait
 
           case 'points_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/points/payments';
@@ -428,14 +466,14 @@ trait NotificationsTrait
             break;
 
           case 'market_withdrawal':
-            $notification['icon'] = "fa fa-shopping-bag";
+            $notification['icon'] = "icon-[tabler--shopping-bag]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/market/payments';
             $notification['message'] = __("Sent new market withdrawal request");
             break;
 
           case 'market_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/market';
@@ -444,7 +482,7 @@ trait NotificationsTrait
 
           case 'market_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/market';
@@ -453,7 +491,7 @@ trait NotificationsTrait
 
           case 'market_outofstock':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
@@ -461,32 +499,32 @@ trait NotificationsTrait
             break;
 
           case 'market_order':
-            $notification['icon'] = "fa fa-shopping-bag";
+            $notification['icon'] = "icon-[tabler--shopping-bag]";
             $notification['url'] = $system['system_url'] . '/market/sales?query=' . $notification['node_url'];
             $notification['message'] = __("You got new order");
             break;
 
           case 'market_order_tracking_updated':
-            $notification['icon'] = "fa fa-shopping-bag";
+            $notification['icon'] = "icon-[tabler--shopping-bag]";
             $notification['url'] = $system['system_url'] . '/market/orders?query=' . $notification['node_url'];
             $notification['message'] = __("Your order tracking updated");
             break;
 
           case 'market_order_status_updated':
-            $notification['icon'] = "fa fa-shopping-bag";
+            $notification['icon'] = "icon-[tabler--shopping-bag]";
             $notification['url'] = $system['system_url'] . '/market/orders?query=' . $notification['node_url'];
             $notification['message'] = __("Your order status updated");
             break;
 
           case 'market_order_delivered':
-            $notification['icon'] = "fa fa-shopping-bag";
+            $notification['icon'] = "icon-[tabler--shopping-bag]";
             $notification['url'] = $system['system_url'] . '/market/sales?query=' . $notification['node_url'];
             $notification['message'] = __("Your order delivered");
             break;
 
           case 'market_order_delivered_seller_system':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/market/sales?query=' . $notification['node_url'];
@@ -495,7 +533,7 @@ trait NotificationsTrait
 
           case 'market_order_delivered_buyer_system':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/market/orders?query=' . $notification['node_url'];
@@ -503,26 +541,26 @@ trait NotificationsTrait
             break;
 
           case 'job_application':
-            $notification['icon'] = "fa fa-briefcase";
+            $notification['icon'] = "icon-[tabler--briefcase]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("applied to your job");
             break;
 
           case 'course_application':
-            $notification['icon'] = "fa fa-graduation-cap";
+            $notification['icon'] = "icon-[tabler--school]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("enrolled to your course");
             break;
 
           case 'funding_withdrawal':
-            $notification['icon'] = "fa fa-hand-holding-usd";
+            $notification['icon'] = "icon-[tabler--coin]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/funding/payments';
             $notification['message'] = __("Sent new funding withdrawal request");
             break;
 
           case 'funding_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/funding';
@@ -531,7 +569,7 @@ trait NotificationsTrait
 
           case 'funding_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/funding';
@@ -539,20 +577,20 @@ trait NotificationsTrait
             break;
 
           case 'funding_donation':
-            $notification['icon'] = "fa fa-hand-holding-usd";
+            $notification['icon'] = "icon-[tabler--coin]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("donated to your funding request with") . " " . print_money($notification['node_type']);
             break;
 
           case 'monetization_withdrawal':
-            $notification['icon'] = "fa fa-hand-holding-usd";
+            $notification['icon'] = "icon-[tabler--coin]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/monetization/payments';
             $notification['message'] = __("Sent new monetization withdrawal request");
             break;
 
           case 'monetization_withdrawal_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/monetization';
@@ -561,7 +599,7 @@ trait NotificationsTrait
 
           case 'monetization_withdrawal_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/monetization';
@@ -569,20 +607,20 @@ trait NotificationsTrait
             break;
 
           case 'ads_campaign_added':
-            $notification['icon'] = "fa fa-bullseye";
+            $notification['icon'] = "icon-[tabler--target]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/ads/users_ads';
             $notification['message'] = __("Added new ads campaign");
             break;
 
           case 'ads_campaign_edited':
-            $notification['icon'] = "fa fa-bullseye";
+            $notification['icon'] = "icon-[tabler--target]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/ads/users_ads';
             $notification['message'] = __("Edited ads campaign");
             break;
 
           case 'ads_campaign_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/ads';
@@ -591,7 +629,7 @@ trait NotificationsTrait
 
           case 'ads_campaign_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/ads';
@@ -599,20 +637,20 @@ trait NotificationsTrait
             break;
 
           case 'report':
-            $notification['icon'] = "fa fa-flag";
+            $notification['icon'] = "icon-[tabler--flag]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/reports';
             $notification['message'] = __("reported new content");
             break;
 
           case 'verification_request':
-            $notification['icon'] = "fa fa-check-circle";
+            $notification['icon'] = "icon-[tabler--circle-check]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/verification';
             $notification['message'] = __("sent new verification request");
             break;
 
           case 'verification_request_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/verification';
@@ -621,7 +659,7 @@ trait NotificationsTrait
 
           case 'verification_request_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/settings/verification';
@@ -630,7 +668,7 @@ trait NotificationsTrait
 
           case 'verification_request_page_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'] . '/settings/verification';
@@ -639,7 +677,7 @@ trait NotificationsTrait
 
           case 'verification_request_page_declined':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'] . '/settings/verification';
@@ -647,14 +685,14 @@ trait NotificationsTrait
             break;
 
           case 'live_stream':
-            $notification['icon'] = "fa fa-video";
+            $notification['icon'] = "icon-[tabler--video]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("is live now");
             break;
 
           case 'async_request':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'];
@@ -663,7 +701,7 @@ trait NotificationsTrait
 
           case 'video_converted':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
@@ -671,62 +709,62 @@ trait NotificationsTrait
             break;
 
           case 'page_review':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("reviewed your page");
             break;
 
           case 'page_review_reply':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/pages/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("replied on your review");
             break;
 
           case 'group_review':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("reviewed your group");
             break;
 
           case 'group_review_reply':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/groups/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("replied on your review");
             break;
 
           case 'event_review':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("reviewed your event");
             break;
 
           case 'event_review_reply':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/events/' . $notification['node_url'] . '/reviews';
             $notification['message'] = __("replied on your review");
             break;
 
           case 'post_review':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("reviewed your post");
             break;
 
           case 'post_review_reply':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("replied on your review");
             break;
 
           case 'pending_post':
-            $notification['icon'] = "fa fa-clock";
+            $notification['icon'] = "icon-[tabler--clock]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/posts/pending';
             $notification['message'] = __("sent new post for approval");
             break;
 
           case 'pending_post_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
@@ -734,14 +772,14 @@ trait NotificationsTrait
             break;
 
           case 'pending_user':
-            $notification['icon'] = "fa fa-clock";
+            $notification['icon'] = "icon-[tabler--clock]";
             $notification['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/pending';
             $notification['message'] = __("sent new user for approval");
             break;
 
           case 'pending_user_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'];
@@ -750,7 +788,7 @@ trait NotificationsTrait
 
           case 'pending_payment_approved':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'] . $notification['node_url'];
@@ -758,20 +796,20 @@ trait NotificationsTrait
             break;
 
           case 'chat_message_paid':
-            $notification['icon'] = "fa fa-dollar-sign";
+            $notification['icon'] = "icon-[tabler--currency-dollar]";
             $notification['url'] = $system['system_url'] . '/messages';
             $notification['message'] = __("sent you a paid message");
             break;
 
           case 'merit_received':
-            $notification['icon'] = "fa fa-star";
+            $notification['icon'] = "icon-[tabler--star]";
             $notification['url'] = $system['system_url'] . '/posts/' . $notification['node_url'];
             $notification['message'] = __("sent you a merit");
             break;
 
           case 'merit_sent':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'];
@@ -780,22 +818,31 @@ trait NotificationsTrait
 
           case 'merits_reminder':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'];
             $notification['message'] = __("You still have ") . $notification['node_url'] . __(" merits to send");
             break;
 
+          case 'new_login':
+            $notification['system_notification'] = true;
+            $notification['icon'] = "icon-[tabler--shield-lock]";
+            $notification['user_picture'] = get_picture("", "system");
+            $notification['name'] = __("System") . " " . __("Message");
+            $notification['url'] = $system['system_url'] . '/settings/security/sessions';
+            $notification['message'] = __("New login to your account from") . " " . $notification['node_url'];
+            break;
+
           case 'support_ticket_created':
-            $notification['icon'] = "fa fa-ticket";
+            $notification['icon'] = "icon-[tabler--ticket]";
             $notification['url'] = $system['system_url'] . '/support/tickets/';
             $notification['message'] = __("created a new support ticket");
             break;
 
           case 'support_ticket_updated':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("Support Center");
             $notification['url'] = $system['system_url'] . '/support/tickets/' . $notification['node_url'];
@@ -804,7 +851,7 @@ trait NotificationsTrait
 
           case 'support_ticket_replied':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("Support Center");
             $notification['url'] = $system['system_url'] . '/support/tickets/' . $notification['node_url'];
@@ -813,17 +860,17 @@ trait NotificationsTrait
 
           case 'ccbill_complete':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
-            $notification['icon'] = "fa fa-dollar-sign";
+            $notification['icon'] = "icon-[tabler--currency-dollar]";
             $notification['url'] = $system['system_url'];
             $notification['message'] = __("Your CCBill payment has been completed");
             break;
 
           case 'ccbill_failed':
             $notification['system_notification'] = true;
-            $notification['icon'] = "fa fa-bell";
+            $notification['icon'] = "icon-[tabler--bell]";
             $notification['user_picture'] = get_picture("", "system");
             $notification['name'] = __("System") . " " . __("Message");
             $notification['url'] = $system['system_url'];
@@ -831,10 +878,14 @@ trait NotificationsTrait
             break;
         }
         /* prepare message */
+        if (!$notification['name']) {
+          $notification['name'] = $notification['notification_id'];
+        }
         $notification['full_message'] = html_entity_decode($notification['name'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
         $notifications[] = $notification;
       }
     }
+    $this->_cursor = (isset($last_read_id) && $last_notification_id === null) ? cursor_encode([$last_read_id]) : null;
     return $notifications;
   }
 
@@ -847,7 +898,26 @@ trait NotificationsTrait
    */
   public function post_notification($args = [])
   {
-    global $db, $date, $system, $gettextLoader, $gettextTranslator, $control_panel;
+    global $gettextTranslations;
+    /* keep the viewer's language after notifying a receiver in theirs */
+    $viewer_translations = $gettextTranslations;
+    try {
+      $this->post_notification_send($args);
+    } finally {
+      $gettextTranslations = $viewer_translations;
+    }
+  }
+
+
+  /**
+   * post_notification_send
+   * 
+   * @param array $args
+   * @return void
+   */
+  private function post_notification_send($args = [])
+  {
+    global $db, $date, $system, $gettextTranslations, $control_panel;
     if (!isset($control_panel)) {
       $control_panel['url'] = ($this->_is_admin) ? "admincp" : "modcp";
     }
@@ -880,6 +950,14 @@ trait NotificationsTrait
         $this->_data['user_fullname'] = ($system['show_usernames_enabled']) ? $sender['user_name'] : $sender['user_firstname'] . " " . $sender['user_lastname'];
       }
     }
+    /* get sender name */
+    $sender_fullname = $this->_data['user_fullname'];
+    if (!$system_notification && $from_user_type == 'page') {
+      $get_sender_page = $db->query(sprintf("SELECT page_title FROM pages WHERE page_id = %s", secure($from_user_id, 'int')));
+      if ($get_sender_page->num_rows > 0) {
+        $sender_fullname = $get_sender_page->fetch_assoc()['page_title'];
+      }
+    }
     /* get receiver user */
     $get_receiver = $db->query(sprintf("SELECT * FROM users WHERE user_id = %s", secure($to_user_id, 'int')));
     if ($get_receiver->num_rows == 0) {
@@ -887,18 +965,16 @@ trait NotificationsTrait
     }
     /* insert notification */
     $db->query(sprintf("INSERT INTO notifications (to_user_id, from_user_id, from_user_type, action, node_type, node_url, notify_id, message, time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($to_user_id, 'int'), secure($from_user_id, 'int'), secure($from_user_type), secure($action), secure($node_type), secure($node_url), secure($notify_id), secure($message), secure($date)));
-    /* update notifications counter +1 */
+    /* update notifications counter +1 (and the newest id, so the live poll can tell nothing is new) */
     if ($action != "chat_message") {
-      $db->query(sprintf("UPDATE users SET user_live_notifications_counter = user_live_notifications_counter + 1 WHERE user_id = %s", secure($to_user_id, 'int')));
+      $db->query(sprintf("UPDATE users SET user_live_notifications_counter = user_live_notifications_counter + 1, user_live_notifications_lastid = GREATEST(user_live_notifications_lastid, %s) WHERE user_id = %s", secure($db->insert_id, 'int', false), secure($to_user_id, 'int')));
     }
     if ($system['onesignal_notification_enabled'] || $system['onesignal_messenger_notification_enabled'] || $system['onesignal_timeline_notification_enabled'] || $system['email_notifications']) {
       /* prepare receiver */
       $receiver = $get_receiver->fetch_assoc();
       $receiver['name'] = ($system['show_usernames_enabled']) ? $receiver['user_name'] : $receiver['user_firstname'] . " " . $receiver['user_lastname'];
       /* set notification language to receiver's language */
-      if ($receiver['user_language'] != DEFAULT_LOCALE) {
-        $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $receiver['user_language'] . '/LC_MESSAGES/messages.po');
-      }
+      $gettextTranslations = translations_load($receiver['user_language']);
       /* prepare notification notify_id */
       $notify_id = ($notify_id) ? "?notify_id=" . $notify_id : "";
       /* prepare notification node_url */
@@ -936,6 +1012,16 @@ trait NotificationsTrait
           $notification['message'] = __("poked you");
           break;
 
+        case 'dating_match':
+          $notification['url'] = $system['system_url'] . '/dating/matches';
+          $notification['message'] = __("matched with you in dating");
+          break;
+
+        case 'dating_priority_message':
+          $notification['url'] = $system['system_url'] . '/dating/likes';
+          $notification['message'] = __("sent you a message in dating");
+          break;
+
         case 'gift':
           $notification['url'] = $system['system_url'] . '/' . $this->_data['user_name'] . '?gift=' . $node_url;
           $notification['message'] = __("Sent you a gift");
@@ -960,6 +1046,11 @@ trait NotificationsTrait
         case 'paid_post':
           $notification['url'] = $system['system_url'] . '/posts/' . $node_url;
           $notification['message'] = __("paid to see your post");
+          break;
+
+        case 'paid_message':
+          $notification['url'] = $system['system_url'] . '/messages/' . $node_url;
+          $notification['message'] = __("paid to unlock your message");
           break;
 
         case 'react_like':
@@ -987,6 +1078,9 @@ trait NotificationsTrait
           } elseif ($node_type == "photo_reply") {
             $notification['url'] = $system['system_url'] . '/photos/' . $node_url . $notify_id;
             $notification['message'] = __("reacted to your reply");
+          } elseif ($node_type == "story") {
+            $notification['url'] = $system['system_url'] . '/?story=' . $node_url;
+            $notification['message'] = __("reacted to your story");
           }
           break;
 
@@ -1015,7 +1109,7 @@ trait NotificationsTrait
           break;
 
         case 'vote':
-          $notification['url'] = $system['system_url'] . '/posts/' . $node_url;
+          $notification['url'] = ($node_type == "story") ? $system['system_url'] . '/?story=' . $node_url : $system['system_url'] . '/posts/' . $node_url;
           $notification['message'] = __("voted on your poll");
           break;
 
@@ -1045,6 +1139,11 @@ trait NotificationsTrait
               $notification['url'] = $system['system_url'] . '/photos/' . $node_url . $notify_id;
               $notification['message'] = __("mentioned you in a reply");
               break;
+
+            case 'story':
+              $notification['url'] = $system['system_url'] . '/?story=' . $node_url;
+              $notification['message'] = __("mentioned you in a story");
+              break;
           }
           break;
 
@@ -1071,6 +1170,11 @@ trait NotificationsTrait
         case 'page_admin_addation':
           $notification['url'] = $system['system_url'] . '/pages/' . $node_url;
           $notification['message'] = __("added you as admin to") . " '" . html_entity_decode($node_type, ENT_QUOTES) . "' " . __("page");
+          break;
+
+        case 'page_message':
+          $notification['url'] = $system['system_url'] . '/pages/' . $node_url;
+          $notification['message'] = __("sent a message to your page") . " '" . html_entity_decode($node_type, ENT_QUOTES) . "'";
           break;
 
         case 'page_event':
@@ -1453,6 +1557,11 @@ trait NotificationsTrait
           $notification['message'] = __("You still have ") . $node_url . __(" merits to send");
           break;
 
+        case 'new_login':
+          $notification['url'] = $system['system_url'] . '/settings/security/sessions';
+          $notification['message'] = __("New login to your account from") . " " . $node_url;
+          break;
+
         case 'support_ticket_created':
           $notification['url'] = $system['system_url'] . '/support/tickets/';
           $notification['message'] = __("created a new support ticket");
@@ -1479,10 +1588,10 @@ trait NotificationsTrait
           break;
       }
       /* prepare notification for web */
-      $notification['full_message'] = html_entity_decode($this->_data['user_fullname'], ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
+      $notification['full_message'] = html_entity_decode($sender_fullname, ENT_QUOTES) . " " . html_entity_decode($notification['message'], ENT_QUOTES);
       /* prepare notification for mobile apps */
       $notification_mobile = $notification;
-      $notification_mobile['headings'] = $this->_data['user_fullname'];
+      $notification_mobile['headings'] = $sender_fullname;
       $notification_mobile['full_message'] = $notification_mobile['message'];
       /* onesignal push notifications */
       $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s AND (session_onesignal_user_id IS NOT NULL OR session_onesignal_user_id != '')", secure($receiver['user_id'], 'int')));
@@ -1548,6 +1657,9 @@ trait NotificationsTrait
           } elseif ($node_type == "photo_reply") {
             $notification['url'] = $system['system_url'] . '/photos/' . $node_url . $notify_id;
             $notification['message'] = __("reacted to your reply");
+          } elseif ($node_type == "story") {
+            $notification['url'] = $system['system_url'] . '/?story=' . $node_url;
+            $notification['message'] = __("reacted to your story");
           }
           break;
 
@@ -1612,6 +1724,11 @@ trait NotificationsTrait
             case 'reply_photo':
               $notification['url'] = $system['system_url'] . '/photos/' . $node_url . $notify_id;
               $notification['message'] = __("mentioned you in a reply");
+              break;
+
+            case 'story':
+              $notification['url'] = $system['system_url'] . '/?story=' . $node_url;
+              $notification['message'] = __("mentioned you in a story");
               break;
           }
           break;
@@ -1786,8 +1903,8 @@ trait NotificationsTrait
     global $db, $date;
     /* insert notification */
     $db->query(sprintf("INSERT INTO notifications (to_user_id, from_user_id, action, node_type, node_url, message, time, seen) VALUES ('0', %s, 'mass_notification', 'notification', %s, %s, %s, '1')", secure($this->_data['user_id'], 'int'), secure($url), secure($message), secure($date)));
-    /* update notifications counter +1 */
-    $db->query(sprintf("UPDATE users SET user_live_notifications_counter = user_live_notifications_counter + 1"));
+    /* update notifications counter +1 (and the newest id, so the live poll can tell nothing is new) */
+    $db->query(sprintf("UPDATE users SET user_live_notifications_counter = user_live_notifications_counter + 1, user_live_notifications_lastid = GREATEST(user_live_notifications_lastid, %s)", secure($db->insert_id, 'int', false)));
   }
 
 

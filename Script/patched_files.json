@@ -1,0 +1,31 @@
+{
+ "product": "sngine",
+ "releases": {
+  "v5.0": {
+   "since": "6b1af5ddafe98a54032f606134ceb3fa0663a131",
+   "zip": "sngine-v5.0-patch.zip",
+   "updated": "2026-10-31",
+   "files": [
+    "admin.php",
+    "content/themes/nova/templates/_header.explore.tpl",
+    "content/themes/nova/templates/_js_templates.payments.tpl",
+    "content/themes/nova/templates/admin.colored_posts.tpl",
+    "content/themes/nova/templates/admin.license.tpl",
+    "content/themes/nova/templates/index.newsfeed.tpl",
+    "content/uploads/.htaccess",
+    "includes/ajax/admin/pro.php",
+    "includes/assets/js/core/admin.js",
+    "includes/assets/js/core/stories.js",
+    "includes/class-user.php",
+    "includes/functions-payments.php",
+    "includes/functions-system.php",
+    "includes/functions.php",
+    "includes/traits/hashtags.php",
+    "includes/traits/merits.php",
+    "includes/traits/photos.php",
+    "includes/traits/posts.php",
+    "includes/traits/wallet.php"
+   ]
+  }
+ }
+}

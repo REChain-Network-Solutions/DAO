@@ -1,0 +1,9 @@
+{__("Hi")},
+
+{$user->_data['user_fullname']} {__("has invited you to join")} {__($system['system_title'])}.
+
+{__("Click the link below to create your free account")}:
+{$system['system_url']}/signup?ref={$user->_data['user_name']}&invitation_code={$code}
+
+---
+{__($system['system_title'])} — {$system['system_url']}

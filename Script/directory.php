@@ -50,11 +50,17 @@ try {
       if ($system['users_approval_enabled']) {
         $approval_statement = " AND users.user_approved = '1' ";
       }
-      $get_rows = $db->query("SELECT * FROM users WHERE users.user_banned = '0' " . $approval_statement . $limit_query);
+      $get_rows = paged_query("SELECT * FROM users WHERE users.user_banned = '0' " . $approval_statement, 'users.user_id', $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
         /* get the connection between the viewer & the target */
         $row['connection'] = $user->connection($row['user_id']);
+        /* get mutual friends */
+        if ($user->_logged_in && $row['user_id'] != $user->_data['user_id']) {
+          $mutual_friends = $user->get_mutual_friends_preview($row['user_id']);
+          $row['mutual_friends_count'] = $mutual_friends['count'];
+          $row['mutual_friends'] = $mutual_friends['friends'];
+        }
         $rows[] = $row;
       }
       /* assign variables */
@@ -78,7 +84,7 @@ try {
 
       // get posts
       $rows = [];
-      $get_rows = $db->query("SELECT posts.post_id FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND (posts.user_type != 'user' OR IFNULL(users.user_banned, 0) = 0) AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) " . $limit_query);
+      $get_rows = paged_query("SELECT posts.post_id FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' LEFT JOIN `groups` ON posts.in_group = '1' AND posts.group_id = `groups`.group_id LEFT JOIN `events` ON posts.in_event = '1' AND posts.event_id = `events`.event_id WHERE posts.privacy = 'public' AND (posts.pre_approved = '1' OR posts.has_approved = '1') AND (posts.user_type != 'user' OR IFNULL(users.user_banned, 0) = 0) AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ", 'posts.post_id', $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row = $user->get_post($row['post_id']);
         if ($row) {
@@ -111,7 +117,7 @@ try {
 
       // get pages
       $rows = [];
-      $get_rows = $db->query("SELECT * FROM pages " . $limit_query);
+      $get_rows = paged_query("SELECT * FROM pages ", 'pages.page_id', $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row['page_picture'] = get_picture($row['page_picture'], 'page');
         /* check if the viewer liked the page */
@@ -150,7 +156,7 @@ try {
 
       // get groups
       $rows = [];
-      $get_rows = $db->query("SELECT * FROM `groups` WHERE group_privacy = 'public' " . $limit_query);
+      $get_rows = paged_query("SELECT * FROM `groups` WHERE group_privacy = 'public' ", '`groups`.group_id', $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row['group_picture'] = get_picture($row['group_picture'], 'group');
         /* check if the viewer joined the group */
@@ -183,7 +189,7 @@ try {
 
       // get events
       $rows = [];
-      $get_rows = $db->query("SELECT * FROM `events` WHERE event_privacy = 'public' " . $limit_query);
+      $get_rows = paged_query("SELECT * FROM `events` WHERE event_privacy = 'public' ", '`events`.event_id', $limit_query);
       while ($row = $get_rows->fetch_assoc()) {
         $row['event_picture'] = get_picture($row['event_cover'], 'event');
         /* check if the viewer joined the event */
@@ -196,35 +202,7 @@ try {
       break;
 
     case 'games':
-      // games enabled
-      if (!$system['games_enabled']) {
-        _error(404);
-      }
-
-      // page header
-      page_header(__("Games Directory") . ' | ' . __($system['system_title']), __($system['system_description_directory']));
-
-      // pager config
-      require('includes/class-pager.php');
-      $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-      $total = $db->query("SELECT COUNT(*) as count FROM games");
-      $params['total_items'] = $total->fetch_assoc()['count'];
-      $params['items_per_page'] = $system['max_results'];
-      $params['url'] = $system['system_url'] . '/directory/' . 'games' . '/%s';
-      $pager = new Pager($params);
-      $limit_query = $pager->getLimitSql();
-
-      // get games
-      $rows = [];
-      $get_rows = $db->query("SELECT * FROM games " . $limit_query);
-      while ($row = $get_rows->fetch_assoc()) {
-        $row['thumbnail'] = get_picture($row['thumbnail'], 'game');
-        $row['title_url'] = get_url_text($row['title']);
-        $rows[] = $row;
-      }
-      /* assign variables */
-      $smarty->assign('rows', $rows);
-      $smarty->assign('pager', $pager->getPager());
+      redirect('/games');
       break;
 
     default:
@@ -235,7 +213,7 @@ try {
   $smarty->assign('view', $_GET['view']);
 
   // get ads campaigns
-  $ads_campaigns = $user->ads_campaigns();
+  $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : [];
   /* assign variables */
   $smarty->assign('ads_campaigns', $ads_campaigns);
 

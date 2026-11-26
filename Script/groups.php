@@ -49,13 +49,16 @@ try {
 
       // get promoted groups
       if ($system['packages_enabled']) {
-        $smarty->assign('promoted_groups', $user->get_groups(['promoted' => true, 'results' => 4]));
+        $smarty->assign('promoted_groups', $user->get_groups(['promoted' => true, 'results' => 3]));
       }
 
       // get new groups
-      $groups = $user->get_groups(['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $groups = $user->get_groups($args);
+      $total = $user->get_groups(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('groups', $groups);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "suggested_groups");
       $smarty->assign('view_title', __("Discover"));
       break;
@@ -87,9 +90,12 @@ try {
       $smarty->assign('categories', $categories);
 
       // get category groups
-      $groups = $user->get_groups(['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $groups = $user->get_groups($args);
+      $total = $user->get_groups(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('groups', $groups);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "category_groups");
       $smarty->assign('view_title', __($current_category['category_name']));
       break;
@@ -102,9 +108,12 @@ try {
       page_header(__("Joined Groups") . ' | ' . __($system['system_title']));
 
       // get joined groups
-      $groups = $user->get_groups(['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $groups = $user->get_groups($args);
+      $total = $user->get_groups(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('groups', $groups);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "joined_groups");
       $smarty->assign('view_title', __("Joined Groups"));
       break;
@@ -117,9 +126,12 @@ try {
       page_header(__("My Groups") . ' | ' . __($system['system_title']));
 
       // get managed groups
-      $groups = $user->get_groups(['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $groups = $user->get_groups($args);
+      $total = $user->get_groups(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('groups', $groups);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "groups");
       $smarty->assign('view_title', __("My Groups"));
       break;

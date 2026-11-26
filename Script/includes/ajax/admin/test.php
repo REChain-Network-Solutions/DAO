@@ -41,6 +41,33 @@ try {
       return_json(['success' => true, 'message' => __("Test SMS has been sent to") . ": " . $system['system_phone']]);
       break;
 
+    case 'redis':
+      /* test */
+      $settings = redis_settings();
+      $redis = redis_connect($settings);
+      $start = hrtime(true);
+      $redis->ping();
+      $latency = round((hrtime(true) - $start) / 1e6, 2);
+      $version = $redis->info('server')['Server']['redis_version'] ?? '';
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!") . " " . __("Redis") . " " . $version . " (" . $latency . " " . __("ms") . ")"]);
+      break;
+
+    case 'redis_flush':
+      /* flush */
+      $settings = redis_settings();
+      $deleted = redis_flush(redis_connect($settings), $settings['prefix']);
+      /* return */
+      return_json(['success' => true, 'message' => $deleted . " " . __("cached keys deleted")]);
+      break;
+
+    case 'sitemap_cache':
+      /* clear */
+      $user->sitemap_reset();
+      /* return */
+      return_json(['success' => true, 'message' => __("Sitemap cache has been cleared")]);
+      break;
+
     case 'chat_socket_status':
       /* test */
       $response = socket_io_action('status');
@@ -76,6 +103,13 @@ try {
       return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
       break;
 
+    case 'ipinfo':
+      /* test */
+      ipinfo_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
     case 'ffmpeg':
       /* test */
       $response = ffmpeg_test();
@@ -92,7 +126,7 @@ try {
 
     case 's3-agora':
       /* test */
-      aws_s3_test($system['agora_s3_bucket'], $system['agora_s3_region'], $system['agora_s3_key'], $system['agora_s3_secret']);
+      aws_s3_test($system['agora_s3_bucket'], $system['agora_s3_region'], $system['agora_s3_key'], $system['agora_s3_secret'], $system['agora_s3_endpoint']);
       /* return */
       return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
       break;
@@ -142,6 +176,27 @@ try {
     case 'pushr':
       /* test */
       pushr_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
+    case 'ovh':
+      /* test */
+      ovh_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
+    case 'bunny':
+      /* test */
+      bunny_test();
+      /* return */
+      return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
+      break;
+
+    case 'storj':
+      /* test */
+      storj_test();
       /* return */
       return_json(['success' => true, 'message' => __("Connection established Successfully!")]);
       break;

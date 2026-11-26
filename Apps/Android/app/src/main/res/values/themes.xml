@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Launch theme: the system splash screen. Colors and logo come from sngine_config.xml. -->
+    <style name="Theme.Sngine.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Sngine</item>
+    </style>
+
+    <!-- App theme after the splash screen. -->
+    <style name="Theme.Sngine" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="android:windowBackground">@color/system_bar_background</item>
+    </style>
+
+</resources>

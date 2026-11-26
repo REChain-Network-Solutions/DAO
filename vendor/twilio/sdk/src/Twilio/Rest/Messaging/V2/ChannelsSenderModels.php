@@ -44,7 +44,7 @@ abstract class ChannelsSenderModels
     }
 
     /**
-     * @property string|null $name The name of the sender. Required for WhatsApp senders and must follow [Meta's display name guidelines](https://www.facebook.com/business/help/757569725593362).
+     * @property string|null $name The name of the sender. Required for WhatsApp senders and must follow [Meta's display name guidelines](https://www.facebook.com/business/help/757569725593362). On update, a WhatsApp sender's name is not changed synchronously: it is submitted to Meta for review, and `profile.name` continues to report the current active name until Meta approves the new one and the sender is automatically re-registered. Track progress with `pending_display_name_status` on Fetch Sender, and see `display_name_status` on the update response for the immediate outcome. Re-submitting the same name is how you retry applying a name Meta has already approved, for example after correcting the sender's two-step verification PIN. Meta permits a limited number of display name changes per 30-day period.
      * @property string|null $about The profile about text for the sender.
      * @property string|null $address The address of the sender.
      * @property string|null $description The description of the sender.
@@ -66,6 +66,7 @@ abstract class ChannelsSenderModels
 
     /**
      * @property string $senderId The ID of the sender in `whatsapp:<E.164_PHONE_NUMBER>` format.
+     * @property string|null $friendlyName Optional display label for the sender in the Twilio Console.
      * @property MessagingV2ChannelsSenderConfiguration $configuration
      * @property MessagingV2ChannelsSenderWebhook $webhook
      * @property MessagingV2ChannelsSenderProfile $profile
@@ -76,6 +77,7 @@ abstract class ChannelsSenderModels
     }
 
     /**
+     * @property string|null $friendlyName Optional display label for the sender in the Twilio Console.
      * @property MessagingV2ChannelsSenderConfiguration $configuration
      * @property MessagingV2ChannelsSenderWebhook $webhook
      * @property MessagingV2ChannelsSenderProfile $profile
@@ -196,7 +198,7 @@ class MessagingV2ChannelsSenderWebhook implements \JsonSerializable
 class MessagingV2ChannelsSenderProfile implements \JsonSerializable
 {
     /**
-     * @property string|null $name The name of the sender. Required for WhatsApp senders and must follow [Meta's display name guidelines](https://www.facebook.com/business/help/757569725593362).
+     * @property string|null $name The name of the sender. Required for WhatsApp senders and must follow [Meta's display name guidelines](https://www.facebook.com/business/help/757569725593362). On update, a WhatsApp sender's name is not changed synchronously: it is submitted to Meta for review, and `profile.name` continues to report the current active name until Meta approves the new one and the sender is automatically re-registered. Track progress with `pending_display_name_status` on Fetch Sender, and see `display_name_status` on the update response for the immediate outcome. Re-submitting the same name is how you retry applying a name Meta has already approved, for example after correcting the sender's two-step verification PIN. Meta permits a limited number of display name changes per 30-day period.
      * @property string|null $about The profile about text for the sender.
      * @property string|null $address The address of the sender.
      * @property string|null $description The description of the sender.
@@ -301,16 +303,19 @@ class MessagingV2ChannelsSenderRequestsCreate implements \JsonSerializable
 {
     /**
      * @property string $senderId The ID of the sender in `whatsapp:<E.164_PHONE_NUMBER>` format.
+     * @property string|null $friendlyName Optional display label for the sender in the Twilio Console.
      * @property MessagingV2ChannelsSenderConfiguration $configuration
      * @property MessagingV2ChannelsSenderWebhook $webhook
      * @property MessagingV2ChannelsSenderProfile $profile
     */
         protected $senderId;
+        protected $friendlyName;
         protected $configuration;
         protected $webhook;
         protected $profile;
     public function __construct(array $payload = []) {
         $this->senderId = Values::array_get($payload, 'sender_id');
+        $this->friendlyName = Values::array_get($payload, 'friendly_name');
         $this->configuration = Values::array_get($payload, 'configuration');
         $this->webhook = Values::array_get($payload, 'webhook');
         $this->profile = Values::array_get($payload, 'profile');
@@ -324,8 +329,13 @@ class MessagingV2ChannelsSenderRequestsCreate implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'sender_id' => $this->senderId
         ];
+        if (isset($this->senderId)) {
+            $jsonString['sender_id'] = $this->senderId;
+        }
+        if (isset($this->friendlyName)) {
+            $jsonString['friendly_name'] = $this->friendlyName;
+        }
         if (isset($this->configuration)) {
             $jsonString['configuration'] = $this->configuration;
         }
@@ -342,14 +352,17 @@ class MessagingV2ChannelsSenderRequestsCreate implements \JsonSerializable
 class MessagingV2ChannelsSenderRequestsUpdate implements \JsonSerializable
 {
     /**
+     * @property string|null $friendlyName Optional display label for the sender in the Twilio Console.
      * @property MessagingV2ChannelsSenderConfiguration $configuration
      * @property MessagingV2ChannelsSenderWebhook $webhook
      * @property MessagingV2ChannelsSenderProfile $profile
     */
+        protected $friendlyName;
         protected $configuration;
         protected $webhook;
         protected $profile;
     public function __construct(array $payload = []) {
+        $this->friendlyName = Values::array_get($payload, 'friendly_name');
         $this->configuration = Values::array_get($payload, 'configuration');
         $this->webhook = Values::array_get($payload, 'webhook');
         $this->profile = Values::array_get($payload, 'profile');
@@ -364,6 +377,9 @@ class MessagingV2ChannelsSenderRequestsUpdate implements \JsonSerializable
     {
         $jsonString = [
         ];
+        if (isset($this->friendlyName)) {
+            $jsonString['friendly_name'] = $this->friendlyName;
+        }
         if (isset($this->configuration)) {
             $jsonString['configuration'] = $this->configuration;
         }

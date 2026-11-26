@@ -24,6 +24,12 @@ trait PublisherTrait
   {
     global $db, $system, $date;
 
+    /* photo layout */
+    $photo_layout = $args['photo_layout'] ?? 'classic';
+    if (!is_string($photo_layout) || !isset(get_photo_layout_presets()[$photo_layout])) {
+      throw new ValidationException(__("Please select a valid photo layout"));
+    }
+
     /* check posts permission */
     if (!$this->_data['can_publish_posts']) {
       throw new Exception(__("You don't have the permission to do this"));
@@ -44,8 +50,9 @@ trait PublisherTrait
       }
     }
 
-    /* prepare returned post */
+    /* prepare post */
     $post = [];
+    $post['photo_layout'] = $photo_layout;
     $post['user_id'] = $this->_data['user_id'];
     $post['user_type'] = "user";
     $post['in_wall'] = 0;
@@ -58,11 +65,6 @@ trait PublisherTrait
     $post['event_approved'] = 0;
 
     $post['author_id'] = $this->_data['user_id'];
-    $post['post_author_picture'] = $this->_data['user_picture'];
-    $post['post_author_url'] = $system['system_url'] . '/' . $this->_data['user_name'];
-    $post['post_author_name'] = $this->_data['user_fullname'];
-    $post['post_author_verified'] = $this->_data['user_verified'];
-    $post['post_author_online'] = false;
 
     /* check the handle */
     if ($args['handle'] == "user") {
@@ -81,8 +83,6 @@ trait PublisherTrait
       }
       $post['in_wall'] = 1;
       $post['wall_id'] = $args['id'];
-      $post['wall_username'] = $_user['user_name'];
-      $post['wall_fullname'] = ($system['show_usernames_enabled']) ? $_user['user_name'] : $_user['user_firstname'] . " " . $_user['user_lastname'];
     } elseif ($args['handle'] == "page") {
       /* check if the page is valid */
       $check_page = $db->query(sprintf("SELECT * FROM pages WHERE page_id = %s", secure($args['id'], 'int')));
@@ -96,10 +96,6 @@ trait PublisherTrait
       }
       $post['user_id'] = $_page['page_id'];
       $post['user_type'] = "page";
-      $post['post_author_picture'] = get_picture($_page['page_picture'], "page");
-      $post['post_author_url'] = $system['system_url'] . '/pages/' . $_page['page_name'];
-      $post['post_author_name'] = $_page['page_title'];
-      $post['post_author_verified'] = $this->_data['page_verified'];
     } elseif ($args['handle'] == "group") {
       /* check if the group is valid & the viewer is group member (approved) */
       $check_group = $db->query(sprintf("SELECT `groups`.* FROM `groups` INNER JOIN groups_members ON `groups`.group_id = groups_members.group_id WHERE groups_members.approved = '1' AND groups_members.user_id = %s AND groups_members.group_id = %s", secure($this->_data['user_id'], 'int'), secure($args['id'], 'int')));
@@ -144,17 +140,6 @@ trait PublisherTrait
         }
         $post['user_id'] = $_page['page_id'];
         $post['user_type'] = "page";
-        $post['post_author_picture'] = get_picture($_page['page_picture'], "page");
-        $post['post_author_url'] = $system['system_url'] . '/pages/' . $_page['page_name'];
-        $post['post_author_name'] = $_page['page_title'];
-        $post['post_author_verified'] = $this->_data['page_verified'];
-      }
-    }
-
-    /* check the user_type to set user online or not */
-    if ($post['user_type'] == "user") {
-      if ($this->_data['user_chat_enabled']) {
-        $post['post_author_online'] = true;
       }
     }
 
@@ -170,10 +155,10 @@ trait PublisherTrait
     $args['message'] = strip_tags($args['message'], '<p><br><b><strong><i><em><u><s><del><blockquote><ul><ol><li><h1><h2><span>');
     $post['text'] = $args['message'];
     $post['location'] = $args['location'];
+    $post['has_coordinates'] = !is_empty($args['location']) && valid_location($args['latitude'] ?? null, $args['longitude'] ?? null);
     $post['privacy'] = $args['privacy'];
     $post['is_schedule'] = (isset($args['is_schedule'])) ? $args['is_schedule'] : '0';
     $post['time'] = ($post['is_schedule']) ? $args['schedule_date'] : $date;
-    $post['still_scheduled'] = ($post['is_schedule']) ? '1' : '0';
     $post['is_anonymous'] = (isset($args['is_anonymous'])) ? $args['is_anonymous'] : '0';
     $post['for_adult'] = (isset($args['for_adult'])) ? $args['for_adult'] : '0';
     $post['tips_enabled'] = (isset($args['tips_enabled'])) ? $args['tips_enabled'] : '0';
@@ -221,24 +206,11 @@ trait PublisherTrait
     $post['is_collaborative'] = (isset($args['is_collaborative'])) ? $args['is_collaborative'] : '0';
     $post['collaborative_users_ids'] = $args['collaborative_users_ids'];
     $post['collaborative_percent'] = $args['collaborative_percent'];
-    $post['reaction_like_count'] = 0;
-    $post['reaction_love_count'] = 0;
-    $post['reaction_haha_count'] = 0;
-    $post['reaction_yay_count'] = 0;
-    $post['reaction_wow_count'] = 0;
-    $post['reaction_sad_count'] = 0;
-    $post['reaction_angry_count'] = 0;
-    $post['reactions_total_count'] = 0;
-    $post['comments'] = 0;
-    $post['shares'] = 0;
-    $post['views'] = 0;
     $post['processing'] = '0';
-    $post['can_get_details'] = '1';
 
     /* post feeling */
     $post['feeling_action'] = '';
     $post['feeling_value'] = '';
-    $post['feeling_icon'] = '';
     if (!is_empty($args['feeling_action']) && !is_empty($args['feeling_value'])) {
       if ($args['feeling_action'] != "Feeling") {
         $_feeling_icon = get_feeling_icon($args['feeling_action'], get_feelings());
@@ -248,7 +220,6 @@ trait PublisherTrait
       if ($_feeling_icon) {
         $post['feeling_action'] = $args['feeling_action'];
         $post['feeling_value'] = $args['feeling_value'];
-        $post['feeling_icon'] = $_feeling_icon;
       }
     }
 
@@ -367,6 +338,8 @@ trait PublisherTrait
           colored_pattern, 
           time, 
           location, 
+          location_latitude, 
+          location_longitude, 
           privacy, 
           text, 
           feeling_action, 
@@ -386,8 +359,9 @@ trait PublisherTrait
           pre_approved, 
           has_approved, 
           post_latitude, 
-          post_longitude
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+          post_longitude,
+          photo_layout
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
       secure($post['user_id'], 'int'),
       secure($post['user_type']),
       secure($post['in_wall'], 'int'),
@@ -404,6 +378,8 @@ trait PublisherTrait
       secure($post['colored_pattern'], 'int'),
       secure($post['time']),
       secure($post['location']),
+      secure($post['has_coordinates'] ? round((float) $args['latitude'], 7) : 'null'),
+      secure($post['has_coordinates'] ? round((float) $args['longitude'], 7) : 'null'),
       secure($post['privacy']),
       secure($post['text']),
       secure($post['feeling_action']),
@@ -423,9 +399,11 @@ trait PublisherTrait
       secure($post['pre_approved']),
       secure($post['has_approved']),
       secure($this->_data['user_latitude']),
-      secure($this->_data['user_longitude'])
+      secure($this->_data['user_longitude']),
+      secure($post['photo_layout'])
     ));
     $post['post_id'] = $db->insert_id;
+    $this->index_post_location($post['post_id'], $post['post_type']);
 
     /* remove pending uploads */
     remove_pending_uploads([$post['subscriptions_image'], $post['paid_image']]);
@@ -433,25 +411,10 @@ trait PublisherTrait
     /* insert the post [link] */
     if ($post['post_type'] == 'link') {
       $db->query(sprintf("INSERT INTO posts_links (post_id, source_url, source_host, source_title, source_text, source_thumbnail) VALUES (%s, %s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['link']->source_url), secure($args['link']->source_host), secure($args['link']->source_title), secure($args['link']->source_text), secure($args['link']->source_thumbnail)));
-      $post['link']['link_id'] = $db->insert_id;
-      $post['link']['post_id'] = $post['post_id'];
-      $post['link']['source_url'] = $args['link']->source_url;
-      $post['link']['source_host'] = $args['link']->source_host;
-      $post['link']['source_title'] = $args['link']->source_title;
-      $post['link']['source_text'] = $args['link']->source_text;
-      $post['link']['source_thumbnail'] = $args['link']->source_thumbnail;
     }
     /* insert the post [media] */
     if ($post['post_type'] == 'media') {
       $db->query(sprintf("INSERT INTO posts_media (post_id, source_url, source_provider, source_type, source_title, source_text, source_html, source_thumbnail) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['link']->source_url), secure($args['link']->source_provider), secure($args['link']->source_type), secure($args['link']->source_title), secure($args['link']->source_text), secure($args['link']->source_html), secure($args['link']->source_thumbnail)));
-      $post['media']['media_id'] = $db->insert_id;
-      $post['media']['post_id'] = $post['post_id'];
-      $post['media']['source_url'] = $args['link']->source_url;
-      $post['media']['source_type'] = $args['link']->source_type;
-      $post['media']['source_provider'] = $args['link']->source_provider;
-      $post['media']['source_title'] = $args['link']->source_title;
-      $post['media']['source_text'] = $args['link']->source_text;
-      $post['media']['source_html'] = $args['link']->source_html;
     }
     /* insert the post [photos] */
     if ($post['post_type'] == 'photos' || ($post['post_type'] == 'combo' && $args['photos'])) {
@@ -496,24 +459,9 @@ trait PublisherTrait
         }
         $album_id = $this->_data['user_album_timeline'];
       }
-      foreach ($args['photos'] as $photo) {
-        $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($album_id, 'int'), secure($photo['source']), secure($photo['blur'])));
-        $post_photo['photo_id'] = $db->insert_id;
-        $post_photo['post_id'] = $post['post_id'];
-        $post_photo['source'] = $photo['source'];
-        $post_photo['blur'] = $photo['blur'];
-        $post_photo['reaction_like_count'] = 0;
-        $post_photo['reaction_love_count'] = 0;
-        $post_photo['reaction_haha_count'] = 0;
-        $post_photo['reaction_yay_count'] = 0;
-        $post_photo['reaction_wow_count'] = 0;
-        $post_photo['reaction_sad_count'] = 0;
-        $post_photo['reaction_angry_count'] = 0;
-        $post_photo['reactions_total_count'] = 0;
-        $post_photo['comments'] = 0;
-        $post['photos'][] = $post_photo;
+      foreach ($args['photos'] as $sort_order => $photo) {
+        $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur, sort_order) VALUES (%s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($album_id, 'int'), secure($photo['source']), secure($photo['blur']), secure($sort_order, 'int')));
       }
-      $post['photos_num'] = count($post['photos']);
       /* remove pending uploads */
       remove_pending_uploads(array_column($args['photos'], 'source'));
     }
@@ -522,35 +470,8 @@ trait PublisherTrait
       /* create new album */
       $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, in_group, group_id, in_event, event_id, title, privacy) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", secure($post['user_id'], 'int'), secure($post['user_type']), secure($post['in_group']), secure($post['group_id'], 'int'), secure($post['in_event']), secure($post['event_id'], 'int'), secure($args['album']), secure($post['privacy'])));
       $album_id = $db->insert_id;
-      foreach ($args['photos'] as $photo) {
-        $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($album_id, 'int'), secure($photo['source']), secure($photo['blur'])));
-        $post_photo['photo_id'] = $db->insert_id;
-        $post_photo['post_id'] = $post['post_id'];
-        $post_photo['source'] = $photo['source'];
-        $post_photo['blur'] = $photo['blur'];
-        $post_photo['reaction_like_count'] = 0;
-        $post_photo['reaction_love_count'] = 0;
-        $post_photo['reaction_haha_count'] = 0;
-        $post_photo['reaction_yay_count'] = 0;
-        $post_photo['reaction_wow_count'] = 0;
-        $post_photo['reaction_sad_count'] = 0;
-        $post_photo['reaction_angry_count'] = 0;
-        $post_photo['reactions_total_count'] = 0;
-        $post_photo['comments'] = 0;
-        $post['photos'][] = $post_photo;
-      }
-      $post['album']['album_id'] = $album_id;
-      $post['album']['title'] = $args['album'];
-      $post['photos_num'] = count($post['photos']);
-      /* get album path */
-      if ($post['in_group']) {
-        $post['album']['path'] = 'groups/' . $_group['group_name'];
-      } elseif ($post['in_event']) {
-        $post['album']['path'] = 'events/' . $_event['event_id'];
-      } elseif ($post['user_type'] == "user") {
-        $post['album']['path'] = $this->_data['user_name'];
-      } elseif ($post['user_type'] == "page") {
-        $post['album']['path'] = 'pages/' . $_page['page_name'];
+      foreach ($args['photos'] as $sort_order => $photo) {
+        $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur, sort_order) VALUES (%s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($album_id, 'int'), secure($photo['source']), secure($photo['blur']), secure($sort_order, 'int')));
       }
       /* remove pending uploads */
       remove_pending_uploads(array_column($args['photos'], 'source'));
@@ -573,7 +494,7 @@ trait PublisherTrait
     if ($post['post_type'] == 'funding') {
       /* insert funding details */
       /* Note: no need to return any data as publisher will redirect to post link */
-      $db->query(sprintf("INSERT INTO posts_funding (post_id, title, amount, cover_image) VALUES (%s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['funding']->title), secure($args['funding']->amount), secure($args['funding']->cover_image)));
+      $db->query(sprintf("INSERT INTO posts_funding (post_id, category_id, title, amount, cover_image) VALUES (%s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['funding']->category, 'int'), secure($args['funding']->title), secure($args['funding']->amount), secure($args['funding']->cover_image)));
       /* remove pending uploads */
       remove_pending_uploads([$args['funding']->cover_image]);
     }
@@ -613,23 +534,15 @@ trait PublisherTrait
     if ($post['post_type'] == 'poll') {
       /* insert poll */
       $db->query(sprintf("INSERT INTO posts_polls (post_id) VALUES (%s)", secure($post['post_id'], 'int')));
-      $post['poll']['poll_id'] = $db->insert_id;
-      $post['poll']['post_id'] = $post['post_id'];
-      $post['poll']['votes'] = '0';
+      $poll_id = $db->insert_id;
       /* insert poll options */
       foreach ($args['poll_options'] as $option) {
-        $db->query(sprintf("INSERT INTO posts_polls_options (poll_id, text) VALUES (%s, %s)", secure($post['poll']['poll_id'], 'int'), secure($option)));
-        $poll_option['option_id'] = $db->insert_id;
-        $poll_option['text'] = $option;
-        $poll_option['votes'] = 0;
-        $poll_option['checked'] = false;
-        $post['poll']['options'][] = $poll_option;
+        $db->query(sprintf("INSERT INTO posts_polls_options (poll_id, text) VALUES (%s, %s)", secure($poll_id, 'int'), secure($option)));
       }
     }
     /* insert the post [reel] */
     if ($post['post_type'] == 'reel' || $args['reel']) {
       $db->query(sprintf("INSERT INTO posts_reels (post_id, source, thumbnail) VALUES (%s, %s, %s)", secure($post['post_id'], 'int'), secure($args['reel']->source), secure($args['reel_thumbnail'])));
-      $post['reel']['reel_id'] = $db->insert_id;
       $post['reel']['source'] = $args['reel']->source;
       $post['reel']['thumbnail'] = $args['reel_thumbnail'];
       /* remove pending uploads */
@@ -637,33 +550,35 @@ trait PublisherTrait
     }
     /* insert the post [video] */
     if ($post['post_type'] == 'video' || ($post['post_type'] == 'combo' && $args['video'])) {
-      $db->query(sprintf("INSERT INTO posts_videos (post_id, category_id, source, thumbnail) VALUES (%s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['video_category']), secure($args['video']->source), secure($args['video_thumbnail'])));
-      $post['video']['video_id'] = $db->insert_id;
-      $post['video']['category_id'] = $args['video_category'];
+      $video_width = (isset($args['video']->width) && is_numeric($args['video']->width) && $args['video']->width > 0) ? min((int) $args['video']->width, 65535) : 'null';
+      $video_height = (isset($args['video']->height) && is_numeric($args['video']->height) && $args['video']->height > 0) ? min((int) $args['video']->height, 65535) : 'null';
+      $db->query(sprintf("INSERT INTO posts_videos (post_id, category_id, source, thumbnail, width, height) VALUES (%s, %s, %s, %s, %s, %s)", secure($post['post_id'], 'int'), secure($args['video_category']), secure($args['video']->source), secure($args['video_thumbnail']), secure($video_width, 'int'), secure($video_height, 'int')));
       $post['video']['source'] = $args['video']->source;
       $post['video']['thumbnail'] = $args['video_thumbnail'];
-      /* get category name */
-      $get_category = $db->query(sprintf("SELECT * FROM posts_videos_categories WHERE category_id = %s", secure($args['video_category'], 'int')));
-      $post['video']['category_name'] = $get_category->fetch_assoc()['category_name'];
       /* remove pending uploads */
       remove_pending_uploads([$args['video']->source, $args['video_thumbnail']]);
     }
     /* insert the post [audio] */
     if ($post['post_type'] == 'audio' || ($post['post_type'] == 'combo' && $args['audio'])) {
       $db->query(sprintf("INSERT INTO posts_audios (post_id, source) VALUES (%s, %s)", secure($post['post_id'], 'int'), secure($args['audio']->source)));
-      $post['audio']['audio_id'] = $db->insert_id;
-      $post['audio']['source'] = $args['audio']->source;
       /* remove pending uploads */
       remove_pending_uploads([$args['audio']->source]);
     }
     /* insert the post [file] */
     if ($post['post_type'] == 'file' || ($post['post_type'] == 'combo' && $args['file'])) {
-      $db->query(sprintf("INSERT INTO posts_files (post_id, source) VALUES (%s, %s)", secure($post['post_id'], 'int'), secure($args['file']->source)));
-      $post['file']['file_id'] = $db->insert_id;
-      $post['file']['source'] = $args['file']->source;
+      $db->query(sprintf(
+        "INSERT INTO posts_files (post_id, source, name, size) VALUES (%s, %s, %s, %s)",
+        secure($post['post_id'], 'int'),
+        secure($args['file']->source),
+        secure($this->sanitize_upload_file_name($args['file']->name ?? '')),
+        secure(max(0, (int) ($args['file']->size ?? 0)), 'int')
+      ));
       /* remove pending uploads */
       remove_pending_uploads([$args['file']->source]);
     }
+
+    /* index the post for search */
+    $this->refresh_post_search($post['post_id']);
 
     /* insert custom fields values */
     if ($args['custom_fields']) {
@@ -678,7 +593,6 @@ trait PublisherTrait
     /* insert collaborative users */
     if ($post['is_collaborative']) {
       $this->insert_collaborative_users($post['post_id'], $post['collaborative_users_ids']);
-      $post['collaborative_users'] = $this->get_collaborative_users($post['post_id']);
     }
 
     /* post wall notifications */
@@ -698,14 +612,8 @@ trait PublisherTrait
       $this->post_notification(['to_user_id' => $_event['event_admin'], 'action' => 'event_post_pending', 'node_type' => $_event['event_title'], 'node_url' => $_event['event_id'] . "-[guid=]" . $post['post_id']]);
     }
 
-    /* parse text */
+    /* record trending hashtags */
     $this->prepare_post_text($post, true);
-
-    /* get post colored pattern */
-    $post['colored_pattern'] = $this->get_posts_colored_pattern($post['colored_pattern']);
-
-    /* user can manage the post */
-    $post['manage_post'] = true;
 
     /* points balance */
     $this->points_balance("add", $this->_data['user_id'], "post", $post['post_id']);
@@ -795,7 +703,7 @@ trait PublisherTrait
    */
   public function get_collaborative_users($post_id)
   {
-    global $db;
+    global $db, $system;
     $collaborative_users = [];
     $get_collaborative_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, user_gender FROM posts_collaborative_users INNER JOIN users ON posts_collaborative_users.user_id = users.user_id WHERE posts_collaborative_users.post_id = %s", secure($post_id, 'int')));
     while ($collaborative_user = $get_collaborative_users->fetch_assoc()) {
@@ -838,16 +746,54 @@ trait PublisherTrait
     if (!isset($url_parsed["scheme"])) {
       $url = "http://" . $url;
     }
+    $url_parsed = parse_url($url);
+    if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(strtolower($url_parsed['scheme'] ?? ''), ['http', 'https'])) {
+      return false;
+    }
     /* check if the url is banned */
     $host = get_base_domain($url);
     if ($this->check_censored_domains($host)) {
       return false;
     }
+    /* facebook embeds */
+    if (in_array(strtolower($url_parsed['host']), ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'web.facebook.com'])) {
+      $path = $url_parsed['path'] ?? '/';
+      parse_str($url_parsed['query'] ?? '', $query);
+      $facebook_plugin = null;
+      if (
+        preg_match('~^/[^/]+/posts/(?:pfbid[a-zA-Z0-9]+|[0-9]+|[^/]+/[0-9]+)/?$~D', $path)
+        || (in_array($path, ['/permalink.php', '/story.php']) && !empty($query['story_fbid']) && is_string($query['story_fbid']))
+      ) {
+        $facebook_plugin = 'post';
+      } elseif (
+        preg_match('~^/(?:[^/]+/videos/[0-9]+|reel/[0-9]+)/?$~D', $path)
+        || (in_array($path, ['/watch', '/watch/', '/video.php']) && !empty($query['v']) && is_string($query['v']) && ctype_digit($query['v']))
+      ) {
+        $facebook_plugin = 'video';
+      }
+      if ($facebook_plugin) {
+        $facebook_url = 'https://www.facebook.com' . $path;
+        if (!empty($url_parsed['query'])) {
+          $facebook_url .= '?' . $url_parsed['query'];
+        }
+        $iframe_url = 'https://www.facebook.com/plugins/' . $facebook_plugin . '.php?' . http_build_query(['href' => $facebook_url, 'show_text' => 'true', 'width' => 500], '', '&', PHP_QUERY_RFC3986);
+        return [
+          'source_url' => $url,
+          'source_host' => $url_parsed['host'],
+          'source_title' => 'Facebook',
+          'source_text' => '',
+          'source_thumbnail' => '',
+          'source_html' => '<iframe src="' . htmlspecialchars($iframe_url, ENT_QUOTES, 'UTF-8') . '" width="500" height="680" frameborder="0" allowfullscreen="true" title="Facebook"></iframe>',
+          'source_provider' => 'Facebook',
+          'source_type' => 'rich',
+        ];
+      }
+    }
     /* get the embed */
     $client = new Embed\Http\CurlClient();
     $client->setSettings([
       'ignored_errors' => [18, 23],
-      'ssl_verify_host' => 1,
+      'ssl_verify_host' => 2,
       'ssl_verify_peer' => 1,
       'follow_location' => true,
       'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -859,21 +805,22 @@ trait PublisherTrait
     ]);
     $embed = new Embed\Embed($crawler);
     $info = $embed->get($url);
-    if ($info) {
+    if ($info && $info->getResponse()->getStatusCode() < 400) {
+      $html = $info->code->html ?? '';
       $return = [];
       $return['source_url'] = $url;
       $return['source_host'] = $url_parsed['host'];
       $return['source_title'] = $info->title;
       $return['source_text'] = $info->description;
-      $return['source_thumbnail'] = $info->image;
-      $return['source_html'] = $info->code->html;
+      $return['source_thumbnail'] = $info->image ? (string) $info->image : '';
+      $return['source_html'] = $html;
       $return['source_provider'] = $info->providerName;
-      $return['source_type'] = ($info->code->html && preg_match('/<iframe|blockquote>/', $info->code->html)) ? 'rich' : 'link';
-      if ($return['source_type'] === 'rich' && preg_match('/(wp-embedded-content|m3u8|\.mov)/', $info->code->html)) {
+      $return['source_type'] = ($html && preg_match('/<(?:iframe|blockquote)\b/i', $html)) ? 'rich' : 'link';
+      if ($return['source_type'] === 'rich' && preg_match('/(wp-embedded-content|m3u8|\.mov)/', $html)) {
         $return['source_type'] = 'link';
       }
       if ($info->providerName == "Twitch") {
-        $return['source_html'] = str_replace("meta.tag", $_SERVER['HTTP_HOST'], $info->code->html);
+        $return['source_html'] = str_replace("meta.tag", $_SERVER['HTTP_HOST'], $html);
       }
       return $return;
     } else {
@@ -940,6 +887,75 @@ trait PublisherTrait
 
 
   /**
+   * is_post_edit_window_open
+   *
+   * @param array $post
+   * @return boolean
+   */
+  public function is_post_edit_window_open($post)
+  {
+    global $system;
+    /* bypass for admins & moderators */
+    if ($this->_data['user_group'] < 3) {
+      return true;
+    }
+    if (empty($system['posts_edit_limit_enabled'])) {
+      return true;
+    }
+    $limit = (int) ($system['posts_edit_limit'] ?? 0);
+    if ($limit <= 0) {
+      return true;
+    }
+    $post_time = strtotime($post['time'] ?? '');
+    if ($post_time === false) {
+      return true;
+    }
+    /* scheduled posts stay editable until they go live */
+    if ($post_time > time()) {
+      return true;
+    }
+    return (time() - $post_time) <= ($limit * 3600);
+  }
+
+
+  /**
+   * check_post_edit_window
+   *
+   * @param array $post
+   * @return void
+   */
+  public function check_post_edit_window($post)
+  {
+    if (!$this->is_post_edit_window_open($post)) {
+      throw new ValidationException(__("The edit window for this post has closed"));
+    }
+  }
+
+
+  /**
+   * queue_post_reapproval
+   *
+   * @param array $post
+   * @return boolean
+   */
+  public function queue_post_reapproval($post)
+  {
+    global $system, $db;
+    $pending = ($post['pre_approved'] == '0' && $post['has_approved'] == '0');
+    /* bypass for admins & moderators */
+    if ($this->_data['user_group'] < 3 || empty($system['posts_approval_enabled'])) {
+      return $pending;
+    }
+    if ($pending) {
+      return true;
+    }
+    $db->query(sprintf("UPDATE posts SET pre_approved = '0', has_approved = '0' WHERE post_id = %s", secure($post['post_id'], 'int')));
+    $this->notify_system_admins("pending_post");
+    return true;
+  }
+
+
+  /**
    * prepare_post_text
    *
    * @param array $post
@@ -950,16 +966,93 @@ trait PublisherTrait
   {
     $post['text_raw'] = $post['text'];
     $post['text_html'] = ($post['text_raw']) ? htmlspecialchars_decode($post['text_raw'], ENT_QUOTES) : $post['text_raw'];
-    $post['text_html'] = ($post['text_html']) ? preg_replace(['/<\/p>\s*<p>/', '/^<p>/', '/<\/p>$/'], ["\n", '', ''], $post['text_html']) : $post['text_html'];
+    $post['text_html'] = ($post['text_html']) ? preg_replace(['/<p>\s*<br\s*\/?>\s*<\/p>/i', '/<\/p>\s*<p>/', '/^<p>/', '/<\/p>$/'], ['<p></p>', "\n", '', ''], $post['text_html']) : $post['text_html'];
     $post['text_html'] = ($post['text_html']) ? preg_replace('/(\s|<br\s*\/?>)+$/i', '', $post['text_html']) : $post['text_html'];
+    $post['text_html'] = $this->sanitize_post_html($post['text_html']);
+    $post['text_html'] = $this->convert_post_lists($post['text_html']);
     $post['text_plain'] = $this->decode_mentions($post['text_html'], true, true);
     $post['text_plain'] = ($post['text_plain']) ? strip_tags($post['text_plain']) : $post['text_plain'];
-    $parse_args = ["text" => $post['text_html'], 'decode_emojis' => false];
+    $parse_args = ["text" => $post['text_html']];
     if ($trending_hashtags) {
       $parse_args['trending_hashtags'] = true;
       $parse_args['post_id'] = $post['post_id'];
     }
     $post['text'] = $this->parse($parse_args);
+  }
+
+
+  /**
+   * sanitize_post_html
+   *
+   * @param string $html
+   * @return string
+   */
+  private function sanitize_post_html($html)
+  {
+    if (!$html) return $html;
+    return preg_replace_callback('/<(\/?)([a-z][a-z0-9]*)\b([^<>]*)>|</i', function ($matches) {
+      /* escape stray brackets */
+      if (!isset($matches[2])) {
+        return '&lt;';
+      }
+      /* remove not allowed tags */
+      $tag = strtolower($matches[2]);
+      if (!in_array($tag, ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'del', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'span'])) {
+        return '';
+      }
+      if ($matches[1]) {
+        return '</' . $tag . '>';
+      }
+      /* keep safe attributes only */
+      preg_match_all('/(?<=[\s"\'\/])(?:class|data-[a-z0-9-]+)="[^"]*"/i', $matches[3], $attributes);
+      return '<' . $tag . ($attributes[0] ? ' ' . implode(' ', $attributes[0]) : '') . '>';
+    }, $html);
+  }
+
+
+  /**
+   * convert_post_lists
+   *
+   * @param string $html
+   * @return string
+   */
+  private function convert_post_lists($html)
+  {
+    if (!$html || stripos($html, 'data-list=') === false) return $html;
+    return preg_replace_callback('/<ol>(.*?)<\/ol>/is', function ($matches) {
+      preg_match_all('/<li\b([^>]*)>(.*?)<\/li>/is', $matches[1], $items, PREG_SET_ORDER);
+      $list = '';
+      $levels = [];
+      foreach ($items as $item) {
+        $tag = (preg_match('/data-list="ordered"/i', $item[1])) ? 'ol' : 'ul';
+        $level = (preg_match('/ql-indent-(\d+)/i', $item[1], $indent)) ? (int) $indent[1] : 0;
+        $text = preg_replace('/<span class="ql-ui"[^>]*><\/span>/i', '', $item[2]);
+        /* close deeper levels */
+        while (count($levels) > $level + 1) {
+          $list .= '</li></' . array_pop($levels) . '>';
+        }
+        /* close other list type */
+        if (count($levels) == $level + 1 && end($levels) != $tag) {
+          $list .= '</li></' . array_pop($levels) . '>';
+        }
+        /* same level */
+        if (count($levels) == $level + 1) {
+          $list .= '</li><li>' . $text;
+          continue;
+        }
+        /* open new levels */
+        while (count($levels) < $level) {
+          $list .= '<' . $tag . '><li class="list-none">';
+          $levels[] = $tag;
+        }
+        $list .= '<' . $tag . '><li>' . $text;
+        $levels[] = $tag;
+      }
+      while ($levels) {
+        $list .= '</li></' . array_pop($levels) . '>';
+      }
+      return $list;
+    }, $html);
   }
 
 
@@ -974,7 +1067,6 @@ trait PublisherTrait
     /* validate arguments */
     $text = $args['text'];
     $decode_urls = !isset($args['decode_urls']) ? true : $args['decode_urls'];
-    $decode_emojis = !isset($args['decode_emojis']) ? true : $args['decode_emojis'];
     $decode_stickers = !isset($args['decode_stickers']) ? true : $args['decode_stickers'];
     $decode_mentions = !isset($args['decode_mentions']) ? true : $args['decode_mentions'];
     $decode_mentions_html = !isset($args['decode_mentions_html']) ? true : $args['decode_mentions_html'];
@@ -985,10 +1077,6 @@ trait PublisherTrait
     /* decode urls */
     if ($decode_urls) {
       $text = decode_urls($text);
-    }
-    /* decode emojis */
-    if ($decode_emojis) {
-      $text = $this->decode_emojis($text);
     }
     /* decode stickers */
     if ($decode_stickers) {
@@ -1039,7 +1127,7 @@ trait PublisherTrait
 
 
   /**
-   * check_censored_domains ✅
+   * check_censored_domains
    * 
    * @param string $url
    * @return boolean

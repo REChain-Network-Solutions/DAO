@@ -35,6 +35,8 @@ use Twilio\Deserialize;
  * @property string $channelSettings
  * @property string[] $statusCallbacks
  * @property string[] $intelligenceConfigurationIds
+ * @property string[] $traitExtractionStrategyIds
+ * @property string[] $observationExtractionStrategyIds
  * @property bool $memoryExtractionEnabled
  * @property string $conversationsV1Bridge
  * @property \DateTime $createdAt
@@ -48,9 +50,9 @@ class ListConfiguration200ResponseConfigurationsInstance extends InstanceResourc
      *
      * @param Version $version Version that contains the resource
      * @param mixed[] $payload The response payload
-     * @param string $sid
+     * @param string $id
      */
-    public function __construct(Version $version, array $payload, ?string $sid = null)
+    public function __construct(Version $version, array $payload, ?string $id = null)
     {
         $apiV1Version = new ApiV1Version($version->getDomain(), $version->version);
         parent::__construct($apiV1Version);
@@ -65,6 +67,8 @@ class ListConfiguration200ResponseConfigurationsInstance extends InstanceResourc
             'channelSettings' => Values::array_get($payload, 'channelSettings'),
             'statusCallbacks' => Values::array_get($payload, 'statusCallbacks'),
             'intelligenceConfigurationIds' => Values::array_get($payload, 'intelligenceConfigurationIds'),
+            'traitExtractionStrategyIds' => Values::array_get($payload, 'traitExtractionStrategyIds'),
+            'observationExtractionStrategyIds' => Values::array_get($payload, 'observationExtractionStrategyIds'),
             'memoryExtractionEnabled' => Values::array_get($payload, 'memoryExtractionEnabled'),
             'conversationsV1Bridge' => Values::array_get($payload, 'conversationsV1Bridge'),
             'createdAt' => Deserialize::dateTime(Values::array_get($payload, 'createdAt')),
@@ -72,7 +76,7 @@ class ListConfiguration200ResponseConfigurationsInstance extends InstanceResourc
             'version' => Values::array_get($payload, 'version'),
         ];
 
-        $this->solution = ['sid' => $sid ?: ($this->properties['sid'] ?? null), ];
+        $this->solution = ['id' => $id ?: ($this->properties['id'] ?? null), ];
     }
 
     /**
@@ -86,7 +90,7 @@ class ListConfiguration200ResponseConfigurationsInstance extends InstanceResourc
         if (!$this->context) {
             $this->context = new ConfigurationContext(
                 $this->version,
-                $this->solution['sid']
+                $this->solution['id']
             );
         }
 
@@ -116,6 +120,19 @@ class ListConfiguration200ResponseConfigurationsInstance extends InstanceResourc
     {
 
         return $this->proxy()->fetch();
+    }
+
+    /**
+     * Patch the CreateConfiguration202ResponseInstance
+     *
+     * @param array|Options $options Optional Arguments
+     * @return CreateConfiguration202ResponseInstance Patchd CreateConfiguration202ResponseInstance
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function patch(array $options = []): CreateConfiguration202ResponseInstance
+    {
+
+        return $this->proxy()->patch($options);
     }
 
     /**

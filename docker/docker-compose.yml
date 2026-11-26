@@ -41,6 +41,11 @@ services:
    - 3306:3306 # 👈 Change to your MySQL port
   volumes:
    - sngine_db_data:/var/lib/mysql # 👈 Change to your MySQL data volume
+  healthcheck:
+   test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+   interval: 5s
+   timeout: 5s
+   retries: 20
 
  # ----------------------
  # phpMyAdmin

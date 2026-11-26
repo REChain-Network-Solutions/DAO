@@ -23,6 +23,9 @@ if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
 
+// refresh the compiled system cache
+register_shutdown_function('system_cache_flush');
+
 // handle languages
 try {
 

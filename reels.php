@@ -22,21 +22,21 @@ if (!$system['system_public']) {
 
 try {
 
+  // get tab
+  $tab = (($_GET['tab'] ?? '') == 'following' && $user->_logged_in) ? 'following' : 'for_you';
+  /* assign variables */
+  $smarty->assign('tab', $tab);
+
   // get view content
   switch ($_GET['view']) {
     case '':
 
       // get posts (reels)
-      /* first get the reels from discover */
-      $reels_discover = ($user->_logged_in) ? $user->get_posts(['get' => 'discover', 'filter' => 'reel']) : [];
-      /* second get the reels from newsfeed */
-      $reels_newsfeed = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel']);
-      /* merge the two arrays */
-      $posts = array_merge($reels_discover, $reels_newsfeed);
-      /* randomize the array */
-      shuffle($posts);
+      $posts = $user->get_reels_feed(['tab' => $tab]);
       /* assign variables */
       $smarty->assign('posts', $posts);
+      $smarty->assign('cursor', $user->_cursor);
+      $smarty->assign('pinned', '');
 
       // page header
       page_header(__("Reels") . ' | ' . __($system['system_title']));
@@ -44,35 +44,32 @@ try {
 
     case 'reel':
       // get post
-      $post = $user->get_post($_GET['post_id']);
-      if (!$post || $post['post_type'] != "reel") {
+      $post = $user->get_post($_GET['post_id'], false, false, true);
+      if (!$post || $post['post_type'] != "reel" || !$post['reel']) {
         _error(404);
+      }
+      /* check locked post */
+      if ($user->reel_locked($post)) {
+        redirect('/posts/' . $post['post_id']);
       }
       /* assign variables */
       $smarty->assign('post', $post);
 
       // get posts (reels)
-      /* first get the reels from discover */
-      $reels_discover = ($user->_logged_in) ? $user->get_posts(['get' => 'discover', 'filter' => 'reel']) : [];
-      /* second get the reels from newsfeed */
-      $reels_newsfeed = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel']);
-      /* merge the two arrays */
-      $posts = array_merge($reels_discover, $reels_newsfeed);
-      /* randomize the array */
-      shuffle($posts);
-      /* remove the post from the array if exists */
-      foreach ($posts as $key => $value) {
-        if ($value['post_id'] == $post['post_id']) {
-          unset($posts[$key]);
-        }
-      }
+      $posts = $user->get_reels_feed(['tab' => $tab, 'exclude' => $post['post_id']]);
       /* add the post to the beginning of the array */
       array_unshift($posts, $post);
       /* assign variables */
       $smarty->assign('posts', $posts);
+      $smarty->assign('cursor', $user->_cursor);
+      $smarty->assign('pinned', $post['post_id']);
 
       // page header
       page_header($post['og_title'], $post['og_description'], $post['og_image']);
+      break;
+
+    default:
+      _error(404);
       break;
   }
 } catch (Exception $e) {

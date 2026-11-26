@@ -29,9 +29,7 @@ try {
   switch ($_POST['type']) {
     case 'wallet':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_wallet_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-      }
+      admin_access('mods_wallet_permission');
 
       // handle request
       /* get the request */
@@ -43,7 +41,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE wallet_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */
@@ -54,7 +54,9 @@ try {
           /* decline request */
           $db->query(sprintf("UPDATE wallet_payments SET status = '-1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* update user balance */
-          $user->wallet_update_balance($withdrawal_request['amount'], '+', $withdrawal_request['user_id']);
+          if (method_exists($user, 'wallet_update_balance')) {
+            $user->wallet_update_balance($withdrawal_request['amount'], '+', $withdrawal_request['user_id']);
+          }
           /* send notification to request author */
           $user->post_notification(['to_user_id' => $withdrawal_request['user_id'], 'action' => 'wallet_withdrawal_declined']);
           break;
@@ -67,9 +69,7 @@ try {
 
     case 'affiliates':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_affiliates_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-      }
+      admin_access('mods_affiliates_permission');
 
       // handle request
       /* get the request */
@@ -81,7 +81,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE affiliates_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */
@@ -105,9 +107,7 @@ try {
 
     case 'points':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_points_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-      }
+      admin_access('mods_points_permission');
 
       // handle request
       /* get the request */
@@ -119,7 +119,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE points_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */
@@ -144,8 +146,9 @@ try {
 
     case 'market':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_marketplace_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
+      admin_access('mods_marketplace_permission');
+      if (!licence_has_entitlement('monetization')) {
+        licence_throw_admin_lock();
       }
 
       // handle request
@@ -158,7 +161,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE market_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */
@@ -182,9 +187,7 @@ try {
 
     case 'funding':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_funding_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-      }
+      admin_access('mods_funding_permission');
 
       // handle request
       /* get the request */
@@ -196,7 +199,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE funding_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */
@@ -220,9 +225,7 @@ try {
 
     case 'monetization':
       // check admin|moderator permission
-      if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_monetization_permission'])) {
-        modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-      }
+      admin_access('mods_monetization_permission');
 
       // handle request
       /* get the request */
@@ -234,7 +237,9 @@ try {
       switch ($_POST['handle']) {
         case 'approve':
           /* process automatic withdrawal */
-          process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          if (function_exists('process_automatic_withdrawal')) {
+            process_automatic_withdrawal($withdrawal_request['method'], $withdrawal_request['amount'], $withdrawal_request['method_value']);
+          }
           /* approve request */
           $db->query(sprintf("UPDATE monetization_payments SET status = '1' WHERE payment_id = %s", secure($_POST['id'], 'int')));
           /* send notification to request author */

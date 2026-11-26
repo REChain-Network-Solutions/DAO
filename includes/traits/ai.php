@@ -78,7 +78,7 @@ trait AiTrait
     /* credit calculation (using full response to be safe) */
     if ($system['ai_text_credit_enabled']) {
       /* calculate generated text credits */
-      $generated_text_credits = str_word_count($full_response) * $system['ai_generated_word_cost'];
+      $generated_text_credits = count_words($full_response) * $system['ai_generated_word_cost'];
       /* decrease user ai credits balance */
       $this->_data['user_ai_credits_balance'] -= $generated_text_credits;
       $db->query(sprintf('UPDATE users SET user_ai_credits_balance = user_ai_credits_balance - %s WHERE user_id = %s', secure($generated_text_credits, 'int'), secure($this->_data['user_id'], 'int')));
@@ -166,7 +166,6 @@ trait AiTrait
           $payload = json_encode(['input' => $input]);
           curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
           $result = json_decode(curl_exec($ch), true);
-          curl_close($ch);
           if (!isset($result['output'])) {
             throw new Exception($result['error'] ?? "Replicate generation failed");
           }

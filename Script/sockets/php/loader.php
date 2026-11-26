@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Sockets -> loader
+ * sockets -> php -> loader
  * 
  * @package Sngine
  * @author Zamblek
@@ -9,6 +9,9 @@
 
 // set ABSPATH
 define('ABSPATH', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR);
+
+// long-running process: per-request lists must not be kept between socket events
+define('SOCKET_SERVER', true);
 
 
 // get system version & exceptions
@@ -22,6 +25,9 @@ require(ABSPATH . 'vendor/autoload.php');
 
 // get functions
 require(ABSPATH . 'includes/functions.php');
+if (is_file(ABSPATH . 'includes/functions-payments.php')) {
+  require(ABSPATH . 'includes/functions-payments.php');
+}
 
 
 // check config file
@@ -38,7 +44,7 @@ require(ABSPATH . 'includes/config.php');
 // set debugging settings
 if (DEBUGGING) {
   ini_set("display_errors", true);
-  error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+  error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 } else {
   ini_set("display_errors", false);
   error_reporting(0);
@@ -46,8 +52,7 @@ if (DEBUGGING) {
 
 
 // configure localization
-$gettextLoader = new Gettext\Loader\PoLoader();
-$gettextTranslator = Gettext\Translations::create('default');
+$gettextTranslations = [];
 
 
 // init system session
@@ -76,16 +81,9 @@ try {
 }
 
 
-// get system session hash
-$session_hash = get_system_session_hash($system['session_hash']);
-if (!$session_hash) {
-  print("❌ Your session hash has been broken, Please contact Sngine's support!\n");
-  exit;
-}
-
-
 // init smarty
 $smarty = init_smarty();
+$smarty->assign('system', $system);
 
 
 // get user

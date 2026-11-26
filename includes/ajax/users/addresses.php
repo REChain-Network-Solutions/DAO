@@ -31,7 +31,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.addresses.add.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'edit':
@@ -41,7 +41,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.addresses.edit.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'insert':

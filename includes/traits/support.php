@@ -283,7 +283,7 @@ trait SupportTrait
     $pager = new Pager($params);
     $limit_query = $pager->getLimitSql();
     /* get tickets */
-    $get_tickets = $db->query(
+    $tickets_query =
       "SELECT 
             requesters.user_name AS requester_username,
             requesters.user_firstname AS requester_firstname,
@@ -300,9 +300,8 @@ trait SupportTrait
         INNER JOIN users AS requesters ON support_tickets.user_id = requesters.user_id
         LEFT JOIN users AS agents ON support_tickets.agent_id = agents.user_id
         " . ($where_query ? "WHERE $where_query" : "") . "
-        ORDER BY support_tickets.updated_at DESC
-        " . ($limit_query ? $limit_query : "")
-    );
+        ORDER BY support_tickets.updated_at DESC, support_tickets.ticket_id DESC";
+    $get_tickets = ($limit_query) ? paged_query($tickets_query, 'support_tickets.ticket_id', $limit_query) : $db->query($tickets_query);
     if ($get_tickets->num_rows > 0) {
       while ($ticket = $get_tickets->fetch_assoc()) {
         $ticket['requester_picture'] = get_picture($ticket['requester_picture'], $ticket['requester_gender']);

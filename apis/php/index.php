@@ -29,6 +29,9 @@ require(ABSPATH . 'vendor/autoload.php');
 
 // get functions
 require(ABSPATH . 'includes/functions.php');
+if (is_file(ABSPATH . 'includes/functions-payments.php')) {
+  require(ABSPATH . 'includes/functions-payments.php');
+}
 require('utils/functions.php');
 
 
@@ -45,7 +48,7 @@ require(ABSPATH . 'includes/config.php');
 // set debugging settings
 if (DEBUGGING) {
   ini_set("display_errors", true);
-  error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+  error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 } else {
   ini_set("display_errors", false);
   error_reporting(0);
@@ -53,12 +56,8 @@ if (DEBUGGING) {
 
 
 // configure localization
-$gettextLoader = new Gettext\Loader\PoLoader();
-$gettextTranslator = Gettext\Translations::create('default');
+$gettextTranslations = [];
 
-
-// init system session
-init_system_session();
 
 
 // init system datetime
@@ -80,16 +79,12 @@ try {
   apiError($e->getMessage());
 }
 
+// init system session
+init_system_session();
+
 
 // check apps API request
 checkAPIRequest();
-
-
-// get system session hash
-$session_hash = get_system_session_hash($system['session_hash']);
-if (!$session_hash) {
-  apiError("Your session hash has been broken, Please contact Sngine's support!");
-}
 
 
 // init smarty
@@ -124,10 +119,6 @@ if ($user->_is_banned) {
 
 
 // 🚀 Starting the APIs ...
-
-// log session
-$user->log_session();
-
 
 // user authentication
 isUserAuthenticated();

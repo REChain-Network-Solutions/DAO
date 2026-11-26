@@ -14,9 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_affiliates_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_affiliates_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
@@ -42,7 +40,7 @@ try {
   $smarty->assign('id', $id);
   /* return */
   $return['template'] = $smarty->fetch("ajax.who_referred.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template);";
+  $return['callback'] = "modal_content(response.template);";
 
   // return & exit
   return_json($return);

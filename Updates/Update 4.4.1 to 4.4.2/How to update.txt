@@ -1,0 +1,29 @@
+============================================================
+== If you running Sngine v 4.4.1 you can upgrade to 4.4.2 ==
+============================================================
+
+!!! IMPORTANT !!!
+==============================================================================================================
+== Backup your database and your website files just in case something wrong happened                        ==
+==============================================================================================================
+
+1- Shutdown your system from the admin panel
+
+2- Upload all files located in the "Update_4.4.2" folder to your live server and replace all files/folders inside this folder
+
+3- Empty this folder "content/themes/default/templates_compiled"
+
+=========================================================
+== After Update ==
+=========================================================
+
+1- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
+
+2- Go to your admin panel (http://yourdomain.com/path_to_script/admincp) and make site live again
+
+And That's it, Have Fun :)
+
+=======================================================================================================
+
+If you need help/support:
+Open support ticket here and our team will help you: https://www.zamblek.com/support

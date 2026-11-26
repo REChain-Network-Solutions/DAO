@@ -28,7 +28,7 @@ trait GroupsTrait
     $category_id = !isset($args['category_id']) ? null : $args['category_id'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $random = !isset($args['random']) ? false : true;
+    $random = filter_var($args['random'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $get_all = !isset($args['get_all']) ? false : true;
     $offset = !isset($args['offset']) ? 0 : $args['offset'];
     $results = !isset($args['results']) ? $system['groups_results'] : $args['results'];
@@ -36,9 +36,19 @@ trait GroupsTrait
     $boosted = !isset($args['boosted']) ? false : true;
     $suggested = !isset($args['suggested']) ? false : true;
     $managed = !isset($args['managed']) ? false : true;
+    $count = !isset($args['count']) ? false : true;
     /* initialize vars */
     $groups = [];
+    $this->_cursor = null;
+    if ($count) {
+      $offset = 0;
+      $results = PHP_INT_MAX;
+    }
     $offset *= $results;
+    /* prepare query (wrapped as a count when requested) */
+    $query = function ($sql) use ($db, $count) {
+      return $db->query(($count) ? "SELECT COUNT(*) AS count FROM (" . $sql . ") AS results" : $sql);
+    };
     /* prepare country statement */
     if ($country && $system['groups_location_filter_enabled'] && $country != "all") {
       $country_statement = sprintf(" AND group_country = %s ", secure($country, 'int'));
@@ -47,29 +57,60 @@ trait GroupsTrait
     if ($language && $language != "all") {
       $language_statement = sprintf(" AND group_language = %s ", secure($language, 'int'));
     }
+    /* pages after the first continue from a cursor (the last group id) instead of an offset */
+    $use_cursor = !$count && !$get_all && !$promoted && !($suggested && $random);
+    $cursor = ($use_cursor) ? cursor_decode($args['cursor'] ?? null, ['int']) : null;
+    $language_statement = ($language_statement ?? "") . (($cursor) ? " AND " . cursor_where(['`groups`.group_id'], $cursor) : "");
+    if ($cursor) {
+      $offset = 0;
+    }
     if ($promoted) {
       /* get promoted groups */
-      $get_groups = $db->query(sprintf("SELECT * FROM `groups` WHERE group_boosted = '1' " . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false)));
+      $residual_statement = ($country_statement ?? "") . ($language_statement ?? "");
+      if ($count) {
+        $get_groups = $query("SELECT group_id FROM `groups` WHERE group_boosted = '1' " . $residual_statement);
+      } else {
+        $filter = ($residual_statement) ? function ($ids) use ($db, $residual_statement) {
+          return array_column($db->query(sprintf("SELECT group_id FROM `groups` WHERE group_id IN (%s) " . $residual_statement, implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'group_id');
+        } : null;
+        $groups_ids = sample_ids('groups', 'group_id', "group_boosted = '1'", $results, ['pool' => 200, 'filter' => $filter, 'shared' => 'promoted_groups']);
+        $rows = ($groups_ids) ? $db->query(sprintf("SELECT * FROM `groups` WHERE group_id IN (%s)", implode(',', $groups_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_groups = new PrefetchedResult(rows_by_ids($rows, 'group_id', $groups_ids));
+      }
     } elseif ($boosted) {
       /* get the "viewer" boosted groups */
-      $get_groups = $db->query(sprintf("SELECT * FROM `groups` WHERE group_boosted = '1' AND group_boosted_by = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+      $get_groups = $query(sprintf("SELECT * FROM `groups` WHERE group_boosted = '1' AND group_boosted_by = %s " . $country_statement . $language_statement . " ORDER BY group_id DESC LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } elseif ($suggested) {
       /* get suggested groups */
-      $where_statement = "";
-      /* make a list from joined groups (approved|pending) */
-      $where_statement .= sprintf("AND group_id NOT IN (%s) ", $this->spread_ids($this->get_groups_ids()));
       $category_statement = ($category_id) ? "AND group_category = " . secure($category_id, 'int') : "";
-      $sort_statement = ($random) ? " ORDER BY RAND() " : " ORDER BY group_id DESC ";
-      $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_groups = $db->query("SELECT * FROM `groups` WHERE group_privacy != 'secret' " . $where_statement . $country_statement . $language_statement . $category_statement . $sort_statement . $limit_statement);
+      if ($random && !$count) {
+        /* random groups, sampled through the groups ids (or the category) */
+        $residual_statement = ($country_statement ?? "") . ($language_statement ?? "");
+        $groups_ids = sample_ids('groups', 'group_id', ($category_id) ? sprintf("group_category = %s", secure($category_id, 'int')) : "group_id > 0", $results, [
+          'pivots' => 3,
+          /* joined groups (approved|pending) */
+          'exclude' => $this->get_groups_ids(),
+          'filter' => function ($ids) use ($db, $residual_statement) {
+            return array_column($db->query(sprintf("SELECT group_id FROM `groups` WHERE group_id IN (%s) AND group_privacy != 'secret' " . $residual_statement, implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'group_id');
+          },
+        ]);
+        $rows = ($groups_ids) ? $db->query(sprintf("SELECT * FROM `groups` WHERE group_id IN (%s)", implode(',', $groups_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_groups = new PrefetchedResult(rows_by_ids($rows, 'group_id', $groups_ids));
+      } else {
+        $where_statement = "";
+        /* make a list from joined groups (approved|pending) */
+        $where_statement .= sprintf("AND group_id NOT IN (%s) ", $this->spread_ids($this->get_groups_ids()));
+        $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
+        $get_groups = $query("SELECT * FROM `groups` WHERE group_privacy != 'secret' " . $where_statement . $country_statement . $language_statement . $category_statement . " ORDER BY group_id DESC " . $limit_statement);
+      }
     } elseif ($managed) {
       /* get the "taget" all groups who admin */
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_groups = $db->query(sprintf("SELECT `groups`.* FROM groups_admins INNER JOIN `groups` ON groups_admins.group_id = `groups`.group_id WHERE groups_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($user_id, 'int')));
+      $get_groups = $query(sprintf("SELECT `groups`.* FROM groups_admins INNER JOIN `groups` ON groups_admins.group_id = `groups`.group_id WHERE groups_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($user_id, 'int')));
     } elseif ($user_id == null) {
       /* get the "viewer" groups who admin */
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_groups = $db->query(sprintf("SELECT `groups`.* FROM groups_admins INNER JOIN `groups` ON groups_admins.group_id = `groups`.group_id WHERE groups_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
+      $get_groups = $query(sprintf("SELECT `groups`.* FROM groups_admins INNER JOIN `groups` ON groups_admins.group_id = `groups`.group_id WHERE groups_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
       /* get the "target" groups*/
     } else {
       /* get the target user's privacy */
@@ -77,21 +118,27 @@ trait GroupsTrait
       $privacy = $get_privacy->fetch_assoc();
       /* check the target user's privacy */
       if (!$this->check_privacy($privacy['user_privacy_groups'], $user_id)) {
-        return $groups;
+        return ($count) ? 0 : $groups;
       }
       /* if the viewer not the target exclude secret groups */
       $where_statement = ($this->_data['user_id'] == $user_id) ? "" : "AND `groups`.group_privacy != 'secret'";
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_groups = $db->query(sprintf("SELECT `groups`.* FROM `groups` INNER JOIN groups_members ON `groups`.group_id = groups_members.group_id WHERE groups_members.approved = '1' AND groups_members.user_id = %s " . $where_statement . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($user_id, 'int')));
+      $get_groups = $query(sprintf("SELECT `groups`.* FROM `groups` INNER JOIN groups_members ON `groups`.group_id = groups_members.group_id WHERE groups_members.approved = '1' AND groups_members.user_id = %s " . $where_statement . $country_statement . $language_statement . " ORDER BY group_id DESC " . $limit_statement, secure($user_id, 'int')));
+    }
+    if ($count) {
+      return (int) $get_groups->fetch_assoc()['count'];
     }
     if ($get_groups->num_rows > 0) {
-      while ($group = $get_groups->fetch_assoc()) {
+      $rows = $get_groups->fetch_all(MYSQLI_ASSOC);
+      $this->preload_memberships('groups', array_column($rows, 'group_id'));
+      foreach ($rows as $group) {
         $group['group_picture'] = get_picture($group['group_picture'], 'group');
         /* check if the viewer joined the group */
         $group['i_joined'] = $this->check_group_membership($this->_data['user_id'], $group['group_id']);;
         $groups[] = $group;
       }
     }
+    $this->_cursor = ($use_cursor && !empty($rows)) ? cursor_encode([end($rows)['group_id']]) : null;
     return $groups;
   }
 
@@ -232,7 +279,7 @@ trait GroupsTrait
    */
   public function edit_group($group_id, $edit, $args)
   {
-    global $db, $system;
+    global $db, $system, $date;
     /* check if groups enabled */
     if (!$system['groups_enabled']) {
       throw new Exception(__("The groups module has been disabled by the admin"));
@@ -347,6 +394,8 @@ trait GroupsTrait
         ));
         /* check if group privacy changed to public */
         if ($args['privacy'] == "public") {
+          /* add shortcuts */
+          $db->query(sprintf("INSERT IGNORE INTO users_shortcuts (user_id, node_id, node_type, time) SELECT user_id, group_id, 'group', %s FROM groups_members WHERE group_id = %s AND approved = '0'", secure($date), secure($group_id, 'int')));
           /* approve any pending join requests */
           $db->query(sprintf("UPDATE groups_members SET approved = '1' WHERE group_id = %s", secure($group_id, 'int')));
           /* update members counter + affected rows */
@@ -436,10 +485,14 @@ trait GroupsTrait
     }
     /* delete the group */
     $db->query(sprintf("DELETE FROM `groups` WHERE group_id = %s", secure($group_id, 'int')));
+    /* delete the group translations */
+    $this->delete_translations('group', $group_id);
     /* delete the group members */
     $db->query(sprintf("DELETE FROM groups_members WHERE group_id = %s", secure($group_id, 'int')));
     /* delete the group admins */
     $db->query(sprintf("DELETE FROM groups_admins WHERE group_id = %s", secure($group_id, 'int')));
+    /* delete the group shortcuts */
+    $this->delete_shortcuts($group_id, 'group');
     /* check if the group has chatbox */
     if ($group['chatbox_conversation_id']) {
       /* delete the chatbox */
@@ -457,6 +510,10 @@ trait GroupsTrait
   public function get_group_admins_ids($group_id)
   {
     global $db;
+    /* many posts on one page share the same group (reset by connect() and on every call in socket servers) */
+    if (!defined('SOCKET_SERVER') && isset($this->_connections_ids['group_admins'][$group_id])) {
+      return $this->_connections_ids['group_admins'][$group_id];
+    }
     $admins = [];
     $get_admins = $db->query(sprintf("SELECT user_id FROM groups_admins WHERE group_id = %s", secure($group_id, 'int')));
     if ($get_admins->num_rows > 0) {
@@ -464,7 +521,7 @@ trait GroupsTrait
         $admins[] = $admin['user_id'];
       }
     }
-    return $admins;
+    return $this->_connections_ids['group_admins'][$group_id] = $admins;
   }
 
 
@@ -475,12 +532,18 @@ trait GroupsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_group_admins($group_id, $offset = 0)
+  public function get_group_admins($group_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $admins = [];
     $offset *= $system['max_results_even'];
-    $get_admins = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM groups_admins INNER JOIN users ON groups_admins.user_id = users.user_id WHERE groups_admins.group_id = %s LIMIT %s, %s", secure($group_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last admin id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['groups_admins.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_admins = $db->query(sprintf("SELECT groups_admins.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM groups_admins INNER JOIN users ON groups_admins.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE groups_admins.group_id = %s" . $cursor_statement . " ORDER BY groups_admins.user_id DESC " . $limit_statement, secure($group_id, 'int')));
+    [$get_admins, $next_cursor] = cursor_result($get_admins);
     if ($get_admins->num_rows > 0) {
       while ($admin = $get_admins->fetch_assoc()) {
         $admin['user_picture'] = get_picture($admin['user_picture'], $admin['user_gender']);
@@ -491,6 +554,7 @@ trait GroupsTrait
         $admins[] = $admin;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $admins;
   }
 
@@ -503,12 +567,18 @@ trait GroupsTrait
    * @param boolean $manage
    * @return array
    */
-  public function get_group_members($group_id, $offset = 0, $manage = false)
+  public function get_group_members($group_id, $offset = 0, $manage = false, $cursor = null)
   {
     global $db, $system;
     $members = [];
     $offset *= $system['max_results_even'];
-    $get_members = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM groups_members INNER JOIN users ON groups_members.user_id = users.user_id WHERE groups_members.approved = '1' AND groups_members.group_id = %s LIMIT %s, %s", secure($group_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest accounts first; pages after the first continue from a cursor (the member id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['groups_members.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_members = $db->query(sprintf("SELECT groups_members.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM groups_members INNER JOIN users ON groups_members.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE groups_members.approved = '1' AND groups_members.group_id = %s" . $cursor_statement . " ORDER BY groups_members.user_id DESC " . $limit_statement, secure($group_id, 'int')));
+    [$get_members, $next_cursor] = cursor_result($get_members);
     if ($get_members->num_rows > 0) {
       /* get group admins ids */
       $group_admins_ids = $this->get_group_admins_ids($group_id);
@@ -526,6 +596,7 @@ trait GroupsTrait
         $members[] = $member;
       }
     }
+    $this->_cursor = $next_cursor;
     return $members;
   }
 
@@ -557,18 +628,25 @@ trait GroupsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_group_invites($group_id, $offset = 0)
+  public function get_group_invites($group_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $friends = [];
     $offset *= $system['max_results_even'];
-    $get_friends = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users LEFT JOIN groups_members ON users.user_id = groups_members.user_id AND groups_members.group_id = %s LEFT JOIN groups_invites ON users.user_id = groups_invites.user_id AND groups_invites.group_id = %s AND groups_invites.from_user_id = %s WHERE users.user_id IN (%s) AND groups_members.id IS NULL AND groups_invites.id IS NULL LIMIT %s, %s", secure($group_id, 'int'), secure($group_id, 'int'), secure($this->_data['user_id'], 'int'), $this->spread_ids($this->_data['friends_ids']), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last user id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_friends = $db->query(sprintf("SELECT users.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users LEFT JOIN groups_members ON users.user_id = groups_members.user_id AND groups_members.group_id = %s LEFT JOIN groups_invites ON users.user_id = groups_invites.user_id AND groups_invites.group_id = %s AND groups_invites.from_user_id = %s LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_id IN (%s) AND groups_members.id IS NULL AND groups_invites.id IS NULL" . $cursor_statement . " ORDER BY users.user_id DESC " . $limit_statement, secure($group_id, 'int'), secure($group_id, 'int'), secure($this->_data['user_id'], 'int'), $this->spread_ids($this->friends_ids())));
+    [$get_friends, $next_cursor] = cursor_result($get_friends);
     while ($friend = $get_friends->fetch_assoc()) {
       $friend['user_picture'] = get_picture($friend['user_picture'], $friend['user_gender']);
       $friend['connection'] = 'group_invite';
       $friend['node_id'] = $group_id;
       $friends[] = $friend;
     }
+    $this->_cursor = $next_cursor ?? null;
     return $friends;
   }
 
@@ -595,12 +673,18 @@ trait GroupsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_group_requests($group_id, $offset = 0)
+  public function get_group_requests($group_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $requests = [];
     $offset *= $system['max_results'];
-    $get_requests = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users INNER JOIN groups_members ON users.user_id = groups_members.user_id WHERE groups_members.approved = '0' AND groups_members.group_id = %s LIMIT %s, %s", secure($group_id, 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last member id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['groups_members.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    $get_requests = $db->query(sprintf("SELECT groups_members.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users INNER JOIN groups_members ON users.user_id = groups_members.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE groups_members.approved = '0' AND groups_members.group_id = %s" . $cursor_statement . " ORDER BY groups_members.user_id DESC " . $limit_statement, secure($group_id, 'int')));
+    [$get_requests, $next_cursor] = cursor_result($get_requests);
     if ($get_requests->num_rows > 0) {
       while ($request = $get_requests->fetch_assoc()) {
         $request['user_picture'] = get_picture($request['user_picture'], $request['user_gender']);
@@ -609,6 +693,7 @@ trait GroupsTrait
         $requests[] = $request;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $requests;
   }
 
@@ -636,7 +721,7 @@ trait GroupsTrait
    */
   public function check_group_adminship($user_id, $group_id)
   {
-    if ($this->_logged_in) {
+    if ($this->_logged_in && $group_id) {
       /* get group admins ids */
       $group_admins_ids = $this->get_group_admins_ids($group_id);
       if (in_array($user_id, $group_admins_ids)) {
@@ -657,6 +742,14 @@ trait GroupsTrait
   public function check_group_membership($user_id, $group_id)
   {
     global $db;
+    /* loaded with a page of posts by prefetch_posts() */
+    if ($this->_logged_in && $user_id == $this->_data['user_id'] && isset($this->_posts_prefetch['group_membership']) && array_key_exists($group_id, $this->_posts_prefetch['group_membership'])) {
+      return $this->_posts_prefetch['group_membership'][$group_id];
+    }
+    /* loaded with its list by preload_memberships() */
+    if ($this->_logged_in && $user_id == $this->_data['user_id'] && isset($this->_connections_ids['group_membership']) && array_key_exists((int) $group_id, $this->_connections_ids['group_membership'])) {
+      return $this->_connections_ids['group_membership'][(int) $group_id];
+    }
     if ($this->_logged_in) {
       $get_membership = $db->query(sprintf("SELECT * FROM groups_members WHERE user_id = %s AND group_id = %s", secure($user_id, 'int'), secure($group_id, 'int')));
       if ($get_membership->num_rows > 0) {

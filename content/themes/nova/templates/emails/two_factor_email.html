@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>{$template_subject}</title>
+    {include file='emails/__email_styles.tpl'}
+  </head>
+
+  <body>
+    <span class="preheader">{$template_subject}</span>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body">
+      <tr>
+        <td>&nbsp;</td>
+        <td class="container">
+
+          <div class="email-header">
+            <a href="{$system['system_url']}">
+              {if $system['system_logo']}
+              <img src="{$system['system_uploads']}/{$system['system_logo']}" alt="{__($system['system_title'])}">
+              {else}
+              <span class="site-name">{__($system['system_title'])}</span>
+              {/if}
+            </a>
+          </div>
+
+          <div class="content">
+            <table role="presentation" class="main">
+              <tr>
+                <td class="header-bar">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="wrapper">
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <h1>{__("Two-Factor Authentication")}</h1>
+                        <p>{__("Hi")} {$user['user_name']},</p>
+                        <p>{__("Use the 6-digit code below to complete your sign-in. This code is time-sensitive.")}</p>
+
+                        <div class="code-block">
+                          <span>{$two_factor_key}</span>
+                        </div>
+
+                        <hr>
+
+                        <p class="note">{__("If you did not attempt to sign in, please change your password immediately as your account may be compromised.")}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="footer">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td class="content-block">
+                    <p>&copy; {$smarty.now|date_format:"%Y"} <a href="{$system['system_url']}">{__($system['system_title'])}</a>. {__("All rights reserved.")}</p>
+                    <p>{__("You are receiving this email because two-factor authentication is enabled on your account at")} <a href="{$system['system_url']}">{__($system['system_title'])}</a>.</p>
+                    <p><a href="{$system['system_url']}/settings/notifications">{__("Manage email notification preferences")}</a></p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+  </body>
+
+</html>

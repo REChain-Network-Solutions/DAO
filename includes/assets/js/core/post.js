@@ -16,21 +16,24 @@ api['posts/scraper'] = ajax_path + "posts/scraper.php";
 api['posts/post'] = ajax_path + "posts/post.php";
 api['posts/comment'] = ajax_path + "posts/comment.php";
 api['posts/reaction'] = ajax_path + "posts/reaction.php";
+api['chat/actions'] = ajax_path + "chat/actions.php";
 api['posts/edit'] = ajax_path + "posts/edit.php";
 api['posts/product'] = ajax_path + "posts/product.php";
-api['posts/story'] = ajax_path + "posts/story.php";
 /* ai */
 api['ai/generate'] = ajax_path + "ai/generate.php";
 /* albums */
 api['albums/action'] = ajax_path + "albums/action.php";
 /* forums */
 api['forums/delete'] = ajax_path + "forums/delete.php";
+api['forums/thread'] = ajax_path + "forums/thread.php";
+api['forums/react'] = ajax_path + "forums/react.php";
 
 
 // initialize voice recording global vars
 var voice_recording_encoding = voice_notes_encoding;
 var voice_recording_limit = voice_notes_durtaion;
 var voice_recording_process = false;
+var voice_recording_cancelled = false;
 var voice_recording_timer;
 var voice_recording_object;
 var voice_recording_stream;
@@ -38,15 +41,14 @@ var voice_recording_stream;
 
 // initialize live post global vars
 if (live_enabled) {
-  var agora_client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-  if (system_debugging_mode == true) {
-    AgoraRTC.setLogLevel(0);
-  } else {
-    AgoraRTC.setLogLevel(4);
-  }
+  var agora_client = null;
+  var live_post_room = null;
   var live_post_realtime_thread;
   var live_post_realtime_process = false;
   var live_post_streaming_process = false;
+  var live_post_audio_track = null;
+  var live_post_stats_pending = false;
+  var live_socket_post_id = null;
 }
 
 
@@ -62,6 +64,7 @@ function quill_publisher() {
     }
     var quill = new Quill(el, {
       theme: 'bubble',
+      bounds: $(el).closest('.colored-text-wrapper').get(0) || document.body,
       placeholder: __['What is on your mind?'],
       modules: {
         toolbar: {
@@ -76,6 +79,10 @@ function quill_publisher() {
         mention: {
           allowedChars: /^[a-zA-Z0-9_]*$|./u,
           mentionDenotationChars: ["@", "#"],
+          positioningStrategy: 'fixed',
+          mentionContainerClass: 'z-[100020] max-h-72 w-72 overflow-y-auto rounded-box border-[1px] border-base-300 bg-base-100 p-1.5 shadow-lg',
+          mentionListClass: 'm-0 flex list-none flex-col gap-0.5 p-0',
+          listItemClass: 'cursor-pointer rounded-lg [&.selected]:bg-base-200',
           source: function (searchTerm, renderList, mentionChar) {
             if (mentionChar === "@" && searchTerm.length > 0) {
               $.get(api['users/mentions'], { 'term': searchTerm }, function (response) {
@@ -122,6 +129,10 @@ function quill_publisher() {
         quill.setSelection(range.index + text.length);
       }
     }, true);
+    /* remember the emoji insertion point */
+    quill.on('selection-change', function (range) {
+      if (range) quill.emojiSelection = range;
+    });
     /* sync the quill with the publisher */
     quill.on('text-change', function () {
       var publisher = $(quill.root).closest('.publisher');
@@ -154,7 +165,120 @@ function update_quill_editor(quill, text) {
 }
 
 
-// publisher tab
+// publisher photos
+function publisher_photos_refresh(publisher, moved_source) {
+  var panel = publisher.find('.js_publisher-photo-layout');
+  if (!panel.length) {
+    return;
+  }
+  var files = Object.assign({}, publisher.data('photos') || {});
+  var queue = publisher.data('attachment-queue');
+  if (queue) {
+    queue.items.filter(function (item) { return item.type === 'photos'; }).forEach(function (item) {
+      if (item.result) delete files[item.result.source];
+      files[item.id] = { preview: item.preview, source: item.result && item.result.source, card: item.card };
+    });
+  }
+  var sources = Object.keys(files);
+  var order = (publisher.data('photo_order') || []).filter(function (source) {
+    return Object.prototype.hasOwnProperty.call(files, source);
+  });
+  sources.forEach(function (source) {
+    if (order.indexOf(source) === -1) order.push(source);
+  });
+  var layout = publisher.data('photo_layout') || 'classic';
+  var attachments = publisher.find('.js_attachments-photos');
+  var list = attachments.children('.js_photo-order-list');
+  if (!sources.length) {
+    publisher.removeData('photo_order').removeData('photo_layout');
+    if (list.length && typeof Sortable === 'function' && Sortable.get(list[0])) Sortable.get(list[0]).destroy();
+    list.remove();
+    panel.hide().find('.js_photo-layout-preview').empty();
+    return;
+  }
+  publisher.data('photo_order', order).data('photo_layout', layout);
+  if (!list.length) {
+    list = $('<ul class="js_photo-order-list"></ul>').appendTo(attachments);
+  }
+  list.children('li.item').each(function () {
+    if (order.indexOf($(this).attr('data-src')) === -1) $(this).remove();
+  });
+  order.forEach(function (source, index) {
+    var item = list.children('li.item').filter(function () {
+      return $(this).attr('data-src') === source;
+    });
+    if (!item.length) {
+      item = files[source].card || $(render_template('#publisher-photo-item', { src: source, image_path: uploads_path + '/' + source }));
+    }
+    var position = list.children('li.item').eq(index);
+    if (position[0] !== item[0]) {
+      if (position.length) item.insertBefore(position);
+      else list.append(item);
+    }
+    item.find('.js_photo-position').text(index + 1);
+    item.find('.js_photo-featured').toggle(index === 0);
+    item.find('[data-direction="earlier"], [data-direction="first"]').prop('disabled', index === 0);
+    item.find('[data-direction="later"]').prop('disabled', index === order.length - 1);
+  });
+  if (typeof Sortable === 'function' && !Sortable.get(list[0])) {
+    list.addClass('[&>.sortable-ghost]:rounded-box [&>.sortable-ghost]:border-2 [&>.sortable-ghost]:border-dashed [&>.sortable-ghost]:border-primary [&>.sortable-ghost]:bg-primary/10 [&>.sortable-ghost>*]:invisible');
+    Sortable.create(list[0], {
+      draggable: 'li.item',
+      handle: '.js_photo-drag',
+      animation: 150,
+      onUpdate: function (event) {
+        publisher.data('photo_order', list.children('li.item').map(function () {
+          return $(this).attr('data-src');
+        }).get());
+        publisher_photos_refresh(publisher, $(event.item).attr('data-src'));
+      }
+    });
+  }
+  panel.show();
+  panel.find('.js_photo-layout-toolbar, .js_photo-layout-help').toggle(order.length > 1);
+  var selected = panel.find('.js_photo-layout-option').filter(function () {
+    var checked = $(this).data('layout') === layout;
+    $(this).attr('aria-checked', checked ? 'true' : 'false').find('.js_photo-layout-check').toggleClass('invisible', !checked);
+    return checked;
+  });
+  panel.find('.js_photo-layout-label').text(selected.find('.js_photo-layout-name').text());
+  panel.find('.js_photo-layout-icon').attr('class', 'js_photo-layout-icon size-4 ' + selected.data('icon'));
+  var preview = panel.find('.js_photo-layout-preview').empty();
+  if (order.length === 1) {
+    $('<img class="max-h-[42rem] w-full object-contain" alt="">').attr('src', files[order[0]].preview || uploads_path + '/' + files[order[0]].source).appendTo(preview);
+  } else {
+    var preset = panel.data('presets')[layout][Math.min(4, order.length)];
+    var grid = $('<div>').addClass(preset.container).appendTo(preview);
+    order.slice(0, preset.visible).forEach(function (source, index) {
+      var tile = $('<div class="relative min-h-0 min-w-0 overflow-hidden"></div>').addClass(index === 0 ? preset.first : '').addClass(preset.tile || '').addClass(index % 2 === 1 ? preset.offset || '' : '').addClass(preset.mobile && index >= preset.mobile ? 'max-sm:hidden' : '').appendTo(grid);
+      $('<img class="size-full object-cover" alt="">').attr('src', files[source].preview || uploads_path + '/' + files[source].source).appendTo(tile);
+      if (index === preset.visible - 1 && order.length > preset.visible) {
+        $('<span class="absolute inset-0 flex items-center justify-center bg-black/50 text-3xl font-semibold text-white"></span>').text('+' + (order.length - preset.visible)).appendTo(tile);
+      }
+      /* phones show fewer cards */
+      if (preset.mobile && index === preset.mobile - 1 && order.length > preset.mobile) {
+        $('<span class="absolute inset-0 flex items-center justify-center bg-black/50 text-3xl font-semibold text-white sm:hidden"></span>').text('+' + (order.length - preset.mobile)).appendTo(tile);
+      }
+    });
+  }
+  if (moved_source) {
+    var status = panel.find('.js_photo-order-status');
+    status.text(status.data('message').replace('%s', order.indexOf(moved_source) + 1));
+  }
+}
+
+
+// published photo order
+function publisher_photo_order(publisher) {
+  var queue = publisher.data('attachment-queue');
+  return (publisher.data('photo_order') || Object.keys(publisher.data('photos') || {})).map(function (id) {
+    var item = queue && queue.items.find(function (entry) { return entry.id === id; });
+    return item ? item.result && item.result.source : id;
+  });
+}
+
+
+// publisher tabs
 function publisher_tab(publisher, tab) {
   /* toggle active class */
   publisher.find('.js_publisher-tab[data-tab="' + tab + '"]').toggleClass('active');
@@ -294,11 +418,12 @@ function publisher_tab(publisher, tab) {
     case "poll":
       /* toggle meta */
       publisher.find('.publisher-meta[data-meta="poll"]').slideToggle('fast');
-      /* toggle textarea placeholder */
-      if (publisher.find('.js_publisher-tab[data-tab="poll"]').hasClass('active')) {
-        publisher.find('textarea').attr('placeholder', __['Ask something'] + "...").trigger('focus');
-      } else {
-        publisher.find('textarea').attr('placeholder', publisher.find('textarea').data('init-placeholder')).trigger('focus');
+      /* toggle textarea + Quill placeholder */
+      var poll_placeholder = publisher.find('.js_publisher-tab[data-tab="poll"]').hasClass('active') ? __['Ask something'] + "..." : publisher.find('textarea').data('init-placeholder');
+      publisher.find('textarea').attr('placeholder', poll_placeholder).trigger('focus');
+      var quill = publisher.find('.js_quill').data('quill');
+      if (quill && quill.root) {
+        quill.root.setAttribute('data-placeholder', poll_placeholder);
       }
       /* toggle conflicted tabs */
       publisher.find('.js_publisher-tab[data-tab="offer"]').toggleClass('disabled');
@@ -398,16 +523,261 @@ function publisher_tab(publisher, tab) {
       }
       break;
   }
+  publisher_edit_tabs(publisher);
+}
+
+
+// update attachment choices while editing
+function publisher_edit_tabs(publisher) {
+  var state = publisher.data('post-editor');
+  if (!state || state.limited) return;
+  var queue = publisher.data('attachment-queue');
+  function has(kind) {
+    return !!publisher.data(kind) || !!(queue && queue.items.some(function (item) { return item.type === kind; }));
+  }
+  var exclusive = null;
+  if (publisher.data('scraping')) exclusive = publisher.data('scraping').source_provider === 'giphy' ? 'gif' : 'scraper';
+  else if (has('reel')) exclusive = 'reel';
+  else {
+    ['poll', 'colored', 'voice_notes', 'gif', 'album'].some(function (kind) {
+      if (publisher.find('.js_publisher-tab[data-tab="' + kind + '"]').hasClass('active') || (kind === 'album' && state.post_type === 'album') || (kind === 'voice_notes' && has(kind))) {
+        exclusive = kind;
+        return true;
+      }
+      return false;
+    });
+  }
+  var media = ['photos', 'video', 'audio', 'file'].filter(has);
+  ['photos', 'video', 'audio', 'file', 'reel', 'album', 'poll', 'colored', 'gif', 'voice_notes'].forEach(function (kind) {
+    var allowed = exclusive ? kind === exclusive || (exclusive === 'album' && kind === 'photos') : !media.length || ['photos', 'video', 'audio', 'file'].includes(kind) || (kind === 'album' && media.every(function (type) { return type === 'photos'; }));
+    var tab = publisher.find('.js_publisher-tab[data-tab="' + kind + '"]');
+    tab.toggleClass('disabled', !allowed || (kind === 'poll' && state.poll_locked));
+    if (['photos', 'video', 'audio', 'file', 'reel'].includes(kind)) tab.toggleClass('active activated', has(kind));
+  });
+}
+
+
+// load a saved post into the publisher
+function publisher_edit_load(publisher, state) {
+  publisher.data('post-editor', state).data('edit-loading', true);
+  var quill = publisher.find('.js_quill').data('quill');
+  if (quill) {
+    quill.clipboard.dangerouslyPasteHTML(state.text || '', 'silent');
+    quill.history.clear();
+    publisher.find('.js_publisher-scraper').val(quill.getText());
+    publisher.find('.js_publisher-hidden-editor').val(state.text || '');
+    quill.on('text-change', function () { publisher.data('edit-text-changed', true); });
+    if (state.poll_locked) quill.enable(false);
+  }
+  publisher.find('.js_publisher-tab.link, .js_publisher-tab[data-tab="rich_text"]').remove();
+  publisher.find('.publisher-tools-tabs .dropdown-menu [role="separator"]').remove();
+  publisher.find('.publisher-tools-tabs .dropdown').filter(function () { return !$(this).find('.js_publisher-tab').length; }).remove();
+  publisher.find('.js_publisher-anonymous-toggle').closest('.form-table-row').hide();
+  publisher.find('.js_publisher-privacy').val(state.privacy);
+  publisher.find('.publisher-meta[data-meta="location"] input.js_geocomplete').val(state.location);
+  publisher.find('.publisher-meta[data-meta="location"] [data-geo="lat"]').val(state.location_latitude);
+  publisher.find('.publisher-meta[data-meta="location"] [data-geo="lng"]').val(state.location_longitude);
+  if (state.location) publisher_tab(publisher, 'location');
+  if (state.feeling_value) {
+    publisher.find('.publisher-meta[data-meta="feelings"]').show();
+    publisher.find('#feelings-menu, #feelings-types').hide();
+    publisher.find('#feelings-menu-toggle').text(state.feeling_action).addClass('active');
+    publisher.find('#feelings-data').show().find('input').data('action', state.feeling_action).val(state.feeling_value).show();
+    publisher.find('#feelings-data span').hide();
+    publisher.find('.js_publisher-feelings').addClass('active activated');
+  }
+  var toggles = {for_adult: 'adult', tips_enabled: 'tips', for_subscriptions: 'subscribers', is_paid: 'paid', is_paid_locked: 'paid-lock', is_collaborative: 'collaborative'};
+  Object.keys(toggles).forEach(function (key) {
+    if (state[key] == '1') publisher.find('.js_publisher-' + toggles[key] + '-toggle').trigger('click');
+  });
+  publisher.find('[name="paid_post_price"]').val(state.post_price);
+  publisher.find('[name="paid_post_text"]').val(state.paid_text);
+  publisher.find('[name="collaborative_percent"]').val(state.collaborative_percent);
+  if (state.still_scheduled) {
+    publisher.find('.js_publisher-schedule-toggle').trigger('click');
+    var date = new Date(state.time.replace(' ', 'T') + 'Z');
+    var local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    publisher.find('.js_publisher-schedule-date').val(local.toISOString().slice(0, 16));
+    publisher.data('edit-schedule', local.toISOString().slice(0, 16));
+  }
+  function image_value(selector, source) {
+    if (!source) return;
+    var tile = publisher.find(selector).find('.x-image');
+    tile.find('.js_x-uploader-input').val(source);
+    tile.css('background-image', 'url("' + uploads_path + '/' + source.replace(/["\\\n\r]/g, '') + '")');
+    tile.find('.js_x-image-remover').removeClass('hidden');
+  }
+  image_value('#subscriptions-image-wrapper', state.subscriptions_image);
+  image_value('#paid-image-wrapper', state.paid_image);
+  if (!state.limited) {
+    if (state.photos.length) {
+      var photos = {};
+      state.photos.forEach(function (photo) { photos[photo.source] = photo; });
+      publisher.data('photos', photos).data('photo_order', state.photos.map(function (photo) { return photo.source; })).data('photo_layout', state.photo_layout || 'classic');
+      publisher_tab(publisher, 'photos');
+      publisher.find('.js_publisher-tab[data-tab="photos"]').addClass('activated');
+      publisher_photos_refresh(publisher);
+      publisher.find('.js_attachments-photos').show();
+    }
+    if (state.post_type == 'album') {
+      publisher_tab(publisher, 'album');
+      publisher.find('.publisher-meta[data-meta="album"] input').val(state.album).prop('readonly', true);
+      publisher.find('.js_publisher-tab[data-tab="album"]').addClass('activated');
+    }
+    ['video', 'reel', 'audio', 'file'].forEach(function (kind) {
+      if (!state[kind]) return;
+      publisher.data(kind, state[kind]);
+      publisher_tab(publisher, kind);
+      publisher.find('.publisher-meta[data-meta="' + kind + '"]').show();
+      publisher.find('.js_publisher-tab[data-tab="' + kind + '"]').addClass('activated');
+      var preview = publisher.find('.js_attachments-' + kind).empty().show();
+      if (kind == 'file') {
+        $('<span class="block rounded-field bg-base-200 p-3 text-sm"></span>').text(state.file.name || state.file.source.split('/').pop()).appendTo(preview);
+      } else {
+        $('<' + (kind == 'audio' ? 'audio' : 'video') + ' class="w-full rounded-field" controls preload="metadata"></' + (kind == 'audio' ? 'audio' : 'video') + '>').attr('src', uploads_path + '/' + state[kind].source).appendTo(preview);
+      }
+      if (kind == 'video' || kind == 'reel') {
+        publisher.find('.publisher-' + kind + '-custom-thumbnail').show();
+        image_value('.publisher-' + kind + '-custom-thumbnail', state[kind].thumbnail);
+      }
+    });
+    if (state.video) publisher.find('[name="video_category"]').val(state.video.category_id);
+    var link = state.link || state.media;
+    if (link) {
+      link = Object.assign({}, link);
+      if (state.link) link.source_type = 'link';
+      publisher.data('scraping', link);
+      publisher_tab(publisher, link.source_provider == 'giphy' ? 'gif' : 'scraper');
+      var template = link.source_provider == 'giphy' ? '#pubisher-gif' : (link.source_type == 'photo' ? '#scraper-photo' : '#scraper-link');
+      publisher.find('.publisher-scraper').html(render_template(template, {src: link.source_url, url: link.source_url, thumbnail: link.source_thumbnail, host: link.source_host || link.source_provider, title: link.source_title, text: link.source_text, provider: link.source_provider})).show();
+    }
+    if (Number(state.colored_pattern) > 0) {
+      publisher_tab(publisher, 'colored');
+      var pattern = publisher.find('.js_publisher-pattern').filter(function () { return $(this).data('id') == state.colored_pattern; });
+      if (pattern.length) pattern.trigger('click');
+      else publisher.data('colored_pattern', state.colored_pattern);
+    }
+    if (state.poll_options.length) {
+      publisher_tab(publisher, 'poll');
+      var rows = publisher.find('.publisher-meta[data-meta="poll"]').stop(true, true);
+      var sample = rows.first().clone().removeAttr('style');
+      state.poll_options.concat(state.poll_locked ? [] : [{text: ''}]).forEach(function (option) {
+        var row = sample.clone();
+        row.find('input').val(option.text).prop('readonly', !!state.poll_locked);
+        row.insertBefore(rows.first()).show();
+      });
+      rows.remove();
+      if (state.poll_locked) publisher.find('.js_publisher-tab[data-tab="poll"]').addClass('activated').prop('disabled', true);
+    }
+  } else {
+    publisher.find('.js_publisher-tab').not('[data-tab="location"]').closest('.publisher-tools-tab').remove();
+  }
+  publisher.removeData('edit-loading');
+  publisher_edit_tabs(publisher);
+}
+
+// preserve saved files until the edit is committed
+function publisher_edit_saved_upload(publisher, source) {
+  var state = publisher.data('post-editor');
+  if (!state || !source) return false;
+  if (state.photos.some(function (photo) { return photo.source === source; })) return true;
+  if (state.paid_image === source || state.subscriptions_image === source) return true;
+  return ['video', 'reel', 'audio', 'file'].some(function (kind) {
+    return state[kind] && (state[kind].source === source || state[kind].thumbnail === source);
+  });
+}
+
+// save the publisher edit
+function publisher_edit_save(publisher, payload, button, error) {
+  var state = publisher.data('post-editor');
+  payload.handle = 'post_full';
+  payload.id = state.post_id;
+  payload.revision = state.revision;
+  payload.is_anonymous = state.is_anonymous;
+  payload.colored_pattern = publisher.data('colored_pattern') || '';
+  payload.feeling_action = publisher.find('#feelings-data input').data('action') || '';
+  var kept = Object.values(publisher.data('photos') || {}).map(function (photo) { return String(photo.photo_id || ''); });
+  payload.removed_photos = JSON.stringify(state.limited ? [] : state.photos.filter(function (photo) { return kept.indexOf(String(photo.photo_id)) < 0; }).map(function (photo) { return photo.photo_id; }));
+  payload.removed_media = JSON.stringify(state.limited ? [] : ['video', 'reel', 'audio', 'file'].filter(function (kind) {
+    var value = publisher.data(kind);
+    return state[kind] && (!value || String(value[kind + '_id'] || '') !== String(state[kind][kind + '_id']));
+  }));
+  if (!publisher.data('edit-text-changed') || state.poll_locked) payload.message = state.text || '';
+  if (!payload.collaborative_percent) payload.collaborative_percent = '0';
+  if (!payload.post_price) payload.post_price = '0';
+  if (state.post_type == 'album') payload.album = state.album;
+  var fields = {privacy: '.js_publisher-privacy', for_adult: '.js_publisher-adult-toggle', tips_enabled: '.js_publisher-tips-toggle', for_subscriptions: '.js_publisher-subscribers-toggle', is_paid: '.js_publisher-paid-toggle', is_paid_locked: '.js_publisher-paid-lock-toggle', post_price: '[name="paid_post_price"]', paid_text: '[name="paid_post_text"]', paid_image: '[name="paid_image"]', subscriptions_image: '[name="subscriptions_image"]', is_collaborative: '.js_publisher-collaborative-toggle', collaborative_percent: '[name="collaborative_percent"]'};
+  Object.keys(fields).forEach(function (key) { if (!publisher.find(fields[key]).length) delete payload[key]; });
+  if (!publisher.find('[name="collaborative_users"]').length) delete payload.collaborative_users;
+  if (state.still_scheduled && payload.is_schedule && publisher.find('.js_publisher-schedule-date').val() === publisher.data('edit-schedule')) payload.schedule_date = state.time;
+  if (!state.still_scheduled || !publisher.find('.js_publisher-schedule-toggle').length) {
+    delete payload.is_schedule;
+    delete payload.schedule_date;
+  }
+  if (state.limited) ['photos', 'photo_order', 'link', 'poll_options', 'video', 'reel', 'audio', 'voice_notes', 'file', 'album', 'colored_pattern'].forEach(function (key) { delete payload[key]; });
+  error.hide();
+  $.post(api['posts/edit'], payload, function (response) {
+    if (response.error) {
+      error.text(response.message).show();
+      return;
+    }
+    if (response.callback) {
+      error.text(__['Something went wrong!'] || 'Unable to save this post. Please try again.').show();
+      return;
+    }
+    var cards = $('.post').not('.js_reel-menu').filter(function () { return String($(this).data('id')) === String(state.post_id); });
+    if (response.post) {
+      cards.each(function () {
+        var old = $(this);
+        var replacement = $('<div>').html(response.post).find('.post').first();
+        var comments = old.find('.post-footer').first();
+        if (comments.length) replacement.find('.post-footer').first().replaceWith(comments.detach());
+        old.replaceWith(replacement);
+      });
+    } else if (response.processing || response.approval) {
+      cards.remove();
+    }
+    attachment_upload_clear(publisher);
+    modal_close_all(function () {
+      if (response.approval) modal('#modal-success', {title: __['Under Review'], message: __['Your post is under review now, We will let you know when it is ready!']});
+      else if (response.processing) modal('#modal-success', {title: __['Processing'], message: __['Your video is being processed, We will let you know when it is ready!']});
+    });
+    if (typeof initialize === 'function') initialize();
+  }, 'json').fail(function () {
+    error.text(__['Something went wrong!'] || 'Unable to save this post. Please try again.').show();
+  }).always(function () {
+    button_status(button, 'reset');
+    publisher.removeData('edit-saving');
+    $('.js_posts_stream').removeData('loading');
+  });
+}
+
+
+// publisher reveal
+function publisher_reveal(event, selector) {
+  if (!event.originalEvent || !event.currentTarget.checked) return;
+  var element = $(selector).filter(':visible').last()[0];
+  if (element) element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+
+// close publisher modal
+function close_publisher_modal(modal) {
+  modal_close_all(function () {
+    var wrapper = $('#publisher-wapper');
+    var content = wrapper.data('publisher-detached');
+    if (content) {
+      wrapper.append(content);
+      wrapper.removeData('publisher-detached');
+    }
+    $('body').removeClass('publisher-focus');
+  });
 }
 
 
 // update media views
 function update_media_views(media_type, media_id) {
   switch (media_type) {
-    case "reel":
-      var _do = "update_reel_views";
-      break;
-
     case "video":
       var _do = "update_video_views";
       break;
@@ -431,19 +801,62 @@ function update_media_views(media_type, media_id) {
 
 // initialize scraper
 function initialize_scraper() {
+  if ($(".publisher").length == 0 && $(".js_publisher-trigger").length > 0) {
+    $(".js_publisher-trigger").first().trigger('click');
+    return;
+  }
   $(".js_publisher-scraper").trigger('keyup');
   $('body').addClass('publisher-focus');
   $('.publisher-slider').slideDown();
 }
 
 
+// giphy search
+function giphy_search(query, offset, limit) {
+  var params = { api_key: giphy_key, limit: limit, offset: offset, lang: system_langauge_code || 'en' };
+  if (query) {
+    params['q'] = query;
+  }
+  return $.get('https://api.giphy.com/v1/gifs/' + (query ? 'search' : 'trending'), params, null, 'json');
+}
+
+
+// load agora sdk (on demand)
+function load_agora() {
+  var sdk = (typeof AgoraRTC !== 'undefined') ? Promise.resolve() : load_script(agora_sdk_url);
+  return sdk.then(function () {
+    if (live_enabled && !agora_client) {
+      agora_client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      AgoraRTC.setLogLevel((system_debugging_mode == true) ? 0 : 4);
+    }
+  });
+}
+if (live_enabled && typeof AgoraRTC !== 'undefined') {
+  load_agora();
+}
+
+
+// load livekit sdk (on demand)
+function load_livekit() {
+  return (typeof LivekitClient !== 'undefined') ? Promise.resolve() : load_script(livekit_sdk_url);
+}
+
+
 // run live stream
-async function join(channel_name, token, uid) {
+async function join(channel_name, token, uid, provider) {
+  if (provider == "livekit") {
+    await join_livekit(token);
+    return;
+  }
   /* init agora client */
+  await load_agora();
   await agora_client.setClientRole("audience");
   /* add event listener to play remote tracks when remote user publishs */
   agora_client.on("user-published", handle_user_published);
   agora_client.on("user-unpublished", handle_user_unpublished);
+  agora_client.on("connection-state-change", function (state, previous, reason) {
+    if (reason == "UID_BANNED") live_audience_removed();
+  });
   /* join the channel */
   await agora_client.join(agora_app_id, channel_name, token, uid);
 }
@@ -453,42 +866,244 @@ async function subscribe(user, mediaType) {
     user.videoTrack.play('js_live-video');
   }
   if (mediaType === 'audio') {
-    user.audioTrack.play();
+    live_post_audio_track = user.audioTrack;
+    live_post_audio_track.setVolume($('.js_live-sound').attr('aria-pressed') === 'true' ? 0 : 100);
+    live_post_audio_track.play();
   }
+  live_audience_started();
+}
+async function join_livekit(token) {
+  /* init livekit room */
+  await load_livekit();
+  live_post_room = new LivekitClient.Room({ adaptiveStream: true });
+  live_post_room
+    .on(LivekitClient.RoomEvent.TrackSubscribed, function (track) {
+      if (track.kind === LivekitClient.Track.Kind.Video) {
+        $(track.attach()).addClass('size-full object-cover').appendTo($('#js_live-video').empty());
+      }
+      if (track.kind === LivekitClient.Track.Kind.Audio) {
+        live_post_audio_track = track;
+        live_post_audio_track.setVolume($('.js_live-sound').attr('aria-pressed') === 'true' ? 0 : 1);
+        $(track.attach()).addClass('hidden').appendTo($('.js_live-stage').first());
+      }
+      live_audience_started();
+    })
+    .on(LivekitClient.RoomEvent.TrackMuted, function (publication, participant) {
+      if (!participant.identity.startsWith('host_')) return;
+      handle_user_unpublished({ _video_muted_: publication.kind === LivekitClient.Track.Kind.Video, _audio_muted_: publication.kind === LivekitClient.Track.Kind.Audio });
+    })
+    .on(LivekitClient.RoomEvent.TrackUnmuted, function (publication, participant) {
+      if (!participant.identity.startsWith('host_')) return;
+      $('#js_live-status').html('').hide();
+    })
+    .on(LivekitClient.RoomEvent.ParticipantDisconnected, function (participant) {
+      if (!participant.identity.startsWith('host_')) return;
+      handle_user_unpublished({});
+    })
+    .on(LivekitClient.RoomEvent.Disconnected, function (reason) {
+      if (!live_post_streaming_process) return;
+      if (reason === LivekitClient.DisconnectReason.PARTICIPANT_REMOVED) {
+        live_audience_removed();
+      } else {
+        handle_user_unpublished({});
+      }
+    });
+  /* join the room */
+  await live_post_room.connect(livekit_live_ws_url, token);
+}
+function live_audience_started() {
   /* hide live status */
   $('#js_live-status').html('').hide();
+  /* handle live buttons */
+  $('.js_live-controls').prop('hidden', false);
+  if (!document.fullscreenEnabled && !document.webkitFullscreenEnabled) {
+    $('.js_live-fullscreen').prop('hidden', true);
+  }
+  /* check live post streaming process */
+  if (live_post_streaming_process) {
+    return;
+  }
   /* handle live counter */
-  $('#js_live-counter-status').html(__['Online']).removeClass("offline");
+  $('#js_live-counter-status').html(__['Live']).parent().removeClass("offline");
   $('#js_live-counter-number').html(1);
   /* update live post streaming process */
   live_post_streaming_process = true;
+  /* join live socket room */
+  live_socket_join($('.lightbox, .livebox').data('live-post-id'));
   /* set live post real-time thread */
-  live_post_realtime_thread = setInterval(function () {
-    /* check live realtime process */
-    if (live_post_realtime_process) {
-      return;
-    }
-    /* set live realtime process */
-    var lightbox = $('.lightbox, .livebox');
-    var live_post_id = lightbox.data('live-post-id');
-    live_post_realtime_process = true;
-    var last_comment_id = lightbox.find("ul.js_live-comments .comment:first").data('id') || 0;
-    $.post(api['live/reaction'], { 'do': 'stats', 'post_id': live_post_id, 'last_comment_id': last_comment_id }, function (response) {
-      /* update live count */
-      $('#js_live-counter-number').html(response.live_count);
-      /* update comments */
-      if (response.comments) {
-        lightbox.find('ul.js_live-comments').prepend(response.comments);
-      }
-      /* reset live realtime process */
-      live_post_realtime_process = false;
-    }, 'json');
-  }, 5000);
+  live_post_realtime_thread = setInterval(live_audience_stats, 5000);
   /* bind the beforeunload event */
   $(window).on('beforeunload', function (event) {
     end_live_audience();
     event.preventDefault();
   });
+}
+function live_audience_stats() {
+  /* check live realtime process */
+  if (live_post_realtime_process) {
+    live_post_stats_pending = true;
+    return;
+  }
+  /* set live realtime process */
+  var lightbox = $('.lightbox, .livebox');
+  var live_post_id = lightbox.data('live-post-id');
+  var stream = lightbox.find('ul.js_live-comments');
+  live_post_realtime_process = true;
+  var data = live_stats_data(stream, live_post_id);
+  $.post(api['live/reaction'], data, function (response) {
+    /* update live count */
+    $('#js_live-counter-number').html(response.live_count);
+    /* update comments */
+    live_update_comments(stream, response, data);
+    stream.prepend(live_new_comments(stream, response.comments));
+    /* update restriction */
+    if ((lightbox.data('live-restriction') || null) != (response.restriction || null)) {
+      lightbox.data('live-restriction', response.restriction);
+      lightbox.find('.js_comment-form').toggleClass('hidden', !!response.restriction);
+    }
+    if (response.restriction == 'kick' || response.restriction == 'ban') {
+      live_audience_removed();
+    }
+    /* update reactions */
+    live_fly_reactions(lightbox.find('.js_live-reactions'), response.reactions);
+  }, 'json')
+    .always(function () {
+      /* reset live realtime process */
+      live_post_realtime_process = false;
+      if (live_post_stats_pending) {
+        live_post_stats_pending = false;
+        live_audience_stats();
+      }
+    });
+}
+function live_last_comment_id(stream) {
+  var last_comment_id = 0;
+  stream.children('li').children('.comment[data-id]').each(function () {
+    last_comment_id = Math.max(last_comment_id, parseInt($(this).data('id'), 10) || 0);
+  });
+  return last_comment_id;
+}
+function live_new_comments(stream, comments) {
+  if (!comments || !String(comments).trim()) {
+    return $();
+  }
+  return $('<div>').html(comments).children('li').filter(function () {
+    var id = $(this).find('.comment:first').data('id');
+    return !id || !stream.find('#comment_' + id).length;
+  });
+}
+function live_stats_data(stream, post_id) {
+  var comments = {};
+  stream.find('.comment[data-id]').map(function () {
+    return parseInt($(this).data('id'), 10) || 0;
+  }).get().sort(function (a, b) {
+    return b - a;
+  }).slice(0, 100).forEach(function (id) {
+    comments[id] = stream.find('#comment_' + id).data('live-signature') || '';
+  });
+  return { 'do': 'stats', 'post_id': post_id, 'last_comment_id': live_last_comment_id(stream), 'last_reply_id': (typeof stream.data('last-reply-id') !== 'undefined') ? stream.data('last-reply-id') : -1, 'comments': JSON.stringify(comments) };
+}
+function live_update_comments(stream, response, data) {
+  if (typeof response.last_reply_id !== 'undefined') {
+    stream.data('last-reply-id', response.last_reply_id);
+  }
+  /* remove deleted comments */
+  if (data && response.updates) {
+    $.each(JSON.parse(data.comments), function (comment_id) {
+      if (typeof response.updates[comment_id] === 'undefined') {
+        stream.find('#comment_' + comment_id).closest('li').remove();
+      }
+    });
+  }
+  /* update reactions */
+  $.each(response.updates || {}, function (comment_id, update) {
+    var comment = stream.find('#comment_' + comment_id);
+    comment.data('live-signature', update.signature);
+    if (typeof update.stats !== 'undefined') {
+      comment.find('.js_comment-reactions-stats:first').html(update.stats).toggleClass('hidden', is_empty(update.stats));
+    }
+  });
+  /* add new replies */
+  $.each(response.replies || {}, function (comment_id, replies) {
+    var comment = stream.find('#comment_' + comment_id);
+    var new_replies = live_new_comments(stream, replies);
+    if (!comment.length || !new_replies.length) {
+      return;
+    }
+    comment.find('.js_replies:first').append(new_replies);
+    comment.find('.js_replies-toggle:first').remove();
+    comment.find('.comment-replies:first').removeClass('hidden');
+  });
+}
+function live_fly_reactions(layer, reactions) {
+  if (!layer.length || !reactions) {
+    return;
+  }
+  var previous = layer.data('reactions');
+  layer.data('reactions', reactions);
+  if (!previous || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+  $.each(reactions, function (reaction, count) {
+    var added = Math.min(count - (previous[reaction] || 0), 10);
+    for (var i = 0; i < added; i++) {
+      setTimeout(function () {
+        live_fly_reaction(layer, reaction);
+      }, i * 200 + Math.random() * 150);
+    }
+  });
+}
+function live_fly_reaction(layer, reaction) {
+  var image = layer.find('img[data-reaction="' + reaction + '"]');
+  if (!image.length) {
+    return;
+  }
+  var item = image.clone().removeAttr('hidden').addClass('absolute bottom-0 start-1/2 -ms-5 size-10 drop-shadow-lg')[0];
+  var height = layer.height();
+  var drift = (Math.random() - 0.5) * 70;
+  layer.append(item);
+  item.animate([
+    { transform: 'translate(0, 0) scale(0.3)', opacity: 0 },
+    { transform: 'translate(' + (drift * 0.4) + 'px, ' + (-height * 0.2) + 'px) scale(1)', opacity: 1, offset: 0.15 },
+    { transform: 'translate(' + (-drift * 0.4) + 'px, ' + (-height * 0.6) + 'px) scale(1)', opacity: 0.9, offset: 0.6 },
+    { transform: 'translate(' + drift + 'px, ' + (-height) + 'px) scale(0.8)', opacity: 0 }
+  ], { duration: 2800 + Math.random() * 1200, easing: 'cubic-bezier(0.2, 0.6, 0.4, 1)' }).onfinish = function () {
+    item.remove();
+  };
+}
+function live_socket_notify(comment_id) {
+  if (live_socket_post_id && comment_id && chat_socket_enabled && typeof chat_socket !== "undefined" && chat_socket) {
+    chat_socket.emit('event_client_live_comment', { post_id: live_socket_post_id, comment_id: comment_id });
+  }
+}
+function live_moderation_state(user_id, group, state) {
+  $('.js_live-action[data-uid="' + user_id + '"][data-group="' + group + '"]').each(function () {
+    $(this).text($(this).data(($(this).data('action') == state) ? 'on' : 'off'));
+  });
+}
+function live_socket_moderation() {
+  if (live_socket_post_id && chat_socket_enabled && typeof chat_socket !== "undefined" && chat_socket) {
+    chat_socket.emit('event_client_live_moderation', { post_id: live_socket_post_id });
+  }
+}
+function live_comments_refresh() {
+  if (typeof live_host_stats === "function") {
+    live_host_stats();
+  } else if (live_post_streaming_process) {
+    live_audience_stats();
+  }
+}
+function live_socket_join(post_id) {
+  live_socket_post_id = post_id;
+  if (chat_socket_enabled && typeof chat_socket !== "undefined" && chat_socket) {
+    chat_socket.emit('event_client_live_join', { post_id: post_id });
+  }
+}
+function live_socket_leave() {
+  if (live_socket_post_id && chat_socket_enabled && typeof chat_socket !== "undefined" && chat_socket) {
+    chat_socket.emit('event_client_live_leave', { post_id: live_socket_post_id });
+  }
+  live_socket_post_id = null;
 }
 function handle_user_published(user, mediaType) {
   subscribe(user, mediaType);
@@ -496,20 +1111,50 @@ function handle_user_published(user, mediaType) {
 function handle_user_unpublished(user) {
   /* show live status */
   if (user._video_muted_) {
-    $('#js_live-status').html('<i class="fas fa-video-slash mr5"></i>' + __['Video Muted']).show();
+    $('#js_live-status').html('<span class="icon-[tabler--video-off] size-5 shrink-0" aria-hidden="true"></span>' + __['Video Muted']).show();
     return;
   }
   if (user._audio_muted_) {
-    $('#js_live-status').html('<i class="fas fa-microphone-slash mr5"></i>' + __['Audio Muted']).show();
+    $('#js_live-status').html('<span class="icon-[tabler--microphone-off] size-5 shrink-0" aria-hidden="true"></span>' + __['Audio Muted']).show();
     return;
   }
-  $('#js_live-status').html('<i class="fas fa-exclamation-circle mr5"></i>' + __['Live Ended']).addClass("error").show();
+  $('#js_live-status').html('<span class="icon-[tabler--alert-circle] size-5 shrink-0" aria-hidden="true"></span>' + __['Live Ended']).addClass("error").show();
   /* update live post streaming process */
   live_post_streaming_process = false;
   /* clear live post real-time thread */
   clearInterval(live_post_realtime_thread);
+  /* handle live buttons */
+  $('.js_live-controls').prop('hidden', true);
+  live_socket_leave();
   /* handle live counter */
-  $('#js_live-counter-status').html(__['Offline']).addClass("offline");
+  $('#js_live-counter-status').html(__['Offline']).parent().addClass("offline");
+  $('#js_live-counter-number').html(0);
+  /* unbind the beforeunload event */
+  $(window).off('beforeunload');
+}
+function live_audience_removed() {
+  if (!live_post_streaming_process) {
+    return;
+  }
+  /* update live post streaming process */
+  live_post_streaming_process = false;
+  /* clear live post real-time thread */
+  clearInterval(live_post_realtime_thread);
+  live_socket_leave();
+  /* leave the stream */
+  if (live_post_room) {
+    live_post_room.disconnect();
+  } else if (agora_client) {
+    agora_client.leave();
+  }
+  $('#js_live-video').empty();
+  /* show live status */
+  $('#js_live-status').html('<span class="icon-[tabler--alert-circle] size-5 shrink-0" aria-hidden="true"></span>' + __['You have been removed from this live']).addClass("error").show();
+  /* handle live buttons */
+  $('.js_live-controls').prop('hidden', true);
+  $('.lightbox, .livebox').find('.js_comment-form').addClass('hidden');
+  /* handle live counter */
+  $('#js_live-counter-status').html(__['Offline']).parent().addClass("offline");
   $('#js_live-counter-number').html(0);
   /* unbind the beforeunload event */
   $(window).off('beforeunload');
@@ -524,6 +1169,10 @@ function end_live_audience() {
   var lightbox = $('.lightbox, .livebox');
   var live_post_id = lightbox.data('live-post-id');
   $.post(api['live/reaction'], { 'do': 'leave', 'post_id': live_post_id }, 'json');
+  live_socket_leave();
+  if (live_post_room) {
+    live_post_room.disconnect();
+  }
   /* clear live post real-time thread */
   clearInterval(live_post_realtime_thread);
   /* reset live realtime process */
@@ -536,66 +1185,16 @@ function end_live_audience() {
 
 $(function () {
 
-  // run stories
-  if ($("#stories").length > 0) {
-    var stories = new Zuck('stories', {
-      skin: 'sngine',
-      avatars: false,
-      list: false,
-      backNative: true,
-      previousTap: true,
-      autoFullScreen: false,
-      localStorage: true,
-      stories: $("#stories").data("json"),
-      rtl: (system_langauge_dir == "rtl") ? true : false,
-      language: {
-        unmute: __['Touch to unmute'],
-        keyboardTip: __['Press space to see next'],
-        visitLink: __['Visit link'],
-        time: {
-          ago: __['ago'],
-          hour: __['hour'],
-          hours: __['hours'],
-          minute: __['minute'],
-          minutes: __['minutes'],
-          fromnow: __['from now'],
-          seconds: __['seconds'],
-          yesterday: __['yesterday'],
-          tomorrow: __['tomorrow'],
-          days: __['days']
-        }
-      }
-    });
-  };
-  /* delete story */
-  $('body').on('click', '.js_story-deleter', function () {
-    var id = $(this).data('id');
-    confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
-      $.post(api['posts/story'], { 'do': 'delete' }, function (response) {
-        /* check the response */
-        if (response.callback) {
-          eval(response.callback);
-        } else {
-          window.location.reload();
-        }
-      }, 'json')
-        .fail(function () {
-          show_error_modal();
-        });
-    });
-  });
-
-
   // run daytime messages
-  if (current_page == "index" && daytime_msg_enabled && $('.publisher').length > 0) {
+  if (current_page == "index" && daytime_msg_enabled && $('#publisher-trigger').length > 0) {
     var now = new Date();
     var hours = now.getHours();
     if (hours >= 0 && hours < 12) {
-      $(render_template('#message-morning')).insertAfter('.publisher').fadeIn();
+      $(render_template('#message-morning')).insertAfter('#publisher-trigger').fadeIn();
     } else if (hours >= 12 && hours < 18) {
-      $(render_template('#message-afternoon')).insertAfter('.publisher').fadeIn();
+      $(render_template('#message-afternoon')).insertAfter('#publisher-trigger').fadeIn();
     } else if (hours >= 18 || hours <= 24) {
-      $(render_template('#message-evening')).insertAfter('.publisher').fadeIn();
+      $(render_template('#message-evening')).insertAfter('#publisher-trigger').fadeIn();
     }
   }
 
@@ -605,8 +1204,8 @@ $(function () {
   quill_publisher();
   /* publisher focus */
   $('body').on('click', function (e) {
-    /* check if there is a publisher in the page */
-    if ($(".publisher:not(.mini)").length > 0) {
+    /* check if there is a publisher in the page (the modal publisher stays expanded) */
+    if ($(".publisher:not(.mini):not([data-modal-mode])").length > 0) {
       if ($(e.target).parents(".publisher:not(.mini)").length > 0 || $(e.target).parents(".js_publisher-attachment-image-remover").length > 0 || $(e.target).parents(".js_publisher-gif-remover").length > 0 || $(e.target).parents(".js_publisher-scraper-remover").length > 0 || $(e.target).parents(".js_publisher-extender").length > 0) {
         $('body').addClass('publisher-focus');
         $('.publisher-slider').slideDown();
@@ -652,6 +1251,10 @@ $(function () {
       }
     }
   });
+  /* publisher close modal */
+  $('body').on('click', '.js_close-publisher-modal', function (event) {
+    close_publisher_modal($(this).closest('.modal'));
+  });
   /* publisher tabs */
   $('body').on('click', '.js_publisher-tab', function () {
     var _this = $(this);
@@ -678,6 +1281,7 @@ $(function () {
   $('body').on('keyup paste input propertychange', '.js_publisher-scraper', function () {
     var _this = $(this);
     var publisher = _this.parents('.publisher');
+    if (publisher.data('edit-loading') || (publisher.data('post-editor') && (publisher.data('post-editor').limited || publisher.data('post-editor').poll_locked))) return;
     var loader = publisher.find('.publisher-loader');
     var button = publisher.find('.js_publisher');
     clearTimeout(typing_timer);
@@ -735,8 +1339,6 @@ $(function () {
             }
             /* show the publisher scraper */
             publisher.find('.publisher-scraper').html(template).fadeIn();
-            /* reset facebook iframes */
-            rebuild_facebook_iframes();
           }
         }, 'json');
       }, 500);
@@ -819,7 +1421,7 @@ $(function () {
     /* update/hide feelings data input */
     $('#feelings-data input').hide().val($(this).data("type"));
     /* update feelings data span */
-    $('#feelings-data span').html('<i class="twa twa-lg twa-' + $(this).data("icon") + '"></i>' + $(this).find('.data').text());
+    $('#feelings-data span').text($(this).data("emoji") + ' ' + $(this).find('.data').text());
     /* update publisher feelings */
     $('.js_publisher-feelings').addClass('activated');
   });
@@ -880,21 +1482,24 @@ $(function () {
       /* check if results dropdown-menu already exist */
       if (_this.next('.dropdown-menu').length == 0) {
         /* construct a new one */
-        _this.after('<div class="dropdown-menu gif-search"></div>');
+        _this.after('<div class="dropdown-menu gif-search static! mt-0 max-h-72 w-full overflow-y-auto rounded-box border border-base-300 bg-base-100 p-0 text-sm opacity-100 shadow-none"></div>');
       }
       /* add the loader */
-      _this.next('.dropdown-menu').show().html('<div class="loader loader_small ptb10"></div>');
+      _this.next('.dropdown-menu').show().html('<div class="flex justify-center py-6"><div class="loading loading-spinner loading-sm text-primary"></div></div>');
       /* get results */
-      $.get('https://api.giphy.com/v1/gifs/search?', { q: query, api_key: giphy_key, limit: 20 }, function (response) {
+      giphy_search(query, 0, 20).done(function (response) {
         if (response.meta.status == 200 && response.data.length > 0) {
-          _this.next('.dropdown-menu').show().html("<div class='js_scroller' data-slimScroll-height='180'><div>");
+          _this.next('.dropdown-menu').show().html("<div class='js_scroller grid grid-cols-2 gap-2 p-2 sm:grid-cols-3'></div>");
           for (var i = 0; i < response.data.length; i++) {
-            _this.next('.dropdown-menu').find('.js_scroller').append($('<div class="item"><img class="js_publisher-gif-add" src="' + response.data[i].images.fixed_height_small.url + '" data-gif="' + response.data[i].images.fixed_height.url + '" autoplay loop></div>'));
+            _this.next('.dropdown-menu').find('.js_scroller').append($('<button type="button" class="item overflow-hidden rounded-lg bg-base-200"><img class="js_publisher-gif-add aspect-video size-full object-cover" src="' + response.data[i].images.fixed_height_small.url + '" data-gif="' + response.data[i].images.fixed_height.url + '" alt=""></button>'));
           }
         } else {
-          _this.next('.dropdown-menu').show().html('<div class="ptb5 plr10">' + __['No result found'] + '</div>');
+          _this.next('.dropdown-menu').show().html('<div class="px-4 py-6 text-center text-sm text-base-content/55">' + __['No result found'] + '</div>');
         }
-      }, 'json');
+      })
+        .fail(function () {
+          _this.next('.dropdown-menu').show().html('<div class="px-4 py-6 text-center text-sm text-base-content/55">' + __['No result found'] + '</div>');
+        });
     } else {
       /* check if results dropdown-menu already exist */
       if (_this.next('.dropdown-menu').length > 0) {
@@ -948,7 +1553,7 @@ $(function () {
   /* publisher poll */
   $('body').on('keyup', '.publisher-meta[data-meta="poll"] input', function () {
     var $emptyFields = $('.publisher-meta[data-meta="poll"] input').filter(function () {
-      return $.trim(this.value) === "";
+      return this.value.trim() === "";
     });
     if ($emptyFields.length == $('.publisher-meta[data-meta="poll"] input').length) {
       $('.js_publisher-tab[data-tab="poll"]').removeClass('activated');
@@ -957,7 +1562,34 @@ $(function () {
     }
   });
   $('body').on('focus', '.publisher-meta[data-meta="poll"] input:last', function () {
-    $(render_template('#poll-option')).insertAfter($(this).parent()).fadeIn();
+    if ($(this).prop('readonly')) return;
+    $(render_template('#poll-option')).insertAfter($(this).closest('.publisher-meta')).fadeIn();
+  });
+  /* publisher photo layout */
+  $('body').on('click', '.js_photo-layout-option', function () {
+    var publisher = $(this).closest('.publisher');
+    publisher.data('photo_layout', $(this).data('layout'));
+    publisher_photos_refresh(publisher);
+  });
+  $('body').on('click', '.js_photo-move', function () {
+    var button = $(this);
+    var publisher = button.closest('.publisher');
+    var source = button.closest('li.item').attr('data-src');
+    var order = (publisher.data('photo_order') || []).slice();
+    var index = order.indexOf(source);
+    if (index === -1) return;
+    var direction = button.data('direction');
+    var target = direction === 'first' ? 0 : index + (direction === 'earlier' ? -1 : 1);
+    if (target < 0 || target >= order.length) return;
+    order.splice(index, 1);
+    order.splice(target, 0, source);
+    publisher.data('photo_order', order);
+    publisher_photos_refresh(publisher, source);
+    if (button.prop('disabled')) {
+      button.closest('li.item').find('.js_photo-move:not(:disabled)').first().trigger('focus');
+    } else {
+      button.trigger('focus');
+    }
   });
   /* publisher attachment image remover */
   $('body').on('click', '.js_publisher-attachment-image-remover, .js_publisher-mini-attachment-image-remover', function () {
@@ -989,8 +1621,9 @@ $(function () {
     }
     /* remove the attachment item */
     item.remove();
+    if (!mini) publisher_photos_refresh(publisher);
     /* remove the attachment from server */
-    $.post(api['data/delete'], { 'src': src });
+    if (!publisher_edit_saved_upload(publisher, src)) $.post(api['data/delete'], { 'src': src });
   });
   /* publisher mini attachment video remover */
   $('body').on('click', '.js_publisher-mini-attachment-video-remover', function () {
@@ -1015,7 +1648,14 @@ $(function () {
     var _this = $(this);
     var type = _this.data("type");
     var publisher = _this.parents('.publisher');
+    var queue = publisher.data('attachment-queue');
+    var upload = queue && queue.items.find(function (item) { return item.type === type; });
+    if (upload) {
+      attachment_upload_remove(queue, upload);
+      return;
+    }
     var src = publisher.data(type);
+    if (!src) return;
     src = src['source'];
     if (src === undefined) return;
     /* remove the uploads from publisher data */
@@ -1024,8 +1664,7 @@ $(function () {
     if (type == "reel") {
       /* remove the thumbnail */
       var attachments_reel_thumbnail = publisher.find('.publisher-reel-custom-thumbnail');
-      attachments_reel_thumbnail.find('.x-image').removeAttr("style");
-      attachments_reel_thumbnail.find('input.js_x-uploader-input').val("");
+      x_image_reset(attachments_reel_thumbnail.find('.x-image'));
       attachments_reel_thumbnail.hide();
       /* uncheck adult toggle */
       publisher.find('.js_publisher-adult-toggle').prop('disabled', false);
@@ -1042,14 +1681,14 @@ $(function () {
     } else if (type == "video") {
       /* remove the thumbnail */
       var attachments_video_thumbnail = publisher.find('.publisher-video-custom-thumbnail');
-      attachments_video_thumbnail.find('.x-image').removeAttr("style");
-      attachments_video_thumbnail.find('input.js_x-uploader-input').val("");
+      x_image_reset(attachments_video_thumbnail.find('.x-image'));
       attachments_video_thumbnail.hide();
     }
     publisher_tab(publisher, type);
     publisher.find('.js_publisher-tab[data-tab="' + type + '"]').removeClass('activated');
     /* remove the attachment from server */
-    $.post(api['data/delete'], { 'src': src });
+    publisher.find('.js_attachments-' + type).empty().hide();
+    if (!publisher_edit_saved_upload(publisher, src)) $.post(api['data/delete'], { 'src': src });
   });
   /* publish new post */
   $('body').on('click', '.js_publisher', function () {
@@ -1058,6 +1697,7 @@ $(function () {
     var posts_stream = $('.js_posts_stream');
     /* get publisher */
     var publisher = _this.parents('.publisher');
+    if (attachment_upload_busy(publisher) || publisher.data('edit-saving') || publisher.find('.x-image-loader:not(.hidden):visible, .js_voice-processing-message:visible, .js_voice-stop:visible').length) return;
     /* get handle */
     var handle = publisher.data('handle');
     /* get (user|page|group|event) id */
@@ -1120,7 +1760,7 @@ $(function () {
     var attachments_file_meta = publisher.find('.publisher-meta[data-meta="file"]');
     var file = publisher.data('file');
     /* get privacy */
-    var privacy = publisher.find('.btn-group').data('value');
+    var privacy = publisher.find('.js_publisher-privacy').val();
     /* get schedule */
     var is_schedule = publisher.find('.js_publisher-schedule-toggle').is(":checked");
     var local_schedule_date = publisher.find('.js_publisher-schedule-date').val() || '';
@@ -1156,9 +1796,9 @@ $(function () {
     /* get post_as_page from hidden input if exists */
     var post_as_page = publisher.find('input[name="post_as_page"]').val();
     /* get the error element */
-    var error = publisher.find('.alert.alert-danger');
+    var error = publisher.find('.publisher-error, .alert.alert-error, .alert.alert-danger').first();
     /* return if no data to post */
-    if (is_empty(editor.val()) && link === undefined && photos === undefined && feeling.val() == "" && location.val() == "" && voice_notes === undefined && poll_options === undefined && reel === undefined && video === undefined && audio === undefined && file === undefined) {
+    if (!publisher.data('post-editor') && is_empty(editor.val()) && link === undefined && photos === undefined && feeling.val() == "" && location.val() == "" && voice_notes === undefined && poll_options === undefined && reel === undefined && video === undefined && audio === undefined && file === undefined) {
       return;
     }
     /* button loading */
@@ -1170,10 +1810,14 @@ $(function () {
       'message': editor.val(),
       'link': JSON.stringify(link),
       'photos': JSON.stringify(photos),
+      'photo_layout': publisher.data('photo_layout') || 'classic',
+      'photo_order': publisher.find('.js_publisher-photo-layout').length && photos ? JSON.stringify(publisher_photo_order(publisher)) : undefined,
       'album': album.val(),
       'feeling_action': feeling.data('action'),
       'feeling_value': feeling.val(),
       'location': location.val(),
+      'latitude': location_meta.find('[data-geo="lat"]').val(),
+      'longitude': location_meta.find('[data-geo="lng"]').val(),
       'colored_pattern': publisher.data('colored_pattern'),
       'voice_notes': JSON.stringify(voice_notes),
       'poll_options': JSON.stringify(poll_options),
@@ -1202,21 +1846,38 @@ $(function () {
       'collaborative_percent': collaborative_percent_input.val(),
       'post_as_page': post_as_page
     };
+    if (publisher.data('post-editor')) {
+      publisher.data('edit-saving', true);
+      publisher_edit_save(publisher, payload, _this, error);
+      return;
+    }
     $.post(api['posts/post'], payload, function (response) {
       if (response.callback) {
         /* button reset */
         button_status(_this, "reset");
         eval(response.callback);
       } else {
-        /* check if publisher modal mode -> redirect to post page */
-        if (publisher.data('modal-mode') && !response.approval && !response.processing) {
-          window.location.href = site_path + "/posts/" + response.post_id;
+        /* check if publisher modal mode -> prepend to the matching posts stream or redirect to post page */
+        var target_stream = posts_stream;
+        if (publisher.data('modal-mode')) {
+          var streams = { 'me': 'newsfeed', 'user': 'posts_profile', 'page': 'posts_page', 'group': 'posts_group', 'event': 'posts_event' };
+          target_stream = posts_stream.filter(function () {
+            if (handle == 'me' && $(this).data('get') == 'posts_profile') {
+              return $(this).data('id') == user_id;
+            }
+            return $(this).data('get') == streams[handle] && (handle == 'me' || $(this).data('id') == id);
+          }).first();
+          if (target_stream.length == 0 && !response.approval && !response.processing) {
+            window.location.href = site_path + "/posts/" + response.post_id;
+            return;
+          }
         }
         /* button reset */
         button_status(_this, "reset");
         /* remove the error */
         error.hide();
         /* prepare publisher */
+        attachment_upload_clear(publisher);
         /* remove (active|activated|disabled) from all tabs */
         publisher.find('.js_publisher-tab').removeClass('active activated disabled');
         /* empty textarea */
@@ -1224,6 +1885,9 @@ $(function () {
         textarea.attr('placeholder', textarea.data('init-placeholder'));
         /* empty quill editor */
         quill_editor_reset(quill);
+        if (quill && quill.root) {
+          quill.root.setAttribute('data-placeholder', textarea.data('init-placeholder'));
+        }
         editor.val('');
         /* hide & empty album */
         album.val('');
@@ -1258,6 +1922,7 @@ $(function () {
         attachments_photos.hide();
         attachments_photos.find('li.item').remove();
         publisher.removeData('photos');
+        publisher_photos_refresh(publisher);
         /* ** reel ** */
         attachments_reel.hide();
         attachments_reel_meta.hide();
@@ -1275,12 +1940,10 @@ $(function () {
         attachments_file_meta.hide();
         publisher.removeData('file');
         /* hide & empty reel custom thumbnail */
-        attachments_reel_thumbnail.find('.x-image').removeAttr("style");
-        attachments_reel_thumbnail.find('input.js_x-uploader-input').val("");
+        x_image_reset(attachments_reel_thumbnail.find('.x-image'));
         attachments_reel_thumbnail.hide();
         /* hide & empty video custom thumbnail */
-        attachments_video_thumbnail.find('.x-image').removeAttr("style");
-        attachments_video_thumbnail.find('input.js_x-uploader-input').val("");
+        x_image_reset(attachments_video_thumbnail.find('.x-image'));
         attachments_video_thumbnail.hide();
         /* hide & empty scraper */
         $('.publisher-scraper').hide().html('');
@@ -1301,8 +1964,7 @@ $(function () {
         publisher.find("#subscribers-toggle-wrapper").removeClass("disabled");
         /* reset subscriptions image */
         subscriptions_image_wrapper.hide();
-        subscriptions_image_wrapper.find('.x-image').removeAttr("style");
-        subscriptions_image_wrapper.find('.js_x-image-remover').hide();
+        x_image_reset(subscriptions_image_wrapper.find('.x-image'));
         subscriptions_image_input.val('');
         /* uncheck paid toggle */
         publisher.find('.js_publisher-paid-toggle').prop('checked', false);
@@ -1319,8 +1981,7 @@ $(function () {
         paid_text_input.val('');
         /* reset paid image */
         paid_image_wrapper.hide();
-        paid_image_wrapper.find('.x-image').removeAttr("style");
-        paid_image_wrapper.find('.js_x-image-remover').hide();
+        x_image_reset(paid_image_wrapper.find('.x-image'));
         paid_image_input.val('');
         /* uncheck collaborative toggle */
         publisher.find('.js_publisher-collaborative-toggle').prop('checked', false);
@@ -1331,11 +1992,13 @@ $(function () {
         collaborative_percent_wrapper.hide();
         collaborative_percent_input.val('');
         /* reset privacy */
-        publisher.find('.btn-group').show();
+        publisher.find('.js_publisher-privacy').show();
         publisher.find('.js_publisher-privacy-public').hide();
         /* collapse the publisher */
         $('body').removeClass('publisher-focus');
-        publisher.find('.publisher-slider').slideUp();
+        if (!publisher.data('modal-mode')) {
+          publisher.find('.publisher-slider').slideUp();
+        }
         /* release the loading status */
         posts_stream.removeData('loading');
         if (response.approval) {
@@ -1344,9 +2007,11 @@ $(function () {
           modal('#modal-success', { title: __['Processing'], message: __['Your video is being processed, We will let you know when it is ready!'] });
         } else {
           /* attache the new post */
-          $('.js_posts_stream').find('ul:first').prepend(response.post);
-          /* rerun photo grid */
-          ui_rebuild();
+          target_stream.find('ul:first').prepend(response.post);
+          /* close the publisher modal */
+          if (publisher.data('modal-mode')) {
+            close_publisher_modal();
+          }
           /* close the window if share plugin */
           if (current_page == "share") {
             window.close();
@@ -1361,29 +2026,31 @@ $(function () {
       });
   });
   /* publisher schedule toggle */
-  $('body').on('click', '.js_publisher-schedule-toggle', function () {
+  $('body').on('click', '.js_publisher-schedule-toggle', function (e) {
     $("#schedule-toggle-wrapper").toggle();
+    publisher_reveal(e, '#schedule-toggle-wrapper');
   });
   /* publisher anonymous toggle */
   $('body').on('click', '.js_publisher-anonymous-toggle', function () {
     var publisher = $(this).parents('.publisher');
     publisher_tab(publisher, "anonymous");
-    publisher.find('.btn-group').toggle();
+    publisher.find('.js_publisher-privacy').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
   });
   /* publisher subscribers toggle */
-  $('body').on('click', '.js_publisher-subscribers-toggle', function () {
+  $('body').on('click', '.js_publisher-subscribers-toggle', function (e) {
     var publisher = $(this).parents('.publisher');
     $("#paid-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-paid-toggle").prop("disabled", !$(".js_publisher-paid-toggle").prop("disabled"));
     $("#collaborative-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-collaborative-toggle").prop("disabled", !$(".js_publisher-collaborative-toggle").prop("disabled"));
     $("#subscriptions-image-wrapper").toggle();
-    publisher.find('.btn-group').toggle();
+    publisher.find('.js_publisher-privacy').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
+    publisher_reveal(e, '#subscriptions-image-wrapper');
   });
   /* publisher paid toggle */
-  $('body').on('click', '.js_publisher-paid-toggle', function () {
+  $('body').on('click', '.js_publisher-paid-toggle', function (e) {
     var publisher = $(this).parents('.publisher');
     $("#subscribers-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-subscribers-toggle").prop("disabled", !$(".js_publisher-subscribers-toggle").prop("disabled"));
@@ -1391,11 +2058,12 @@ $(function () {
     $("#paid-price-wrapper").toggle();
     $("#paid-text-wrapper").toggle();
     $("#paid-image-wrapper").toggle();
-    publisher.find('.btn-group').toggle();
+    publisher.find('.js_publisher-privacy').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
+    publisher_reveal(e, '#paid-lock-toggle-wrapper, #paid-price-wrapper, #paid-text-wrapper, #paid-image-wrapper');
   });
   /* publisher collaborative toggle */
-  $('body').on('click', '.js_publisher-collaborative-toggle', function () {
+  $('body').on('click', '.js_publisher-collaborative-toggle', function (e) {
     var publisher = $(this).parents('.publisher');
     $("#anonymous-toggle-wrapper").toggleClass("disabled");
     $(".js_publisher-anonymous-toggle").prop("disabled", !$(".js_publisher-anonymous-toggle").prop("disabled"));
@@ -1403,46 +2071,16 @@ $(function () {
     $(".js_publisher-subscribers-toggle").prop("disabled", !$(".js_publisher-subscribers-toggle").prop("disabled"));
     $("#collaborative-users-wrapper").toggle();
     $("#collaborative-percent-wrapper").toggle();
-    publisher.find('.btn-group').toggle();
+    publisher.find('.js_publisher-privacy').toggle();
     publisher.find('.js_publisher-privacy-public').toggle();
-  });
-  /* publish new story */
-  $('body').on('click', '.js_publisher-story', function () {
-    var _this = $(this);
-    /* get publisher */
-    var publisher = _this.parents('.publisher-mini');
-    /* get is_ads */
-    var is_ads = publisher.find('#is_ads').is(":checked")
-    /* get text */
-    var textarea = publisher.find('textarea');
-    /* get photos */
-    var photos = publisher.data('photos');
-    /* get videos */
-    var videos = publisher.data('video');
-    /* return if no data to post */
-    if (photos === undefined && videos === undefined) {
-      return;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    $.post(api['posts/story'], { 'do': 'publish', 'is_ads': is_ads, 'message': textarea.val(), 'photos': JSON.stringify(photos), 'videos': JSON.stringify(videos) }, function (response) {
-      if (response.callback) {
-        /* button reset */
-        button_status(_this, "reset");
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        show_error_modal();
-      });
+    publisher_reveal(e, '#collaborative-users-wrapper, #collaborative-percent-wrapper');
   });
   /* publish new product */
   $('body').on('click', '.js_publisher-product', function () {
     var _this = $(this);
     /* get publisher */
     var publisher = _this.parents('.publisher-mini');
+    if (attachment_upload_busy(publisher)) return;
     /* get product */
     var product = {};
     publisher.find('input, textarea, select').each(function (index) {
@@ -1481,6 +2119,7 @@ $(function () {
     var _this = $(this);
     /* get publisher */
     var publisher = _this.parents('.publisher');
+    if (attachment_upload_busy(publisher)) return;
     /* get album id */
     var id = publisher.data('id');
     /* get text */
@@ -1494,14 +2133,14 @@ $(function () {
     var feeling_meta = publisher.find('.publisher-meta[data-meta="feelings"]');
     var feeling = feeling_meta.find('input');
     /* get privacy */
-    var privacy = publisher.find('.btn-group').data('value');
+    var privacy = publisher.find('.js_publisher-privacy').val();
     /* return if no data to post */
     if (photos === undefined) {
       return;
     }
     /* button loading */
     button_status(_this, "loading");
-    $.post(api['albums/action'], { 'do': 'add_photos', 'id': id, 'message': textarea.val(), 'photos': JSON.stringify(photos), 'feeling_action': feeling.data('action'), 'feeling_value': feeling.val(), 'location': location.val(), 'privacy': privacy }, function (response) {
+    $.post(api['albums/action'], { 'do': 'add_photos', 'id': id, 'message': textarea.val(), 'photos': JSON.stringify(photos), 'feeling_action': feeling.data('action'), 'feeling_value': feeling.val(), 'location': location.val(), 'latitude': location_meta.find('[data-geo="lat"]').val(), 'longitude': location_meta.find('[data-geo="lng"]').val(), 'privacy': privacy }, function (response) {
       if (response.callback) {
         /* button reset */
         button_status(_this, "reset");
@@ -1518,6 +2157,7 @@ $(function () {
   $('body').on('click', '.js_publisher-review', function () {
     var _this = $(this);
     var publisher = _this.parents('.publisher-mini');
+    if (attachment_upload_busy(publisher)) return;
     /* button loading */
     button_status(_this, "loading");
     $.post(api['modules/review'], { 'do': 'publish-review', 'id': publisher.data('id'), 'type': publisher.data('type'), 'rating': publisher.find('input[name="rating"]:checked').val(), 'review': publisher.find('textarea').val(), 'photos': JSON.stringify(publisher.data('photos')) }, function (response) {
@@ -1552,7 +2192,7 @@ $(function () {
   $('body').on('submit', '.js_ai-generate-text', function (e) {
     e.preventDefault();
     var form = $(this);
-    var submit = form.find('button[type="submit"]');
+    var submit = form.find('button[type="submit"]:visible');
     var error = form.find('.alert.alert-danger');
     button_status(submit, "loading");
     /* get ajax response */
@@ -1568,13 +2208,11 @@ $(function () {
         /* update words balance */
         $('.js_ai-words-balance').text(response.words_balance);
         /* update generated title */
-        $('.js_ai-generated-title').val(response.generated_title);
+        form.find('.js_ai-generated-title').val(response.generated_title);
         /* update generated text */
-        $('.js_ai-generated-text').val(response.generated_text);
-        /* show generated text container */
-        $('.js_ai-generated-text-container').show();
-        /* show use generated text button */
-        $('.js_ai-use-generated-text').show();
+        form.find('.js_ai-generated-text').val(response.generated_text);
+        /* show generated text */
+        form.attr('data-generated', 'true');
       } else if (response.error) {
         error.html(response.message).slideDown();
       } else if (response.callback) {
@@ -1590,25 +2228,28 @@ $(function () {
   });
   /* use generated text */
   $('body').on('click', '.js_ai-use-generated-text', function () {
+    var form = $(this).closest('form');
     var handle = $(this).data('handle');
+    var generated_title = form.find('.js_ai-generated-title').val();
+    var generated_text = form.find('.js_ai-generated-text').val();
     /* close modal */
-    $('#modal').modal('hide');
+    modal_close();
     /* check the handle */
     if (handle == 'post') {
       /* add generated text to publisher */
-      update_quill_editor($('.publisher').find('.js_quill').first().data('quill'), $('.js_ai-generated-text').val());
+      update_quill_editor($('#publisher-box').find('.js_quill').first().data('quill'), generated_text);
     } else if (handle == 'blog') {
       /* add generated title to blog title */
-      $('.js_blog-title').val($('.js_ai-generated-title').val());
+      $('.js_blog-title').val(generated_title);
       /* add generated text to blog */
-      tinymce.get('blog-editor').setContent($('.js_ai-generated-text').val());
+      tinymce.get('blog-editor').setContent(generated_text);
     }
   });
   /* generate AI image */
   $('body').on('submit', '.js_ai-generate-image', function (e) {
     e.preventDefault();
     var form = $(this);
-    var submit = form.find('button[type="submit"]');
+    var submit = form.find('button[type="submit"]:visible');
     var error = form.find('.alert.alert-danger');
     button_status(submit, "loading");
     /* get ajax response */
@@ -1625,11 +2266,9 @@ $(function () {
         $('.js_ai-images-balance').text(response.images_balance);
         /* update generated image */
         var imageSrc = 'data:image/png;base64,' + response.generated_image;
-        $('.js_ai-generated-image').attr('src', imageSrc);
-        /* show generated image container */
-        $('.js_ai-generated-image-container').show();
-        /* show use generated image button */
-        $('.js_ai-use-generated-image').show();
+        form.find('.js_ai-generated-image').attr('src', imageSrc);
+        /* show generated image */
+        form.attr('data-generated', 'true');
       } else if (response.error) {
         error.html(response.message).slideDown();
       } else if (response.callback) {
@@ -1645,14 +2284,14 @@ $(function () {
   });
   /* use generated image */
   $('body').on('click', '.js_ai-use-generated-image', function () {
-    /* close modal */
-    $('#modal').modal('hide');
-    /* get form */
-    var form = $('.js_publisher-images-uploader').find('form');
-    var input = form.find('input[type="file"]');
     /* get base64 image */
-    var imageSrc = $('.js_ai-generated-image').attr('src');
+    var imageSrc = $(this).closest('form').find('.js_ai-generated-image').attr('src');
+    /* close modal */
+    modal_close();
     if (!imageSrc) return;
+    /* get form */
+    var form = $('#publisher-box').find('.js_publisher-images-uploader').find('form');
+    var input = form.find('input[type="file"]');
     /* convert base64 → File */
     var file = base64ToFile(imageSrc, 'ai-image.png');
     /* create DataTransfer */
@@ -1669,6 +2308,11 @@ $(function () {
   /* shim for AudioContext|getUserMedia if it's not available */
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
   navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+  /* reset composer voice state */
+  function voice_composer_reset(wrapper) {
+    wrapper.removeAttr('data-state');
+    wrapper.find('.js_voice-timer').html('00:00');
+  }
   /* start voice recording */
   $('body').on('click', '.js_voice-start', function () {
     /* check if there recording process */
@@ -1676,7 +2320,8 @@ $(function () {
       return;
     }
     var _this = $(this);
-    var _parent = _this.parents(".voice-recording-wrapper");
+    var _parent = _this.closest(".voice-recording-wrapper");
+    var composer = _parent.hasClass('js_composer');
     var voice_start_button = _this;
     var voice_stop_button = _parent.find('.js_voice-stop');
     var voice_timer = _parent.find(".js_voice-timer");
@@ -1684,31 +2329,23 @@ $(function () {
     var voice_success_message = _parent.find('.js_voice-success-message');
     var handle = _parent.data("handle");
     var handle_type = "voice_notes";
-    /* hide voice start button */
-    voice_start_button.hide();
-    /* show voice stop button */
-    voice_stop_button.show();
-    /* init recording timer */
-    voice_recording_timer = new easytimer.Timer();
-    voice_recording_timer.addEventListener('secondsUpdated', function (e) {
-      voice_timer.html(voice_recording_timer.getTimeValues().toString(['minutes', 'seconds']));
-    });
-    voice_recording_timer.addEventListener('started', function (e) {
-      voice_timer.html(voice_recording_timer.getTimeValues().toString(['minutes', 'seconds']));
-    });
-    voice_recording_timer.addEventListener('reset', function (e) {
-      voice_timer.html(voice_recording_timer.getTimeValues().toString(['minutes', 'seconds']));
-    });
-    /* init stop recording */
-    voice_stop_button[0].addEventListener('click', function () {
-      /* stop recording ... */
-      /* stop microphone access */
-      voice_recording_stream.getAudioTracks()[0].stop();
-      /* tell the recorder to stop the recording */
-      voice_recording_object.finishRecording();
-    });
+    voice_recording_cancelled = false;
+    if (composer) {
+      /* switch the composer to recording */
+      _parent.attr('data-state', 'recording');
+    } else {
+      /* hide voice start button */
+      voice_start_button.hide();
+      /* show voice stop button */
+      voice_stop_button.show();
+    }
     /* start recording ... */
     navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function (stream) {
+      /* check if the recording cancelled while waiting for the microphone */
+      if (voice_recording_cancelled) {
+        stream.getTracks().forEach(function (track) { track.stop(); });
+        return;
+      }
       /* create an audio context after getUserMedia is called */
       var audioContext = new AudioContext();
       /*  assign to voice_recording_stream for later use */
@@ -1723,15 +2360,22 @@ $(function () {
       );
       /* handle onComplete event */
       voice_recording_object.onComplete = function (recorder, blob) {
-        /* hide voice stop button */
-        voice_stop_button.hide();
+        /* stop microphone access */
+        voice_recording_stream.getTracks().forEach(function (track) { track.stop(); });
         /* stop recording timer */
-        voice_recording_timer.reset();
-        voice_recording_timer.stop();
+        clearInterval(voice_recording_timer);
+        voice_timer.html(format_timer(0));
         /* update voice processing process */
         voice_recording_process = false;
-        /* show voice processing message */
-        voice_processing_message.show();
+        if (composer) {
+          /* switch the composer to processing */
+          _parent.attr('data-state', 'processing');
+        } else {
+          /* hide voice stop button */
+          voice_stop_button.hide();
+          /* show voice processing message */
+          voice_processing_message.show();
+        }
         /* upload the blob audio file */
         var formData = new FormData();
         formData.append('secret', secret);
@@ -1750,7 +2394,9 @@ $(function () {
           success: function (response) {
             /* handle the response */
             if (response.callback) {
-              if (handle == "publisher") {
+              if (composer) {
+                voice_composer_reset(_parent);
+              } else if (handle == "publisher") {
                 /* publisher */
                 var publisher = _this.parents('.publisher');
                 var publisher_button = publisher.find('.js_publisher-btn');
@@ -1758,6 +2404,13 @@ $(function () {
                 button_status(publisher_button, "reset");
               }
               eval(response.callback);
+            } else if (composer) {
+              /* send the voice note directly */
+              var root = (handle == "chat") ? _parent.closest('.chat-widget, .panel-messages') : _parent.closest('.comment');
+              root.data(handle_type, response.file);
+              voice_composer_reset(_parent);
+              _parent.find('.js_composer-send').trigger('click');
+              root.removeData(handle_type);
             } else {
               /* hide voice processing message */
               voice_processing_message.hide();
@@ -1774,26 +2427,13 @@ $(function () {
                 publisher.find('.js_publisher-tab[data-tab="' + handle_type + '"]').addClass('activated');
                 /* enable publisher button */
                 button_status(publisher_button, "reset");
-              } else if (handle == "comment") {
-                /* comment */
-                var comment = _this.parents('.comment');
-                /* add the attachment to comment data */
-                comment.data(handle_type, response.file);
-                /* hide comment x-form-tools */
-                comment.find('.x-form-tools-attach').hide();
-                comment.find('.x-form-tools-voice').hide();
-              } else if (handle == "chat") {
-                /* chat */
-                var chat_widget = _this.parents('.chat-widget, .panel-messages');
-                /* add the attachment to chat widget data */
-                chat_widget.data(handle_type, response.file);
-                /* hide chat widget x-form-tools */
-                chat_widget.find('.x-form-tools-attach').hide();
-                chat_widget.find('.x-form-tools-voice').hide();
               }
             }
           },
           error: function () {
+            if (composer) {
+              voice_composer_reset(_parent);
+            }
             show_error_modal();
           }
         });
@@ -1807,7 +2447,12 @@ $(function () {
       /* start the recording process */
       voice_recording_object.startRecording();
       /* start recording timer */
-      voice_recording_timer.start();
+      var voice_recording_start = Date.now();
+      clearInterval(voice_recording_timer);
+      voice_timer.html(format_timer(0));
+      voice_recording_timer = setInterval(function () {
+        voice_timer.html(format_timer((Date.now() - voice_recording_start) / 1000));
+      }, 1000);
       /* update voice recording process */
       voice_recording_process = true;
       /* check the handle */
@@ -1816,20 +2461,41 @@ $(function () {
         var publisher_button = publisher.find('.js_publisher-btn');
         /* disable publisher button */
         button_status(publisher_button, "loading");
-      } else if (handle == "comment") {
-        var comment = _this.parents('.comment');
-        /* hide comment x-form-tools */
-        comment.find('.x-form-tools-attach').hide();
-        comment.find('.x-form-tools-voice').hide();
-      } else if (handle == "chat") {
-        var chat_widget = _this.parents('.chat-widget, .panel-messages');
-        /* hide chat widget x-form-tools */
-        chat_widget.find('.x-form-tools-attach').hide();
-        chat_widget.find('.x-form-tools-voice').hide();
       }
     }).catch(function (err) {
+      if (composer) {
+        voice_composer_reset(_parent);
+      } else {
+        voice_stop_button.hide();
+        voice_start_button.show();
+      }
       modal('#modal-message', { title: __['Error'], message: err });
     });
+  });
+  /* stop voice recording */
+  $('body').on('click', '.js_voice-stop', function () {
+    if (!voice_recording_process || !voice_recording_object.isRecording()) {
+      return;
+    }
+    /* stop microphone access */
+    voice_recording_stream.getTracks().forEach(function (track) { track.stop(); });
+    /* tell the recorder to stop the recording */
+    voice_recording_object.finishRecording();
+  });
+  /* cancel voice recording */
+  $('body').on('click', '.js_voice-cancel', function () {
+    voice_recording_cancelled = true;
+    if (voice_recording_process) {
+      /* stop microphone access */
+      voice_recording_stream.getTracks().forEach(function (track) { track.stop(); });
+      /* discard the recording */
+      if (voice_recording_object.isRecording()) {
+        voice_recording_object.cancelRecording();
+      }
+      clearInterval(voice_recording_timer);
+      voice_recording_process = false;
+    }
+    voice_composer_reset($(this).closest('.voice-recording-wrapper'));
   });
   /* remove voice record */
   $('body').on('click', '.js_voice-remove', function () {
@@ -1837,55 +2503,32 @@ $(function () {
     var _parent = _this.parents(".voice-recording-wrapper");
     var voice_start_button = _parent.find('.js_voice-start');
     var voice_success_message = _parent.find('.js_voice-success-message');
-    var handle = _parent.data("handle");
     var handle_type = "voice_notes";
     /* hide voice success message */
     voice_success_message.hide();
     /* show voice start button */
     voice_start_button.show();
-    /* check the handle */
-    if (handle == "publisher") {
-      /* publisher */
-      var publisher = _this.parents('.publisher');
-      /* remove the uploads from publisher data */
-      publisher.removeData(handle_type);
-      publisher_tab(publisher, handle_type);
-      publisher.find('.js_publisher-tab[data-tab="' + handle_type + '"]').removeClass('activated');
-    } else if (handle == "comment") {
-      /* comment */
-      var comment = _this.parents('.comment');
-      /* remove the uploads from comment data */
-      comment.removeData(handle_type);
-      /* show comment x-form-tools */
-      comment.find('.x-form-tools-attach').show();
-      comment.find('.x-form-tools-voice').show();
-    } else if (handle == "chat") {
-      /* chat */
-      var chat_widget = _this.parents('.chat-widget, .panel-messages');
-      /* remove the uploads from chat data */
-      chat_widget.removeData(handle_type);
-      /* show chat widget x-form-tools */
-      chat_widget.find('.x-form-tools-attach').show();
-      chat_widget.find('.x-form-tools-voice').show();
-    }
-  });
-  $('body').on('click', '.js_comment-voice-notes-toggle', function () {
-    var comment = $(this).closest(".comment");
-    comment.find('.comment-voice-notes').slideToggle();
-  });
-  $('body').on('click', '.js_chat-voice-notes-toggle', function () {
-    var chat_widget = $(this).parents('.chat-widget, .panel-messages');
-    chat_widget.find('.chat-voice-notes').slideToggle();
+    /* remove the uploads from publisher data */
+    var publisher = _this.parents('.publisher');
+    publisher.removeData(handle_type);
+    publisher_tab(publisher, handle_type);
+    publisher.find('.js_publisher-tab[data-tab="' + handle_type + '"]').removeClass('activated');
   });
 
 
   // run posts filter
-  $('body').on('click', '.js_posts-filter .dropdown-item', function () {
+  $('body').on('change', '.js_posts-filter', function () {
     var posts_stream = $('.js_posts_stream');
     var posts_loader = $('.js_posts_loader');
     var data = {};
     data['get'] = posts_stream.data('get');
-    data['filter'] = $(this).data('value');
+    data['filter'] = $(this).val();
+    if (posts_stream.data('category') !== undefined) {
+      data['category'] = posts_stream.data('category');
+    }
+    if (posts_stream.data('country') !== undefined) {
+      data['country'] = posts_stream.data('country');
+    }
     if (posts_stream.data('id') !== undefined) {
       data['id'] = posts_stream.data('id');
     }
@@ -1902,10 +2545,12 @@ $(function () {
           posts_loader.hide();
           posts_stream.removeData('loading');
           posts_stream.html(response.posts);
-          setTimeout(ui_rebuild(), 200);
         }
       }
     }, 'json');
+  });
+  $('body').on('change', '.js_newsfeed-nav', function () {
+    window.location = $(this).val();
   });
 
 
@@ -1913,93 +2558,95 @@ $(function () {
   $('body').on('click', '.js_lightbox-live', function () {
     /* initialize vars */
     var _this = $(this);
-    var live_post_id = _this.parents('.post').data('id');
+    var live_post_id = _this.data('id') || _this.parents('.post').data('id');
 
     /* load lightbox */
     var lightbox = $(render_template("#lightbox-live", { 'post_id': live_post_id }));
-    $('body').addClass('lightbox-open').append(lightbox.fadeIn('fast'));
+    $('body').addClass('lightbox-open overflow-hidden').append(lightbox.fadeIn('fast'));
 
     /* get live post */
     $.post(api['live/reaction'], { 'do': 'join', 'post_id': live_post_id }, async function (response) {
       /* check the response */
       if (response.callback) {
-        $('body').removeClass('lightbox-open');
+        $('body').removeClass('lightbox-open overflow-hidden');
         $('.lightbox').remove();
         eval(response.callback);
       } else {
         lightbox.find('.lightbox-post').replaceWith(response.lightbox);
         if (response.live_ended) {
           /* show live status */
-          $('#js_live-status').html('<i class="fas fa-exclamation-circle mr5"></i>' + __['Live Ended']).addClass("error");
+          $('#js_live-status').html('<span class="icon-[tabler--alert-circle] size-5 shrink-0" aria-hidden="true"></span>' + __['Live Ended']).addClass("error");
         } else {
           /* init agora client */
-          await join(response.agora_channel_name, response.agora_audience_token, response.agora_audience_uid);
+          await join(response.agora_channel_name, (response.live_provider == "livekit") ? response.livekit_token : response.agora_audience_token, response.agora_audience_uid, response.live_provider);
         }
       }
     }, 'json');
   });
 
 
-  // run emoji
-  /* toggle(close|open) emoji-menu */
-  $('body').on('click', '.js_emoji-menu-toggle', function () {
-    if ($(this).parent().find('.emoji-menu').length == 0) {
-      $(this).after(render_template("#emoji-menu", { 'id': guid() }));
-      initialize();
-    }
-    $(this).parent().find('.emoji-menu').toggle();
-    $('.tab-emojis .js_scroller').each(function () {
-      var emojisScrollEl = $(this);
-      if (!emojisScrollEl.hasClass('lazy-load-initialized')) {
-        emojisScrollEl.addClass('lazy-load-initialized').on('scroll', function () {
-          setTimeout(function () {
-            if (emojisScrollEl.scrollTop() + 250 > emojisScrollEl[0].scrollHeight) {
-              $('.item[js-hidden]', emojisScrollEl).slice(0, 50).removeAttr('js-hidden').show();
-            }
-          }, 200);
-        });
-      }
-    });
-  });
-  /* close emoji-menu when clicked outside */
-  $('body').on('click', function (e) {
-    if ($(e.target).hasClass('js_emoji-menu-toggle') || $(e.target).parents('.js_emoji-menu-toggle').length > 0 || $(e.target).hasClass('emoji-menu') || $(e.target).parents('.emoji-menu').length > 0) {
+  // run video lightbox
+  $('body').on('click', '.js_lightbox-video', function (e) {
+    if ($(e.target).closest('a').length) {
       return;
     }
-    $('.emoji-menu').hide();
+    e.preventDefault();
+    /* initialize vars */
+    var post_id = $(this).data('id');
+    /* load lightbox */
+    var lightbox = $(render_template("#lightbox-video", {}));
+    $('body').addClass('lightbox-open overflow-hidden').append(lightbox.fadeIn('fast'));
+    /* get video post */
+    $.post(api['posts/lightbox-video'], { 'post_id': post_id }, function (response) {
+      /* check the response */
+      if (response.callback) {
+        $('body').removeClass('lightbox-open overflow-hidden');
+        $('.lightbox').remove();
+        eval(response.callback);
+      } else {
+        lightbox.find('.lightbox-post').replaceWith(response.lightbox);
+        lightbox.find('.lightbox-video-stage').html(response.player);
+        lightbox.find('a.lightbox-download').attr('href', response.download);
+        initialize();
+        var video = lightbox.find('video.js_video-plyr')[0];
+        if (video && video.plyr) {
+          video.plyr.play();
+        }
+      }
+    }, 'json');
   });
-  /* add an emoji */
-  $('body').on('click', '.js_emoji', function () {
-    var emoji = $(this).data('emoji');
-    var textarea = $(this).parents('.x-form').find('textarea');
-    var cursorPosition = textarea.prop('selectionStart');
-    var textBeforeCursor = textarea.val().substring(0, cursorPosition);
-    var textAfterCursor = textarea.val().substring(cursorPosition);
-    /* check if we need a space before or after */
-    var spaceBefore = textBeforeCursor.length > 0 && !textBeforeCursor.endsWith(' ') ? ' ' : '';
-    var spaceAfter = textAfterCursor.length > 0 && !textAfterCursor.startsWith(' ') ? ' ' : '';
-    /* insert the emoji with optional spaces */
-    var emojiWithSpaces = spaceBefore + emoji + spaceAfter;
-    textarea.val(textBeforeCursor + emojiWithSpaces + textAfterCursor);
-    /* set the cursor position after the inserted emoji */
-    var newCursorPosition = cursorPosition + emojiWithSpaces.length;
-    textarea.prop('selectionStart', newCursorPosition);
-    textarea.prop('selectionEnd', newCursorPosition);
-    /* focus the textarea and hide the emoji menu */
-    textarea.trigger('focus');
-    $(this).parents('.emoji-menu').hide();
+
+
+  // live stream buttons
+  $('body').on('click', '.js_live-sound', function () {
+    var muted = $(this).attr('aria-pressed') !== 'true';
+    $(this).attr('aria-pressed', muted);
+    if (live_post_audio_track) {
+      if (live_post_room) {
+        live_post_room.startAudio();
+        live_post_audio_track.setVolume(muted ? 0 : 1);
+      } else {
+        live_post_audio_track.setVolume(muted ? 0 : 100);
+      }
+    }
+  });
+  $('body').on('click', '.js_live-fullscreen', function () {
+    var stage = $(this).closest('.js_live-stage')[0];
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
+    }
+  });
+  $(document).on('fullscreenchange webkitfullscreenchange', function () {
+    $('.js_live-fullscreen').attr('aria-pressed', !!(document.fullscreenElement || document.webkitFullscreenElement));
   });
 
 
   // handle post
   /* edit post */
   $('body').on('click', '.js_edit-post', function () {
-    var post = $(this).parents('.post');
-    if (post.find('.post-edit').length > 0) {
-      return;
-    }
-    post.find('.post-replace').hide().after(render_template("#edit-post", { 'text': post.find('.post-text-plain').text() }));
-    autosize(post.find('.post-edit textarea'));
+    $(this).removeClass('js_edit-post').addClass('js_modal').data('url', 'posts/publisher.php?do=edit&post_id=' + $(this).closest('.post').data('id')).data('size', 'publisher').data('static', true).trigger('click');
   });
   /* unedit post */
   $('body').on('click', '.js_unedit-post', function () {
@@ -2035,11 +2682,11 @@ $(function () {
       });
   });
   /* edit privacy */
-  $('body').on('click', '.js_edit-privacy', function () {
+  $('body').on('change', '.js_edit-privacy', function () {
     var _this = $(this);
     var post = _this.parents('.post');
     var id = post.data('id');
-    var privacy = _this.data('value');
+    var privacy = _this.val();
     $.post(api['posts/edit'], { 'handle': 'privacy', 'id': id, 'privacy': privacy }, function (response) {
       /* check if there is a callback */
       if (response.callback) {
@@ -2059,7 +2706,7 @@ $(function () {
       post.hide();
       $.post(api['posts/reaction'], { 'do': 'delete_post', 'id': id }, function (response) {
         /* check the response */
-        $('#modal').modal('hide');
+        modal_close();
         if (response.refresh && (current_page == "profile" || current_page == "page" || current_page == "group" || current_page == "event")) {
           window.location.reload();
         } else if (response.callback) {
@@ -2106,7 +2753,7 @@ $(function () {
     confirm(__['Delete Post'], __['Are you sure you want to delete this post?'], function () {
       $.post(api['posts/reaction'], { 'do': 'delete_post', 'id': id }, function (response) {
         /* check the response */
-        $('#modal').modal('hide');
+        modal_close();
         if (response.callback) {
           eval(response.callback);
         }
@@ -2161,7 +2808,7 @@ $(function () {
       if (response.callback) {
         eval(response.callback);
       } else {
-        _this.removeClass('js_sold-post').addClass('js_unclosed-post').find('span').text(__['Mark as Available']);
+        _this.removeClass('js_closed-post').addClass('js_unclosed-post').find('span').text(__['Mark as Available']);
       }
     }, 'json')
       .fail(function () {
@@ -2178,7 +2825,7 @@ $(function () {
       if (response.callback) {
         eval(response.callback);
       } else {
-        _this.removeClass('js_unsold-post').addClass('js_closed-post').find('span').text(__['Mark as Closed']);
+        _this.removeClass('js_unclosed-post').addClass('js_closed-post').find('span').text(__['Mark as Closed']);
       }
     }, 'json')
       .fail(function () {
@@ -2189,7 +2836,7 @@ $(function () {
   $('body').on('click', '.js_save-post', function () {
     var _this = $(this);
     var post = _this.parents('.post');
-    var id = post.data('id');
+    var id = _this.data('id') || post.data('id');
     $.post(api['posts/reaction'], { 'do': 'save_post', 'id': id }, function (response) {
       /* check the response */
       if (response.callback) {
@@ -2206,7 +2853,7 @@ $(function () {
   $('body').on('click', '.js_unsave-post', function () {
     var _this = $(this);
     var post = _this.parents('.post');
-    var id = post.data('id');
+    var id = _this.data('id') || post.data('id');
     $.post(api['posts/reaction'], { 'do': 'unsave_post', 'id': id }, function (response) {
       /* check the response */
       if (response.callback) {
@@ -2439,7 +3086,7 @@ $(function () {
     confirm(__['Hide from Timeline'], __['Are you sure you want to hide this post from your profile timeline? It may still appear in other places like newsfeed and search results'], function () {
       $.post(api['posts/reaction'], { 'do': 'disallow_post', 'id': id }, function (response) {
         /* check the response */
-        $('#modal').modal('hide');
+        modal_close();
         /* check the response */
         if (response.callback) {
           eval(response.callback);
@@ -2476,102 +3123,72 @@ $(function () {
     $(this).next().toggle();
   });
   /* poll vote */
-  $('body').on('click', '.js_poll-vote', function (event) {
-    if ($(event.target).is('input[type="radio"]')) {
-      return false;
-    }
+  $('body').on('click', '.js_poll-vote', function () {
     var _this = $(this);
+    var parent = _this.closest('.poll-options');
+    if (parent.data('voting')) {
+      return;
+    }
     var id = _this.data('id');
-    var radio = _this.find('input[type="radio"]');
-    var parent = _this.parents('.poll-options');
-    var poll_votes = parent.data('poll-votes');
-    var checked_id = parent.find('input[type="radio"]:checked').parents('.poll-option').data('id');
-    if (checked_id === undefined) {
-      var _do = "add_vote";
-    } else if (checked_id == id) {
-      var _do = "delete_vote";
-    } else {
-      var _do = "change_vote";
-    }
-    if (_do == "add_vote") {
-      /* update poll votes */
-      poll_votes = poll_votes + 1;
-      parent.data('poll-votes', poll_votes);
-      /* update all option */
-      parent.find('.poll-option').each(function () {
-        var option_votes = $(this).data('option-votes');
-        /* update option votes */
-        if ($(this).data('id') == id) {
-          option_votes = option_votes + 1;
-          $(this).data('option-votes', option_votes);
-        }
-        var width = (option_votes / poll_votes) * 100;
-        $(this).find('.percentage-bg').width(width + '%');
-        $(this).next('.poll-voters').find('.more').html(option_votes);
-      });
-      /* uncheck all inputs */
-      parent.find('input[type="radio"]').removeAttr("checked").prop("checked", false);
-      /* check the active radio */
-      radio.attr("checked", "checked").prop("checked", true);
-
-    } else if (_do == "delete_vote") {
-      /* update poll votes */
-      poll_votes = poll_votes - 1;
-      parent.data('poll-votes', poll_votes);
-      /* update all option */
-      parent.find('.poll-option').each(function () {
-        var option_votes = $(this).data('option-votes');
-        /* update option votes */
-        if ($(this).data('id') == id) {
-          option_votes = option_votes - 1;
-          $(this).data('option-votes', option_votes);
-        }
-        var width = (poll_votes == 0) ? 0 : (option_votes / poll_votes) * 100;
-        $(this).find('.percentage-bg').width(width + '%');
-        $(this).next('.poll-voters').find('.more').html(option_votes);
-      });
-      /* uncheck all inputs */
-      parent.find('input[type="radio"]').removeAttr("checked").prop("checked", false);
-
-    } else {
-      /* update poll votes */
-      poll_votes = poll_votes;
-      /* update all option */
-      parent.find('.poll-option').each(function () {
-        var option_votes = $(this).data('option-votes');
-        /* update option votes */
-        if ($(this).data('id') == id) {
-          option_votes = option_votes + 1;
-          $(this).data('option-votes', option_votes);
-        }
-        if ($(this).data('id') == checked_id) {
-          option_votes = option_votes - 1;
-          $(this).data('option-votes', option_votes);
-        }
-        var width = (option_votes / poll_votes) * 100;
-        $(this).find('.percentage-bg').width(width + '%');
-        $(this).next('.poll-voters').find('.more').html(option_votes);
-      });
-      /* uncheck all inputs */
-      parent.find('input[type="radio"]').removeAttr("checked").prop("checked", false);
-      /* check the active radio */
-      radio.attr("checked", "checked").prop("checked", true);
-    }
+    var checked_id = parent.find('.poll-option[aria-pressed="true"]').data('id');
+    var _do = checked_id === undefined ? 'add_vote' : (checked_id == id ? 'delete_vote' : 'change_vote');
+    var polls = $('.poll-options').filter(function () {
+      return $(this).data('poll-id') == parent.data('poll-id');
+    });
+    var restore_focus = _this.is(':focus');
+    var vote_updated = false;
+    /* lock voting */
+    polls.data('voting', true).attr('aria-busy', 'true').find('button').prop('disabled', true);
     $.post(api['posts/reaction'], { 'do': _do, 'id': id, 'checked_id': checked_id }, function (response) {
       /* check the response */
       if (response.callback) {
         eval(response.callback);
+        return;
+      }
+      if (response.template) {
+        var results = $('<div>').html(response.template);
+        var options = results.find('.poll-option');
+        polls.each(function () {
+          var poll = $(this);
+          var current_options = poll.find('.poll-option');
+          var matching_options = current_options.length === options.length && options.toArray().every(function (option, index) {
+            return $(option).attr('data-id') === current_options.eq(index).attr('data-id');
+          });
+          if (!matching_options || poll.find('.poll-check').length !== options.length) {
+            poll.html(response.template);
+            return;
+          }
+          /* keep options in place for transitions */
+          options.each(function (index) {
+            var next = $(this);
+            var current = current_options.eq(index);
+            current.attr('class', next.attr('class')).attr('aria-pressed', next.attr('aria-pressed'))
+              .attr('data-option-votes', next.attr('data-option-votes')).data('option-votes', next.data('option-votes'));
+            ['.percentage-bg', '.poll-check', '.poll-label', '.poll-voters-space'].forEach(function (selector) {
+              current.find(selector).attr('class', next.find(selector).attr('class'));
+            });
+            current.find('.percentage-bg')[0].style.width = next.find('.percentage-bg')[0].style.width;
+            current.find('.poll-percentage').text(next.find('.poll-percentage').text());
+            current.siblings('.poll-voters').remove();
+            current.after(next.siblings('.poll-voters').clone());
+          });
+          poll.find('.poll-votes-count').text(results.find('.poll-votes-count').text());
+        });
+        polls.data('poll-votes', response.votes).attr('data-poll-votes', response.votes);
+        vote_updated = true;
       }
     }, 'json')
       .fail(function () {
         show_error_modal();
+      })
+      .always(function () {
+        polls.removeData('voting').removeAttr('aria-busy').find('button').prop('disabled', false);
+        if (vote_updated && restore_focus) {
+          parent.find('.poll-option').filter(function () {
+            return $(this).data('id') == id;
+          }).trigger('focus');
+        }
       });
-  });
-  $('body').on('mouseup', '.js_poll-vote input', function (event) {
-    event.stopPropagation();
-    event.preventDefault();
-    $(this).parents('.js_poll-vote').trigger('click');
-    return false;
   });
 
 
@@ -2605,14 +3222,14 @@ $(function () {
   /* post comment */
   function _comment(element) {
     var _this = $(element);
-    var comment = _this.parents('.comment');
+    var comment = _this.closest('.comment');
+    if (attachment_upload_busy(comment)) return;
     var stream = _this.parents('.post-comments').find('.js_comments');
     var handle = comment.data('handle');
     var id = comment.data('id');
     var textarea = comment.find('textarea.js_post-comment');
     var message = textarea.val();
     var attachments = comment.find('.comment-attachments');
-    var attachments_voice_notes = comment.find('.comment-voice-notes');
     /* check if there is current (sending) process */
     if (comment.data('sending')) {
       return false;
@@ -2625,13 +3242,17 @@ $(function () {
     var photo = comment.data('photos');
     /* get voice note from comment data */
     var voice_note = comment.data('voice_notes');
+    /* get gif from comment data */
+    var gif = comment.data('gif') || '';
     /* check if message is empty */
-    if (is_empty(message) && !photo && !voice_note) {
+    if (is_empty(message) && !photo && !voice_note && !gif) {
       return;
     }
     /* add currenet sending process */
     comment.data('sending', true);
-    $.post(api['posts/comment'], { 'handle': handle, 'id': id, 'message': message, 'photo': JSON.stringify(photo), 'voice_note': JSON.stringify(voice_note) }, function (response) {
+    $.post(api['posts/comment'], { 'handle': handle, 'id': id, 'message': message, 'photo': JSON.stringify(photo), 'voice_note': JSON.stringify(voice_note), 'gif': gif }, function (response) {
+      /* remove currenet sending process */
+      comment.removeData('sending');
       /* check if there is a callback */
       if (response.callback) {
         eval(response.callback);
@@ -2640,21 +3261,21 @@ $(function () {
         textarea.attr('style', '');
         attachments.hide();
         attachments.find('li.item').remove();
+        attachment_upload_clear(comment);
+        composer_gif_clear(comment);
         comment.removeData('photos');
         comment.find('.x-form-tools-attach').show();
         comment.removeData('voice_notes');
-        comment.find('.x-form-tools-voice').show();
-        attachments_voice_notes.hide();
-        attachments_voice_notes.find(".js_voice-success-message").hide();
-        attachments_voice_notes.find('.js_voice-start').show();
         if (!stream.hasClass("js_live-comments")) {
           stream.prepend(response.comment);
+        } else {
+          live_comments_refresh();
+          live_socket_notify($('<div>').html(response.comment).find('.comment:first').data('id'));
         }
-        /* remove currenet sending process */
-        comment.removeData('sending');
       }
     }, 'json')
       .fail(function () {
+        comment.removeData('sending');
         show_error_modal();
       });
   }
@@ -2664,10 +3285,8 @@ $(function () {
       _comment(this);
     }
   });
-  $('body').on('click', 'li.js_post-comment', function () {
-    if (is_mobile()) {
-      _comment(this);
-    }
+  $('body').on('click', 'button.js_post-comment', function () {
+    _comment(this);
   });
   /* replies toggle */
   $('body').on('click', '.js_replies-toggle', function () {
@@ -2689,23 +3308,25 @@ $(function () {
   /* post reply */
   function _reply(element) {
     var _this = $(element);
-    var comment = _this.parents('.comment');
+    var comment = _this.closest('.comment');
+    if (attachment_upload_busy(comment)) return;
     var stream = comment.find('.js_replies');
     var handle = 'comment';
     var id = comment.data('id');
     var textarea = comment.find('textarea.js_post-reply');
     var message = textarea.val();
     var attachments = comment.find('.comment-attachments');
-    var attachments_voice_notes = comment.find('.comment-voice-notes');
     /* get photo from comment data */
     var photo = comment.data('photos');
     /* get voice note from comment data */
     var voice_note = comment.data('voice_notes');
+    /* get gif from comment data */
+    var gif = comment.data('gif') || '';
     /* check if message is empty */
-    if (is_empty(message) && !photo && !voice_note) {
+    if (is_empty(message) && !photo && !voice_note && !gif) {
       return;
     }
-    $.post(api['posts/comment'], { 'handle': handle, 'id': id, 'message': message, 'photo': JSON.stringify(photo), 'voice_note': JSON.stringify(voice_note) }, function (response) {
+    $.post(api['posts/comment'], { 'handle': handle, 'id': id, 'message': message, 'photo': JSON.stringify(photo), 'voice_note': JSON.stringify(voice_note), 'gif': gif }, function (response) {
       /* check if there is a callback */
       if (response.callback) {
         eval(response.callback);
@@ -2714,14 +3335,15 @@ $(function () {
         textarea.attr('style', '');
         attachments.hide();
         attachments.find('li.item').remove();
+        attachment_upload_clear(comment);
+        composer_gif_clear(comment);
         comment.removeData('photos');
         comment.find('.x-form-tools-attach').show();
         comment.removeData('voice_notes');
-        comment.find('.x-form-tools-voice').show();
-        attachments_voice_notes.hide();
-        attachments_voice_notes.find(".js_voice-success-message").hide();
-        attachments_voice_notes.find('.js_voice-start').show();
         stream.append(response.comment);
+        if (stream.closest('.js_live-comments').length) {
+          live_socket_notify($('<div>').html(response.comment).find('.comment:first').data('id'));
+        }
       }
     }, 'json')
       .fail(function () {
@@ -2734,10 +3356,8 @@ $(function () {
       _reply(this);
     }
   });
-  $('body').on('click', 'li.js_post-reply', function () {
-    if (is_mobile()) {
-      _reply(this);
-    }
+  $('body').on('click', 'button.js_post-reply', function () {
+    _reply(this);
   });
   /* delete comment */
   $('body').on('click', '.js_delete-comment', function (e) {
@@ -2751,7 +3371,8 @@ $(function () {
         if (response.callback) {
           eval(response.callback);
         } else {
-          $('#modal').modal('hide');
+          modal_close();
+          live_socket_moderation();
         }
       }, 'json')
         .fail(function () {
@@ -2776,6 +3397,7 @@ $(function () {
   $('body').on('click', '.js_update-comment', function (event) {
     var _this = $(this);
     var comment = _this.closest('.comment');
+    if (attachment_upload_busy(comment)) return;
     var id = comment.data('id');
     var textarea = comment.find('textarea.js_update-comment-textarea');
     var message = textarea.val();
@@ -2794,6 +3416,7 @@ $(function () {
         eval(response.callback);
       } else {
         comment.find('.comment-edit:first').remove();
+        attachment_upload_clear(comment);
         comment.find('.comment-replace:first').html(response.comment);
         comment.find('.comment-data:first').show();
       }
@@ -2805,14 +3428,14 @@ $(function () {
 
 
   // run comments filter
-  $('body').on('click', '.js_comments-filter .dropdown-item', function () {
+  $('body').on('change', '.js_comments-filter', function () {
     var _this = $(this);
     var _parent = _this.parents('.post-comments');
     var comments_stream = _parent.find('.js_comments');
     var comments_loader = _parent.find('.js_comments-filter-loader');
     var comments_see_more = _parent.find('.js_see-more');
     var data = {};
-    data['get'] = _this.data('value');
+    data['get'] = _this.val();
     data['id'] = _this.data('id');
     comments_see_more.data('get', data['get']);
     comments_see_more.removeData('offset');
@@ -2835,41 +3458,166 @@ $(function () {
 
 
   // handle reactions
+  /* update the reactions stats (posts & photos & comments) */
+  function update_reactions_stats(parent, handle, response) {
+    if (typeof response.template === 'undefined') {
+      return;
+    }
+    if (handle == 'comment') {
+      if (parent.closest('.js_live-comments').length) {
+        live_socket_notify(parent.data('id'));
+      }
+      var stats = parent.find('.js_comment-reactions-stats:first');
+      stats.removeClass('hidden');
+      reactions_stats_update(stats, response.template, function () {
+        stats.toggleClass('hidden', is_empty(response.template));
+      });
+    } else if (response.template) {
+      reactions_stats_update(parent.find('.js_post-reactions-stats:first'), response.template);
+    }
+    if (handle == 'post' && typeof response.reactions_count !== 'undefined') {
+      parent.find('.js_reel-reactions-count:first').text(response.reactions_count);
+    }
+    if (handle == 'post' && live_socket_post_id && parent.closest('[data-live-post-id]').length) {
+      live_comments_refresh();
+      if (chat_socket_enabled && typeof chat_socket !== "undefined" && chat_socket) {
+        chat_socket.emit('event_client_live_reaction', { post_id: live_socket_post_id });
+      }
+    }
+  }
+  var reactions_hide_timer;
+  function post_message_reaction(_do, id, reaction) {
+    if (typeof chat_socket_enabled !== 'undefined' && chat_socket_enabled && chat_socket && chat_socket.connected) {
+      chat_socket.emit('event_client_react_message', { do: (_do == 'unreact_message') ? 'unreact' : 'react', message_id: id, reaction: reaction }, function (response) {
+        var data = JSON.parse(response);
+        if (typeof chat_update_reactions === 'function') {
+          chat_update_reactions(data.message_id, data.reactions, data.reactions_total_count, data.reactions_total_count_formatted);
+        }
+      });
+    } else {
+      $.post(api['chat/actions'], { 'do': _do, 'reaction': reaction, 'message_id': id }, function (response) {
+        if (response.callback) {
+          eval(response.callback);
+        }
+        if (response.message && typeof chat_update_reactions === 'function') {
+          chat_update_reactions(id, response.message.reactions, response.message.reactions_total_count, response.message.reactions_total_count_formatted);
+        }
+      }, 'json').fail(function () {
+        show_error_modal();
+      });
+    }
+  }
+  function _reaction_button(_parent, handle, reaction, source) {
+    var name = _parent.find('.reaction-btn-name:first');
+    var icon = _parent.find('.reaction-btn-icon:first');
+    var in_reel = icon.closest('.reel-container').length > 0;
+    var size = (handle == 'message') ? 'size-4' : 'size-5';
+    var html;
+    if (reaction) {
+      name.text(reaction.title).removeAttr('style').css('color', reaction.color);
+      html = '<div class="inline-emoji no_animation inline-flex ' + (in_reel ? 'size-6' : size) + '">' + reaction.html + '</div>';
+    } else {
+      name.text(__['React']).removeAttr('style');
+      html = '<span class="icon-[tabler--mood-smile] ' + size + '" aria-hidden="true"></span>';
+    }
+    ui_animate(name[0], [{ opacity: 0, transform: 'translateY(40%)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    reaction_icon_swap(icon, html, source);
+  }
   function _show_reactions(element) {
     var _this = $(element);
     var reactions = _this.find('.reactions-container');
-    var is_reel = _this.parents('.reel-container').length;
-    var offset = _this.offset();
-    var reactions_height = ($(window).width() < 480) ? 144 : 48;
-    var posY = (offset.top - $(window).scrollTop()) - reactions_height;
-    var posX = offset.left - $(window).scrollLeft();
-    if (is_reel || $('html').attr('dir') == "RTL") {
-      var right = $(window).width() - posX - _this.width();
-      reactions.css({ 'top': posY + 'px', 'right': right + 'px' });
-    } else {
-      reactions.css({ 'top': posY + 'px', 'left': posX + 'px' });
+    var hiding = reactions[0] && reactions[0]._ui_hide;
+    var was_visible = reactions.is(':visible') && !hiding;
+    if (hiding) {
+      hiding.onfinish = null;
+      hiding.cancel();
+      reactions[0]._ui_hide = null;
     }
-    reactions.show();
+    if (was_visible) return;
+    var is_reel = _this.parents('.reel-container').length;
+    var chat_widget = _this.closest('.chat-widget');
+    var touch = current_page == 'reels' || is_iPad() || is_mobile();
+    var edge = 8;
+    /* measure from the containing block (lightbox, carousel, chat box) */
+    reactions.css({ 'top': 0, 'left': 0, 'right': 'auto' }).show();
+    var origin = reactions[0].getBoundingClientRect();
+    var width = reactions[0].offsetWidth;
+    var height = reactions[0].offsetHeight;
+    var button = element.getBoundingClientRect();
+    /* touch screens open the reactions right above the button */
+    var top = (touch || is_reel) ? button.top - height - edge : button.top - 40;
+    var below = false;
+    if (top < edge) {
+      top = button.bottom + edge;
+      below = true;
+    }
+    /* chat boxes open the reactions away from the screen edge */
+    var from_right = ($('html').attr('dir') == "rtl") ? !chat_widget.length : chat_widget.length > 0;
+    from_right = from_right || (is_reel && $('html').attr('dir') != "rtl");
+    var left = from_right ? button.right - width : button.left;
+    /* keep the reactions inside the viewport */
+    left = Math.max(edge, Math.min(left, window.innerWidth - edge - width));
+    /* keep the reactions inside the chat box */
+    if (chat_widget.length) {
+      var box = chat_widget[0].getBoundingClientRect();
+      left = Math.max(box.left + edge, Math.min(left, box.right - edge - width));
+    }
+    reactions.css({
+      'top': (top - origin.top) + 'px',
+      'left': (left - origin.left) + 'px',
+      'transform-origin': (below ? 'top ' : 'bottom ') + (from_right ? 'right' : 'left')
+    });
+    ui_animate(reactions[0], [
+      { opacity: 0, transform: 'translateY(8px) scale(0.6)' },
+      { opacity: 1, transform: 'none' }
+    ], { duration: 320, easing: ui_spring });
   }
   function _hide_reactions(element) {
     var _this = $(element);
     var reactions = _this.find('.reactions-container:first');
-    reactions.removeAttr('style').hide();
+    if (reactions[0] && reactions[0]._ui_hide) return;
+    var animation = ui_animate(reactions[0], [
+      { opacity: 1, transform: 'none' },
+      { opacity: 0, transform: 'translateY(4px) scale(0.85)' }
+    ], { duration: 150, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+    if (!animation) {
+      reactions.removeAttr('style').hide();
+      return;
+    }
+    reactions[0]._ui_hide = animation;
+    animation.onfinish = function () {
+      reactions[0]._ui_hide = null;
+      reactions.removeAttr('style').hide();
+      animation.cancel();
+    };
   }
   /* reactions toggle */
-  $('body').on('mouseenter', '.reactions-wrapper', function () {
+  $('body').on('mouseenter', '.reactions-wrapper, .reactions-container', function () {
+    clearTimeout(reactions_hide_timer);
     if (current_page != 'reels' && !is_iPad() && !is_mobile()) {
-      /* desktop -> show the reactions */
-      _show_reactions(this);
+      var wrapper = $(this).closest('.reactions-wrapper');
+      if (wrapper.length) {
+        _show_reactions(wrapper[0]);
+      }
     }
   });
-  $('body').on('mouseleave', '.reactions-wrapper', function () {
+  $('body').on('mouseleave', '.reactions-wrapper, .reactions-container', function (e) {
     if (current_page != 'reels' && !is_iPad() && !is_mobile()) {
-      /* desktop -> hide the reactions */
-      _hide_reactions(this);
+      if ($(e.relatedTarget).closest('.reactions-wrapper, .reactions-container').length) {
+        return;
+      }
+      var wrapper = $(this).closest('.reactions-wrapper');
+      reactions_hide_timer = setTimeout(function () {
+        if (wrapper.length) {
+          _hide_reactions(wrapper[0]);
+        }
+      }, 200);
     }
   });
-  $('body').on('click', '.reactions-wrapper', function () {
+  $('body').on('click', '.reactions-wrapper', function (e) {
+    if ($(e.target).closest('.js_react-post, .js_react-photo, .js_react-comment, .js_react-message').length) {
+      return;
+    }
     if (current_page == 'reels' || is_iPad() || is_mobile()) {
       /* mobile -> toggle the reactions */
       if ($(this).find('.reactions-container:first').is(":visible")) {
@@ -2889,7 +3637,7 @@ $(function () {
         if (_this.hasClass('js_unreact-post')) {
           var _undo = 'unreact_post';
           var handle = 'post';
-          var _parent = _this.closest('.post, .lightbox-post, .blog');
+          var _parent = _this.closest('.post, .lightbox-post, .blog, .reel-container');
         } else if (_this.hasClass('js_unreact-photo')) {
           var _undo = 'unreact_photo';
           var handle = 'photo';
@@ -2898,29 +3646,36 @@ $(function () {
           var _undo = 'unreact_comment';
           var handle = 'comment';
           var _parent = _this.closest('.comment');
+        } else if (_this.hasClass('js_unreact-message')) {
+          var _undo = 'unreact_message';
+          var handle = 'message';
+          var _parent = _this.closest('.conversation');
         }
-        var id = _parent.data('id');
+        var id = _parent.data('id') || _parent.attr('id');
         var reactions_wrapper = _parent.find('.reactions-wrapper:first');
         /* remove unreact from reactions-wrapper */
         reactions_wrapper.removeClass('js_unreact-' + handle);
         /* remove reactions-wrapper data-reaction */
         reactions_wrapper.data('reaction', '');
-        /* change reaction-btn-name */
-        _parent.find('.reaction-btn-name:first').text(__['React']).removeAttr('style');
-        /* change reaction-btn-icon */
-        _parent.find('.reaction-btn-icon:first').html('<i class="far fa-smile fa-lg fa-fw"></i>');
+        /* change reaction-btn */
+        _reaction_button(_parent, handle);
         /* hide reactions-container */
         _parent.find('.reactions-container:visible').removeAttr('style').hide();
         /* AJAX */
-        $.post(api['posts/reaction'], { 'do': _undo, 'reaction': old_reaction, 'id': id }, function (response) {
-          /* check the response */
-          if (response.callback) {
-            eval(response.callback);
-          }
-        }, 'json')
-          .fail(function () {
-            show_error_modal();
-          });
+        if (handle == 'message') {
+          post_message_reaction(_undo, id, old_reaction);
+        } else {
+          $.post(api['posts/reaction'], { 'do': _undo, 'reaction': old_reaction, 'id': id }, function (response) {
+            /* check the response */
+            if (response.callback) {
+              eval(response.callback);
+            }
+            update_reactions_stats(_parent, handle, response);
+          }, 'json')
+            .fail(function () {
+              show_error_modal();
+            });
+        }
       }
     }
   });
@@ -2941,8 +3696,10 @@ $(function () {
     }
   });
   /* react post & photo & comment */
-  $('body').on('click', '.js_react-post, .js_react-photo, .js_react-comment', function (e) {
+  $('body').on('click', '.js_react-post, .js_react-photo, .js_react-comment, .js_react-message', function (e) {
+    e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
     var _this = $(this);
     var reaction = _this.data('reaction');
     var reaction_color = _this.data('reaction-color');
@@ -2963,8 +3720,13 @@ $(function () {
       var _undo = 'unreact_comment';
       var handle = 'comment';
       var _parent = _this.closest('.comment');
+    } else if (_this.hasClass('js_react-message')) {
+      var _do = 'react_message';
+      var _undo = 'unreact_message';
+      var handle = 'message';
+      var _parent = _this.closest('.conversation');
     }
-    var id = _parent.data('id');
+    var id = _parent.data('id') || _parent.attr('id');
     var reactions_wrapper = _parent.find('.reactions-wrapper:first');
     var old_reaction = reactions_wrapper.data('reaction');
     /* check if user react or unreact */
@@ -2974,25 +3736,25 @@ $(function () {
       reactions_wrapper.removeClass('js_unreact-' + handle);
       /* remove reactions-wrapper data-reaction */
       reactions_wrapper.data('reaction', '');
-      /* change reaction-btn-name */
-      _parent.find('.reaction-btn-name:first').text(__['React']).removeAttr('style');
-      /* change reaction-btn-icon */
-      _parent.find('.reaction-btn-icon:first').html('<i class="far fa-smile fa-fw action-icon"></i>');
+      /* change reaction-btn */
+      _reaction_button(_parent, handle);
       /* hide reactions-container */
       _parent.find('.reactions-container:visible').removeAttr('style').hide();
       /* AJAX */
-      $.post(api['posts/reaction'], { 'do': _undo, 'reaction': old_reaction, 'id': id }, function (response) {
-        /* check the response */
-        if (response.callback) {
-          eval(response.callback);
-        }
-        if (response.template && handle != 'comment') {
-          _parent.find('.js_post-reactions-stats:first').html(response.template);
-        }
-      }, 'json')
-        .fail(function () {
-          show_error_modal();
-        });
+      if (handle == 'message') {
+        post_message_reaction(_undo, id, old_reaction);
+      } else {
+        $.post(api['posts/reaction'], { 'do': _undo, 'reaction': old_reaction, 'id': id }, function (response) {
+          /* check the response */
+          if (response.callback) {
+            eval(response.callback);
+          }
+          update_reactions_stats(_parent, handle, response);
+        }, 'json')
+          .fail(function () {
+            show_error_modal();
+          });
+      }
     } else {
       /* [2] user react */
       /* add unreact class to reactions wrapper */
@@ -3001,25 +3763,25 @@ $(function () {
       }
       /* change reactions-wrapper data-reaction */
       reactions_wrapper.data('reaction', reaction);
-      /* change reaction-btn-name */
-      _parent.find('.reaction-btn-name:first').text(reaction_title).removeAttr('style').css("color", reaction_color);
-      /* change reaction-btn-icon */
-      _parent.find('.reaction-btn-icon:first').html('<div class="inline-emoji no_animation">' + reaction_html + '</div>');
+      /* change reaction-btn */
+      _reaction_button(_parent, handle, { title: reaction_title, color: reaction_color, html: reaction_html }, _this.find('img')[0]);
       /* hide reactions-container */
       _parent.find('.reactions-container:visible').removeAttr('style').hide();
       /* AJAX */
-      $.post(api['posts/reaction'], { 'do': _do, 'reaction': reaction, 'id': id }, function (response) {
-        /* check the response */
-        if (response.callback) {
-          eval(response.callback);
-        }
-        if (response.template && handle != 'comment') {
-          _parent.find('.js_post-reactions-stats:first').html(response.template);
-        }
-      }, 'json')
-        .fail(function () {
-          show_error_modal();
-        });
+      if (handle == 'message') {
+        post_message_reaction(_do, id, reaction);
+      } else {
+        $.post(api['posts/reaction'], { 'do': _do, 'reaction': reaction, 'id': id }, function (response) {
+          /* check the response */
+          if (response.callback) {
+            eval(response.callback);
+          }
+          update_reactions_stats(_parent, handle, response);
+        }, 'json')
+          .fail(function () {
+            show_error_modal();
+          });
+      }
     }
   });
 
@@ -3030,73 +3792,144 @@ $(function () {
     var index = $('#blog-references-list .auto-connect-node').length + 1;
     $('#blog-references-list').append(render_template('#blog-reference', { index })).fadeIn();
   });
+  /* schedule date (local -> utc) */
+  $('body').on('change', '.js_blog-schedule-date', function () {
+    var local_schedule_date = $(this).val();
+    local_schedule_date = (local_schedule_date) ? new Date(local_schedule_date.replace(' ', 'T') + ':00') : '';
+    $('.js_blog-schedule-utc').val((local_schedule_date) ? local_schedule_date.toISOString().slice(0, 19).replace('T', ' ') : '');
+  });
+  /* schedule date (utc -> local) */
+  $('.js_blog-schedule-utc').each(function () {
+    var schedule_date = $(this).val();
+    if (!schedule_date) return;
+    var date = new Date(schedule_date.replace(' ', 'T') + 'Z');
+    var local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    $('.js_blog-schedule-date').val(local.toISOString().slice(0, 16));
+  });
 
 
   // handle translator
+  /* request a translation (cached on the server) */
+  function request_translation(data, onResult, onSame, onFail) {
+    $.post(api['data/translate'], data, function (response) {
+      if (response.callback) {
+        if (onFail) onFail();
+        eval(response.callback);
+        return;
+      }
+      if (response.error) {
+        if (onFail) onFail();
+        modal('#modal-message', { title: __['Error'], message: response.message });
+        return;
+      }
+      if (response.same) {
+        onSame();
+        return;
+      }
+      onResult(response.translations);
+    }, 'json')
+      .fail(function () {
+        if (onFail) onFail();
+        show_error_modal();
+      });
+  }
   $('body').on('click', '.js_translator', function () {
     /* check if translator is enabled */
     if (!post_translation_enabled) {
       return;
     }
     var _this = $(this);
-    var post = _this.closest('.post, .lightbox-post, .post-media');
-    var text = post.find('.post-text:first').text();
-    var to_lang = $('html').data('lang').substring(0, 2);
-    /* check text */
-    if (is_empty(text)) {
-      _this.removeClass('text-link js_translator').text(__['Translated']);
+    var is_toggle = _this.hasClass('js_translator-toggle');
+    var is_description = _this.hasClass('js_translator-description');
+    var container = _this.closest('.post-snippet, .post, .lightbox-post, .post-media, .js_translate-wrapper');
+    var sourceSelector = _this.data('source') || '.post-text';
+    var translationSelector = _this.data('translation') || '.post-text-translation';
+    var $source = container.find(sourceSelector + ':first');
+    var $translation = container.find(translationSelector + ':first');
+    var node = { 'node_type': _this.data('node-type'), 'node_id': _this.data('node-id') };
+    /* toggle between original and translated title */
+    if (is_toggle && _this.data('translated-text')) {
+      if (_this.data('showing-translated')) {
+        $source.text(_this.data('original-text'));
+        _this.data('showing-translated', false);
+        _this.removeClass('active');
+      } else {
+        $source.text(_this.data('translated-text'));
+        _this.data('showing-translated', true);
+        _this.addClass('active');
+      }
       return;
     }
-    /* decide which translation service to use based on the available key */
-    if (typeof google_translation_key !== 'undefined' && google_translation_key) {
-      /* use Google translate */
-      $.ajax({
-        url: `https://translation.googleapis.com/language/translate/v2`,
-        type: 'POST',
-        data: {
-          key: google_translation_key,
-          q: text,
-          target: to_lang
-        },
-        success: function (response) {
-          /* check if the target language is the same as the detected language */
-          if (response.data.translations[0].detectedSourceLanguage === to_lang) {
-            _this.removeClass('text-link js_translator').text(__['Translated']);
-            return;
-          }
-          _this.removeClass('text-link js_translator').text(__['Translated']);
-          post.find('.post-text-translation:first').text(response.data.translations[0].translatedText).show().addClass("x-notifier");
-          setTimeout(function () {
-            post.find('.post-text-translation:first').removeClass("x-notifier");
-          }, 2500);
-        },
-        error: function () {
-          show_error_modal();
-        }
-      });
-    } else if (typeof yandex_key !== 'undefined' && yandex_key) {
-      /* use Yandex translate */
-      $.get('https://translate.yandex.net/api/v1.5/tr.json/detect', { 'key': yandex_key, 'text': text }, function (response) {
-        /* check if the target language is the same as the detected language */
-        if (to_lang === response.lang) {
-          _this.removeClass('text-link js_translator').text(__['Translated']);
+    /* check if a request is running */
+    if (_this.data('translating')) {
+      return;
+    }
+    _this.data('translating', true);
+    var reset = function () {
+      _this.removeData('translating');
+    };
+    /* title toggle icons (page / group / event) */
+    if (is_toggle) {
+      var original_text = $source.text();
+      request_translation($.extend({ 'field': 'title' }, node), function (translations) {
+        reset();
+        if (!translations.title) {
           return;
         }
-        $.getJSON('https://translate.yandex.net/api/v1.5/tr.json/translate', { 'key': yandex_key, 'text': text, 'lang': to_lang }, function (response) {
-          _this.removeClass('text-link js_translator').text(__['Translated']);
-          post.find('.post-text-translation:first').text(response.text).show().addClass("x-notifier");
-          setTimeout(function () {
-            post.find('.post-text-translation:first').removeClass("x-notifier");
-          }, 2500);
-        }).fail(function () {
-          show_error_modal();
-        });
-      }).fail(function () {
-        show_error_modal();
-      });
-    } else {
-      modal('#modal-message', { title: __['Error'], message: __['Translation service not available!'] });
+        _this.data('original-text', original_text);
+        _this.data('translated-text', translations.title);
+        _this.data('showing-translated', true);
+        $source.text(translations.title);
+        _this.addClass('active');
+      }, reset, reset);
+      return;
     }
+    /* about / bio description icons (page / group / event) */
+    if (is_description) {
+      request_translation($.extend({ 'field': 'description' }, node), function (translations) {
+        reset();
+        if (translations.description) {
+          $translation.text(translations.description).hide().fadeIn(250);
+        }
+        _this.hide();
+      }, function () {
+        reset();
+        _this.hide();
+      }, reset);
+      return;
+    }
+    /* post header "Translate" button: translates the body text and, for product-style
+       posts (job / course / funding / offer), the post title in place too */
+    var is_icon = _this.hasClass('js_translator-icon');
+    var shimmer = 'animate-shimmer [animation-duration:2s] bg-[linear-gradient(90deg,var(--color-base-content)_0%,var(--color-base-content)_12%,var(--color-base-300)_25%,var(--color-base-content)_38%,var(--color-base-content)_62%,var(--color-base-300)_75%,var(--color-base-content)_88%,var(--color-base-content)_100%)] bg-size-[200%_100%] bg-clip-text text-transparent! [&_*]:text-transparent!';
+    /* shimmer the text and disable the button while translating */
+    if (is_icon) {
+      _this.prop('disabled', true);
+      $source.addClass(shimmer);
+    }
+    var mark_done = function () {
+      reset();
+      $source.removeClass(shimmer);
+      if (is_icon) {
+        _this.removeClass('js_translator').attr({ 'title': __['Translated'], 'aria-label': __['Translated'] });
+        return;
+      }
+      _this.removeClass('text-primary cursor-pointer js_translator').text(__['Translated']);
+    };
+    var mark_failed = function () {
+      reset();
+      $source.removeClass(shimmer);
+      _this.prop('disabled', false);
+    };
+    request_translation(node, function (translations) {
+      mark_done();
+      if (translations.title) {
+        container.find('.js_post_title:first').text(translations.title);
+      }
+      if (translations.text) {
+        $translation.text(translations.text).hide().fadeIn(250);
+      }
+    }, mark_done, mark_failed);
   });
   $('body').on('click', '.js_chat-translator', function () {
     /* check if translator is enabled */
@@ -3104,68 +3937,29 @@ $(function () {
       return;
     }
     var _this = $(this);
-    var text = _this.find('.text:first').text();
-    var to_lang = $('html').data('lang').substring(0, 2);
+    var $text = _this.find('.text:first');
+    var message_id = _this.closest('.conversation').attr('id');
+    /* stop listening on this message */
+    _this.removeClass('js_chat-translator');
     /* check text */
-    if (is_empty(text)) {
-      _this.removeClass('js_chat-translator');
+    if (is_empty($text.text()) || !message_id) {
       _this.find('.translate').remove();
       return;
     }
-    /* decide which translation service to use based on the available key */
-    if (typeof google_translation_key !== 'undefined' && google_translation_key) {
-      /* use Google translate */
-      $.ajax({
-        url: `https://translation.googleapis.com/language/translate/v2`,
-        type: 'POST',
-        data: {
-          key: google_translation_key,
-          q: text,
-          target: to_lang
-        },
-        success: function (response) {
-          /* check if the target language is the same as the detected language */
-          if (response.data.translations[0].detectedSourceLanguage === to_lang) {
-            _this.removeClass('js_chat-translator');
-            _this.find('.translate').remove();
-            return;
-          }
-          _this.removeClass('js_chat-translator');
-          _this.find('.translate').remove();
-          _this.find('.text:first').text(response.data.translations[0].translatedText).addClass("x-notifier");
-          setTimeout(function () {
-            _this.find('.text:first').removeClass("x-notifier");
-          }, 2500);
-        },
-        error: function () {
-          show_error_modal();
-        }
-      });
-    } else if (typeof yandex_key !== 'undefined' && yandex_key) {
-      /* use Yandex translate */
-      $.get('https://translate.yandex.net/api/v1.5/tr.json/detect', { 'key': yandex_key, 'text': text }, function (response) {
-        /* check if the target language is the same as the detected language */
-        if (to_lang === response.lang) {
-          _this.removeClass('js_chat-translator');
-          _this.find('.translate').remove();
-          return;
-        }
-        $.getJSON('https://translate.yandex.net/api/v1.5/tr.json/translate', { 'key': yandex_key, 'text': text, 'lang': to_lang }, function (response) {
-          _this.removeClass('js_chat-translator');
-          _this.find('.translate').remove();
-          _this.find('.text:first').text(response.text).addClass("x-notifier");
-          setTimeout(function () {
-            _this.find('.text:first').removeClass("x-notifier");
-          }, 2500);
-        }).fail(function () {
-          show_error_modal();
-        });
-      }).fail(function () {
-        show_error_modal();
-      });
-    } else {
-      modal('#modal-message', { title: __['Error'], message: __['Translation service not available!'] });
-    }
+    request_translation({ 'node_type': 'message', 'node_id': message_id }, function (translations) {
+      _this.find('.translate').remove();
+      if (!translations.text) {
+        return;
+      }
+      $text.text(translations.text).addClass("x-notifier");
+      setTimeout(function () {
+        $text.removeClass("x-notifier");
+      }, 2500);
+    }, function () {
+      _this.find('.translate').remove();
+    }, function () {
+      _this.addClass('js_chat-translator');
+    });
   });
 
 
@@ -3200,7 +3994,7 @@ $(function () {
           /* remove photo */
           _this.parents('.pg_photo').parent().fadeOut(300, function () { $(this).remove(); });
           /* hide the confimation */
-          $('#modal').modal('hide');
+          modal_close();
         }
       }, 'json')
         .fail(function () {
@@ -3264,7 +4058,7 @@ $(function () {
           show_error_modal();
         });
       /* hide the confimation */
-      $('#modal').modal('hide');
+      modal_close();
     });
   });
 
@@ -3272,7 +4066,7 @@ $(function () {
   // handle daytime messages
   /* hide */
   $('body').on('click', '.js_daytime-remover', function () {
-    var daytime_message = $(this).parents('.card');
+    var daytime_message = $(this).closest('.daytime_message');
     confirm(__['Delete'], __['Are you sure you want to delete this?'], function () {
       /* remove the daytime message */
       daytime_message.fadeOut();
@@ -3286,15 +4080,43 @@ $(function () {
           show_error_modal();
         });
       /* hide the confimation */
-      $('#modal').modal('hide');
+      modal_close();
     });
   });
 
 
   // handle forums
-  /* forum toggle */
-  $('body').on('click', '.js_forum-toggle', function () {
-    $(this).parents('.forum-category').next('.js_forum-toggle-wrapper').slideToggle();
+  /* update forum thread [pin|unpin|lock|unlock] */
+  $('body').on('click', '.js_forum-thread-action', function () {
+    var id = $(this).data('id');
+    var _do = $(this).data('do');
+    $.post(api['forums/thread'] + '?do=' + _do + '&id=' + id, function (response) {
+      /* check the response */
+      if (response.callback) {
+        eval(response.callback);
+      }
+    }, 'json')
+      .fail(function () {
+        show_error_modal();
+      });
+  });
+  /* like forum [thread|reply] */
+  $('body').on('click', '.js_forum-like', function () {
+    var _this = $(this);
+    var _do = (_this.hasClass('text-primary')) ? 'unlike' : 'like';
+    $.post(api['forums/react'], { 'do': _do, 'handle': _this.data('handle'), 'id': _this.data('id') }, function (response) {
+      /* check the response */
+      if (response.callback) {
+        eval(response.callback);
+      } else {
+        _this.toggleClass('text-primary', _do == 'like');
+        _this.attr('aria-pressed', _do == 'like');
+        _this.find('.js_forum-likes').text(response.likes);
+      }
+    }, 'json')
+      .fail(function () {
+        show_error_modal();
+      });
   });
   /* delete forum [thread|reply] */
   $('body').on('click', '.js_delete-forum', function () {
@@ -3312,6 +4134,127 @@ $(function () {
         });
     });
   });
+  /* reply to forum reply */
+  $('body').on('click', '.js_forum-reply-to', function () {
+    var quote = $('.js_forum-reply-quote');
+    var id = $(this).data('id');
+    if (id) {
+      quote.find('.js_forum-reply-quote-picture').attr('src', $(this).data('picture'));
+      quote.find('.js_forum-reply-quote-name').text($(this).data('name'));
+      quote.find('.js_forum-reply-quote-text').text($(this).data('text'));
+      quote.removeClass('hidden').addClass('flex');
+      quote.prev('input').val(id);
+    } else {
+      quote.removeClass('flex').addClass('hidden');
+      quote.prev('input').val('');
+    }
+  });
+  $('body').on('click', '.js_forum-reply-cancel', function () {
+    var quote = $('.js_forum-reply-quote');
+    quote.removeClass('flex').addClass('hidden');
+    quote.prev('input').val('');
+  });
+  /* forum thread scrubber */
+  if ($('.js_forum-scrubber').length > 0) {
+    var scrubber = $('.js_forum-scrubber');
+    var scrubber_track = scrubber.find('.js_forum-scrubber-track');
+    var scrubber_handle = scrubber.find('.js_forum-scrubber-handle');
+    var scrubber_total = parseInt(scrubber.data('total'), 10);
+    var scrubber_per_page = parseInt(scrubber.data('per-page'), 10);
+    var scrubber_offset = 110;
+    var scrubber_ord = 1;
+    var scrubber_dragging = false;
+    var scrubber_ticking = false;
+    /* render the handle */
+    var scrubber_render = function (ord) {
+      ord = Math.min(Math.max(ord, 1), scrubber_total);
+      scrubber_ord = ord;
+      var range = scrubber_track.height() - scrubber_handle.outerHeight();
+      var position = (scrubber_total > 1) ? (ord - 1) / (scrubber_total - 1) * range : 0;
+      var index = (scrubber.data('sort') == 'newest' && ord > 1) ? scrubber_total - ord + 2 : ord;
+      var post = $('.js_forum-post[data-ord="' + ord + '"]');
+      var date = '';
+      if (post.length > 0) {
+        date = moment(post.data('time'), ["YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD H:mm:ss", moment.ISO_8601]).add({ minutes: moment().utcOffset() }).locale($('html').data('lang') || 'en-us').format("MMMM YYYY");
+      }
+      scrubber_handle.css('top', position + 'px').attr('aria-valuenow', index);
+      scrubber.find('.js_forum-scrubber-index').text(index);
+      scrubber.find('.js_forum-scrubber-date').text(date);
+    };
+    /* get the ord from the pointer */
+    var scrubber_pointer_ord = function (e) {
+      var range = scrubber_track.height() - scrubber_handle.outerHeight();
+      var position = e.clientY - scrubber_track[0].getBoundingClientRect().top - scrubber_handle.outerHeight() / 2;
+      position = Math.min(Math.max(position, 0), range);
+      return (range > 0) ? Math.round(position / range * (scrubber_total - 1)) + 1 : 1;
+    };
+    /* go to the post */
+    var scrubber_go = function (ord) {
+      var post = $('.js_forum-post[data-ord="' + ord + '"]').filter(':visible');
+      if (post.length > 0) {
+        window.scrollTo({ top: post.offset().top - scrubber_offset + 10, behavior: 'smooth' });
+      } else {
+        var page = Math.max(1, Math.ceil((ord - 1) / scrubber_per_page));
+        window.location = scrubber.data('url') + '?sort=' + scrubber.data('sort') + '&page=' + page + '&post=' + ord;
+      }
+    };
+    /* sync the handle with the scroll */
+    var scrubber_sync = function () {
+      scrubber_ticking = false;
+      if (scrubber_dragging) return;
+      var ord = null;
+      $('.js_forum-post').filter(':visible').each(function () {
+        if (ord === null || this.getBoundingClientRect().top <= window.innerHeight / 2) {
+          ord = parseInt($(this).data('ord'), 10);
+        }
+      });
+      if (ord !== null) {
+        scrubber_render(ord);
+      }
+    };
+    $(window).on('scroll resize', function () {
+      if (!scrubber_ticking) {
+        scrubber_ticking = true;
+        window.requestAnimationFrame(scrubber_sync);
+      }
+    });
+    /* drag the handle */
+    scrubber_track.on('pointerdown', function (e) {
+      e.preventDefault();
+      scrubber_dragging = true;
+      this.setPointerCapture(e.originalEvent.pointerId);
+      scrubber_render(scrubber_pointer_ord(e));
+    });
+    scrubber_track.on('pointermove', function (e) {
+      if (!scrubber_dragging) return;
+      scrubber_render(scrubber_pointer_ord(e));
+    });
+    scrubber_track.on('pointerup pointercancel', function (e) {
+      if (!scrubber_dragging) return;
+      scrubber_dragging = false;
+      if (e.type == 'pointerup') {
+        scrubber_go(scrubber_ord);
+      } else {
+        scrubber_sync();
+      }
+    });
+    /* move the handle with the keyboard */
+    scrubber_handle.on('keydown', function (e) {
+      if (e.key == 'ArrowUp' || e.key == 'ArrowDown') {
+        e.preventDefault();
+        scrubber_go(Math.min(Math.max(scrubber_ord + ((e.key == 'ArrowDown') ? 1 : -1), 1), scrubber_total));
+      }
+    });
+    /* open the requested post */
+    var scrubber_post = parseInt(new URLSearchParams(window.location.search).get('post'), 10);
+    if (scrubber_post && !window.location.hash) {
+      var scrubber_target = $('.js_forum-post[data-ord="' + scrubber_post + '"]').filter(':visible');
+      if (scrubber_target.length > 0) {
+        window.scrollTo({ top: scrubber_target.offset().top - scrubber_offset + 10 });
+      }
+    }
+    scrubber_sync();
+  }
 
 
   // handle keyboard shortcuts

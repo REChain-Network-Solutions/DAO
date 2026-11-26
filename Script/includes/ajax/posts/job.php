@@ -28,7 +28,7 @@ if (!$system['jobs_enabled']) {
 
 // check jobs permission
 if (in_array($_GET['do'], ['create', 'publish', 'edit']) && !$user->_data['can_create_jobs']) {
-  if (!$user->check_module_package_permission("jobs_permission")) {
+  if ($user->check_module_package_permission("jobs_permission")) {
     return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
   } else {
     modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -63,7 +63,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.job.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'publish':
@@ -156,6 +156,9 @@ try {
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your job")]);
       }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
+      }
       /* set custom fields */
       try {
         $inputs['custom_fields'] = $user->set_custom_fields($_POST, 'job');
@@ -227,7 +230,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.job.editor.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'application':
@@ -251,7 +254,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.job.apply.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'apply':
@@ -324,7 +327,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.job.candidates.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     default:

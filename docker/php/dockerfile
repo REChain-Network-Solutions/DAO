@@ -1,15 +1,31 @@
-FROM php:8.4-fpm
+FROM php:8.5-fpm
 
-# Install required PHP Extensions: GD, ImageMagick, ZIP, mysqli, pcntl
+# Install required PHP Extensions: GD, ImageMagick, ZIP, mysqli, pcntl, intl
 RUN apt-get update && apt-get install -y \
     libwebp-dev libxpm-dev zlib1g-dev \
     libfreetype6-dev libjpeg-dev libpng-dev \
     libzip-dev unzip \
+    libicu-dev \
     libmagickwand-dev imagemagick \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd zip mysqli pcntl \
+    && docker-php-ext-install -j$(nproc) gd zip mysqli pcntl intl \
     && pecl install imagick \
     && docker-php-ext-enable imagick
 
+# Install Node.js
+ENV NODE_MAJOR=24
+RUN apt-get update && apt-get install -y ca-certificates curl gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy PHP.ini custom settings
 COPY ./php/custom.ini /usr/local/etc/php/conf.d/custom.ini
+
+# Install the NodeJS socket server deps on start if missing, then run PHP-FPM.
+COPY ./php/docker-entrypoint-node.sh /usr/local/bin/docker-entrypoint-node.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint-node.sh
+ENTRYPOINT ["docker-entrypoint-node.sh"]
+CMD ["php-fpm"]

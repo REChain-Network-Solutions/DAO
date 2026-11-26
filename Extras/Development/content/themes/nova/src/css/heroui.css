@@ -1,0 +1,6 @@
+/* HeroUI v3 CSS, loaded beside FlyonUI. Vite scopes every selector to .heroui
+   and rewrites colliding roots (.card/.avatar) to hui-card / hui-avatar.
+   Wrap new HeroUI markup in .heroui; keep FlyonUI .btn/.input/.modal outside. */
+@import "tailwindcss/theme" source(none);
+@import "tailwindcss/utilities" source(none);
+@import "./_heroui.css";

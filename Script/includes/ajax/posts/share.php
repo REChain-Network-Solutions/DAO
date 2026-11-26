@@ -60,6 +60,16 @@ try {
       if ($post['reel']) {
         $post['share_link'] = $system['system_url'] . '/reels/' . $post['post_id'];
       }
+      /* check if post is a video and post is public */
+      if ($system['video_embed_code_enabled'] && $post['post_type'] == 'video' && $post['privacy'] == 'public') {
+        /* prepare embed video link */
+        $post['embedded_video_link'] = $system['system_url'] . '/embed/' . $post['post_id'];
+        $post['embedded_video_iframe'] = sprintf(
+          '<iframe src="%s" width="560" height="315" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>',
+          $post['embedded_video_link']
+        );
+      }
+
       $smarty->assign('post', $post);
       /* get user pages */
       $pages = $user->get_pages(['get_all' => true, 'managed' => true, 'user_id' => $user->_data['user_id']]);
@@ -73,7 +83,7 @@ try {
 
       // return
       $return['share_publisher'] = $smarty->fetch("ajax.share.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.share_publisher); initialize_modal();";
+      $return['callback'] = "modal_content(response.share_publisher, true);";
       break;
 
     default:

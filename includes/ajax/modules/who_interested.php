@@ -33,7 +33,7 @@ try {
   $smarty->assign('id', $_GET['event_id']);
   /* return */
   $return['template'] = $smarty->fetch("ajax.who_interested.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template);";
+  $return['callback'] = "modal_content(response.template);";
 
   // return & exit
   return_json($return);

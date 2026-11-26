@@ -35,7 +35,7 @@ switch ($_GET['do']) {
       $smarty->assign('code', $code);
       /* return */
       $return['template'] = $smarty->fetch("ajax.invitations.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
 
       // return & exit
       return_json($return);
@@ -55,7 +55,7 @@ switch ($_GET['do']) {
       $smarty->assign('code', $_GET['code']);
       /* return */
       $return['template'] = $smarty->fetch("ajax.invitations.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
 
       // return & exit
       return_json($return);

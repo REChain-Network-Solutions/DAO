@@ -21,6 +21,28 @@ if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
 
+if (($_POST['handle'] ?? '') == 'post_full') {
+  try {
+    $result = $user->edit_publisher_post($_POST['id'] ?? null, $_POST);
+    $response = ['post_id' => $result['post_id'], 'approval' => $result['approval'], 'processing' => $result['processing']];
+    if (!$result['processing'] && !$result['approval']) {
+      $smarty->assign('post', $user->get_post($result['post_id'], true, true, true));
+      $smarty->assign('_get', 'posts_profile');
+      $response['post'] = $smarty->fetch('__feeds_post.tpl');
+    }
+    if ($result['processing']) {
+      return_json_async($response);
+      foreach ($result['conversions'] as $kind => $media) {
+        ffmpeg_convert($result['post_id'], $result['author_id'], $media['source'], $media['thumbnail'], $kind);
+      }
+      exit;
+    }
+    return_json($response);
+  } catch (Throwable $e) {
+    return_json(['error' => true, 'message' => $e instanceof ValidationException ? $e->getMessage() : __("Unable to save this post. Please try again")]);
+  }
+}
+
 try {
 
   // initialize the return array
@@ -39,6 +61,16 @@ try {
       /* filter comment photo */
       if (isset($_POST['photo'])) {
         $_POST['photo'] = json_decode($_POST['photo']);
+        if ($_POST['photo']) {
+          if (is_object($_POST['photo'])) {
+            if (!is_valid_upload_source($_POST['photo']->source ?? null)) {
+              _error(400);
+            }
+            $_POST['photo'] = $_POST['photo']->source;
+          } elseif (!is_valid_upload_source($_POST['photo'])) {
+            _error(400);
+          }
+        }
       }
 
       // edit comment
@@ -87,6 +119,10 @@ try {
       /* check product download URL */
       if (!is_empty($_POST['product_url']) && !valid_url($_POST['product_url'])) {
         return_json(['error' => true, 'message' => __("Please add valid product download URL")]);
+      }
+      /* check product file */
+      if (!is_empty($_POST['product_file']) && !is_valid_upload_source($_POST['product_file'])) {
+        _error(400);
       }
       /* check product name */
       if (is_empty($_POST['name'])) {
@@ -164,6 +200,17 @@ try {
       /* check funding cover image */
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your funding request")]);
+      }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
+      }
+      /* check funding category */
+      if (is_empty($_POST['category'])) {
+        return_json(['error' => true, 'message' => __("select valid category for your funding")]);
+      }
+      $check = $db->query(sprintf("SELECT COUNT(*) as count FROM funding_categories WHERE category_id = %s", secure($_POST['category'], 'int')));
+      if ($check->fetch_assoc()['count'] == 0) {
+        return_json(['error' => true, 'message' => __("select valid category for your funding")]);
       }
 
       // edit funding
@@ -362,6 +409,9 @@ try {
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your job")]);
       }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
+      }
       /* set custom fields */
       try {
         $user->set_custom_fields($_POST, "job", "settings", $_POST['id']);
@@ -437,6 +487,9 @@ try {
       /* check course cover */
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your course")]);
+      }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
       }
       /* set custom fields */
       try {

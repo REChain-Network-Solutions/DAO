@@ -77,15 +77,18 @@ try {
   } else {
     _error(400);
   }
+  /* get reactions counts */
+  $reactions_counts = $user->who_reacts_counts([$get => $id]);
   /* assign variables */
   $smarty->assign('reaction_type', $reaction_type);
+  $smarty->assign('reactions_counts', $reactions_counts);
   $smarty->assign('users', $users);
   $smarty->assign('handle', $handle);
   $smarty->assign('get', $get);
   $smarty->assign('id', $id);
   /* return */
   $return['template'] = $smarty->fetch("ajax.who_reacts.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template);";
+  $return['callback'] = "modal_content(response.template);";
 
   // return & exit
   return_json($return);

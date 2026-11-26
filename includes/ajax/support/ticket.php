@@ -60,7 +60,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.ticket.update.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'edit':

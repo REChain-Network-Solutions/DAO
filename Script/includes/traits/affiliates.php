@@ -180,12 +180,18 @@ trait AffiliatesTrait
    * @param integer $offset
    * @return array
    */
-  public function get_affiliates($user_id, $offset = 0)
+  public function get_affiliates($user_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $affiliates = [];
     $offset *= $system['max_results'];
-    $get_affiliates = $db->query(sprintf('SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users INNER JOIN users_affiliates ON users.user_id = users_affiliates.referee_id WHERE users_affiliates.referrer_id = %s LIMIT %s, %s', secure($user_id, 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last affiliate) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users_affiliates.referee_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    $get_affiliates = $db->query(sprintf('SELECT users_affiliates.referee_id AS `cursor`, user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users INNER JOIN users_affiliates ON users.user_id = users_affiliates.referee_id LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE users_affiliates.referrer_id = %s' . $cursor_statement . ' ORDER BY users_affiliates.referee_id DESC ' . $limit_statement, secure($user_id, 'int')));
+    [$get_affiliates, $next_cursor] = cursor_result($get_affiliates);
     if ($get_affiliates->num_rows > 0) {
       while ($affiliate = $get_affiliates->fetch_assoc()) {
         $affiliate['user_picture'] = get_picture($affiliate['user_picture'], $affiliate['user_gender']);
@@ -194,6 +200,7 @@ trait AffiliatesTrait
         $affiliates[] = $affiliate;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $affiliates;
   }
 }

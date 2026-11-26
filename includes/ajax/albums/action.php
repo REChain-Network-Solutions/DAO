@@ -86,6 +86,8 @@ try {
       $inputs['privacy'] = $_POST['privacy'];
       $inputs['message'] = $_POST['message'];
       $inputs['location'] = $_POST['location'];
+      $inputs['latitude'] = $_POST['latitude'] ?? '';
+      $inputs['longitude'] = $_POST['longitude'] ?? '';
       $inputs['feeling_action'] = $_POST['feeling_action'];
       $inputs['feeling_value'] = $_POST['feeling_value'];
 

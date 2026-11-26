@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ┌──────────────────────────────────────────────────────────────┐
+    │  SNGINE APP BRANDING                                          │
+    │  Change the values below to match your website, then rebuild. │
+    │                                                               │
+    │  • Splash logo: replace res/drawable-nodpi/splash_logo_image  │
+    │  • Dark mode colors: res/values-night/sngine_config.xml       │
+    │  • Website URL & features: SngineConfig.kt                    │
+    └──────────────────────────────────────────────────────────────┘
+-->
+<resources>
+
+    <!-- App name shown under the launcher icon and in the recent apps screen. -->
+    <string name="app_name">Sngine</string>
+
+    <!-- Your brand color: progress bar, pull-to-refresh spinner and buttons. -->
+    <color name="brand_primary">#5E72E4</color>
+
+    <!-- Color behind the status bar (top) and navigation bar (bottom) while the app starts.
+         After the website loads, the bars take the page's own top and bottom colors
+         (turn this off with SYSTEM_BARS_FOLLOW_PAGE in SngineConfig.kt). -->
+    <color name="system_bar_background">#FFFFFF</color>
+
+    <!-- true = dark status bar icons (use with a light bar color above). -->
+    <bool name="light_system_bars">true</bool>
+
+    <!-- Splash screen background. -->
+    <color name="splash_background">#FFFFFF</color>
+
+    <!-- Background shown behind the website while it is loading. -->
+    <color name="page_background">#FFFFFF</color>
+
+</resources>

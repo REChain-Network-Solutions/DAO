@@ -55,15 +55,19 @@ try {
       /* online */
       $get_online = $db->query(sprintf("SELECT COUNT(*) as count FROM users WHERE user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s))", secure($system['offline_time'], 'int', false)));
       $insights['online'] = $get_online->fetch_assoc()['count'];
-      /* get total vistors (log_sessions) */
-      $get_vistors = $db->query("SELECT COUNT(*) as count FROM log_sessions");
-      $insights['vistors'] = $get_vistors->fetch_assoc()['count'];
-      /* get total visitors today (log_sessions) */
-      $get_vistors_today = $db->query("SELECT COUNT(*) as count FROM log_sessions WHERE DATE(session_date) = CURDATE()");
-      $insights['vistors_today'] = $get_vistors_today->fetch_assoc()['count'];
-      /* get total visitors this month (log_sessions) */
-      $get_vistors_month = $db->query("SELECT COUNT(*) as count FROM log_sessions WHERE YEAR(session_date) = YEAR(CURRENT_DATE()) AND MONTH(session_date) = MONTH(CURRENT_DATE())");
-      $insights['vistors_month'] = $get_vistors_month->fetch_assoc()['count'];
+      /* users this month / last month */
+      $get_users_month = $db->query("SELECT COUNT(*) as count FROM users WHERE YEAR(user_registered) = YEAR(CURRENT_DATE()) AND MONTH(user_registered) = MONTH(CURRENT_DATE())");
+      $insights['users_month'] = $get_users_month->fetch_assoc()['count'];
+      $get_users_last_month = $db->query("SELECT COUNT(*) as count FROM users WHERE user_registered >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND user_registered < DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')");
+      $insights['users_last_month'] = $get_users_last_month->fetch_assoc()['count'];
+      /* posts this month / last month */
+      $get_posts_month = $db->query("SELECT COUNT(*) as count FROM posts WHERE YEAR(time) = YEAR(CURRENT_DATE()) AND MONTH(time) = MONTH(CURRENT_DATE())");
+      $insights['posts_month'] = $get_posts_month->fetch_assoc()['count'];
+      $get_posts_last_month = $db->query("SELECT COUNT(*) as count FROM posts WHERE time >= DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND time < DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')");
+      $insights['posts_last_month'] = $get_posts_last_month->fetch_assoc()['count'];
+      /* month-over-month % (null when last month is 0) */
+      $insights['users_month_pct'] = ($insights['users_last_month'] > 0) ? round((($insights['users_month'] - $insights['users_last_month']) / $insights['users_last_month']) * 100, 1) : null;
+      $insights['posts_month_pct'] = ($insights['posts_last_month'] > 0) ? round((($insights['posts_month'] - $insights['posts_last_month']) / $insights['posts_last_month']) * 100, 1) : null;
       /* posts */
       $get_posts = $db->query("SELECT COUNT(*) as count FROM posts");
       $insights['posts'] = $get_posts->fetch_assoc()['count'];
@@ -79,6 +83,7 @@ try {
       /* events */
       $get_events = $db->query("SELECT COUNT(*) as count FROM `events`");
       $insights['events'] = $get_events->fetch_assoc()['count'];
+      $insights['community_total'] = $insights['pages'] + $insights['groups'] + $insights['events'];
       /* messages */
       $get_messages = $db->query("SELECT COUNT(*) as count FROM conversations_messages");
       $insights['messages'] = $get_messages->fetch_assoc()['count'];
@@ -86,28 +91,38 @@ try {
       $get_notifications = $db->query("SELECT COUNT(*) as count FROM notifications");
       $insights['notifications'] = $get_notifications->fetch_assoc()['count'];
 
-      // get chart data
-      for ($i = 1; $i <= 12; $i++) {
-        /* get users */
-        $get_monthly_users = $db->query("SELECT COUNT(*) as count FROM users WHERE YEAR(user_registered) = YEAR(CURRENT_DATE()) AND MONTH(user_registered) = $i");
-        $chart['users'][$i] = $get_monthly_users->fetch_assoc()['count'];
-        /* get pages */
-        $get_monthly_pages = $db->query("SELECT COUNT(*) as count FROM pages WHERE YEAR(page_date) = YEAR(CURRENT_DATE()) AND MONTH(page_date) = $i");
-        $chart['pages'][$i] = $get_monthly_pages->fetch_assoc()['count'];
-        /* get groups */
-        $get_monthly_groups = $db->query("SELECT COUNT(*) as count FROM `groups` WHERE YEAR(group_date) = YEAR(CURRENT_DATE()) AND MONTH(group_date) = $i");
-        $chart['groups'][$i] = $get_monthly_groups->fetch_assoc()['count'];
-        /* get events */
-        $get_monthly_events = $db->query("SELECT COUNT(*) as count FROM `events` WHERE YEAR(event_date) = YEAR(CURRENT_DATE()) AND MONTH(event_date) = $i");
-        $chart['events'][$i] = $get_monthly_events->fetch_assoc()['count'];
-        /* get posts */
-        $get_monthly_posts = $db->query("SELECT COUNT(*) as count FROM posts WHERE YEAR(time) = YEAR(CURRENT_DATE()) AND MONTH(time) = $i");
-        $chart['posts'][$i] = $get_monthly_posts->fetch_assoc()['count'];
+      // get chart data (one grouped query per series; keys 1–12 for the default theme)
+      $chart = [
+        'users' => array_fill(1, 12, 0),
+        'pages' => array_fill(1, 12, 0),
+        'groups' => array_fill(1, 12, 0),
+        'events' => array_fill(1, 12, 0),
+        'posts' => array_fill(1, 12, 0),
+      ];
+      $chart_queries = [
+        'users' => "SELECT MONTH(user_registered) AS m, COUNT(*) AS c FROM users WHERE YEAR(user_registered) = YEAR(CURRENT_DATE()) GROUP BY m",
+        'pages' => "SELECT MONTH(page_date) AS m, COUNT(*) AS c FROM pages WHERE YEAR(page_date) = YEAR(CURRENT_DATE()) GROUP BY m",
+        'groups' => "SELECT MONTH(group_date) AS m, COUNT(*) AS c FROM `groups` WHERE YEAR(group_date) = YEAR(CURRENT_DATE()) GROUP BY m",
+        'events' => "SELECT MONTH(event_date) AS m, COUNT(*) AS c FROM `events` WHERE YEAR(event_date) = YEAR(CURRENT_DATE()) GROUP BY m",
+        'posts' => "SELECT MONTH(time) AS m, COUNT(*) AS c FROM posts WHERE YEAR(time) = YEAR(CURRENT_DATE()) GROUP BY m",
+      ];
+      foreach ($chart_queries as $key => $sql) {
+        $get_monthly = $db->query($sql);
+        while ($row = $get_monthly->fetch_assoc()) {
+          $month = (int) $row['m'];
+          if ($month >= 1 && $month <= 12) {
+            $chart[$key][$month] = (int) $row['c'];
+          }
+        }
       }
 
       // assign variables
       $smarty->assign('insights', $insights);
       $smarty->assign('chart', $chart);
+      $smarty->assign('dashboard_chart_json', json_encode([
+        'users' => array_values($chart['users']),
+        'posts' => array_values($chart['posts']),
+      ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS));
       break;
 
     case 'settings':
@@ -180,8 +195,25 @@ try {
 
           // get PHP upload_max_filesize
           $max_upload_size = ini_get("upload_max_filesize");
+
+          // get upload size options
+          $upload_size_values = [];
+          foreach (['max_photo_size', 'max_cover_size', 'max_avatar_size', 'max_video_size', 'max_audio_size', 'max_file_size'] as $upload_size_key) {
+            $upload_size_values[$upload_size_key] = get_upload_size_option($system[$upload_size_key]);
+          }
+          $upload_size_values['max_daily_upload_size'] = get_upload_size_option($system['max_daily_upload_size'], true);
           /* assign variables */
           $smarty->assign('max_upload_size', $max_upload_size);
+          $smarty->assign('upload_size_options', get_upload_size_options());
+          $smarty->assign('upload_size_values', $upload_size_values);
+          $smarty->assign('watermark_opacity_value', get_watermark_opacity($system['watermark_opacity']));
+          $smarty->assign('watermark_videos_opacity_value', get_watermark_opacity($system['watermark_videos_opacity']));
+          $smarty->assign('watermark_positions', [
+            'watermark_x' => get_watermark_percent($system['watermark_x'] ?? null, 95),
+            'watermark_y' => get_watermark_percent($system['watermark_y'] ?? null, 95),
+            'watermark_videos_x' => get_watermark_percent($system['watermark_videos_x'] ?? null, 50),
+            'watermark_videos_y' => get_watermark_percent($system['watermark_videos_y'] ?? null, 50),
+          ]);
           break;
 
         case 'payments':
@@ -204,6 +236,16 @@ try {
           page_header($control_panel['title'] . " &rsaquo; " . __("Analytics Settings"));
           break;
 
+        case 'redis':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Redis Settings"));
+
+          // get redis & system cache status
+          $smarty->assign('redis_status', redis_status());
+          $smarty->assign('redis_default_prefix', redis_settings(['prefix' => ''])['prefix']);
+          $smarty->assign('system_cache_status', system_cache_status());
+          break;
+
         default:
           _error(404);
           break;
@@ -223,9 +265,12 @@ try {
           page_header($control_panel['title'] . " &rsaquo; " . __("Themes"));
 
           // get data
+          $rows = [];
           $get_rows = $db->query("SELECT * FROM system_themes");
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
+              $row['title'] = (!empty($row['title'])) ? $row['title'] : $row['name'];
+              $row['thumbnail_exists'] = is_file("content/themes/{$row['name']}/thumbnail.png");
               $rows[] = $row;
             }
           }
@@ -246,17 +291,56 @@ try {
             _error(404);
           }
           $data = $get_data->fetch_assoc();
+          $data['title'] = (!empty($data['title'])) ? $data['title'] : $data['name'];
+          $data['landing'] = (!empty($data['landing'])) ? $data['landing'] : 'default';
+          $data['wallpaper_preview'] = theme_landing_wallpaper($data['name'], $data['landing']);
+          $data['landings'] = [];
+          $get_landings = $db->query(sprintf("SELECT * FROM system_theme_landings WHERE theme_id = %s ORDER BY is_default DESC, landing_id ASC", secure($_GET['id'], 'int')));
+          if ($get_landings && $get_landings->num_rows > 0) {
+            while ($landing = $get_landings->fetch_assoc()) {
+              $data['landings'][] = array_merge($landing, theme_landing_thumbnails($data['name'], $landing['slug']));
+            }
+          }
+          if (!$data['landings']) {
+            $data['landings'][] = array_merge(['landing_id' => '', 'slug' => 'default', 'title' => 'Default', 'is_default' => '1'], theme_landing_thumbnails($data['name'], 'default'));
+          }
+          if ($data['name'] == 'nova') {
+            foreach (['orbit' => 'Orbit', 'liquid' => 'Liquid', 'summit' => 'Summit', 'studio' => 'Studio'] as $slug => $title) {
+              if (!is_file(ABSPATH . 'content/themes/nova/templates/index.landing.' . $slug . '.tpl')) {
+                continue;
+              }
+              $registered = false;
+              foreach ($data['landings'] as $landing) {
+                if ($landing['slug'] == $slug) {
+                  $registered = true;
+                  break;
+                }
+              }
+              if (!$registered) {
+                $data['landings'][] = array_merge(['landing_id' => '', 'slug' => $slug, 'title' => $title, 'is_default' => '0'], theme_landing_thumbnails('nova', $slug));
+              }
+            }
+          }
 
           // assign variables
           $smarty->assign('data', $data);
 
           // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Themes") . " &rsaquo; " . $data['name']);
+          page_header($control_panel['title'] . " &rsaquo; " . __("Themes") . " &rsaquo; " . $data['title']);
           break;
 
         case 'add':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Themes") . " &rsaquo; " . __("Add New"));
+
+          // default landing stub
+          $smarty->assign('data', [
+            'landing' => 'default',
+            'wallpaper_preview' => theme_landing_wallpaper($system['theme'], 'default'),
+            'landings' => [
+              array_merge(['landing_id' => '', 'slug' => 'default', 'title' => 'Default', 'is_default' => '1'], theme_landing_thumbnails($system['theme'], 'default')),
+            ],
+          ]);
           break;
 
         default:
@@ -270,6 +354,9 @@ try {
       if ($user->_is_moderator) {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
+
+      // get modules names
+      $smarty->assign('module_names', module_names_registry());
 
       // page header
       page_header($control_panel['title'] . " &rsaquo; " . __("Design"));
@@ -539,7 +626,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users?page=%s' . $query_string;
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users " . $cug_where_query . "ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users " . $cug_where_query . "ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -566,7 +653,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/admins?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users WHERE user_group = '1' ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users WHERE user_group = '1' ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -592,7 +679,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/moderators?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users WHERE user_group = '2' ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users WHERE user_group = '2' ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -618,7 +705,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/online?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf("SELECT * FROM users WHERE user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s)) ORDER BY user_id ASC " . $limit_query, secure($system['offline_time'], 'int', false)));
+          $get_rows = paged_query(sprintf("SELECT * FROM users WHERE user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s)) ORDER BY user_id ASC ", secure($system['offline_time'], 'int', false)), 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -644,7 +731,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/banned?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users WHERE user_banned = '1' ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users WHERE user_banned = '1' ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -670,7 +757,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/not_activated?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users WHERE user_activated = '0' ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users WHERE user_activated = '0' ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -696,7 +783,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/pending?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM users WHERE user_approved = '0' ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT * FROM users WHERE user_approved = '0' ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -738,7 +825,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/stats?page=%s' . $query_string;
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT users.*, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.user_id AND posts.user_type = 'user' " . $where_query . ") AS posts_count FROM users " . $where_users_query . " ORDER BY user_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT users.*, (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.user_id AND posts.user_type = 'user' " . $where_query . ") AS posts_count FROM users " . $where_users_query . " ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -767,7 +854,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/users/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT * FROM users WHERE (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s OR user_email LIKE %1$s OR user_phone LIKE %1$s) ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT * FROM users WHERE (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s OR user_email LIKE %1$s OR user_phone LIKE %1$s) ', secure($_GET['query'], 'search')), 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -814,6 +901,7 @@ try {
           $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s", secure($_GET['id'], 'int')));
           if ($get_sessions->num_rows > 0) {
             while ($session = $get_sessions->fetch_assoc()) {
+              $session['user_location'] = $user->get_session_location($session);
               $data['sessions'][] = $session;
             }
           }
@@ -842,13 +930,13 @@ try {
               $data['subscription_timeleft'] = ceil(($data['subscription_end'] - time()) / (60 * 60 * 24));
             }
             /* get packages */
-            $packages = $user->get_packages(true);
+            $packages = method_exists($user, 'get_packages') ? $user->get_packages(true) : [];
             $smarty->assign('packages', $packages);
           }
           /* prepare monetization */
           $data['can_monetize_content'] = $system['monetization_enabled'] && $user->check_user_permission($data['user_id'], 'monetization_permission');
           // get monetozaion plans
-          if ($data['can_monetize_content']) {
+          if ($data['can_monetize_content'] && method_exists($user, 'get_monetization_plans')) {
             $smarty->assign('monetization_plans', $user->get_monetization_plans($data['user_id']));
           }
           /* get custom fields */
@@ -1031,7 +1119,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/posts?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE (posts.pre_approved = '1' OR posts.has_approved = '1') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE (posts.pre_approved = '1' OR posts.has_approved = '1') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1063,13 +1151,14 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND (posts.post_id = %1$s OR posts.text LIKE %2$s)', secure($_GET['query'], 'int'), secure($_GET['query'], 'search')));
+          $search_query = sprintf('(posts.post_id = %s OR ', secure($_GET['query'], 'int')) . $user->posts_search_clause($_GET['query'], sprintf('(posts.text LIKE %s)', secure($_GET['query'], 'search'))) . ')';
+          $total = $db->query('SELECT COUNT(*) as count FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/posts/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND (posts.post_id = %1$s OR posts.text LIKE %2$s) ' . $limit_query, secure($_GET['query'], 'int'), secure($_GET['query'], 'search')));
+          $get_rows = paged_query('SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query . ' ', 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1091,6 +1180,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'pending':
@@ -1116,7 +1206,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/posts/pending?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE (posts.pre_approved = '0' AND posts.has_approved = '0') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT posts.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE (posts.pre_approved = '0' AND posts.has_approved = '0') AND NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1185,6 +1275,50 @@ try {
           $smarty->assign('categories', $categories);
           break;
 
+        case 'live_categories':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Posts") . " &rsaquo; " . __("Live Categories"));
+
+          // get data
+          $rows = $user->get_categories("posts_live_categories");
+
+          // assign variables
+          $smarty->assign('rows', $rows);
+          break;
+
+        case 'edit_live_category':
+          // valid inputs
+          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+            _error(404);
+          }
+
+          // get data
+          $get_data = $db->query(sprintf("SELECT * FROM posts_live_categories WHERE category_id = %s", secure($_GET['id'], 'int')));
+          if ($get_data->num_rows == 0) {
+            _error(404);
+          }
+          $data = $get_data->fetch_assoc();
+          /* get categories */
+          $data['categories'] = $user->get_categories("posts_live_categories");
+
+          // assign variables
+          $smarty->assign('data', $data);
+
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Posts") . " &rsaquo; " . __("Live Categories") . " &rsaquo; " . $data['category_name']);
+          break;
+
+        case 'add_live_category':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Posts") . " &rsaquo; " . __("Live Categories") . " &rsaquo; " . __("Add New Category"));
+
+          // get data
+          $categories = $user->get_categories("posts_live_categories");
+
+          // assign variables
+          $smarty->assign('categories', $categories);
+          break;
+
         default:
           _error(404);
           break;
@@ -1220,7 +1354,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/pages?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT pages.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM pages INNER JOIN users ON pages.page_admin = users.user_id ORDER BY pages.page_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT pages.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM pages INNER JOIN users ON pages.page_admin = users.user_id ORDER BY pages.page_id ASC ", 'pages.page_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['page_picture'] = get_picture($row['page_picture'], 'page');
@@ -1248,7 +1382,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/pages/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT pages.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM pages INNER JOIN users ON pages.page_admin = users.user_id WHERE pages.page_name LIKE %1$s OR pages.page_title LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT pages.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM pages INNER JOIN users ON pages.page_admin = users.user_id WHERE pages.page_name LIKE %1$s OR pages.page_title LIKE %1$s ', secure($_GET['query'], 'search')), 'pages.page_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['page_picture'] = get_picture($row['page_picture'], 'page');
@@ -1285,7 +1419,7 @@ try {
           /* prepare monetization */
           $data['can_monetize_content'] = $system['monetization_enabled'] && $user->check_user_permission($data['page_admin'], 'monetization_permission');
           // get monetozaion plans
-          if ($data['can_monetize_content']) {
+          if ($data['can_monetize_content'] && method_exists($user, 'get_monetization_plans')) {
             $smarty->assign('monetization_plans', $user->get_monetization_plans($data['page_id'], 'page'));
           }
 
@@ -1358,6 +1492,16 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Groups"));
 
+          // get insights
+          $get_groups = $db->query("SELECT COUNT(*) as count FROM `groups`");
+          $insights['groups'] = $get_groups->fetch_assoc()['count'];
+          $get_public = $db->query("SELECT COUNT(*) as count FROM `groups` WHERE group_privacy = 'public'");
+          $insights['public'] = $get_public->fetch_assoc()['count'];
+          $get_closed = $db->query("SELECT COUNT(*) as count FROM `groups` WHERE group_privacy = 'closed'");
+          $insights['closed'] = $get_closed->fetch_assoc()['count'];
+          $get_secret = $db->query("SELECT COUNT(*) as count FROM `groups` WHERE group_privacy = 'secret'");
+          $insights['secret'] = $get_secret->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
@@ -1367,7 +1511,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/groups?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT `groups`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `groups` INNER JOIN users ON `groups`.group_admin = users.user_id ORDER BY `groups`.group_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT `groups`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `groups` INNER JOIN users ON `groups`.group_admin = users.user_id ORDER BY `groups`.group_id ASC ", '`groups`.group_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['group_picture'] = get_picture($row['group_picture'], 'group');
@@ -1377,6 +1521,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1394,7 +1539,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/groups/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT `groups`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `groups` INNER JOIN users ON `groups`.group_admin = users.user_id WHERE `groups`.group_name LIKE %1$s OR `groups`.group_title LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT `groups`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `groups` INNER JOIN users ON `groups`.group_admin = users.user_id WHERE `groups`.group_name LIKE %1$s OR `groups`.group_title LIKE %1$s ', secure($_GET['query'], 'search')), '`groups`.group_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['group_picture'] = get_picture($row['group_picture'], 'group');
@@ -1406,6 +1551,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'edit_group':
@@ -1430,7 +1576,7 @@ try {
           $smarty->assign('custom_fields', $user->get_custom_fields(["for" => "group", "get" => "settings", "node_id" => $_GET['id']]));
           /* prepare monetization */
           $data['can_monetize_content'] = $system['monetization_enabled'] && $user->check_user_permission($data['group_admin'], 'monetization_permission');
-          if ($data['can_monetize_content']) {
+          if ($data['can_monetize_content'] && method_exists($user, 'get_monetization_plans')) {
             // get monetozaion plans
             $smarty->assign('monetization_plans', $user->get_monetization_plans($data['group_id'], 'group'));
           }
@@ -1504,6 +1650,18 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Events"));
 
+          // get insights
+          $insights = [];
+          /* total events */
+          $get_events = $db->query("SELECT COUNT(*) as count FROM `events`");
+          $insights['events'] = $get_events->fetch_assoc()['count'];
+          $get_upcoming = $db->query("SELECT COUNT(*) as count FROM `events` WHERE `event_end_date` >= NOW()");
+          $insights['upcoming'] = $get_upcoming->fetch_assoc()['count'];
+          $get_online = $db->query("SELECT COUNT(*) as count FROM `events` WHERE `event_is_online` = '1'");
+          $insights['online'] = $get_online->fetch_assoc()['count'];
+          $get_categories = $db->query("SELECT COUNT(*) as count FROM `events_categories`");
+          $insights['categories'] = $get_categories->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
@@ -1513,15 +1671,17 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/events?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT `events`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `events` INNER JOIN users ON `events`.event_admin = users.user_id ORDER BY `events`.event_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT `events`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `events` INNER JOIN users ON `events`.event_admin = users.user_id ORDER BY `events`.event_id ASC ", '`events`.event_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
+              $row['event_picture'] = get_picture($row['event_cover'], 'event');
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
               $rows[] = $row;
             }
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1539,9 +1699,10 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/events/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT `events`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `events` INNER JOIN users ON `events`.event_admin = users.user_id WHERE `events`.event_title LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT `events`.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM `events` INNER JOIN users ON `events`.event_admin = users.user_id WHERE `events`.event_title LIKE %1$s ', secure($_GET['query'], 'search')), '`events`.event_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
+              $row['event_picture'] = get_picture($row['event_cover'], 'event');
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
               $rows[] = $row;
             }
@@ -1642,16 +1803,26 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Blogs"));
 
+          // get insights
+          $insights = [];
+          $get_blogs = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = 'article' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
+          $insights['blogs'] = $get_blogs->fetch_assoc()['count'];
+          $get_categories = $db->query("SELECT COUNT(*) as count FROM blogs_categories");
+          $insights['categories'] = $get_categories->fetch_assoc()['count'];
+          $get_comments = $db->query("SELECT COUNT(*) as count FROM posts_comments INNER JOIN posts ON posts_comments.node_id = posts.post_id AND posts_comments.node_type = 'post' AND posts.post_type = 'article'");
+          $insights['comments'] = $get_comments->fetch_assoc()['count'];
+          $get_reactions = $db->query("SELECT COUNT(*) as count FROM posts_reactions INNER JOIN posts ON posts_reactions.post_id = posts.post_id AND posts.post_type = 'article'");
+          $insights['reactions'] = $get_reactions->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = 'article' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $insights['blogs'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/blogs?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_articles.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = 'article' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT posts.*, posts_articles.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = 'article' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['blog_title_url'] = get_url_text($row['title']);
@@ -1672,6 +1843,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1683,13 +1855,15 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = "article" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_articles.title LIKE %1$s OR posts_articles.text LIKE %1$s OR posts_articles.tags LIKE %1$s', secure($_GET['query'], 'search')));
+          $legacy_query = ($system['blogs_search_content_enabled']) ? '(posts.text LIKE %1$s OR posts_articles.title LIKE %1$s OR posts_articles.tags LIKE %1$s OR posts_articles.text LIKE %1$s)' : '(posts.text LIKE %1$s OR posts_articles.title LIKE %1$s OR posts_articles.tags LIKE %1$s)';
+          $search_query = $user->posts_search_clause($_GET['query'], sprintf($legacy_query, secure($_GET['query'], 'search')));
+          $total = $db->query('SELECT COUNT(*) as count FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = "article" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/blogs/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_articles.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = "article" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_articles.title LIKE %1$s OR posts_articles.text LIKE %1$s OR posts_articles.tags LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query('SELECT posts.*, posts_articles.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_articles ON posts.post_id = posts_articles.post_id AND posts.post_type = "article" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query . ' ', 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['blog_title_url'] = get_url_text($row['title']);
@@ -1710,6 +1884,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1770,22 +1945,37 @@ try {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
+      // prepare offers queries
+      $offers_from_query = " FROM posts INNER JOIN posts_offers ON posts.post_id = posts_offers.post_id AND posts.post_type = 'offer' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page'";
+      $offers_author_query = " NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)";
+      $offers_select_query = "SELECT posts.*, posts_offers.*, (posts_offers.end_date IS NULL OR posts_offers.end_date >= NOW()) AS offer_active, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.*";
+
       // get nested view content
       switch ($_GET['sub_view']) {
         case '':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Offers"));
 
+          // get insights
+          $insights = [];
+          $get_offers = $db->query("SELECT COUNT(*) as count" . $offers_from_query . " WHERE" . $offers_author_query);
+          $insights['offers'] = $get_offers->fetch_assoc()['count'];
+          $get_active = $db->query("SELECT COUNT(*) as count" . $offers_from_query . " WHERE" . $offers_author_query . " AND (posts_offers.end_date IS NULL OR posts_offers.end_date >= NOW())");
+          $insights['active'] = $get_active->fetch_assoc()['count'];
+          $get_expired = $db->query("SELECT COUNT(*) as count" . $offers_from_query . " WHERE" . $offers_author_query . " AND posts_offers.end_date < NOW()");
+          $insights['expired'] = $get_expired->fetch_assoc()['count'];
+          $get_categories = $db->query("SELECT COUNT(*) as count FROM offers_categories");
+          $insights['categories'] = $get_categories->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_offers ON posts.post_id = posts_offers.post_id AND posts.post_type = 'offer' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $insights['offers'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/offers?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_offers.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_offers ON posts.post_id = posts_offers.post_id AND posts.post_type = 'offer' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query($offers_select_query . $offers_from_query . " WHERE" . $offers_author_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1805,6 +1995,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1816,13 +2007,14 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_offers ON posts.post_id = posts_offers.post_id AND posts.post_type = "offer" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_offers.title LIKE %1$s', secure($_GET['query'], 'search')));
+          $search_query = $user->posts_search_clause($_GET['query'], sprintf("(posts.text LIKE %1\$s OR posts_offers.title LIKE %1\$s)", secure($_GET['query'], 'search')));
+          $total = $db->query("SELECT COUNT(*) as count" . $offers_from_query . " WHERE" . $offers_author_query . " AND " . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/offers/find?query=' . $_GET['query'] . '&page=%s';
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/offers/find?query=' . urlencode($_GET['query']) . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_offers.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_offers ON posts.post_id = posts_offers.post_id AND posts.post_type = "offer" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_offers.title LIKE %1$s' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query($offers_select_query . $offers_from_query . " WHERE" . $offers_author_query . " AND " . $search_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1844,6 +2036,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'categories':
@@ -1902,22 +2095,38 @@ try {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
+      // prepare jobs queries
+      $jobs_from_query = " FROM posts INNER JOIN posts_jobs ON posts.post_id = posts_jobs.post_id AND posts.post_type = 'job' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page'";
+      $jobs_author_query = " NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)";
+      $jobs_select_query = "SELECT posts.*, posts_jobs.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.*";
+      $jobs_types = ['full_time' => __("Full Time"), 'part_time' => __("Part Time"), 'internship' => __("Internship"), 'volunteer' => __("Volunteer"), 'contract' => __("Contract")];
+
       // get nested view content
       switch ($_GET['sub_view']) {
         case '':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Jobs"));
 
+          // get insights
+          $insights = [];
+          $get_jobs = $db->query("SELECT COUNT(*) as count" . $jobs_from_query . " WHERE" . $jobs_author_query);
+          $insights['jobs'] = $get_jobs->fetch_assoc()['count'];
+          $get_open = $db->query("SELECT COUNT(*) as count" . $jobs_from_query . " WHERE" . $jobs_author_query . " AND posts_jobs.available = '1'");
+          $insights['open'] = $get_open->fetch_assoc()['count'];
+          $get_closed = $db->query("SELECT COUNT(*) as count" . $jobs_from_query . " WHERE" . $jobs_author_query . " AND posts_jobs.available = '0'");
+          $insights['closed'] = $get_closed->fetch_assoc()['count'];
+          $get_categories = $db->query("SELECT COUNT(*) as count FROM jobs_categories");
+          $insights['categories'] = $get_categories->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_jobs ON posts.post_id = posts_jobs.post_id AND posts.post_type = 'job' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $insights['jobs'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/jobs?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_jobs.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_jobs ON posts.post_id = posts_jobs.post_id AND posts.post_type = 'job' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query($jobs_select_query . $jobs_from_query . " WHERE" . $jobs_author_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1932,11 +2141,14 @@ try {
                 $row['job_author_url'] = $system['system_url'] . '/pages/' . $row['page_name'];
                 $row['job_author_name'] = $row['page_title'];
               }
+              /* prepare job meta data */
+              $row['type_meta'] = $jobs_types[$row['type']] ?? null;
               $rows[] = $row;
             }
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -1948,13 +2160,14 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_jobs ON posts.post_id = posts_jobs.post_id AND posts.post_type = "job" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_jobs.title LIKE %1$s', secure($_GET['query'], 'search')));
+          $search_query = $user->posts_search_clause($_GET['query'], sprintf("(posts.text LIKE %1\$s OR posts_jobs.title LIKE %1\$s)", secure($_GET['query'], 'search')));
+          $total = $db->query("SELECT COUNT(*) as count" . $jobs_from_query . " WHERE" . $jobs_author_query . " AND " . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/jobs/find?query=' . $_GET['query'] . '&page=%s';
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/jobs/find?query=' . urlencode($_GET['query']) . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_jobs.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_jobs ON posts.post_id = posts_jobs.post_id AND posts.post_type = "job" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_jobs.title LIKE %1$s' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query($jobs_select_query . $jobs_from_query . " WHERE" . $jobs_author_query . " AND " . $search_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -1969,6 +2182,8 @@ try {
                 $row['job_author_url'] = $system['system_url'] . '/pages/' . $row['page_name'];
                 $row['job_author_name'] = $row['page_title'];
               }
+              /* prepare job meta data */
+              $row['type_meta'] = $jobs_types[$row['type']] ?? null;
               $rows[] = $row;
             }
           }
@@ -1976,6 +2191,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'categories':
@@ -2034,22 +2250,37 @@ try {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
+      // prepare courses queries
+      $courses_from_query = " FROM posts INNER JOIN posts_courses ON posts.post_id = posts_courses.post_id AND posts.post_type = 'course' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page'";
+      $courses_author_query = " NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)";
+      $courses_select_query = "SELECT posts.*, posts_courses.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.*";
+
       // get nested view content
       switch ($_GET['sub_view']) {
         case '':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Courses"));
 
+          // get insights
+          $insights = [];
+          $get_courses = $db->query("SELECT COUNT(*) as count" . $courses_from_query . " WHERE" . $courses_author_query);
+          $insights['courses'] = $get_courses->fetch_assoc()['count'];
+          $get_open = $db->query("SELECT COUNT(*) as count" . $courses_from_query . " WHERE" . $courses_author_query . " AND posts_courses.available = '1'");
+          $insights['open'] = $get_open->fetch_assoc()['count'];
+          $get_closed = $db->query("SELECT COUNT(*) as count" . $courses_from_query . " WHERE" . $courses_author_query . " AND posts_courses.available = '0'");
+          $insights['closed'] = $get_closed->fetch_assoc()['count'];
+          $get_categories = $db->query("SELECT COUNT(*) as count FROM courses_categories");
+          $insights['categories'] = $get_categories->fetch_assoc()['count'];
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_courses ON posts.post_id = posts_courses.post_id AND posts.post_type = 'course' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL)");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $insights['courses'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/courses?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_courses.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_courses ON posts.post_id = posts_courses.post_id AND posts.post_type = 'course' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query($courses_select_query . $courses_from_query . " WHERE" . $courses_author_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -2069,6 +2300,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
@@ -2080,13 +2312,14 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_courses ON posts.post_id = posts_courses.post_id AND posts.post_type = "course" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_courses.title LIKE %1$s', secure($_GET['query'], 'search')));
+          $search_query = $user->posts_search_clause($_GET['query'], sprintf("(posts.text LIKE %1\$s OR posts_courses.title LIKE %1\$s)", secure($_GET['query'], 'search')));
+          $total = $db->query("SELECT COUNT(*) as count" . $courses_from_query . " WHERE" . $courses_author_query . " AND " . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/courses/find?query=' . $_GET['query'] . '&page=%s';
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/courses/find?query=' . urlencode($_GET['query']) . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_courses.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_courses ON posts.post_id = posts_courses.post_id AND posts.post_type = "course" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_courses.title LIKE %1$s' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query($courses_select_query . $courses_from_query . " WHERE" . $courses_author_query . " AND " . $search_query . " ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -2108,6 +2341,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'categories':
@@ -2172,10 +2406,22 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Forums"));
 
+          // get insights
+          $insights = [];
+          $get_forums = $db->query("SELECT COUNT(*) as count FROM forums");
+          $insights['forums'] = $get_forums->fetch_assoc()['count'];
+          $get_sections = $db->query(sprintf("SELECT COUNT(*) as count FROM forums WHERE forum_section = %s", secure(0, 'int')));
+          $insights['sections'] = $get_sections->fetch_assoc()['count'];
+          $get_threads = $db->query("SELECT COUNT(*) as count FROM forums_threads");
+          $insights['threads'] = $get_threads->fetch_assoc()['count'];
+          $get_replies = $db->query("SELECT COUNT(*) as count FROM forums_replies");
+          $insights['replies'] = $get_replies->fetch_assoc()['count'];
+
           // get data
           $rows = $user->get_forums();
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           break;
 
@@ -2224,7 +2470,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/forums/threads?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT forums_threads.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_threads INNER JOIN users ON forums_threads.user_id = users.user_id ORDER BY forums_threads.thread_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT forums_threads.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_threads INNER JOIN users ON forums_threads.user_id = users.user_id ORDER BY forums_threads.thread_id ASC ", 'forums_threads.thread_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['thread_title_url'] = get_url_text($row['title']);
@@ -2253,7 +2499,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/forums/find_threads?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT forums_threads.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_threads INNER JOIN users ON forums_threads.user_id = users.user_id WHERE forums_threads.title LIKE %1$s OR forums_threads.text LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT forums_threads.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_threads INNER JOIN users ON forums_threads.user_id = users.user_id WHERE forums_threads.title LIKE %1$s OR forums_threads.text LIKE %1$s ', secure($_GET['query'], 'search')), 'forums_threads.thread_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['thread_title_url'] = get_url_text($row['title']);
@@ -2267,6 +2513,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'replies':
@@ -2282,7 +2529,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/forums/replies?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT forums_replies.*, forums_threads.title, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_replies INNER JOIN users ON forums_replies.user_id = users.user_id INNER JOIN forums_threads ON forums_replies.thread_id = forums_threads.thread_id ORDER BY forums_replies.reply_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT forums_replies.*, forums_threads.title, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_replies INNER JOIN users ON forums_replies.user_id = users.user_id INNER JOIN forums_threads ON forums_replies.thread_id = forums_threads.thread_id ORDER BY forums_replies.reply_id ASC ", 'forums_replies.reply_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['thread_title_url'] = get_url_text($row['title']);
@@ -2311,7 +2558,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/forums/find_replies?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT forums_replies.*, forums_threads.title, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_replies INNER JOIN users ON forums_replies.user_id = users.user_id INNER JOIN forums_threads ON forums_replies.thread_id = forums_threads.thread_id WHERE forums_replies.text LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT forums_replies.*, forums_threads.title, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM forums_replies INNER JOIN users ON forums_replies.user_id = users.user_id INNER JOIN forums_threads ON forums_replies.thread_id = forums_threads.thread_id WHERE forums_replies.text LIKE %1$s ', secure($_GET['query'], 'search')), 'forums_replies.reply_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['thread_title_url'] = get_url_text($row['title']);
@@ -2325,6 +2572,7 @@ try {
           // assign variables
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         default:
@@ -2345,6 +2593,17 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Movies"));
 
+          // get insights
+          $insights = [];
+          $get_movies = $db->query("SELECT COUNT(*) as count FROM movies");
+          $insights['movies'] = $get_movies->fetch_assoc()['count'];
+          $get_paid = $db->query("SELECT COUNT(*) as count FROM movies WHERE is_paid = '1'");
+          $insights['paid'] = $get_paid->fetch_assoc()['count'];
+          $get_free = $db->query("SELECT COUNT(*) as count FROM movies WHERE is_paid = '0'");
+          $insights['free'] = $get_free->fetch_assoc()['count'];
+          $get_genres = $db->query("SELECT COUNT(*) as count FROM movies_genres");
+          $insights['genres'] = $get_genres->fetch_assoc()['count'];
+
           // get data
           $get_rows = $db->query("SELECT * FROM movies");
           if ($get_rows->num_rows > 0) {
@@ -2356,6 +2615,7 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           break;
 
@@ -2443,24 +2703,101 @@ try {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
+      // prepare games genres
+      $games_genres_map = [];
+      foreach ($user->get_games_genres() as $_genre) {
+        $games_genres_map[$_genre['genre_id']] = $_genre['genre_name'];
+      }
+
       // get nested view content
       switch ($_GET['sub_view']) {
         case '':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Games"));
 
+          // get insights
+          $insights = [];
+          $get_games = $db->query("SELECT COUNT(*) as count FROM games");
+          $insights['games'] = $get_games->fetch_assoc()['count'];
+          $insights['genres'] = count($games_genres_map);
+          $get_players = $db->query("SELECT COUNT(DISTINCT user_id) as count FROM games_players");
+          $insights['players'] = $get_players->fetch_assoc()['count'];
+          $get_played = $db->query("SELECT COUNT(DISTINCT game_id) as count FROM games_players");
+          $insights['played'] = $get_played->fetch_assoc()['count'];
+
           // get data
-          $get_rows = $db->query("SELECT * FROM games");
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $params['total_items'] = $insights['games'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/games?page=%s';
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query("SELECT * FROM games ORDER BY game_id DESC ", 'games.game_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['title_url'] = get_url_text($row['title']);
               $row['thumbnail'] = get_picture($row['thumbnail'], 'game');
+              /* get game genres */
+              $row['genres_list'] = [];
+              foreach (array_filter(explode(',', $row['genres'])) as $_genre_id) {
+                if (isset($games_genres_map[$_genre_id])) {
+                  $row['genres_list'][] = $games_genres_map[$_genre_id];
+                }
+              }
               $rows[] = $row;
+            }
+            /* get games players */
+            $players = $user->get_games_players(array_column($rows, 'game_id'));
+            foreach ($rows as $key => $row) {
+              $rows[$key]['players'] = (isset($players[$row['game_id']])) ? $players[$row['game_id']] : 0;
+            }
+          }
+
+          // assign variables
+          $smarty->assign('insights', $insights);
+          $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
+          break;
+
+        case 'find':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Games") . " &rsaquo; " . __("Find"));
+
+          // get data
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query(sprintf("SELECT COUNT(*) as count FROM games WHERE (title LIKE %1\$s OR description LIKE %1\$s)", secure($_GET['query'], 'search')));
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/games/find?query=' . urlencode($_GET['query']) . '&page=%s';
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query(sprintf("SELECT * FROM games WHERE (title LIKE %1\$s OR description LIKE %1\$s) ORDER BY game_id DESC ", secure($_GET['query'], 'search')), 'games.game_id', $limit_query);
+          if ($get_rows->num_rows > 0) {
+            while ($row = $get_rows->fetch_assoc()) {
+              $row['title_url'] = get_url_text($row['title']);
+              $row['thumbnail'] = get_picture($row['thumbnail'], 'game');
+              /* get game genres */
+              $row['genres_list'] = [];
+              foreach (array_filter(explode(',', $row['genres'])) as $_genre_id) {
+                if (isset($games_genres_map[$_genre_id])) {
+                  $row['genres_list'][] = $games_genres_map[$_genre_id];
+                }
+              }
+              $rows[] = $row;
+            }
+            /* get games players */
+            $players = $user->get_games_players(array_column($rows, 'game_id'));
+            foreach ($rows as $key => $row) {
+              $rows[$key]['players'] = (isset($players[$row['game_id']])) ? $players[$row['game_id']] : 0;
             }
           }
 
           // assign variables
           $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
+          $smarty->assign('query', ($_GET['query']) ? htmlentities($_GET['query'], ENT_QUOTES, 'utf-8') : null);
           break;
 
         case 'edit':
@@ -2545,8 +2882,38 @@ try {
       break;
 
     case 'earnings':
+    case 'wallet':
+    case 'pro':
+    case 'paid_modules':
+    case 'funding':
+    case 'monetization':
+    case 'tips':
+    case 'coinpayments':
+    case 'bank':
+      if ($licence_monetization && licence_module_installed()) {
+        admin_monetization_view();
+      } else {
+        $licence_pages = [
+          'earnings' => __("Earnings"),
+          'wallet' => __("Wallet"),
+          'pro' => __("Pro System"),
+          'paid_modules' => __("Paid Modules"),
+          'funding' => __("Funding"),
+          'monetization' => __("Monetization"),
+          'tips' => __("Tips"),
+          'coinpayments' => __("CoinPayments"),
+          'bank' => __("Bank Receipts"),
+        ];
+        $smarty->assign('licence_page', $licence_pages[$_GET['view']]);
+
+        // page header
+        page_header($control_panel['title'] . " &rsaquo; " . $licence_pages[$_GET['view']]);
+      }
+      break;
+
+    case 'dating':
       // check admin|moderator permission
-      if ($user->_is_moderator) {
+      if ($user->_is_moderator && (!$system['mods_dating_permission'] || !in_array($_GET['sub_view'], ['members', 'edit_member', 'photos']))) {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
@@ -2554,354 +2921,261 @@ try {
       switch ($_GET['sub_view']) {
         case '':
           // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Payments"));
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating"));
 
-          // get chart data
-          /* payment methods chart */
-          $payment_methods_chart = [];
-          $payment_methods = [];
-          $get_payment_methods = $db->query("SELECT DISTINCT method FROM log_payments");
-          while ($method = $get_payment_methods->fetch_assoc()) {
-            $payment_methods[] = $method['method'];
-          }
-          for ($i = 1; $i <= 12; $i++) {
-            $payment_methods_chart[$i] = [];
-            foreach ($payment_methods as $method) {
-              $result = $db->query("SELECT SUM(amount) as total_amount FROM log_payments WHERE YEAR(time) = YEAR(CURRENT_DATE()) AND MONTH(time) = $i AND method = '$method'");
-              $row = $result->fetch_assoc();
-              /* round to 2 decimal places */
-              $payment_methods_chart[$i][$method] = ($row['total_amount']) ? round($row['total_amount'], 2) : 0;
-            }
-          }
-          /* payment handle chart */
-          $payment_handles_chart = [];
-          $payment_handles = [];
-          $get_payment_handles = $db->query("SELECT DISTINCT handle FROM log_payments");
-          while ($handle = $get_payment_handles->fetch_assoc()) {
-            $payment_handles[] = $handle['handle'];
-          }
-          for ($i = 1; $i <= 12; $i++) {
-            $payment_handles_chart[$i] = [];
-            foreach ($payment_handles as $handle) {
-              $result = $db->query("SELECT SUM(amount) as total_amount FROM log_payments WHERE YEAR(time) = YEAR(CURRENT_DATE()) AND MONTH(time) = $i AND handle = '$handle'");
-              $row = $result->fetch_assoc();
-              /* round to 2 decimal places */
-              $payment_handles_chart[$i][$handle] = ($row['total_amount']) ? round($row['total_amount'], 2) : 0;
-            }
-          }
+          // get insights
+          $insights = $user->get_dating_insights();
 
-          // calculate payins
-          /* calculate total payins */
-          $total_payin = 0;
-          $get_total_payin = $db->query("SELECT SUM(amount) as total_payin FROM log_payments");
-          if ($get_total_payin->num_rows > 0) {
-            $total_payin = $get_total_payin->fetch_assoc()['total_payin'];
-          }
-          /* calculate this month payins */
-          $month_payin = 0;
-          $get_month_payin = $db->query("SELECT SUM(amount) as month_payin FROM log_payments WHERE MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          if ($get_month_payin->num_rows > 0) {
-            $month_payin = $get_month_payin->fetch_assoc()['month_payin'];
-          }
+          // assign variables
+          $smarty->assign('insights', $insights);
+          break;
 
-          // calculate payouts (withdrawals) (total & this month)
-          /* get monetiztaion withdrawals */
-          $get_total_pending_monetization_withdrawals = $db->query("SELECT SUM(amount) as total_monetization_withdrawals FROM monetization_payments WHERE status = '0'");
-          $total_pending_monetization_withdrawals = $get_total_pending_monetization_withdrawals->fetch_assoc()['total_monetization_withdrawals'];
-          $get_total_approved_monetization_withdrawals = $db->query("SELECT SUM(amount) as total_pending_monetization_withdrawals FROM monetization_payments WHERE status = '1'");
-          $total_approved_monetization_withdrawals = $get_total_approved_monetization_withdrawals->fetch_assoc()['total_pending_monetization_withdrawals'];
-          $get_total_pending_month_monetization_withdrawals = $db->query("SELECT SUM(amount) as month_monetization_withdrawals FROM monetization_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_monetization_withdrawals = $get_total_pending_month_monetization_withdrawals->fetch_assoc()['month_monetization_withdrawals'];
-          $get_total_approved_month_monetization_withdrawals = $db->query("SELECT SUM(amount) as month_pending_monetization_withdrawals FROM monetization_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_monetization_withdrawals = $get_total_approved_month_monetization_withdrawals->fetch_assoc()['month_pending_monetization_withdrawals'];
-          /* get affiliate withdrawals (affiliates_payments) */
-          $get_total_pending_affiliate_withdrawals = $db->query("SELECT SUM(amount) as total_affiliate_withdrawals FROM affiliates_payments WHERE status = '0'");
-          $total_pending_affiliate_withdrawals = $get_total_pending_affiliate_withdrawals->fetch_assoc()['total_affiliate_withdrawals'];
-          $get_total_approved_affiliate_withdrawals = $db->query("SELECT SUM(amount) as total_pending_affiliate_withdrawals FROM affiliates_payments WHERE status = '1'");
-          $total_approved_affiliate_withdrawals = $get_total_approved_affiliate_withdrawals->fetch_assoc()['total_pending_affiliate_withdrawals'];
-          $get_total_pending_month_affiliate_withdrawals = $db->query("SELECT SUM(amount) as month_affiliate_withdrawals FROM affiliates_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_affiliate_withdrawals = $get_total_pending_month_affiliate_withdrawals->fetch_assoc()['month_affiliate_withdrawals'];
-          $get_total_approved_month_affiliate_withdrawals = $db->query("SELECT SUM(amount) as month_pending_affiliate_withdrawals FROM affiliates_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_affiliate_withdrawals = $get_total_approved_month_affiliate_withdrawals->fetch_assoc()['month_pending_affiliate_withdrawals'];
-          /* get points withdrawals (points_payments) */
-          $get_total_pending_points_withdrawals = $db->query("SELECT SUM(amount) as total_points_withdrawals FROM points_payments WHERE status = '0'");
-          $total_pending_points_withdrawals = $get_total_pending_points_withdrawals->fetch_assoc()['total_points_withdrawals'];
-          $get_total_approved_points_withdrawals = $db->query("SELECT SUM(amount) as total_pending_points_withdrawals FROM points_payments WHERE status = '1'");
-          $total_approved_points_withdrawals = $get_total_approved_points_withdrawals->fetch_assoc()['total_pending_points_withdrawals'];
-          $get_total_pending_month_points_withdrawals = $db->query("SELECT SUM(amount) as month_points_withdrawals FROM points_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_points_withdrawals = $get_total_pending_month_points_withdrawals->fetch_assoc()['month_points_withdrawals'];
-          $get_total_approved_month_points_withdrawals = $db->query("SELECT SUM(amount) as month_pending_points_withdrawals FROM points_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_points_withdrawals = $get_total_approved_month_points_withdrawals->fetch_assoc()['month_pending_points_withdrawals'];
-          /* get market withdrawals (market_payments) */
-          $get_total_pending_market_withdrawals = $db->query("SELECT SUM(amount) as total_market_withdrawals FROM market_payments WHERE status = '0'");
-          $total_pending_market_withdrawals = $get_total_pending_market_withdrawals->fetch_assoc()['total_market_withdrawals'];
-          $get_total_approved_market_withdrawals = $db->query("SELECT SUM(amount) as total_pending_market_withdrawals FROM market_payments WHERE status = '1'");
-          $total_approved_market_withdrawals = $get_total_approved_market_withdrawals->fetch_assoc()['total_pending_market_withdrawals'];
-          $get_total_pending_month_market_withdrawals = $db->query("SELECT SUM(amount) as month_market_withdrawals FROM market_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_market_withdrawals = $get_total_pending_month_market_withdrawals->fetch_assoc()['month_market_withdrawals'];
-          $get_total_approved_month_market_withdrawals = $db->query("SELECT SUM(amount) as month_pending_market_withdrawals FROM market_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_market_withdrawals = $get_total_approved_month_market_withdrawals->fetch_assoc()['month_pending_market_withdrawals'];
-          /* get funding withdrawals (funding_payments) */
-          $get_total_pending_funding_withdrawals = $db->query("SELECT SUM(amount) as total_funding_withdrawals FROM funding_payments WHERE status = '0'");
-          $total_pending_funding_withdrawals = $get_total_pending_funding_withdrawals->fetch_assoc()['total_funding_withdrawals'];
-          $get_total_approved_funding_withdrawals = $db->query("SELECT SUM(amount) as total_pending_funding_withdrawals FROM funding_payments WHERE status = '1'");
-          $total_approved_funding_withdrawals = $get_total_approved_funding_withdrawals->fetch_assoc()['total_pending_funding_withdrawals'];
-          $get_total_pending_month_funding_withdrawals = $db->query("SELECT SUM(amount) as month_funding_withdrawals FROM funding_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_funding_withdrawals = $get_total_pending_month_funding_withdrawals->fetch_assoc()['month_funding_withdrawals'];
-          $get_total_approved_month_funding_withdrawals = $db->query("SELECT SUM(amount) as month_pending_funding_withdrawals FROM funding_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_funding_withdrawals = $get_total_approved_month_funding_withdrawals->fetch_assoc()['month_pending_funding_withdrawals'];
-          /* get wallet withdrawals (wallet_payments) */
-          $get_total_pending_wallet_withdrawals = $db->query("SELECT SUM(amount) as total_wallet_withdrawals FROM wallet_payments WHERE status = '0'");
-          $total_pending_wallet_withdrawals = $get_total_pending_wallet_withdrawals->fetch_assoc()['total_wallet_withdrawals'];
-          $get_total_approved_wallet_withdrawals = $db->query("SELECT SUM(amount) as total_pending_wallet_withdrawals FROM wallet_payments WHERE status = '1'");
-          $total_approved_wallet_withdrawals = $get_total_approved_wallet_withdrawals->fetch_assoc()['total_pending_wallet_withdrawals'];
-          $get_total_pending_month_wallet_withdrawals = $db->query("SELECT SUM(amount) as month_wallet_withdrawals FROM wallet_payments WHERE status = '0' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_pending_wallet_withdrawals = $get_total_pending_month_wallet_withdrawals->fetch_assoc()['month_wallet_withdrawals'];
-          $get_total_approved_month_wallet_withdrawals = $db->query("SELECT SUM(amount) as month_pending_wallet_withdrawals FROM wallet_payments WHERE status = '1' AND MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          $month_approved_wallet_withdrawals = $get_total_approved_month_wallet_withdrawals->fetch_assoc()['month_pending_wallet_withdrawals'];
-          /* calculate total pending payouts */
-          $total_pending_payout = $total_pending_monetization_withdrawals + $total_pending_affiliate_withdrawals + $total_pending_points_withdrawals + $total_pending_market_withdrawals + $total_pending_funding_withdrawals + $total_pending_wallet_withdrawals;
-          /* calculate this month pending payouts */
-          $month_pending_payout = $month_pending_monetization_withdrawals + $month_pending_affiliate_withdrawals + $month_pending_points_withdrawals + $month_pending_market_withdrawals + $month_pending_funding_withdrawals + $month_pending_wallet_withdrawals;
-          /* calculate total approved payouts */
-          $total_approved_payout = $total_approved_monetization_withdrawals + $total_approved_affiliate_withdrawals + $total_approved_points_withdrawals + $total_approved_market_withdrawals + $total_approved_funding_withdrawals + $total_approved_wallet_withdrawals;
-          /* calculate this month approved payouts */
-          $month_approved_payout = $month_approved_monetization_withdrawals + $month_approved_affiliate_withdrawals + $month_approved_points_withdrawals + $month_approved_market_withdrawals + $month_approved_funding_withdrawals + $month_approved_wallet_withdrawals;
+        case 'settings':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Settings"));
+          break;
+
+        case 'photos':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Photos"));
 
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM log_payments INNER JOIN users ON log_payments.user_id = users.user_id");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $db->query("SELECT COUNT(*) as count FROM dating_photos WHERE status = 'pending'")->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/earnings?page=%s';
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/dating/photos?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM log_payments INNER JOIN users ON log_payments.user_id = users.user_id ORDER BY log_payments.payment_id DESC " . $limit_query);
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('payment_methods', $payment_methods);
-          $smarty->assign('payment_methods_chart', $payment_methods_chart);
-          $smarty->assign('payment_handles', $payment_handles);
-          $smarty->assign('payment_handles_chart', $payment_handles_chart);
-          $smarty->assign('total_payin', $total_payin);
-          $smarty->assign('month_payin', $month_payin);
-          $smarty->assign('total_pending_payout', $total_pending_payout);
-          $smarty->assign('month_pending_payout', $month_pending_payout);
-          $smarty->assign('total_approved_payout', $total_approved_payout);
-          $smarty->assign('month_approved_payout', $month_approved_payout);
-          $smarty->assign('rows', $rows);
-          $smarty->assign('pager', $pager->getPager());
-          break;
-
-        case 'commissions':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Commissions"));
-
-          // get chart data
-          $commissions_handles_chart = [];
-          $commissions_handles = [];
-          $get_commissions_handles = $db->query("SELECT DISTINCT handle FROM log_commissions");
-          while ($handle = $get_commissions_handles->fetch_assoc()) {
-            $commissions_handles[] = $handle['handle'];
-          }
-          for ($i = 1; $i <= 12; $i++) {
-            $commissions_handles_chart[$i] = [];
-            foreach ($commissions_handles as $handle) {
-              $result = $db->query("SELECT SUM(amount) as total_amount FROM log_commissions WHERE YEAR(time) = YEAR(CURRENT_DATE()) AND MONTH(time) = $i AND handle = '$handle'");
-              $row = $result->fetch_assoc();
-              /* round to 2 decimal places */
-              $commissions_handles_chart[$i][$handle] = ($row['total_amount']) ? round($row['total_amount'], 2) : 0;
-            }
-          }
-
-          // calculate commissions
-          /* calculate total commissions */
-          $total_commissions = 0;
-          $get_total_commissions = $db->query("SELECT SUM(amount) as total_commissions FROM log_commissions");
-          if ($get_total_commissions->num_rows > 0) {
-            $total_commissions = $get_total_commissions->fetch_assoc()['total_commissions'];
-          }
-          /* calculate this month commissions */
-          $month_commissions = 0;
-          $get_month_commissions = $db->query("SELECT SUM(amount) as month_commissions FROM log_commissions WHERE MONTH(time) = MONTH(CURRENT_DATE()) AND YEAR(time) = YEAR(CURRENT_DATE())");
-          if ($get_month_commissions->num_rows > 0) {
-            $month_commissions = $get_month_commissions->fetch_assoc()['month_commissions'];
-          }
-
-          // get data
-          require('includes/class-pager.php');
-          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM log_commissions INNER JOIN users ON log_commissions.user_id = users.user_id");
-          $params['total_items'] = $total->fetch_assoc()['count'];
-          $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/earnings/commissions?page=%s';
-          $pager = new Pager($params);
-          $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM log_commissions INNER JOIN users ON log_commissions.user_id = users.user_id ORDER BY log_commissions.payment_id DESC " . $limit_query);
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('commissions_handles', $commissions_handles);
-          $smarty->assign('commissions_handles_chart', $commissions_handles_chart);
-          $smarty->assign('total_commissions', $total_commissions);
-          $smarty->assign('month_commissions', $month_commissions);
-          $smarty->assign('rows', $rows);
-          $smarty->assign('pager', $pager->getPager());
-          break;
-
-        case 'packages':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Packages"));
-
-          // get data
-          $total_earnings = 0;
-          $month_earnings = 0;
-          $get_rows = $db->query("SELECT * FROM packages_payments");
           $rows = [];
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row_month = date("n", strtotime($row['payment_date']));
-              $row_year = date("Y", strtotime($row['payment_date']));
-              if ($rows[$row['package_name']]) {
-                $rows[$row['package_name']]['sales']++;
-                if ($rows[$row['package_name']]['months_sales'][$row_month]) {
-                  $rows[$row['package_name']]['months_sales'][$row_month]++;
-                } else {
-                  $rows[$row['package_name']]['months_sales'][$row_month] = 1;
-                }
-                $rows[$row['package_name']]['earnings'] += $row['package_price'];
-                /* add to current month earnings */
-                if ($row_month == date('n') && $row_year == date('Y')) {
-                  $month_earnings += $row['package_price'];
-                }
-                /* add to total earnings */
-                $total_earnings += $row['package_price'];
-              } else {
-                $rows[$row['package_name']]['sales'] = 1;
-                $rows[$row['package_name']]['months_sales'][$row_month] = 1;
-                $rows[$row['package_name']]['earnings'] = $row['package_price'];
-                /* add to current month earnings */
-                if ($row_month == date('n') && $row_year == date('Y')) {
-                  $month_earnings += $row['package_price'];
-                }
-                /* add to total earnings */
-                $total_earnings += $row['package_price'];
-              }
-            }
-          }
-          /* prepare months sales */
-          if ($rows) {
-            foreach ($rows as $key => $value) {
-              for ($i = 1; $i <= 12; $i++) {
-                if ($rows[$key]['months_sales'][$i]) {
-                  continue;
-                } else {
-                  $rows[$key]['months_sales'][$i] = 0;
-                }
-              }
-              ksort($rows[$key]['months_sales']);
-            }
+          $get_rows = $db->query("SELECT dating_photos.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM dating_photos INNER JOIN users ON dating_photos.user_id = users.user_id WHERE dating_photos.status = 'pending' ORDER BY dating_photos.photo_id ASC " . $limit_query);
+          while ($row = $get_rows->fetch_assoc()) {
+            $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
+            $rows[] = $row;
           }
 
           // assign variables
-          $smarty->assign('total_earnings', $total_earnings);
-          $smarty->assign('month_earnings', $month_earnings);
-          $smarty->assign('rows', $rows);
-          break;
-
-
-        case 'movies':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Movies"));
-
-          // calculate earnings
-          $total_earnings = 0;
-          $get_total_earnings = $db->query("SELECT SUM(price) as total_earnings FROM movies_payments INNER JOIN users ON movies_payments.user_id = users.user_id INNER JOIN movies ON movies_payments.movie_id = movies.movie_id");
-          if ($get_total_earnings->num_rows > 0) {
-            $total_earnings = $get_total_earnings->fetch_assoc()['total_earnings'];
-          }
-          $month_earnings = 0;
-          $get_month_earnings = $db->query("SELECT SUM(price) as month_earnings FROM movies_payments INNER JOIN users ON movies_payments.user_id = users.user_id INNER JOIN movies ON movies_payments.movie_id = movies.movie_id WHERE MONTH(payment_time) = MONTH(CURRENT_DATE()) AND YEAR(payment_time) = YEAR(CURRENT_DATE())");
-          if ($get_month_earnings->num_rows > 0) {
-            $month_earnings = $get_month_earnings->fetch_assoc()['month_earnings'];
-          }
-
-          // get data
-          require('includes/class-pager.php');
-          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM movies_payments INNER JOIN users ON movies_payments.user_id = users.user_id INNER JOIN movies ON movies_payments.movie_id = movies.movie_id");
-          $params['total_items'] = $total->fetch_assoc()['count'];
-          $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/earnings/movies?page=%s';
-          $pager = new Pager($params);
-          $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT * FROM movies_payments INNER JOIN users ON movies_payments.user_id = users.user_id INNER JOIN movies ON movies_payments.movie_id = movies.movie_id ORDER BY movies_payments.id DESC " . $limit_query);
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['movie_url'] = get_url_text($row['title']);
-              $row['poster'] = get_picture($row['poster'], 'movie');
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('total_earnings', $total_earnings);
-          $smarty->assign('month_earnings', $month_earnings);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
           break;
 
-        case 'paid_modules':
+        case 'members':
           // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Earnings") . " &rsaquo; " . __("Paid Modules"));
-
-          // calculate earnings
-          $total_earnings = 0;
-          $get_total_earnings = $db->query("SELECT SUM(amount) as total_earnings FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment')");
-          if ($get_total_earnings->num_rows > 0) {
-            $total_earnings = $get_total_earnings->fetch_assoc()['total_earnings'];
-          }
-          $month_earnings = 0;
-          $get_month_earnings = $db->query("SELECT SUM(amount) as month_earnings FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment') AND MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE())");
-          if ($get_month_earnings->num_rows > 0) {
-            $month_earnings = $get_month_earnings->fetch_assoc()['month_earnings'];
-          }
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Members"));
 
           // get data
+          $status = (isset($_GET['status']) && in_array($_GET['status'], ['active', 'paused', 'suspended'])) ? $_GET['status'] : '';
+          $query = (isset($_GET['query']) && is_string($_GET['query'])) ? trim($_GET['query']) : '';
+          $where = [];
+          if ($status) {
+            $where[] = sprintf("dating_profiles.status = %s", secure($status));
+          }
+          if ($query !== '') {
+            $where[] = sprintf('(users.user_name LIKE %1$s OR users.user_firstname LIKE %1$s OR users.user_lastname LIKE %1$s OR CONCAT(users.user_firstname, " ", users.user_lastname) LIKE %1$s OR users.user_email LIKE %1$s OR users.user_phone LIKE %1$s)', secure($query, 'search'));
+          }
+          $where_query = ($where) ? " WHERE " . implode(" AND ", $where) : "";
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM wallet_transactions WHERE node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment')");
-          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['total_items'] = $db->query("SELECT COUNT(*) as count FROM dating_profiles INNER JOIN users ON dating_profiles.user_id = users.user_id" . $where_query)->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/earnings/paid_modules?page=%s';
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/dating/members?' . (($status) ? 'status=' . $status . '&' : '') . (($query !== '') ? 'query=' . urlencode($query) . '&' : '') . 'page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT wallet_transactions.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM wallet_transactions INNER JOIN users ON wallet_transactions.user_id = users.user_id WHERE wallet_transactions.node_type IN ('blogs_module_payment', 'products_module_payment', 'funding_module_payment', 'offers_module_payment', 'jobs_module_payment', 'courses_module_payment') ORDER BY wallet_transactions.transaction_id DESC " . $limit_query);
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $rows[] = $row;
-            }
+          $rows = [];
+          $get_rows = $db->query("SELECT dating_profiles.user_id, dating_profiles.status, dating_profiles.birthdate, dating_profiles.city, dating_profiles.time, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, (SELECT COUNT(*) FROM dating_swipes WHERE dating_swipes.target_id = dating_profiles.user_id AND dating_swipes.action != 'pass') AS likes, (SELECT COUNT(*) FROM dating_matches WHERE dating_matches.status = 'active' AND (dating_matches.user_one_id = dating_profiles.user_id OR dating_matches.user_two_id = dating_profiles.user_id)) AS matches, (SELECT COUNT(*) FROM reports WHERE reports.node_type = 'user' AND reports.node_id = dating_profiles.user_id) AS reports FROM dating_profiles INNER JOIN users ON dating_profiles.user_id = users.user_id" . $where_query . " ORDER BY dating_profiles.time DESC " . $limit_query);
+          while ($row = $get_rows->fetch_assoc()) {
+            $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
+            $row['age'] = get_user_age($row['birthdate']);
+            $rows[] = $row;
           }
 
           // assign variables
-          $smarty->assign('total_earnings', $total_earnings);
-          $smarty->assign('month_earnings', $month_earnings);
+          $smarty->assign('rows', $rows);
+          $smarty->assign('status', $status);
+          $smarty->assign('query', htmlentities($query, ENT_QUOTES, 'utf-8'));
+          $smarty->assign('query_url', urlencode($query));
+          $smarty->assign('pager', $pager->getPager());
+          break;
+
+        case 'edit_member':
+          // valid inputs
+          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+            _error(404);
+          }
+
+          // get data
+          $data = $user->get_dating_profile($_GET['id']);
+          if (!$data) {
+            _error(404);
+          }
+          $get_member = $db->query(sprintf("SELECT user_name, user_firstname, user_lastname, user_gender, user_picture, user_verified FROM users WHERE user_id = %s", secure($_GET['id'], 'int')));
+          if ($get_member->num_rows == 0) {
+            _error(404);
+          }
+          $data = array_merge($data, $get_member->fetch_assoc());
+          $data['user_picture'] = get_picture($data['user_picture'], $data['user_gender']);
+          $data['interests'] = $user->get_dating_profiles_interests([$data['user_id']])[$data['user_id']] ?? [];
+          $data['photos'] = $user->get_dating_photos([$data['user_id']], false)[$data['user_id']] ?? [];
+          $data['likes'] = $db->query(sprintf("SELECT COUNT(*) as count FROM dating_swipes WHERE target_id = %s AND action != 'pass'", secure($data['user_id'], 'int')))->fetch_assoc()['count'];
+          $data['matches'] = $db->query(sprintf("SELECT COUNT(*) as count FROM dating_matches WHERE status = 'active' AND (user_one_id = %1\$s OR user_two_id = %1\$s)", secure($data['user_id'], 'int')))->fetch_assoc()['count'];
+          $data['reports'] = $db->query(sprintf("SELECT COUNT(*) as count FROM reports WHERE node_type = 'user' AND node_id = %s", secure($data['user_id'], 'int')))->fetch_assoc()['count'];
+
+          // assign variables
+          $smarty->assign('data', $data);
+          $smarty->assign('genders', $user->get_genders());
+          $smarty->assign('countries', $user->get_countries());
+          $smarty->assign('dating_interests', $user->get_dating_interests());
+
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Members") . " &rsaquo; " . $data['user_firstname'] . " " . $data['user_lastname']);
+          break;
+
+        case 'interests':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Interests"));
+
+          // assign variables
+          $smarty->assign('rows', $user->get_dating_interests());
+          break;
+
+        case 'add_interest':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Interests") . " &rsaquo; " . __("Add New Interest"));
+          break;
+
+        case 'edit_interest':
+          // valid inputs
+          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+            _error(404);
+          }
+
+          // get data
+          $get_data = $db->query(sprintf("SELECT * FROM dating_interests WHERE interest_id = %s", secure($_GET['id'], 'int')));
+          if ($get_data->num_rows == 0) {
+            _error(404);
+          }
+          $data = $get_data->fetch_assoc();
+
+          // assign variables
+          $smarty->assign('data', $data);
+
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Dating") . " &rsaquo; " . __("Interests") . " &rsaquo; " . $data['title']);
+          break;
+
+        default:
+          _error(404);
+          break;
+      }
+      break;
+
+    case 'stories':
+      // check admin|moderator permission
+      if ($user->_is_moderator && (!$system['mods_stories_permission'] || in_array($_GET['sub_view'], ['']))) {
+        _error(__('System Message'), __("You don't have the right permission to access this"));
+      }
+
+      // get nested view content
+      switch ($_GET['sub_view']) {
+        case '':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Stories"));
+
+          // get data
+          $get_active = $db->query(sprintf("SELECT COUNT(*) as stories, COUNT(DISTINCT user_id) as authors, IFNULL(SUM(views_count), 0) as views, IFNULL(SUM(reactions_count), 0) as reactions, IFNULL(SUM(replies_count), 0) as replies FROM stories WHERE expires_at > %s", secure($date)));
+          $insights = $get_active->fetch_assoc();
+          $get_highlights = $db->query("SELECT COUNT(*) as count FROM stories_highlights");
+          $insights['highlights'] = $get_highlights->fetch_assoc()['count'];
+          $get_music = $db->query("SELECT COUNT(*) as count FROM stories_music WHERE enabled = '1'");
+          $insights['music'] = $get_music->fetch_assoc()['count'];
+          $get_reports = $db->query("SELECT COUNT(*) as count FROM reports WHERE node_type = 'story'");
+          $insights['reports'] = $get_reports->fetch_assoc()['count'];
+
+          // assign variables
+          $smarty->assign('insights', $insights);
+          break;
+
+        case 'list':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Stories") . " &rsaquo; " . __("List Stories"));
+
+          // get data
+          $status = (isset($_GET['status']) && $_GET['status'] == 'archived') ? 'archived' : 'active';
+          $where_query = sprintf(" WHERE stories.expires_at %s %s", ($status == 'archived') ? '<=' : '>', secure($date));
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM stories" . $where_query);
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/stories/list?' . (($status == 'archived') ? 'status=archived&' : '') . 'page=%s';
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $rows = [];
+          $get_rows = $db->query("SELECT stories.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM stories INNER JOIN users ON stories.user_id = users.user_id" . $where_query . " ORDER BY stories.story_id DESC " . $limit_query);
+          while ($row = $get_rows->fetch_assoc()) {
+            $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
+            $preview = ($row['type'] == 'photo') ? $row['source'] : $row['thumbnail'];
+            $row['preview'] = ($preview) ? $system['system_uploads'] . '/' . $preview : '';
+            $row['media'] = ($row['type'] != 'text' && $row['source']) ? $system['system_uploads'] . '/' . $row['source'] : '';
+            $rows[] = $row;
+          }
+
+          // assign variables
+          $smarty->assign('status', $status);
           $smarty->assign('rows', $rows);
           $smarty->assign('pager', $pager->getPager());
+          break;
+
+        case 'music':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Stories") . " &rsaquo; " . __("Music Library"));
+
+          // get data
+          $query = (isset($_GET['query'])) ? trim($_GET['query']) : '';
+          $where_query = (!is_empty($query)) ? sprintf(" WHERE title LIKE %1\$s OR artist LIKE %1\$s", secure($query, 'search')) : "";
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM stories_music" . $where_query);
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/stories/music?page=%s' . ((!is_empty($query)) ? '&query=' . urlencode($query) : '');
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $rows = [];
+          $get_rows = $db->query("SELECT * FROM stories_music" . $where_query . " ORDER BY music_id DESC " . $limit_query);
+          while ($row = $get_rows->fetch_assoc()) {
+            $rows[] = array_merge($row, $user->parse_story_music($row));
+          }
+
+          // assign variables
+          $smarty->assign('rows', $rows);
+          $smarty->assign('query', htmlentities($query, ENT_QUOTES, 'utf-8'));
+          $smarty->assign('pager', $pager->getPager());
+          break;
+
+        case 'add_music':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Stories") . " &rsaquo; " . __("Music Library") . " &rsaquo; " . __("Add New Track"));
+          break;
+
+        case 'edit_music':
+          // valid inputs
+          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+            _error(404);
+          }
+
+          // get data
+          $get_data = $db->query(sprintf("SELECT * FROM stories_music WHERE provider = 'library' AND music_id = %s", secure($_GET['id'], 'int')));
+          if ($get_data->num_rows == 0) {
+            _error(404);
+          }
+          $data = $get_data->fetch_assoc();
+
+          // assign variables
+          $smarty->assign('data', $data);
+
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Stories") . " &rsaquo; " . __("Music Library") . " &rsaquo; " . $data['title']);
           break;
 
         default:
@@ -2927,21 +3201,9 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Ads") . " &rsaquo; " . __("Users Ads"));
 
-          // get data
-          $get_rows = $db->query("SELECT ads_campaigns.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM ads_campaigns INNER JOIN users ON ads_campaigns.campaign_user_id = users.user_id WHERE ads_campaigns.campaign_is_declined = '0'");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              if ($row['campaign_is_approved']) {
-                $rows["approved"][] = $row;
-              } else {
-                $rows["pending"][] = $row;
-              }
-            }
+          if ($licence_monetization && licence_module_installed()) {
+            admin_monetization_users_ads();
           }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
           break;
 
         case 'system_ads':
@@ -2983,163 +3245,6 @@ try {
         case 'add':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Ads") . " &rsaquo; " . __("Add New"));
-          break;
-
-        default:
-          _error(404);
-          break;
-      }
-      break;
-
-    case 'wallet':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_wallet_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // get nested view content
-      switch ($_GET['sub_view']) {
-        case '':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Wallet"));
-          break;
-
-        case 'payments':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Wallet") . " &rsaquo; " . __("Payment Requests"));
-
-          // get data
-          $get_rows = $db->query("SELECT wallet_payments.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM wallet_payments INNER JOIN users ON wallet_payments.user_id = users.user_id WHERE wallet_payments.status = '0'");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              switch ($row['method']) {
-                case 'paypal':
-                  $row['method_color'] = "info";
-                  break;
-
-                case 'skrill':
-                  $row['method_color'] = "primary";
-                  break;
-
-                case 'bank':
-                  $row['method_color'] = "danger";
-                  break;
-
-                case 'custom':
-                  $row['method'] = $system['wallet_payment_method_custom'];
-                  $row['method_color'] = "warning";
-                  break;
-              }
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          break;
-
-        default:
-          _error(404);
-          break;
-      }
-      break;
-
-    case 'pro':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_pro_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // get nested view content
-      switch ($_GET['sub_view']) {
-        case '':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Pro System"));
-          break;
-
-        case 'packages':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Pro System") . " &rsaquo; " . __("Packages"));
-
-          // get data
-          $get_rows = $db->query("SELECT packages.*, permissions_groups.permissions_group_title FROM packages LEFT JOIN permissions_groups ON packages.package_permissions_group_id = permissions_groups.permissions_group_id");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['icon'] = get_picture($row['icon'], 'package');
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          break;
-
-        case 'edit':
-          // valid inputs
-          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-            _error(404);
-          }
-
-          // get data
-          $get_data = $db->query(sprintf("SELECT packages.*, permissions_groups.permissions_group_title FROM packages LEFT JOIN permissions_groups ON packages.package_permissions_group_id = permissions_groups.permissions_group_id WHERE packages.package_id = %s", secure($_GET['id'], 'int')));
-          if ($get_data->num_rows == 0) {
-            _error(404);
-          }
-          $data = $get_data->fetch_assoc();
-          /* get permissions groups */
-          $data['permissions_groups'] = $user->get_permissions_groups();
-
-          // assign variables
-          $smarty->assign('data', $data);
-
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Pro System") . " &rsaquo; " . $data['name']);
-          break;
-
-        case 'add':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Pro System") . " &rsaquo; " . __("Add New"));
-
-          // get permissions groups
-          $smarty->assign('permissions_groups', $user->get_permissions_groups());
-          break;
-
-        case 'subscribers':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Pro System") . " &rsaquo; " . __("Subscribers"));
-
-          // get data
-          $get_rows = $db->query("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscription_date, packages.* FROM users INNER JOIN packages ON users.user_package = packages.package_id WHERE users.user_subscribed = '1'");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['icon'] = get_picture($row['icon'], 'package');
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              switch ($row['period']) {
-                case 'day':
-                  $duration = 86400;
-                  break;
-
-                case 'week':
-                  $duration = 604800;
-                  break;
-
-                case 'month':
-                  $duration = 2629743;
-                  break;
-
-                case 'year':
-                  $duration = 31556926;
-                  break;
-              }
-              $row['subscription_end'] = strtotime($row['user_subscription_date']) + ($row['period_num'] * $duration);
-              $row['subscription_timeleft'] = ceil(($row['subscription_end'] - time()) / (60 * 60 * 24));
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
           break;
 
         default:
@@ -3256,16 +3361,6 @@ try {
       }
       break;
 
-    case 'paid_modules':
-      // check admin|moderator permission
-      if ($user->_is_moderator) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // page header
-      page_header($control_panel['title'] . " &rsaquo; " . __("Paid Modules"));
-      break;
-
     case 'market':
       // check admin|moderator permission
       if ($user->_is_moderator && !$system['mods_marketplace_permission']) {
@@ -3292,7 +3387,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/market/products?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_products.name, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = 'product' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC " . $limit_query);
+          $get_rows = paged_query("SELECT posts.*, posts_products.name, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = 'product' LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) ORDER BY posts.post_id ASC ", 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -3332,13 +3427,14 @@ try {
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = "product" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_products.name LIKE %1$s OR posts_products.location LIKE %1$s', secure($_GET['query'], 'search')));
+          $search_query = $user->posts_search_clause($_GET['query'], sprintf('(posts.text LIKE %1$s OR posts_products.name LIKE %1$s OR posts_products.location LIKE %1$s)', secure($_GET['query'], 'search')));
+          $total = $db->query('SELECT COUNT(*) as count FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = "product" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query);
           $params['total_items'] = $total->fetch_assoc()['count'];
           $params['items_per_page'] = $system['max_results'];
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/market/find?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_products.name, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = "product" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts.text LIKE %1$s OR posts_products.name LIKE %1$s OR posts_products.location LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query('SELECT posts.*, posts_products.name, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.* FROM posts INNER JOIN posts_products ON posts.post_id = posts_products.post_id AND posts.post_type = "product" LEFT JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" LEFT JOIN pages ON posts.user_id = pages.page_id AND posts.user_type = "page" WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND ' . $search_query . ' ', 'posts.post_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* check the post author type */
@@ -3366,6 +3462,10 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Marketplace") . " &rsaquo; " . __("Orders"));
 
+          if (!licence_has_entitlement('monetization')) {
+            break;
+          }
+
           // get data
           require('includes/class-pager.php');
           $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
@@ -3375,7 +3475,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/market/orders?page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT orders.*, u1.user_name AS buyer_username, u1.user_firstname AS buyer_firstname, u1.user_lastname AS buyer_lastname, u1.user_picture AS buyer_user_picture, u1.user_gender AS buyer_user_gender, u2.user_name AS seller_username, u2.user_firstname AS seller_firstname, u2.user_lastname AS seller_lastname, u2.user_picture AS seller_user_picture, u2.user_gender AS seller_user_gender FROM orders INNER JOIN users u1 ON orders.buyer_id = u1.user_id INNER JOIN users u2 ON orders.seller_id = u2.user_id ORDER BY orders.order_id DESC " . $limit_query);
+          $get_rows = paged_query("SELECT orders.*, u1.user_name AS buyer_username, u1.user_firstname AS buyer_firstname, u1.user_lastname AS buyer_lastname, u1.user_picture AS buyer_user_picture, u1.user_gender AS buyer_user_gender, u2.user_name AS seller_username, u2.user_firstname AS seller_firstname, u2.user_lastname AS seller_lastname, u2.user_picture AS seller_user_picture, u2.user_gender AS seller_user_gender FROM orders INNER JOIN users u1 ON orders.buyer_id = u1.user_id INNER JOIN users u2 ON orders.seller_id = u2.user_id ORDER BY orders.order_id DESC ", 'orders.order_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* prepare buyer's info */
@@ -3405,6 +3505,10 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Marketplace") . " &rsaquo; " . __("Orders"));
 
+          if (!licence_has_entitlement('monetization')) {
+            break;
+          }
+
           // valid inputs
           if (!isset($_GET['query']) || is_empty($_GET['query'])) {
             _error(404);
@@ -3419,7 +3523,7 @@ try {
           $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/market/find_orders?query=' . $_GET['query'] . '&page=%s';
           $pager = new Pager($params);
           $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT orders.*, u1.user_name AS buyer_username, u1.user_firstname AS buyer_firstname, u1.user_lastname AS buyer_lastname, u1.user_picture AS buyer_user_picture, u1.user_gender AS buyer_user_gender, u2.user_name AS seller_username, u2.user_firstname AS seller_firstname, u2.user_lastname AS seller_lastname, u2.user_picture AS seller_user_picture, u2.user_gender AS seller_user_gender FROM orders INNER JOIN users u1 ON orders.buyer_id = u1.user_id INNER JOIN users u2 ON orders.seller_id = u2.user_id WHERE orders.order_hash LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
+          $get_rows = paged_query(sprintf('SELECT orders.*, u1.user_name AS buyer_username, u1.user_firstname AS buyer_firstname, u1.user_lastname AS buyer_lastname, u1.user_picture AS buyer_user_picture, u1.user_gender AS buyer_user_gender, u2.user_name AS seller_username, u2.user_firstname AS seller_firstname, u2.user_lastname AS seller_lastname, u2.user_picture AS seller_user_picture, u2.user_gender AS seller_user_gender FROM orders INNER JOIN users u1 ON orders.buyer_id = u1.user_id INNER JOIN users u2 ON orders.seller_id = u2.user_id WHERE orders.order_hash LIKE %1$s ', secure($_GET['query'], 'search')), 'orders.order_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* prepare buyer's info */
@@ -3489,6 +3593,10 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Marketplace") . " &rsaquo; " . __("Payment Requests"));
 
+          if (!licence_has_entitlement('monetization')) {
+            break;
+          }
+
           // get data
           $get_rows = $db->query("SELECT market_payments.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM market_payments INNER JOIN users ON market_payments.user_id = users.user_id WHERE market_payments.status = '0'");
           if ($get_rows->num_rows > 0) {
@@ -3524,234 +3632,6 @@ try {
           _error(404);
           break;
       }
-      break;
-
-    case 'funding':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_funding_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // get nested view content
-      switch ($_GET['sub_view']) {
-        case '':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Funding"));
-          break;
-
-        case 'payments':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Funding") . " &rsaquo; " . __("Payment Requests"));
-
-          // get data
-          $get_rows = $db->query("SELECT funding_payments.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM funding_payments INNER JOIN users ON funding_payments.user_id = users.user_id WHERE funding_payments.status = '0'");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              switch ($row['method']) {
-                case 'paypal':
-                  $row['method_color'] = "info";
-                  break;
-
-                case 'skrill':
-                  $row['method_color'] = "primary";
-                  break;
-
-                case 'bank':
-                  $row['method_color'] = "danger";
-                  break;
-
-                case 'custom':
-                  $row['method'] = $system['funding_payment_method_custom'];
-                  $row['method_color'] = "warning";
-                  break;
-              }
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          break;
-
-        case 'requests':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Funding") . " &rsaquo; " . __("Funding Requests"));
-
-          // get data
-          require('includes/class-pager.php');
-          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query("SELECT COUNT(*) as count FROM posts INNER JOIN posts_funding ON posts.post_id = posts_funding.post_id AND posts.post_type = 'funding' INNER JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user'");
-          $params['total_items'] = $total->fetch_assoc()['count'];
-          $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/funding/requests?page=%s';
-          $pager = new Pager($params);
-          $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query("SELECT posts.*, posts_funding.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM posts INNER JOIN posts_funding ON posts.post_id = posts_funding.post_id AND posts.post_type = 'funding' INNER JOIN users ON posts.user_id = users.user_id AND posts.user_type = 'user' ORDER BY posts.post_id ASC " . $limit_query);
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['post_author_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $row['post_author_url'] = $system['system_url'] . '/' . $row['user_name'];
-              $row['post_author_name'] = ($system['show_usernames_enabled']) ? $row['user_name'] : $row['user_firstname'] . " " . $row['user_lastname'];
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          $smarty->assign('pager', $pager->getPager());
-          break;
-
-        case 'find':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Funding") . " &rsaquo; " . __("Funding Requests") . " &rsaquo; " . __("Find"));
-
-          // get data
-          require('includes/class-pager.php');
-          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
-          $total = $db->query(sprintf('SELECT COUNT(*) as count FROM posts INNER JOIN posts_funding ON posts.post_id = posts_funding.post_id AND posts.post_type = "funding" INNER JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" WHERE posts.text LIKE %1$s OR posts_funding.title LIKE %1$s', secure($_GET['query'], 'search')));
-          $params['total_items'] = $total->fetch_assoc()['count'];
-          $params['items_per_page'] = $system['max_results'];
-          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/funding/find?query=' . $_GET['query'] . '&page=%s';
-          $pager = new Pager($params);
-          $limit_query = $pager->getLimitSql();
-          $get_rows = $db->query(sprintf('SELECT posts.*, posts_funding.title, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM posts INNER JOIN posts_funding ON posts.post_id = posts_funding.post_id AND posts.post_type = "funding" INNER JOIN users ON posts.user_id = users.user_id AND posts.user_type = "user" WHERE posts.text LIKE %1$s OR posts_funding.title LIKE %1$s ' . $limit_query, secure($_GET['query'], 'search')));
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['post_author_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              $row['post_author_url'] = $system['system_url'] . '/' . $row['user_name'];
-              $row['post_author_name'] = ($system['show_usernames_enabled']) ? $row['user_name'] : $row['user_firstname'] . " " . $row['user_lastname'];
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          $smarty->assign('pager', $pager->getPager());
-          break;
-
-        default:
-          _error(404);
-          break;
-      }
-      break;
-
-    case 'monetization':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_monetization_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // get nested view content
-      switch ($_GET['sub_view']) {
-        case '':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Monetization"));
-          break;
-
-        case 'payments':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Monetization") . " &rsaquo; " . __("Payment Requests"));
-
-          // get data
-          $get_rows = $db->query("SELECT monetization_payments.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM monetization_payments INNER JOIN users ON monetization_payments.user_id = users.user_id WHERE monetization_payments.status = '0'");
-          if ($get_rows->num_rows > 0) {
-            while ($row = $get_rows->fetch_assoc()) {
-              $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-              switch ($row['method']) {
-                case 'paypal':
-                  $row['method_color'] = "info";
-                  break;
-
-                case 'skrill':
-                  $row['method_color'] = "primary";
-                  break;
-
-                case 'bank':
-                  $row['method_color'] = "danger";
-                  break;
-
-                case 'custom':
-                  $row['method'] = $system['monetization_payment_method_custom'];
-                  $row['method_color'] = "warning";
-                  break;
-              }
-              $rows[] = $row;
-            }
-          }
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          break;
-
-        default:
-          _error(404);
-          break;
-      }
-      break;
-
-    case 'tips':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_tips_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // page header
-      page_header($control_panel['title'] . " &rsaquo; " . __("Tips"));
-      break;
-
-    case 'coinpayments':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_payments_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // page header
-      page_header($control_panel['title'] . " &rsaquo; " . __("CoinPayments Transactions"));
-
-      // get data
-      $coinpayments_transactions = $user->get_coinpayments_transactions(true);
-
-      // assign variables
-      $smarty->assign('coinpayments_transactions', $coinpayments_transactions);
-      break;
-
-    case 'bank':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_payments_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // page header
-      page_header($control_panel['title'] . " &rsaquo; " . __("Bank Receipts"));
-
-      // get data
-      $get_rows = $db->query("
-        SELECT 
-          bank_transfers.*, 
-          users.user_name, 
-          users.user_firstname, 
-          users.user_lastname, 
-          users.user_gender, 
-          users.user_picture, 
-          packages.name AS package_name, 
-          packages.price AS package_price 
-        FROM bank_transfers 
-        INNER JOIN users 
-          ON bank_transfers.user_id = users.user_id 
-        LEFT JOIN packages 
-          ON bank_transfers.package_id = packages.package_id 
-        WHERE bank_transfers.status = '0'
-      ");
-      if ($get_rows->num_rows > 0) {
-        while ($row = $get_rows->fetch_assoc()) {
-          $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-          $rows[] = $row;
-        }
-      }
-
-      // assign variables
-      $smarty->assign('rows', $rows);
       break;
 
     case 'developers':
@@ -3846,40 +3726,77 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Reports"));
 
+          // get insights
+          $insights = [];
+          /* total reports */
+          $get_reports = $db->query("SELECT COUNT(*) as count FROM reports");
+          $insights['reports'] = $get_reports->fetch_assoc()['count'];
+          $get_accounts = $db->query("SELECT COUNT(*) as count FROM reports WHERE node_type = 'user'");
+          $insights['accounts'] = $get_accounts->fetch_assoc()['count'];
+          $get_content = $db->query("SELECT COUNT(*) as count FROM reports WHERE node_type IN ('post', 'comment', 'forum_thread', 'forum_reply')");
+          $insights['content'] = $get_content->fetch_assoc()['count'];
+          $get_recent = $db->query("SELECT COUNT(*) as count FROM reports WHERE time >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
+          $insights['recent'] = $get_recent->fetch_assoc()['count'];
+
+          // get filters
+          $nodes_types = ['user', 'page', 'group', 'event', 'post', 'comment', 'message', 'conversation', 'forum_thread', 'forum_reply', 'ads_campaign', 'story'];
+          $type = (isset($_GET['type']) && in_array($_GET['type'], $nodes_types)) ? $_GET['type'] : '';
+          $category_id = (isset($_GET['category']) && is_numeric($_GET['category'])) ? $_GET['category'] : '';
+          $query = (isset($_GET['query']) && !is_empty($_GET['query'])) ? $_GET['query'] : '';
+          $where_query = "";
+          $query_string = "";
+          if (!is_empty($type)) {
+            $where_query .= sprintf(" AND reports.node_type = %s", secure($type));
+            $query_string .= "&type=" . urlencode($type);
+          }
+          if (!is_empty($category_id)) {
+            $where_query .= sprintf(" AND reports.category_id = %s", secure($category_id, 'int'));
+            $query_string .= "&category=" . urlencode($category_id);
+          }
+          if (!is_empty($query)) {
+            $where_query .= sprintf(" AND (reports.reason LIKE %s OR reports.report_id LIKE %s OR users.user_name LIKE %s)", secure($query, 'search'), secure($query, 'search'), secure($query, 'search'));
+            $query_string .= "&query=" . urlencode($query);
+          }
+
           // get data
-          $get_rows = $db->query("SELECT reports.*, reports_categories.category_name, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, users.user_gender FROM reports INNER JOIN users ON reports.user_id = users.user_id LEFT JOIN reports_categories ON reports.category_id = reports_categories.category_id");
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM reports INNER JOIN users ON reports.user_id = users.user_id WHERE 1 = 1" . $where_query);
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/reports?page=%s' . $query_string;
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query("SELECT reports.*, reports_categories.category_name, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, users.user_gender FROM reports INNER JOIN users ON reports.user_id = users.user_id LEFT JOIN reports_categories ON reports.category_id = reports_categories.category_id WHERE 1 = 1" . $where_query . " ORDER BY reports.report_id DESC ", 'reports.report_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
               /* get reported node */
+              $node = [];
               if ($row['node_type'] == "user") {
                 $get_node = $db->query(sprintf("SELECT user_name, user_firstname, user_lastname, user_gender, user_picture FROM users WHERE user_id = %s", secure($row['node_id'], 'int')));
                 if ($get_node->num_rows == 0) continue;
                 $node = $get_node->fetch_assoc();
                 $node['user_picture'] = get_picture($node['user_picture'], $node['user_gender']);
-                $node['color'] = 'primary';
-                $node['name'] = $row['node_type'];
+                $node['name'] = __("User");
               } elseif ($row['node_type'] == 'page') {
                 $get_node = $db->query(sprintf("SELECT page_name, page_title, page_picture FROM pages WHERE page_id = %s", secure($row['node_id'], 'int')));
                 if ($get_node->num_rows == 0) continue;
                 $node = $get_node->fetch_assoc();
                 $node['page_picture'] = get_picture($node['page_picture'], 'page');
-                $node['color'] = 'info';
-                $node['name'] = $row['node_type'];
+                $node['name'] = __("Page");
               } elseif ($row['node_type'] == 'group') {
                 $get_node = $db->query(sprintf("SELECT group_name, group_title, group_picture FROM `groups` WHERE group_id = %s", secure($row['node_id'], 'int')));
                 if ($get_node->num_rows == 0) continue;
                 $node = $get_node->fetch_assoc();
                 $node['group_picture'] = get_picture($node['group_picture'], 'group');
-                $node['color'] = 'warning';
-                $node['name'] = $row['node_type'];
+                $node['name'] = __("Group");
               } elseif ($row['node_type'] == 'event') {
                 $get_node = $db->query(sprintf("SELECT event_title, event_cover FROM `events` WHERE event_id = %s", secure($row['node_id'], 'int')));
                 if ($get_node->num_rows == 0) continue;
                 $node = $get_node->fetch_assoc();
                 $node['event_picture'] = get_picture($node['event_cover'], 'event');
-                $node['color'] = 'success';
-                $node['name'] = $row['node_type'];
+                $node['name'] = __("Event");
               } elseif ($row['node_type'] == 'comment') {
                 $comment = $user->get_comment($row['node_id']);
                 if (!$comment) continue;
@@ -3894,35 +3811,55 @@ try {
                   $_node_id = $comment['parent_comment']['node_id'];
                 }
                 $row['url'] = $system['system_url'] . $_handle . $_node_id . '?notify_id=comment_' . $row['node_id'];
-                $node['color'] = 'secondary';
-                $node['name'] = $row['node_type'];
+                $node['name'] = __("Comment");
               } elseif ($row['node_type'] == 'post') {
-                $node['color'] = 'danger';
-                $node['name'] = $row['node_type'];
+                $row['url'] = $system['system_url'] . '/posts/' . $row['node_id'];
+                $node['name'] = __("Post");
               } elseif ($row['node_type'] == 'forum_thread') {
                 $thread = $user->get_forum_thread($row['node_id']);
                 if (!$thread) continue;
                 $row['url'] = $system['system_url'] . '/forums/thread/' . $thread['thread_id'] . '/' . $thread['title_url'];
-                $node['color'] = 'secondary';
                 $node['name'] = __("Forum Thread");
               } elseif ($row['node_type'] == 'forum_reply') {
                 $reply = $user->get_forum_reply($row['node_id']);
                 if (!$reply) continue;
                 $row['url'] = $system['system_url'] . '/forums/thread/' . $reply['thread']['thread_id'] . '/' . $reply['thread']['title_url'] . '/#reply-' . $reply['reply_id'];
-                $node['color'] = 'secondary';
                 $node['name'] = __("Forum Reply");
               } elseif ($row['node_type'] == 'ads_campaign') {
                 $row['url'] = $system['system_url'] . '/ads/edit/' . $row['node_id'];
-                $node['color'] = 'warning';
                 $node['name'] = __("Ads Campaign");
+              } elseif ($row['node_type'] == 'story') {
+                $get_node = $db->query(sprintf("SELECT story_id FROM stories WHERE story_id = %s", secure($row['node_id'], 'int')));
+                if ($get_node->num_rows == 0) continue;
+                $row['url'] = $system['system_url'] . '/?story=' . $row['node_id'];
+                $node['name'] = __("Story");
+              } elseif ($row['node_type'] == 'message') {
+                $get_node = $db->query(sprintf("SELECT message_id FROM conversations_messages WHERE message_id = %s", secure($row['node_id'], 'int')));
+                if ($get_node->num_rows == 0) continue;
+                $node['name'] = __("Message");
+              } elseif ($row['node_type'] == 'conversation') {
+                $get_node = $db->query(sprintf("SELECT conversation_id FROM conversations WHERE conversation_id = %s", secure($row['node_id'], 'int')));
+                if ($get_node->num_rows == 0) continue;
+                $node['name'] = __("Conversation");
+              } else {
+                $node['name'] = ucfirst(str_replace('_', ' ', $row['node_type']));
               }
               $row['node'] = $node;
               $rows[] = $row;
             }
           }
 
+          // get categories
+          $categories = $user->get_categories("reports_categories");
+
           // assign variables
+          $smarty->assign('insights', $insights);
+          $smarty->assign('categories', $categories);
+          $smarty->assign('type', $type);
+          $smarty->assign('category_id', $category_id);
+          $smarty->assign('query', ($query) ? htmlentities($query, ENT_QUOTES, 'utf-8') : null);
           $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
           break;
 
         case 'categories':
@@ -3987,6 +3924,19 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Blacklist"));
 
+          // get insights
+          $insights = [
+            'total' => 0,
+            'ip' => 0,
+            'email' => 0,
+            'username' => 0
+          ];
+          $get_insights = $db->query("SELECT node_type, COUNT(*) as count FROM blacklist GROUP BY node_type");
+          while ($insight = $get_insights->fetch_assoc()) {
+            $insights['total'] += $insight['count'];
+            $insights[$insight['node_type']] = $insight['count'];
+          }
+
           // get data
           $get_rows = $db->query("SELECT * FROM blacklist");
           if ($get_rows->num_rows > 0) {
@@ -3996,12 +3946,13 @@ try {
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           break;
 
         case 'add':
           // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Blacklist") . " &rsaquo; " . __("Add New"));
+          page_header($control_panel['title'] . " &rsaquo; " . __("Blacklist") . " &rsaquo; " . __("Add to Blacklist"));
           break;
 
         default:
@@ -4022,32 +3973,66 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Verification") . " &rsaquo; " . __("Requests"));
 
+          // get insights
+          $insights = [];
+          $verification_from_query = " FROM verification_requests LEFT JOIN users ON verification_requests.node_type = 'user' AND verification_requests.node_id = users.user_id LEFT JOIN pages ON verification_requests.node_type = 'page' AND verification_requests.node_id = pages.page_id WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND verification_requests.status = '0'";
+          $get_requests = $db->query("SELECT COUNT(*) as count" . $verification_from_query);
+          $insights['requests'] = $get_requests->fetch_assoc()['count'];
+          $get_verified_users = $db->query("SELECT COUNT(*) as count FROM users WHERE user_verified = '1'");
+          $insights['users'] = $get_verified_users->fetch_assoc()['count'];
+          $get_verified_pages = $db->query("SELECT COUNT(*) as count FROM pages WHERE page_verified = '1'");
+          $insights['pages'] = $get_verified_pages->fetch_assoc()['count'];
+
           // get data
-          $get_rows = $db->query("SELECT verification_requests.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.page_name, pages.page_title, pages.page_picture FROM verification_requests LEFT JOIN users ON verification_requests.node_type = 'user' AND verification_requests.node_id = users.user_id LEFT JOIN pages ON verification_requests.node_type = 'page' AND verification_requests.node_id = pages.page_id WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND verification_requests.status = '0'");
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $params['total_items'] = $insights['requests'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/verification?page=%s';
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query("SELECT verification_requests.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, pages.page_name, pages.page_title, pages.page_picture" . $verification_from_query . " ORDER BY verification_requests.request_id DESC ", 'verification_requests.request_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               /* get node */
               if ($row['node_type'] == "user") {
                 $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
-                $row['color'] = 'primary';
               } elseif ($row['node_type'] == 'page') {
                 $row['page_picture'] = get_picture($row['page_picture'], 'page');
-                $row['color'] = 'info';
               }
               $rows[] = $row;
             }
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
           break;
 
         case 'users':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Verification") . " &rsaquo; " . __("Verified Users"));
 
+          // get filters
+          $query = (isset($_GET['query']) && !is_empty($_GET['query'])) ? $_GET['query'] : '';
+          $where_query = "";
+          $query_string = "";
+          if (!is_empty($query)) {
+            $where_query .= sprintf(" AND (user_name LIKE %s OR user_firstname LIKE %s OR user_lastname LIKE %s OR user_email LIKE %s)", secure($query, 'search'), secure($query, 'search'), secure($query, 'search'), secure($query, 'search'));
+            $query_string .= "&query=" . urlencode($query);
+          }
+
           // get data
-          $get_rows = $db->query("SELECT * FROM users WHERE user_verified = '1'");
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM users WHERE user_verified = '1'" . $where_query);
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/verification/users?page=%s' . $query_string;
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query("SELECT * FROM users WHERE user_verified = '1'" . $where_query . " ORDER BY user_id ASC ", 'users.user_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['user_picture'] = get_picture($row['user_picture'], $row['user_gender']);
@@ -4056,15 +4041,34 @@ try {
           }
 
           // assign variables
+          $smarty->assign('query', ($query) ? htmlentities($query, ENT_QUOTES, 'utf-8') : null);
           $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
           break;
 
         case 'pages':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Verification") . " &rsaquo; " . __("Verified Pages"));
 
+          // get filters
+          $query = (isset($_GET['query']) && !is_empty($_GET['query'])) ? $_GET['query'] : '';
+          $where_query = "";
+          $query_string = "";
+          if (!is_empty($query)) {
+            $where_query .= sprintf(" AND (page_title LIKE %s OR page_name LIKE %s)", secure($query, 'search'), secure($query, 'search'));
+            $query_string .= "&query=" . urlencode($query);
+          }
+
           // get data
-          $get_rows = $db->query("SELECT * FROM pages WHERE page_verified = '1'");
+          require('includes/class-pager.php');
+          $params['selected_page'] = (!isset($_GET['page']) || (int) $_GET['page'] == 0) ? 1 : $_GET['page'];
+          $total = $db->query("SELECT COUNT(*) as count FROM pages WHERE page_verified = '1'" . $where_query);
+          $params['total_items'] = $total->fetch_assoc()['count'];
+          $params['items_per_page'] = $system['max_results'];
+          $params['url'] = $system['system_url'] . '/' . $control_panel['url'] . '/verification/pages?page=%s' . $query_string;
+          $pager = new Pager($params);
+          $limit_query = $pager->getLimitSql();
+          $get_rows = paged_query("SELECT * FROM pages WHERE page_verified = '1'" . $where_query . " ORDER BY page_id ASC ", 'pages.page_id', $limit_query);
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
               $row['page_picture'] = get_picture($row['page_picture'], 'page');
@@ -4073,7 +4077,9 @@ try {
           }
 
           // assign variables
+          $smarty->assign('query', ($query) ? htmlentities($query, ENT_QUOTES, 'utf-8') : null);
           $smarty->assign('rows', $rows);
+          $smarty->assign('pager', $pager->getPager());
           break;
 
         default:
@@ -4161,6 +4167,12 @@ try {
           /* posts longer than 1 year */
           $get_posts_longer_year = $db->query("SELECT COUNT(*) as count FROM posts WHERE posts.time < NOW() - INTERVAL 1 YEAR");
           $insights['posts_longer_year'] = $get_posts_longer_year->fetch_assoc()['count'];
+          /* expired stories */
+          $get_stories_expired = $db->query(sprintf("SELECT COUNT(*) as count FROM stories WHERE expires_at <= %s AND highlighted = '0'", secure($date)));
+          $insights['stories_expired'] = $get_stories_expired->fetch_assoc()['count'];
+          /* all expired stories */
+          $get_stories_expired_all = $db->query(sprintf("SELECT COUNT(*) as count FROM stories WHERE expires_at <= %s", secure($date)));
+          $insights['stories_expired_all'] = $get_stories_expired_all->fetch_assoc()['count'];
           /* get fake users */
           $get_fake_users = $db->query("SELECT COUNT(*) as count FROM users WHERE is_fake = '1'");
           $insights['fake_users'] = $get_fake_users->fetch_assoc()['count'];
@@ -4184,9 +4196,41 @@ try {
           $smarty->assign('insights', $insights);
           break;
 
+        case 'search-index':
+          // page header
+          page_header($control_panel['title'] . " &rsaquo; " . __("Tools") . " &rsaquo; " . __("Search Index"));
+
+          // get search index status
+          $get_cursor = $db->query("SELECT option_value FROM system_options WHERE option_name = 'posts_search_cursor'");
+          $search_index['cursor'] = ($get_cursor->num_rows > 0) ? (int) $get_cursor->fetch_assoc()['option_value'] : 0;
+          $get_last_post = $db->query("SELECT MAX(post_id) as last_post_id FROM posts");
+          $search_index['last_post_id'] = (int) $get_last_post->fetch_assoc()['last_post_id'];
+          $get_posts = $db->query("SELECT COUNT(*) as count FROM posts");
+          $search_index['posts'] = (int) $get_posts->fetch_assoc()['count'];
+          $get_indexed = $db->query("SELECT COUNT(*) as count FROM posts_search");
+          $search_index['indexed'] = (int) $get_indexed->fetch_assoc()['count'];
+          $get_size = $db->query("SELECT DATA_LENGTH + INDEX_LENGTH as size FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'posts_search'");
+          $search_index['size'] = ($get_size && $get_size->num_rows > 0) ? (int) $get_size->fetch_assoc()['size'] : 0;
+          if ($system['posts_search_ready']) {
+            $search_index['progress'] = 100;
+          } else {
+            $search_index['progress'] = ($search_index['last_post_id'] > 0) ? min(100, (int) floor($search_index['cursor'] * 100 / $search_index['last_post_id'])) : 0;
+          }
+          /* assign variables */
+          $smarty->assign('search_index', $search_index);
+          break;
+
         case 'backups':
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Tools") . " &rsaquo; " . __("Backup Database & Files"));
+
+          // get backups
+          $rows = $user->get_backups();
+          $insights['total'] = count($rows);
+          $insights['size'] = array_sum(array_column($rows, 'size'));
+          /* assign variables */
+          $smarty->assign('rows', $rows);
+          $smarty->assign('insights', $insights);
           break;
 
         case 'cronjob':
@@ -4200,6 +4244,19 @@ try {
               'cronjob_hash' => secure($system['cronjob_hash']),
             ]);
           }
+
+          // get cronjob status
+          if (!$system['cronjob_enabled']) {
+            $cronjob_status = "disabled";
+          } elseif (empty($system['cronjob_last_run'])) {
+            $cronjob_status = "pending";
+          } elseif (strtotime($system['cronjob_last_run']) < strtotime($date) - 172800) {
+            $cronjob_status = "stopped";
+          } else {
+            $cronjob_status = "running";
+          }
+          /* assign variables */
+          $smarty->assign('cronjob_status', $cronjob_status);
           break;
 
         case 'reset':
@@ -4474,56 +4531,6 @@ try {
       }
       break;
 
-    case 'emojis':
-      // check admin|moderator permission
-      if ($user->_is_moderator && !$system['mods_customization_permission']) {
-        _error(__('System Message'), __("You don't have the right permission to access this"));
-      }
-
-      // get nested view content
-      switch ($_GET['sub_view']) {
-        case '':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Emojis"));
-
-          // get data
-          $rows = $emojis;
-
-          // assign variables
-          $smarty->assign('rows', $rows);
-          break;
-
-        case 'edit':
-          // valid inputs
-          if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-            _error(404);
-          }
-
-          // get data
-          $get_data = $db->query(sprintf("SELECT * FROM emojis WHERE emoji_id = %s", secure($_GET['id'], 'int')));
-          if ($get_data->num_rows == 0) {
-            _error(404);
-          }
-          $data = $get_data->fetch_assoc();
-
-          // assign variables
-          $smarty->assign('data', $data);
-
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Emojis") . " &rsaquo; " . __("Edit Emoji"));
-          break;
-
-        case 'add':
-          // page header
-          page_header($control_panel['title'] . " &rsaquo; " . __("Emojis") . " &rsaquo; " . __("Add New Emoji"));
-          break;
-
-        default:
-          _error(404);
-          break;
-      }
-      break;
-
     case 'stickers':
       // check admin|moderator permission
       if ($user->_is_moderator && !$system['mods_customization_permission']) {
@@ -4636,15 +4643,36 @@ try {
           // page header
           page_header($control_panel['title'] . " &rsaquo; " . __("Announcements"));
 
+          // prepare insights
+          $insights = [
+            'total' => 0,
+            'active' => 0,
+            'scheduled' => 0,
+            'expired' => 0
+          ];
+          $current_time = strtotime($date);
+
           // get data
           $get_rows = $db->query("SELECT * FROM announcements");
           if ($get_rows->num_rows > 0) {
             while ($row = $get_rows->fetch_assoc()) {
+              $start_time = strtotime($row['start_date']);
+              $end_time = strtotime($row['end_date']);
+              if ($start_time > $current_time) {
+                $row['status'] = 'scheduled';
+              } elseif ($end_time < $current_time) {
+                $row['status'] = 'expired';
+              } else {
+                $row['status'] = 'active';
+              }
+              $insights['total']++;
+              $insights[$row['status']]++;
               $rows[] = $row;
             }
           }
 
           // assign variables
+          $smarty->assign('insights', $insights);
           $smarty->assign('rows', $rows);
           break;
 
@@ -4800,6 +4828,23 @@ try {
       }
       break;
 
+    case 'sitemap':
+      // check admin|moderator permission
+      if ($user->_is_moderator) {
+        _error(__('System Message'), __("You don't have the right permission to access this"));
+      }
+
+      // page header
+      page_header($control_panel['title'] . " &rsaquo; " . __("Sitemap"));
+
+      // get sitemap stats
+      $sitemap_stats = $user->get_sitemap_stats();
+      /* assign variables */
+      $smarty->assign('sitemap_stats', $sitemap_stats);
+      $smarty->assign('robots_file', is_file(ABSPATH . 'robots.txt'));
+      $smarty->assign('llms_txt', $user->get_llms_txt());
+      break;
+
     case 'pwa':
       // check admin|moderator permission
       if ($user->_is_moderator) {
@@ -4830,14 +4875,158 @@ try {
       page_header($control_panel['title'] . " &rsaquo; " . __("Apps"));
       break;
 
-    case 'changelog':
+    case 'license':
       // check admin|moderator permission
       if ($user->_is_moderator) {
         _error(__('System Message'), __("You don't have the right permission to access this"));
       }
 
       // page header
-      page_header($control_panel['title'] . " &rsaquo; " . __("Changelog"));
+      page_header($control_panel['title'] . " &rsaquo; " . __("License"));
+
+      $licence_info = [
+        'status' => 'missing',
+        'message' => '',
+        'api_warning' => '',
+        'payload' => null,
+        'key_masked' => licence_mask_key(defined('LICENCE_KEY') ? LICENCE_KEY : ''),
+      ];
+
+      $licence_file = ABSPATH . 'includes/sys_verif.php';
+      if (!is_file($licence_file)) {
+        $licence_info['status'] = 'missing';
+        $licence_info['message'] = __("No license file found.");
+      } else {
+        $stored = include $licence_file;
+        try {
+          if (!is_array($stored)) {
+            throw new Exception("License verification failed.");
+          }
+          licence_validate_payload($stored);
+          $licence_info['payload'] = $stored;
+          $licence_info['status'] = 'valid';
+        } catch (Exception $e) {
+          $licence_info['message'] = $e->getMessage();
+          $licence_info['status'] = (strpos($e->getMessage(), 'expired') !== false) ? 'expired' : 'invalid';
+        }
+      }
+
+      if (!$user->_data['user_demo'] && defined('LICENCE_KEY') && LICENCE_KEY !== '') {
+        try {
+          $fresh = get_licence_key(LICENCE_KEY, 'admin');
+          licence_store_payload($fresh);
+          $licence_info['payload'] = $fresh;
+          $licence_info['status'] = 'valid';
+          $licence_info['message'] = '';
+        } catch (Exception $e) {
+          $api_message = $e->getMessage();
+          if (strpos($api_message, 'temporarily unavailable') !== false) {
+            if ($licence_info['status'] == 'valid') {
+              $licence_info['status'] = 'unreachable';
+              $licence_info['api_warning'] = __("License server unreachable; showing last verified payload.");
+            } else {
+              $licence_info['api_warning'] = $api_message;
+            }
+          } else {
+            $licence_info['status'] = (strpos($api_message, 'expired') !== false) ? 'expired' : 'invalid';
+            $licence_info['message'] = $api_message;
+          }
+        }
+      }
+
+      if (is_array($licence_info['payload'])) {
+        unset($licence_info['payload']['signature']);
+      } else {
+        $licence_info['payload'] = [];
+      }
+
+      // normalize the payload so the template never touches an undefined key
+      $licence_info['payload'] = array_merge([
+        'source' => '',
+        'license_type' => '',
+        'domain' => '',
+        'issued_at' => '',
+        'expires_at' => '',
+        'support_expires_at' => '',
+        'billing_cycle' => '',
+        'entitlements' => [],
+        'modules' => [],
+      ], $licence_info['payload']);
+      $licence_info['payload']['entitlements'] = array_merge(['monetization' => false], (array) $licence_info['payload']['entitlements']);
+      foreach ($licence_info['payload']['modules'] as $_i => $_module) {
+        $licence_info['payload']['modules'][$_i] = array_merge(['slug' => '', 'version' => '', 'available' => false], (array) $_module);
+      }
+
+      // days left before support & payload verification lapse
+      $licence_info['support_timeleft'] = null;
+      $licence_info['payload_timeleft'] = null;
+      if (!empty($licence_info['payload']['support_expires_at'])) {
+        $licence_info['support_timeleft'] = ceil((strtotime($licence_info['payload']['support_expires_at']) - time()) / (60 * 60 * 24));
+      }
+      if (!empty($licence_info['payload']['expires_at'])) {
+        $licence_info['payload_timeleft'] = ceil((strtotime($licence_info['payload']['expires_at']) - time()) / (60 * 60 * 24));
+      }
+
+      $kind = strtolower(trim((string) $licence_info['payload']['license_type']));
+      if (!in_array($kind, ['regular', 'extended', 'subscription'], true)) {
+        $kind = 'regular';
+      }
+      $licence_info['kind'] = $kind;
+      $licence_info['perpetual'] = ($kind !== 'subscription');
+      $licence_info['support_ended'] = ($licence_info['support_timeleft'] !== null && $licence_info['support_timeleft'] <= 0);
+      // newer licence servers sign support/updates inside entitlements; trust those over the unsigned date
+      $signed = $licence_info['payload']['entitlements'];
+      if (array_key_exists('support', $signed)) {
+        $licence_info['support_ended'] = empty($signed['support']);
+      }
+      $licence_info['updates_ended'] = array_key_exists('updates', $signed) && empty($signed['updates']);
+      $licence_info['monetization'] = !empty($licence_info['payload']['entitlements']['monetization']);
+      $licence_info['module_installed'] = licence_module_installed();
+      $licence_info['module_present'] = licence_module_present();
+
+      $status = $licence_info['status'];
+      if ($status == 'missing') {
+        $ui = 'missing';
+      } elseif ($status == 'invalid') {
+        $ui = 'invalid';
+      } elseif ($status == 'unreachable') {
+        $ui = 'unreachable';
+      } elseif ($kind == 'subscription' && ($licence_info['support_ended'] || $status == 'expired')) {
+        $ui = 'lapsed';
+      } elseif ($kind == 'subscription' && $licence_info['updates_ended'] && !$licence_info['monetization']) {
+        $ui = 'cancelled';
+      } elseif ($licence_info['perpetual'] && $licence_info['support_ended']) {
+        $ui = 'support_ended';
+      } else {
+        $ui = 'active';
+      }
+      $licence_info['ui'] = $ui;
+
+      $issued_ts = !empty($licence_info['payload']['issued_at']) ? strtotime($licence_info['payload']['issued_at']) : false;
+      $support_ts = !empty($licence_info['payload']['support_expires_at']) ? strtotime($licence_info['payload']['support_expires_at']) : false;
+      $timeline = [
+        'mode' => 'none',
+        'today_pct' => 0,
+        'today_at_end' => false,
+      ];
+      if ($issued_ts && $support_ts && !in_array($ui, ['missing', 'invalid'], true)) {
+        $timeline['mode'] = $licence_info['perpetual'] ? 'perpetual' : 'term';
+        $span = $support_ts - $issued_ts;
+        if ($span <= 0 || $licence_info['support_ended'] || time() >= $support_ts) {
+          $timeline['today_pct'] = 100;
+          $timeline['today_at_end'] = true;
+        } else {
+          $timeline['today_pct'] = (int) round(((time() - $issued_ts) / $span) * 100);
+          $timeline['today_pct'] = max(0, min(100, $timeline['today_pct']));
+          $timeline['today_at_end'] = ($timeline['today_pct'] >= 100);
+        }
+      }
+      $licence_info['timeline'] = $timeline;
+      $licence_info['rel_support'] = licence_relative_days($licence_info['support_timeleft']);
+      $licence_info['rel_verify'] = licence_relative_days($licence_info['payload_timeleft']);
+      $licence_info['billing'] = ($kind == 'subscription') ? licence_billing_cycle($licence_info['payload']) : null;
+
+      $smarty->assign('licence_info', $licence_info);
       break;
 
     default:
@@ -4851,13 +5040,13 @@ try {
   $smarty->assign('view', $_GET['view']);
   $smarty->assign('sub_view', $_GET['sub_view']);
   $smarty->assign('control_panel', $control_panel);
+  $smarty->assign('licence_lock', licence_admin_lock());
 
   // global insights
   if ($user->_is_admin) {
-    /* wallet payments insights */
-    $get_wallet_payments = $db->query("SELECT COUNT(*) as count FROM wallet_payments INNER JOIN users ON wallet_payments.user_id = users.user_id WHERE wallet_payments.status = '0'");
-    $wallet_payments_insights = $get_wallet_payments->fetch_assoc()['count'];
-    $smarty->assign('wallet_payments_insights', $wallet_payments_insights);
+    if ($licence_monetization && licence_module_installed()) {
+      admin_monetization_insights();
+    }
     /* affiliates payments insights */
     $get_affiliates_payments = $db->query("SELECT COUNT(*) as count FROM affiliates_payments INNER JOIN users ON affiliates_payments.user_id = users.user_id WHERE affiliates_payments.status = '0'");
     $affiliates_payments_insights = $get_affiliates_payments->fetch_assoc()['count'];
@@ -4870,18 +5059,6 @@ try {
     $get_marketplace_payments = $db->query("SELECT COUNT(*) as count FROM market_payments INNER JOIN users ON market_payments.user_id = users.user_id WHERE market_payments.status = '0'");
     $marketplace_payments_insights = $get_marketplace_payments->fetch_assoc()['count'];
     $smarty->assign('marketplace_payments_insights', $marketplace_payments_insights);
-    /* funding payments insights */
-    $get_funding_payments = $db->query("SELECT COUNT(*) as count FROM funding_payments INNER JOIN users ON funding_payments.user_id = users.user_id WHERE funding_payments.status = '0'");
-    $funding_payments_insights = $get_funding_payments->fetch_assoc()['count'];
-    $smarty->assign('funding_payments_insights', $funding_payments_insights);
-    /* monetization payments insights */
-    $get_monetization_payments = $db->query("SELECT COUNT(*) as count FROM monetization_payments INNER JOIN users ON monetization_payments.user_id = users.user_id WHERE monetization_payments.status = '0'");
-    $monetization_payments_insights = $get_monetization_payments->fetch_assoc()['count'];
-    $smarty->assign('monetization_payments_insights', $monetization_payments_insights);
-    /* bank transfers insights */
-    $get_bank_transfers = $db->query("SELECT COUNT(*) as count FROM bank_transfers INNER JOIN users ON bank_transfers.user_id = users.user_id LEFT JOIN packages ON bank_transfers.package_id = packages.package_id WHERE bank_transfers.status = '0'");
-    $bank_transfers_insights = $get_bank_transfers->fetch_assoc()['count'];
-    $smarty->assign('bank_transfers_insights', $bank_transfers_insights);
   }
   /* reports insights */
   $get_reports = $db->query("SELECT COUNT(*) as count FROM reports INNER JOIN users ON reports.user_id = users.user_id");

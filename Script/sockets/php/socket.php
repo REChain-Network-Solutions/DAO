@@ -1,7 +1,7 @@
 <?php
 
 /**
- * socket
+ * sockets -> php -> socket
  * 
  * @package Sngine
  * @author Zamblek
@@ -114,7 +114,7 @@ $io->on('connection', function ($socket) use ($io) {
     /* cleanup user typing list */
     $affected_rooms = cleanup_user_typing_list($socket);
     foreach ($affected_rooms as $room) {
-      handle_typing_change($io, $room, $socket, $user, false);
+      handle_typing_change($io, $room, $socket, $user, false, isset($socket->pageRooms[$room]));
     }
   });
 
@@ -160,6 +160,15 @@ $io->on('connection', function ($socket) use ($io) {
   $socket->on('event_client_open_thread', function ($data) use ($io, $socket, $user) {
     /* join the conversation room */
     $room = 'conversation_' . $data['conversation_id'];
+    if (!empty($data['as_page'])) {
+      /* page inbox */
+      if (!$user->check_page_conversation_access($data['conversation_id'])) {
+        return;
+      }
+      $page_rooms = $socket->pageRooms ?? [];
+      $page_rooms[$room] = true;
+      $socket->pageRooms = $page_rooms;
+    }
     $socket->join($room);
     print("👋 {username: {$socket->username}, user_id: {$socket->userId}} Joined Thread: $room\n");
   });
@@ -228,7 +237,7 @@ $io->on('connection', function ($socket) use ($io) {
   $socket->on('event_client_get_conversation', function ($data, $callback) use ($io, $socket, $user) {
     /* get conversation */
     try {
-      $conversation = $user->get_conversation($data['conversation_id']);
+      $conversation = $user->get_conversation($data['conversation_id'], !empty($data['as_page']));
     } catch (Exception $e) {
       $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
       print("❌ Error: " . $e->getMessage() . "\n");
@@ -243,6 +252,13 @@ $io->on('connection', function ($socket) use ($io) {
     global $smarty;
     try {
       $conversation = $user->post_conversation_message($data, true);
+      /* nothing to send (product already shared) */
+      if (!$conversation) {
+        if (is_callable($callback)) {
+          $callback(json_encode(null));
+        }
+        return;
+      }
       /* send message */
       print("✉️ User {username: {$socket->username}, user_id: {$socket->userId}} Sent Message To Conversation: " . $conversation['conversation_id'] . "\n");
     } catch (Exception $e) {
@@ -251,16 +267,30 @@ $io->on('connection', function ($socket) use ($io) {
       return;
     }
     /* prepare message */
+    $message_id = $conversation['last_message']['message_id'];
+    $smarty->assign('user', $user);
+    $smarty->assign('conversation', $conversation);
     $smarty->assign('message', $conversation['last_message']);
     $smarty->assign('is_me', true);
     $last_message_for_me = $smarty->fetch("__feeds_message.tpl");
     $smarty->assign('is_me', false);
     $last_message_for_recipient = $smarty->fetch("__feeds_message.tpl");
+    /* page conversation */
+    if (!empty($conversation['page_id'])) {
+      emit_page_message($io, $socket, $user, $conversation, $last_message_for_me, $last_message_for_recipient);
+      /* callback */
+      $conversation['last_message_html'] = $last_message_for_me;
+      $callback(json_encode($conversation));
+      return;
+    }
     /* broadcast to all online recipients */
     $recipient_ids = array_column($conversation['recipients'], 'user_id');
     $online_recipient_ids = array_intersect($recipient_ids, get_all_sockets_user_ids($io));
     foreach ($online_recipient_ids as $recipient_id) {
       $recipientSockets = get_all_sockets_by_user_id($io, $recipient_id);
+      if (empty($recipientSockets)) {
+        continue;
+      }
       foreach ($recipientSockets as $recipientSocket) {
         $recipientSocket->emit('event_server_message_received', [
           'conversation' => $conversation,
@@ -278,12 +308,72 @@ $io->on('connection', function ($socket) use ($io) {
     ]);
     print("🔄 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Message Sent To: {$socket->username}\n");
     /* callback */
+    $conversation['last_message_html'] = $last_message_for_me;
+    $callback(json_encode($conversation));
+  });
+
+  // [listen] send paid message
+  $socket->on('event_client_send_paid_message', function ($data, $callback) use ($io, $socket, $user) {
+    global $smarty;
+    try {
+      $conversation = $user->post_conversation_paid_message($data, true);
+      /* send message */
+      print("💰 User {username: {$socket->username}, user_id: {$socket->userId}} Sent Paid Message To Conversation: " . $conversation['conversation_id'] . "\n");
+    } catch (ValidationException $e) {
+      $callback(json_encode(['error' => true, 'message' => $e->getMessage()]));
+      print("❌ Validation Error: " . $e->getMessage() . "\n");
+      return;
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+      return;
+    }
+    /* prepare message */
+    $message_id = $conversation['last_message']['message_id'];
+    $smarty->assign('user', $user);
+    $smarty->assign('conversation', $conversation);
+    $smarty->assign('message', $conversation['last_message']);
+    $smarty->assign('is_me', true);
+    $last_message_for_me = $smarty->fetch("__feeds_message.tpl");
+    /* broadcast to all online recipients */
+    $recipient_ids = array_column($conversation['recipients'], 'user_id');
+    $online_recipient_ids = array_intersect($recipient_ids, get_all_sockets_user_ids($io));
+    foreach ($online_recipient_ids as $recipient_id) {
+      $recipientSockets = get_all_sockets_by_user_id($io, $recipient_id);
+      if (empty($recipientSockets)) {
+        continue;
+      }
+      /* render the paid message gated for this specific recipient */
+      $recipient_message = $user->get_conversation_message_by_id($message_id, $recipient_id);
+      $smarty->assign('user', $user);
+      $smarty->assign('conversation', $conversation);
+      $smarty->assign('message', $recipient_message);
+      $smarty->assign('is_me', false);
+      $last_message_for_recipient = $smarty->fetch("__feeds_message.tpl");
+      foreach ($recipientSockets as $recipientSocket) {
+        $recipientSocket->emit('event_server_message_received', [
+          'conversation' => $conversation,
+          'last_message' => $last_message_for_recipient,
+          'is_me' => false,
+        ]);
+        print("🔄 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Paid Message Sent To: {$recipientSocket->username}\n");
+      }
+    }
+    /* broadcast to all user sockets */
+    $socket->broadcast->to($socket->userId)->emit('event_server_message_received', [
+      'conversation' => $conversation,
+      'last_message' => $last_message_for_me,
+      'is_me' => true,
+    ]);
+    print("🔄 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Paid Message Sent To: {$socket->username}\n");
+    /* callback */
+    $conversation['last_message_html'] = $last_message_for_me;
     $callback(json_encode($conversation));
   });
 
   // [listen] typing
   $socket->on('event_client_typing', function ($data) use ($io, $socket, $user) {
-    handle_typing_change($io, 'conversation_' . $data['conversation_id'], $socket, $user, $data['is_typing']);
+    handle_typing_change($io, 'conversation_' . $data['conversation_id'], $socket, $user, $data['is_typing'], !empty($data['as_page']));
   });
 
   // [listen] seen
@@ -291,18 +381,109 @@ $io->on('connection', function ($socket) use ($io) {
     /* broadcast to all user sockets */
     $conversation_id = $data['ids'][0];
     $room = 'conversation_' . $conversation_id;
-    $socket->broadcast->to($room)->emit('event_server_seen', [
-      'conversation_id' => $conversation_id,
-      'seen_name_list' => html_entity_decode(($system['show_usernames_enabled']) ? $user->_data['user_name'] : $user->_data['user_firstname'], ENT_QUOTES),
-    ]);
+    $as_page = !empty($data['as_page']);
+    if ($as_page) {
+      /* page inbox */
+      $page_id = $user->check_page_conversation_access($conversation_id);
+      $page = ($page_id) ? $user->get_chat_page($page_id) : false;
+      if ($page && $system['chat_seen_enabled']) {
+        $socket->broadcast->to($room)->emit('event_server_seen', [
+          'conversation_id' => $conversation_id,
+          'seen_name_list' => $page['page_title'],
+        ]);
+      }
+    } elseif (!$user->check_page_conversation_access($conversation_id)) {
+      $socket->broadcast->to($room)->emit('event_server_seen', [
+        'conversation_id' => $conversation_id,
+        'seen_name_list' => ($system['show_usernames_enabled']) ? $user->_data['user_name'] : $user->_data['user_firstname'],
+      ]);
+    }
     print("👁️ [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Room: $room - Seen: true\n");
     /* update seen status */
     try {
-      $user->update_conversation_seen_status((array)$data['ids']);
+      $user->update_conversation_seen_status((array)$data['ids'], $as_page);
     } catch (Exception $e) {
       $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
       print("❌ Error: " . $e->getMessage() . "\n");
       return;
+    }
+  });
+
+  // [listen] react message
+  $socket->on('event_client_react_message', function ($data, $callback) use ($io, $socket, $user) {
+    try {
+      if (($data['do'] ?? 'react') == 'unreact') {
+        $user->unreact_message($data['message_id'], $data['reaction']);
+      } else {
+        $user->react_message($data['message_id'], $data['reaction']);
+      }
+      $message = $user->get_conversation_message_by_id($data['message_id']);
+      $payload = [
+        'conversation_id' => $message['conversation_id'],
+        'message_id' => $message['message_id'],
+        'user_id' => ($user->check_page_conversation_access($message['conversation_id'])) ? 0 : $user->_data['user_id'],
+        'reactions' => $message['reactions'],
+        'reactions_total_count' => $message['reactions_total_count'],
+        'reactions_total_count_formatted' => $message['reactions_total_count_formatted'],
+      ];
+      emit_to_members($io, $user->get_conversation_members_ids($message['conversation_id']), 'event_server_message_reacted', $payload);
+      $payload['i_react'] = $message['i_react'];
+      $payload['i_reaction'] = $message['i_reaction'] ?? null;
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+    }
+  });
+
+  // [listen] delete message
+  $socket->on('event_client_delete_message', function ($data, $callback) use ($io, $socket, $user) {
+    try {
+      $message = $user->get_conversation_message_by_id($data['message_id']);
+      if (!$message) {
+        throw new AuthorizationException(__("You are not authorized to do this"));
+      }
+      $conversation_id = $message['conversation_id'];
+      $member_ids = $user->get_conversation_members_ids($conversation_id);
+      $user->delete_conversation_message($data['message_id']);
+      $payload = [
+        'conversation_id' => $conversation_id,
+        'message_id' => $data['message_id'],
+      ];
+      emit_to_members($io, $member_ids, 'event_server_message_deleted', $payload);
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+    }
+  });
+
+  // [listen] pin message
+  $socket->on('event_client_pin_message', function ($data, $callback) use ($io, $socket, $user) {
+    global $smarty;
+    try {
+      if (($data['do'] ?? 'pin') == 'unpin') {
+        $conversation = $user->unpin_conversation_message($data['conversation_id'], !empty($data['as_page']));
+      } else {
+        $conversation = $user->pin_conversation_message($data['message_id'], !empty($data['as_page']));
+      }
+      $smarty->assign('conversation', $conversation);
+      $payload = [
+        'conversation_id' => $conversation['conversation_id'],
+        'pinned_message' => $conversation['pinned_message'],
+        'pin_html' => $smarty->fetch("__chat_pin.tpl"),
+      ];
+      emit_to_members($io, $user->get_conversation_members_ids($conversation['conversation_id']), 'event_server_message_pinned', $payload);
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
     }
   });
 
@@ -318,6 +499,76 @@ $io->on('connection', function ($socket) use ($io) {
     /* set conversation color */
     try {
       $user->set_conversation_color($data['conversation_id'], $data['color']);
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+      return;
+    }
+  });
+
+  // [listen] rename conversation
+  $socket->on('event_client_conversation_rename', function ($data, $callback) use ($io, $socket, $user) {
+    try {
+      $conversation = $user->rename_conversation($data['conversation_id'], $data['name'] ?? '');
+      $payload = [
+        'conversation_id' => $conversation['conversation_id'],
+        'conversation' => $conversation,
+      ];
+      emit_conversation_updated($io, conversation_member_ids($conversation, $user->_data['user_id']), $payload);
+      print("✏️ [Emit] {username: {$socket->username}, user_id: {$socket->userId}} Renamed Conversation: conversation_{$conversation['conversation_id']}\n");
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+      return;
+    }
+  });
+
+  // [listen] add conversation user
+  $socket->on('event_client_conversation_add', function ($data, $callback) use ($io, $socket, $user) {
+    try {
+      $conversation = $user->add_conversation_user($data['conversation_id'], $data['user_id']);
+      $payload = [
+        'conversation_id' => $conversation['conversation_id'],
+        'conversation' => $conversation,
+        'added_user_id' => $data['user_id'],
+      ];
+      $member_ids = conversation_member_ids($conversation, $user->_data['user_id']);
+      $member_ids[] = $data['user_id'];
+      emit_conversation_updated($io, $member_ids, $payload);
+      print("➕ [Emit] {username: {$socket->username}, user_id: {$socket->userId}} Added User {$data['user_id']} To Conversation: conversation_{$conversation['conversation_id']}\n");
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
+    } catch (Exception $e) {
+      $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
+      print("❌ Error: " . $e->getMessage() . "\n");
+      return;
+    }
+  });
+
+  // [listen] remove conversation user
+  $socket->on('event_client_conversation_remove', function ($data, $callback) use ($io, $socket, $user) {
+    try {
+      $conversation = $user->get_conversation($data['conversation_id']);
+      if (!$conversation) {
+        throw new AuthorizationException(__("You are not authorized to do this"));
+      }
+      $member_ids = conversation_member_ids($conversation, $user->_data['user_id']);
+      $member_ids[] = $data['user_id'];
+      $updated = $user->remove_conversation_user($data['conversation_id'], $data['user_id']);
+      $payload = [
+        'conversation_id' => $data['conversation_id'],
+        'conversation' => $updated ?: null,
+        'removed_user_id' => $data['user_id'],
+      ];
+      emit_conversation_updated($io, $member_ids, $payload);
+      print("➖ [Emit] {username: {$socket->username}, user_id: {$socket->userId}} Removed User {$data['user_id']} From Conversation: conversation_{$data['conversation_id']}\n");
+      if (is_callable($callback)) {
+        $callback(json_encode($payload));
+      }
     } catch (Exception $e) {
       $socket->emit('event_server_error', ['message' => $e->getMessage(), 'modal' => true]);
       print("❌ Error: " . $e->getMessage() . "\n");
@@ -366,6 +617,7 @@ $io->on('connection', function ($socket) use ($io) {
     foreach ($receiver_sockets as $receiver_socket) {
       $receiver_socket->emit('event_server_call_canceled', $call);
     }
+    emit_call_log($io, $user, $call);
   });
 
   // [listen] decline call (receiver)
@@ -384,6 +636,13 @@ $io->on('connection', function ($socket) use ($io) {
     foreach ($caller_sockets as $caller_socket) {
       $caller_socket->emit('event_server_call_declined', $call);
     }
+    /* stop ringing on the receiver's other sockets */
+    foreach (get_all_sockets_by_user_id($io, $call['to_user_id']) as $receiver_socket) {
+      if ($receiver_socket->id !== $socket->id) {
+        $receiver_socket->emit('event_server_call_canceled', $call);
+      }
+    }
+    emit_call_log($io, $user, $call);
   });
 
   // [listen] end call (caller|receiver)
@@ -411,6 +670,7 @@ $io->on('connection', function ($socket) use ($io) {
         $caller_socket->emit('event_server_call_ended', $call);
       }
     }
+    emit_call_log($io, $user, $call);
   });
 
   // [listen] answer call (receiver)
@@ -429,8 +689,70 @@ $io->on('connection', function ($socket) use ($io) {
     foreach ($caller_sockets as $caller_socket) {
       $caller_socket->emit('event_server_call_answered', $call);
     }
+    /* stop ringing on the receiver's other sockets */
+    foreach (get_all_sockets_by_user_id($io, $call['to_user_id']) as $receiver_socket) {
+      if ($receiver_socket->id !== $socket->id) {
+        $receiver_socket->emit('event_server_call_canceled', $call);
+      }
+    }
     /* callback */
     $callback(json_encode($call));
+  });
+
+  // [listen] join live
+  $socket->on('event_client_live_join', function ($data) use ($io, $socket, $user) {
+    if (empty($data['post_id']) || !$user->check_live_post($data['post_id'])) {
+      return;
+    }
+    $socket->join('live_' . (int) $data['post_id']);
+    print("👋 {username: {$socket->username}, user_id: {$socket->userId}} Joined Live: {$data['post_id']}\n");
+  });
+
+  // [listen] leave live
+  $socket->on('event_client_live_leave', function ($data) use ($io, $socket, $user) {
+    if (empty($data['post_id'])) {
+      return;
+    }
+    $socket->leave('live_' . (int) $data['post_id']);
+  });
+
+  // [listen] live comment
+  $socket->on('event_client_live_comment', function ($data) use ($io, $socket, $user) {
+    if (empty($data['post_id']) || empty($data['comment_id'])) {
+      return;
+    }
+    $room = 'live_' . (int) $data['post_id'];
+    if (!isset($socket->rooms[$room]) || !$user->check_live_comment($data['post_id'], $data['comment_id'])) {
+      return;
+    }
+    $socket->broadcast->to($room)->emit('event_server_live_comment', ['post_id' => $data['post_id'], 'comment_id' => $data['comment_id']]);
+    print("💬 User {username: {$socket->username}, user_id: {$socket->userId}} Commented on Live: {$data['post_id']}\n");
+  });
+
+  // [listen] live reaction
+  $socket->on('event_client_live_reaction', function ($data) use ($io, $socket, $user) {
+    if (empty($data['post_id'])) {
+      return;
+    }
+    $room = 'live_' . (int) $data['post_id'];
+    if (!isset($socket->rooms[$room]) || microtime(true) - ($socket->liveReactionAt ?? 0) < 1) {
+      return;
+    }
+    $socket->liveReactionAt = microtime(true);
+    $socket->broadcast->to($room)->emit('event_server_live_reaction', ['post_id' => $data['post_id']]);
+  });
+
+  // [listen] live moderation
+  $socket->on('event_client_live_moderation', function ($data) use ($io, $socket, $user) {
+    if (empty($data['post_id'])) {
+      return;
+    }
+    $room = 'live_' . (int) $data['post_id'];
+    if (!isset($socket->rooms[$room]) || microtime(true) - ($socket->liveModerationAt ?? 0) < 1) {
+      return;
+    }
+    $socket->liveModerationAt = microtime(true);
+    $socket->broadcast->to($room)->emit('event_server_live_moderation', ['post_id' => $data['post_id']]);
   });
 
   // [listen] update call (receiver)
@@ -446,6 +768,140 @@ $io->on('connection', function ($socket) use ($io) {
     }
   });
 });
+
+
+/**
+ * conversation_member_ids
+ *
+ * @param array $conversation
+ * @param integer $viewer_id
+ * @return array
+ */
+function conversation_member_ids($conversation, $viewer_id)
+{
+  $member_ids = array_column($conversation['recipients'] ?? [], 'user_id');
+  $member_ids[] = $viewer_id;
+  return $member_ids;
+}
+
+
+/**
+ * emit_conversation_updated
+ *
+ * @param object $io
+ * @param array $member_ids
+ * @param array $payload
+ * @return void
+ */
+function emit_to_members($io, $member_ids, $event, $payload)
+{
+  $member_ids = array_unique(array_filter(array_map('intval', (array)$member_ids)));
+  foreach ($member_ids as $member_id) {
+    $member_sockets = get_all_sockets_by_user_id($io, $member_id);
+    foreach ($member_sockets as $member_socket) {
+      $member_socket->emit($event, $payload);
+    }
+  }
+}
+
+
+function emit_conversation_updated($io, $member_ids, $payload)
+{
+  emit_to_members($io, $member_ids, 'event_server_conversation_updated', $payload);
+}
+
+
+/**
+ * emit_page_message
+ *
+ * @param object $io
+ * @param object $socket
+ * @param object $user
+ * @param array $conversation
+ * @param string $last_message_for_me
+ * @param string $last_message_for_recipient
+ * @return void
+ */
+function emit_call_log($io, $user, $call)
+{
+  global $smarty;
+  if (empty($call['log_message_id'])) {
+    return;
+  }
+  $message = $user->get_conversation_message_by_id($call['log_message_id']);
+  if (!$message) {
+    return;
+  }
+  $conversation = $user->get_conversation($message['conversation_id']);
+  $smarty->assign('user', $user);
+  $smarty->assign('conversation', $conversation);
+  $smarty->assign('message', $message);
+  foreach ([$call['from_user_id'], $call['to_user_id']] as $user_id) {
+    $smarty->assign('is_me', $user_id == $call['from_user_id']);
+    $last_message = $smarty->fetch("__feeds_message.tpl");
+    foreach (get_all_sockets_by_user_id($io, $user_id) as $user_socket) {
+      $user_socket->emit('event_server_message_received', [
+        'conversation' => $conversation,
+        'last_message' => $last_message,
+        'is_me' => ($user_id == $user->_data['user_id']),
+      ]);
+    }
+  }
+}
+
+
+function emit_page_message($io, $socket, $user, $conversation, $last_message_for_me, $last_message_for_recipient)
+{
+  global $smarty;
+  $page_admins_ids = array_diff($user->get_page_admins_ids($conversation['page_id']), [$socket->userId]);
+  $page_conversation = [
+    'conversation_id' => $conversation['conversation_id'],
+    'page_id' => $conversation['page_id'],
+  ];
+  if (!empty($conversation['as_page'])) {
+    /* the page replied -> the customer */
+    $customer_id = $conversation['user_id'];
+    $customer_conversation = [
+      'conversation_id' => $conversation['conversation_id'],
+      'page_id' => $conversation['page_id'],
+      'color' => $conversation['color'],
+      'pinned_message_id' => $conversation['pinned_message_id'] ?? null,
+    ];
+    $smarty->assign('conversation', $customer_conversation);
+    $smarty->assign('message', $user->get_conversation_message_by_id($conversation['last_message_id'], $customer_id));
+    $smarty->assign('is_me', false);
+    emit_to_members($io, [$customer_id], 'event_server_message_received', [
+      'conversation' => $customer_conversation,
+      'last_message' => $smarty->fetch("__feeds_message.tpl"),
+      'is_me' => false,
+    ]);
+    /* the other page admins */
+    emit_to_members($io, $page_admins_ids, 'event_server_page_message_received', [
+      'conversation' => $page_conversation,
+      'last_message' => $last_message_for_me,
+      'is_me' => true,
+    ]);
+    $socket->broadcast->to($socket->userId)->emit('event_server_page_message_received', [
+      'conversation' => $page_conversation,
+      'last_message' => $last_message_for_me,
+      'is_me' => true,
+    ]);
+    print("🔄 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Page Message Sent To: {$customer_id}\n");
+  } else {
+    /* the customer messaged the page -> the page admins */
+    emit_to_members($io, $page_admins_ids, 'event_server_page_message_received', [
+      'conversation' => $page_conversation,
+      'last_message' => $last_message_for_recipient,
+      'is_me' => false,
+    ]);
+    $socket->broadcast->to($socket->userId)->emit('event_server_message_received', [
+      'conversation' => $conversation,
+      'last_message' => $last_message_for_me,
+      'is_me' => true,
+    ]);
+    print("🔄 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Message Sent To Page: {$conversation['page_id']}\n");
+  }
+}
 
 
 // run workerman

@@ -14,32 +14,20 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && !in_array($_GET['edit'], ['wallet', 'affiliates', 'points', 'market', 'funding', 'tips'])) {
+if (!$user->_is_admin && !in_array($_GET['edit'], ['affiliates', 'points', 'market'])) {
   modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
 }
-if ($_GET['edit'] == 'wallet' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_wallet_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
-if ($_GET['edit'] == 'affiliates' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_affiliates_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
-if ($_GET['edit'] == 'points' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_points_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
-if ($_GET['edit'] == 'market' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_market_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
-if ($_GET['edit'] == 'funding' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_funding_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
-if ($_GET['edit'] == 'tips' && !$user->_is_admin && ($user->_is_moderator && !$system['mods_tips_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+if ($_GET['edit'] == 'affiliates') admin_access('mods_affiliates_permission');
+if ($_GET['edit'] == 'points') admin_access('mods_points_permission');
+if ($_GET['edit'] == 'market') admin_access('mods_marketplace_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
+
+// refresh the compiled system cache
+register_shutdown_function('system_cache_flush');
 
 // handle settings
 try {
@@ -60,8 +48,15 @@ try {
       /* remove any default currency */
       $db->query("UPDATE system_currencies SET system_currencies.default = '0'");
       /* set selected currency as default */
-      $db->query(sprintf("UPDATE system_currencies SET 
-						system_currencies.default = '1' WHERE currency_id = %s", secure($_POST['system_currency'], 'int')));
+      $db->query(sprintf("UPDATE system_currencies SET system_currencies.default = '1' WHERE currency_id = %s", secure($_POST['system_currency'], 'int')));
+      /* remove any default country */
+      $db->query("UPDATE system_countries SET system_countries.default = '0'");
+      /* set selected country as default */
+      $db->query(sprintf("UPDATE system_countries SET system_countries.default = '1' WHERE country_id = %s", secure($_POST['system_country'], 'int')));
+      /* remove any default language */
+      $db->query("UPDATE system_languages SET system_languages.default = '0'");
+      /* set selected language as default */
+      $db->query(sprintf("UPDATE system_languages SET system_languages.default = '1' WHERE language_id = %s", secure($_POST['system_language'], 'int')));
       break;
 
     case 'seo':
@@ -86,6 +81,7 @@ try {
         'system_description_groups' => secure($_POST['system_description_groups']),
         'system_description_events' => secure($_POST['system_description_events']),
         'system_description_watch' => secure($_POST['system_description_watch']),
+        'system_description_live' => secure($_POST['system_description_live']),
         'system_description_blogs' => secure($_POST['system_description_blogs']),
         'system_description_marketplace' => secure($_POST['system_description_marketplace']),
         'system_description_funding' => secure($_POST['system_description_funding']),
@@ -108,6 +104,8 @@ try {
       $_POST['pokes_enabled'] = (isset($_POST['pokes_enabled'])) ? '1' : '0';
       $_POST['gifts_enabled'] = (isset($_POST['gifts_enabled'])) ? '1' : '0';
       $_POST['gifts_points_enabled'] = (isset($_POST['gifts_points_enabled'])) ? '1' : '0';
+      $_POST['incognito_mode_enabled'] = (isset($_POST['incognito_mode_enabled'])) ? '1' : '0';
+      $_POST['panic_mode_enabled'] = (isset($_POST['panic_mode_enabled'])) ? '1' : '0';
       $_POST['cookie_consent_enabled'] = (isset($_POST['cookie_consent_enabled'])) ? '1' : '0';
       $_POST['adblock_detector_enabled'] = (isset($_POST['adblock_detector_enabled'])) ? '1' : '0';
       /* update */
@@ -123,6 +121,8 @@ try {
         'pokes_enabled' => secure($_POST['pokes_enabled']),
         'gifts_enabled' => secure($_POST['gifts_enabled']),
         'gifts_points_enabled' => secure($_POST['gifts_points_enabled']),
+        'incognito_mode_enabled' => secure($_POST['incognito_mode_enabled']),
+        'panic_mode_enabled' => secure($_POST['panic_mode_enabled']),
         'cookie_consent_enabled' => secure($_POST['cookie_consent_enabled']),
         'adblock_detector_enabled' => secure($_POST['adblock_detector_enabled']),
       ]);
@@ -132,6 +132,7 @@ try {
       /* prepare */
       $_POST['pages_enabled'] = (isset($_POST['pages_enabled'])) ? '1' : '0';
       $_POST['pages_reviews_enabled'] = (isset($_POST['pages_reviews_enabled'])) ? '1' : '0';
+      $_POST['pages_messages_enabled'] = (isset($_POST['pages_messages_enabled'])) ? '1' : '0';
       $_POST['pages_reviews_replacement_enabled'] = (isset($_POST['pages_reviews_replacement_enabled'])) ? '1' : '0';
       $_POST['pages_pbid_enabled'] = (isset($_POST['pages_pbid_enabled'])) ? '1' : '0';
       $_POST['pages_location_filter_enabled'] = (isset($_POST['pages_location_filter_enabled'])) ? '1' : '0';
@@ -146,6 +147,9 @@ try {
       $_POST['events_location_filter_enabled'] = (isset($_POST['events_location_filter_enabled'])) ? '1' : '0';
       $_POST['blogs_enabled'] = (isset($_POST['blogs_enabled'])) ? '1' : '0';
       $_POST['blogs_widget_enabled'] = (isset($_POST['blogs_widget_enabled'])) ? '1' : '0';
+      $_POST['blogs_rss_enabled'] = (isset($_POST['blogs_rss_enabled'])) ? '1' : '0';
+      $_POST['blogs_search_content_enabled'] = (isset($_POST['blogs_search_content_enabled'])) ? '1' : '0';
+      $_POST['blogs_cover_required'] = (isset($_POST['blogs_cover_required'])) ? '1' : '0';
       $_POST['reels_enabled'] = (isset($_POST['reels_enabled'])) ? '1' : '0';
       $_POST['watch_enabled'] = (isset($_POST['watch_enabled'])) ? '1' : '0';
       $_POST['offers_enabled'] = (isset($_POST['offers_enabled'])) ? '1' : '0';
@@ -154,12 +158,14 @@ try {
       $_POST['forums_enabled'] = (isset($_POST['forums_enabled'])) ? '1' : '0';
       $_POST['forums_online_enabled'] = (isset($_POST['forums_online_enabled'])) ? '1' : '0';
       $_POST['forums_statistics_enabled'] = (isset($_POST['forums_statistics_enabled'])) ? '1' : '0';
+      $_POST['forums_rss_enabled'] = (isset($_POST['forums_rss_enabled'])) ? '1' : '0';
       $_POST['movies_enabled'] = (isset($_POST['movies_enabled'])) ? '1' : '0';
       $_POST['games_enabled'] = (isset($_POST['games_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'pages_enabled' => secure($_POST['pages_enabled']),
         'pages_reviews_enabled' => secure($_POST['pages_reviews_enabled']),
+        'pages_messages_enabled' => secure($_POST['pages_messages_enabled']),
         'pages_reviews_replacement_enabled' => secure($_POST['pages_reviews_replacement_enabled']),
         'pages_pbid_enabled' => secure($_POST['pages_pbid_enabled']),
         'pages_location_filter_enabled' => secure($_POST['pages_location_filter_enabled']),
@@ -174,6 +180,9 @@ try {
         'events_location_filter_enabled' => secure($_POST['events_location_filter_enabled']),
         'blogs_enabled' => secure($_POST['blogs_enabled']),
         'blogs_widget_enabled' => secure($_POST['blogs_widget_enabled']),
+        'blogs_rss_enabled' => secure($_POST['blogs_rss_enabled']),
+        'blogs_search_content_enabled' => secure($_POST['blogs_search_content_enabled']),
+        'blogs_cover_required' => secure($_POST['blogs_cover_required']),
         'reels_enabled' => secure($_POST['reels_enabled']),
         'watch_enabled' => secure($_POST['watch_enabled']),
         'offers_enabled' => secure($_POST['offers_enabled']),
@@ -182,54 +191,26 @@ try {
         'forums_enabled' => secure($_POST['forums_enabled']),
         'forums_online_enabled' => secure($_POST['forums_online_enabled']),
         'forums_statistics_enabled' => secure($_POST['forums_statistics_enabled']),
+        'forums_rss_enabled' => secure($_POST['forums_rss_enabled']),
         'movies_enabled' => secure($_POST['movies_enabled']),
         'games_enabled' => secure($_POST['games_enabled']),
       ]);
       break;
 
-    case 'posts':
+    case 'posts_newsfeed':
       /* prepare */
-      $_POST['stories_enabled'] = (isset($_POST['stories_enabled'])) ? '1' : '0';
       $_POST['newsfeed_merge_enabled'] = (isset($_POST['newsfeed_merge_enabled'])) ? '1' : '0';
       $_POST['newsfeed_caching_enabled'] = (isset($_POST['newsfeed_caching_enabled'])) ? '1' : '0';
       $_POST['smooth_infinite_scroll'] = (isset($_POST['smooth_infinite_scroll'])) ? '1' : '0';
       $_POST['newsfeed_location_filter_enabled'] = (isset($_POST['newsfeed_location_filter_enabled'])) ? '1' : '0';
-      $_POST['posts_approval_enabled'] = (isset($_POST['posts_approval_enabled'])) ? '1' : '0';
       $_POST['popular_posts_enabled'] = (isset($_POST['popular_posts_enabled'])) ? '1' : '0';
       $_POST['discover_posts_enabled'] = (isset($_POST['discover_posts_enabled'])) ? '1' : '0';
-      $_POST['memories_enabled'] = (isset($_POST['memories_enabled'])) ? '1' : '0';
-      $_POST['wall_posts_enabled'] = (isset($_POST['wall_posts_enabled'])) ? '1' : '0';
-      $_POST['posts_schedule_enabled'] = (isset($_POST['posts_schedule_enabled'])) ? '1' : '0';
-      $_POST['anonymous_mode'] = (isset($_POST['anonymous_mode'])) ? '1' : '0';
-      $_POST['adult_mode'] = (isset($_POST['adult_mode'])) ? '1' : '0';
-      $_POST['collaborative_posts_enabled'] = (isset($_POST['collaborative_posts_enabled'])) ? '1' : '0';
-      $_POST['colored_posts_enabled'] = (isset($_POST['colored_posts_enabled'])) ? '1' : '0';
-      $_POST['activity_posts_enabled'] = (isset($_POST['activity_posts_enabled'])) ? '1' : '0';
-      $_POST['voice_notes_posts_enabled'] = (isset($_POST['voice_notes_posts_enabled'])) ? '1' : '0';
-      $_POST['voice_notes_comments_enabled'] = (isset($_POST['voice_notes_comments_enabled'])) ? '1' : '0';
-      $_POST['polls_enabled'] = (isset($_POST['polls_enabled'])) ? '1' : '0';
-      $_POST['geolocation_enabled'] = (isset($_POST['geolocation_enabled'])) ? '1' : '0';
-      $_POST['gif_enabled'] = (isset($_POST['gif_enabled'])) ? '1' : '0';
-      $_POST['profile_posts_updates_disabled'] = (isset($_POST['profile_posts_updates_disabled'])) ? '1' : '0';
-      $_POST['post_translation_enabled'] = (isset($_POST['post_translation_enabled'])) ? '1' : '0';
-      $_POST['smart_yt_player'] = (isset($_POST['smart_yt_player'])) ? '1' : '0';
-      $_POST['disable_yt_player'] = (isset($_POST['disable_yt_player'])) ? '1' : '0';
-      $_POST['social_share_enabled'] = (isset($_POST['social_share_enabled'])) ? '1' : '0';
-      $_POST['posts_online_status'] = (isset($_POST['posts_online_status'])) ? '1' : '0';
+      $_POST['posts_approval_enabled'] = (isset($_POST['posts_approval_enabled'])) ? '1' : '0';
+      $_POST['posts_edit_limit_enabled'] = (isset($_POST['posts_edit_limit_enabled'])) ? '1' : '0';
       $_POST['desktop_infinite_scroll'] = (isset($_POST['desktop_infinite_scroll'])) ? '1' : '0';
       $_POST['mobile_infinite_scroll'] = (isset($_POST['mobile_infinite_scroll'])) ? '1' : '0';
-      $_POST['auto_play_videos'] = (isset($_POST['auto_play_videos'])) ? '1' : '0';
-      $_POST['fluid_videos_enabled'] = (isset($_POST['fluid_videos_enabled'])) ? '1' : '0';
-      $_POST['posts_views_enabled'] = (isset($_POST['posts_views_enabled'])) ? '1' : '0';
-      $_POST['posts_reviews_enabled'] = (isset($_POST['posts_reviews_enabled'])) ? '1' : '0';
-      $_POST['posts_reviews_replacement_enabled'] = (isset($_POST['posts_reviews_replacement_enabled'])) ? '1' : '0';
-      $_POST['trending_hashtags_enabled'] = (isset($_POST['trending_hashtags_enabled'])) ? '1' : '0';
-      $_POST['download_images_disabled'] = (isset($_POST['download_images_disabled'])) ? '1' : '0';
-      $_POST['right_click_disabled'] = (isset($_POST['right_click_disabled'])) ? '1' : '0';
       /* update */
       update_system_options([
-        'stories_enabled' => secure($_POST['stories_enabled']),
-        'stories_duration' => secure($_POST['stories_duration']),
         'newsfeed_source' => secure($_POST['newsfeed_source']),
         'newsfeed_merge_enabled' => secure($_POST['newsfeed_merge_enabled']),
         'merge_recent_results' => secure($_POST['merge_recent_results']),
@@ -240,55 +221,136 @@ try {
         'newsfeed_location_filter_enabled' => secure($_POST['newsfeed_location_filter_enabled']),
         'posts_approval_enabled' => secure($_POST['posts_approval_enabled']),
         'posts_approval_limit' => secure($_POST['posts_approval_limit']),
+        'posts_edit_limit_enabled' => secure($_POST['posts_edit_limit_enabled']),
+        'posts_edit_limit' => secure($_POST['posts_edit_limit']),
         'popular_posts_enabled' => secure($_POST['popular_posts_enabled']),
         'popular_posts_interval' => secure($_POST['popular_posts_interval']),
         'discover_posts_enabled' => secure($_POST['discover_posts_enabled']),
+        'desktop_infinite_scroll' => secure($_POST['desktop_infinite_scroll']),
+        'mobile_infinite_scroll' => secure($_POST['mobile_infinite_scroll']),
+      ]);
+      $db->query("DELETE FROM posts_cache");
+      break;
+
+    case 'posts_types':
+      /* prepare */
+      $_POST['memories_enabled'] = (isset($_POST['memories_enabled'])) ? '1' : '0';
+      $_POST['wall_posts_enabled'] = (isset($_POST['wall_posts_enabled'])) ? '1' : '0';
+      $_POST['posts_schedule_enabled'] = (isset($_POST['posts_schedule_enabled'])) ? '1' : '0';
+      $_POST['anonymous_mode'] = (isset($_POST['anonymous_mode'])) ? '1' : '0';
+      $_POST['adult_mode'] = (isset($_POST['adult_mode'])) ? '1' : '0';
+      $_POST['collaborative_posts_enabled'] = (isset($_POST['collaborative_posts_enabled'])) ? '1' : '0';
+      $_POST['rich_text_posts_enabled'] = (isset($_POST['rich_text_posts_enabled'])) ? '1' : '0';
+      $_POST['colored_posts_enabled'] = (isset($_POST['colored_posts_enabled'])) ? '1' : '0';
+      $_POST['activity_posts_enabled'] = (isset($_POST['activity_posts_enabled'])) ? '1' : '0';
+      $_POST['polls_enabled'] = (isset($_POST['polls_enabled'])) ? '1' : '0';
+      $_POST['profile_posts_updates_disabled'] = (isset($_POST['profile_posts_updates_disabled'])) ? '1' : '0';
+      $_POST['voice_notes_posts_enabled'] = (isset($_POST['voice_notes_posts_enabled'])) ? '1' : '0';
+      $_POST['voice_notes_comments_enabled'] = (isset($_POST['voice_notes_comments_enabled'])) ? '1' : '0';
+      $_POST['geolocation_enabled'] = (isset($_POST['geolocation_enabled'])) ? '1' : '0';
+      $_POST['geolocation_provider'] = in_array($_POST['geolocation_provider'] ?? '', ['google', 'openstreetmap']) ? $_POST['geolocation_provider'] : 'google';
+      $_POST['geolocation_osm_url'] = rtrim(trim($_POST['geolocation_osm_url'] ?? ''), '/');
+      if (is_empty($_POST['geolocation_osm_url'])) {
+        $_POST['geolocation_osm_url'] = 'https://photon.komoot.io';
+      }
+      if (!valid_url($_POST['geolocation_osm_url'])) {
+        throw new Exception(__("Please enter a valid OpenStreetMap search URL"));
+      }
+      $_POST['gif_enabled'] = (isset($_POST['gif_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
         'memories_enabled' => secure($_POST['memories_enabled']),
         'wall_posts_enabled' => secure($_POST['wall_posts_enabled']),
         'posts_schedule_enabled' => secure($_POST['posts_schedule_enabled']),
         'anonymous_mode' => secure($_POST['anonymous_mode']),
         'adult_mode' => secure($_POST['adult_mode']),
         'collaborative_posts_enabled' => secure($_POST['collaborative_posts_enabled']),
+        'rich_text_posts_enabled' => secure($_POST['rich_text_posts_enabled']),
         'colored_posts_enabled' => secure($_POST['colored_posts_enabled']),
         'activity_posts_enabled' => secure($_POST['activity_posts_enabled']),
+        'polls_enabled' => secure($_POST['polls_enabled']),
+        'profile_posts_updates_disabled' => secure($_POST['profile_posts_updates_disabled']),
         'voice_notes_posts_enabled' => secure($_POST['voice_notes_posts_enabled']),
         'voice_notes_comments_enabled' => secure($_POST['voice_notes_comments_enabled']),
         'voice_notes_durtaion' => secure($_POST['voice_notes_durtaion']),
         'voice_notes_encoding' => secure($_POST['voice_notes_encoding']),
-        'polls_enabled' => secure($_POST['polls_enabled']),
         'geolocation_enabled' => secure($_POST['geolocation_enabled']),
         'geolocation_key' => secure($_POST['geolocation_key']),
+        'geolocation_provider' => secure($_POST['geolocation_provider']),
+        'geolocation_osm_url' => secure($_POST['geolocation_osm_url']),
         'gif_enabled' => secure($_POST['gif_enabled']),
         'giphy_key' => secure($_POST['giphy_key']),
-        'profile_posts_updates_disabled' => secure($_POST['profile_posts_updates_disabled']),
+      ]);
+      break;
+
+    case 'posts_media':
+      /* prepare */
+      $_POST['post_translation_enabled'] = (isset($_POST['post_translation_enabled'])) ? '1' : '0';
+      $_POST['smart_yt_player'] = (isset($_POST['smart_yt_player'])) ? '1' : '0';
+      $_POST['disable_yt_player'] = (isset($_POST['disable_yt_player'])) ? '1' : '0';
+      $_POST['video_embed_code_enabled'] = (isset($_POST['video_embed_code_enabled'])) ? '1' : '0';
+      $_POST['auto_play_videos'] = (isset($_POST['auto_play_videos'])) ? '1' : '0';
+      $_POST['fluid_videos_enabled'] = (isset($_POST['fluid_videos_enabled'])) ? '1' : '0';
+      $_POST['posts_views_enabled'] = (isset($_POST['posts_views_enabled'])) ? '1' : '0';
+      $user->save_post_view_settings($_POST);
+      $_POST['posts_reviews_enabled'] = (isset($_POST['posts_reviews_enabled'])) ? '1' : '0';
+      $_POST['posts_reviews_replacement_enabled'] = (isset($_POST['posts_reviews_replacement_enabled'])) ? '1' : '0';
+      if (!in_array($_POST['translation_provider'] ?? '', ['google', 'yandex', 'deepl', 'libretranslate'])) {
+        throw new Exception(__("Please select a valid translation provider"));
+      }
+      $_POST['libretranslate_url'] = rtrim(trim($_POST['libretranslate_url']), '/');
+      if (!is_empty($_POST['libretranslate_url']) && !valid_url($_POST['libretranslate_url'])) {
+        throw new Exception(__("Please enter a valid LibreTranslate URL"));
+      }
+      /* update */
+      update_system_options([
         'post_translation_enabled' => secure($_POST['post_translation_enabled']),
         'google_translation_key' => secure($_POST['google_translation_key']),
         'yandex_key' => secure($_POST['yandex_key']),
+        'translation_provider' => secure($_POST['translation_provider']),
+        'deepl_key' => secure($_POST['deepl_key']),
+        'libretranslate_url' => secure($_POST['libretranslate_url']),
+        'libretranslate_key' => secure($_POST['libretranslate_key']),
         'smart_yt_player' => secure($_POST['smart_yt_player']),
         'disable_yt_player' => secure($_POST['disable_yt_player']),
+        'video_embed_code_enabled' => secure($_POST['video_embed_code_enabled']),
+        'auto_play_videos' => secure($_POST['auto_play_videos']),
+        'fluid_videos_enabled' => secure($_POST['fluid_videos_enabled']),
+        'posts_reviews_enabled' => secure($_POST['posts_reviews_enabled']),
+        'posts_reviews_replacement_enabled' => secure($_POST['posts_reviews_replacement_enabled']),
+      ]);
+      break;
+
+    case 'posts_privacy':
+      /* prepare */
+      $_POST['social_share_enabled'] = (isset($_POST['social_share_enabled'])) ? '1' : '0';
+      $_POST['posts_online_status'] = (isset($_POST['posts_online_status'])) ? '1' : '0';
+      $_POST['trending_hashtags_enabled'] = (isset($_POST['trending_hashtags_enabled'])) ? '1' : '0';
+      $_POST['download_images_disabled'] = (isset($_POST['download_images_disabled'])) ? '1' : '0';
+      $_POST['download_videos_disabled'] = (isset($_POST['download_videos_disabled'])) ? '1' : '0';
+      $_POST['right_click_disabled'] = (isset($_POST['right_click_disabled'])) ? '1' : '0';
+      $_POST['posts_read_more_lines'] = (int) ($_POST['posts_read_more_lines'] ?? 0);
+      $_POST['posts_read_more_lines'] = ($_POST['posts_read_more_lines'] < 1) ? 5 : min($_POST['posts_read_more_lines'], 50);
+      $_POST['comments_read_more_lines'] = (int) ($_POST['comments_read_more_lines'] ?? 0);
+      $_POST['comments_read_more_lines'] = ($_POST['comments_read_more_lines'] < 1) ? 3 : min($_POST['comments_read_more_lines'], 50);
+      /* update */
+      update_system_options([
         'social_share_enabled' => secure($_POST['social_share_enabled']),
         'max_post_length' => secure($_POST['max_post_length'], 'int'),
         'max_comment_length' => secure($_POST['max_comment_length'], 'int'),
+        'posts_read_more_lines' => secure($_POST['posts_read_more_lines'], 'int'),
+        'comments_read_more_lines' => secure($_POST['comments_read_more_lines'], 'int'),
         'max_posts_hour' => secure($_POST['max_posts_hour'], 'int'),
         'max_comments_hour' => secure($_POST['max_comments_hour'], 'int'),
         'default_privacy' => secure($_POST['default_privacy']),
         'posts_online_status' => secure($_POST['posts_online_status']),
-        'desktop_infinite_scroll' => secure($_POST['desktop_infinite_scroll']),
-        'mobile_infinite_scroll' => secure($_POST['mobile_infinite_scroll']),
-        'auto_play_videos' => secure($_POST['auto_play_videos']),
-        'fluid_videos_enabled' => secure($_POST['fluid_videos_enabled']),
-        'posts_views_enabled' => secure($_POST['posts_views_enabled']),
-        'posts_views_type' => secure($_POST['posts_views_type']),
-        'posts_reviews_enabled' => secure($_POST['posts_reviews_enabled']),
-        'posts_reviews_replacement_enabled' => secure($_POST['posts_reviews_replacement_enabled']),
         'trending_hashtags_enabled' => secure($_POST['trending_hashtags_enabled']),
         'trending_hashtags_interval' => secure($_POST['trending_hashtags_interval']),
         'trending_hashtags_limit' => secure($_POST['trending_hashtags_limit'], 'int'),
         'download_images_disabled' => secure($_POST['download_images_disabled'], 'int'),
+        'download_videos_disabled' => secure($_POST['download_videos_disabled'], 'int'),
         'right_click_disabled' => secure($_POST['right_click_disabled'], 'int'),
       ]);
-      /* clear posts_cache if newsfeed caching disabled */
-      $db->query("DELETE FROM posts_cache");
       break;
 
     case 'ai_settings':
@@ -329,6 +391,9 @@ try {
       /* check if wallet disabled */
       if (($_POST['ai_text_credit_enabled'] || $_POST['ai_image_credit_enabled']) && !$system['wallet_enabled']) {
         throw new Exception(__("You can not enable AI Text or Image Credit system as long as wallet disabled, Enable it first"));
+      }
+      if (($_POST['ai_text_credit_enabled'] || $_POST['ai_image_credit_enabled']) && !method_exists($user, 'wallet_ai_credits_payment')) {
+        throw new Exception(__("You can't use this feature"));
       }
       /* update */
       update_system_options([
@@ -459,6 +524,16 @@ try {
       $_POST['verification_for_posts'] = (isset($_POST['verification_for_posts'])) ? '1' : '0';
       $_POST['verification_for_monetization'] = (isset($_POST['verification_for_monetization'])) ? '1' : '0';
       $_POST['verification_for_adult_content'] = (isset($_POST['verification_for_adult_content'])) ? '1' : '0';
+      $verification_documents = [];
+      foreach (['user_photo', 'user_passport', 'page_photo', 'page_passport'] as $document) {
+        $title = trim($_POST['verification_' . $document . '_title'] ?? '');
+        $enabled = (isset($_POST['verification_' . $document . '_enabled'])) ? '1' : '0';
+        if (is_empty($title) || strlen($title) > 64) {
+          throw new Exception(__("Please enter a valid title for each verification document"));
+        }
+        $verification_documents['verification_' . $document . '_title'] = secure($title);
+        $verification_documents['verification_' . $document . '_enabled'] = secure($enabled);
+      }
       /* update */
       update_system_options([
         'friends_enabled' => secure($_POST['friends_enabled']),
@@ -476,7 +551,7 @@ try {
         'verification_for_posts' => secure($_POST['verification_for_posts']),
         'verification_for_monetization' => secure($_POST['verification_for_monetization']),
         'verification_for_adult_content' => secure($_POST['verification_for_adult_content']),
-      ]);
+      ] + $verification_documents);
       /* check if switch accounts disabled */
       if ($_POST['switch_accounts_enabled'] == '0') {
         /* delete all switch accounts */
@@ -570,8 +645,9 @@ try {
         'twilio_phone' => secure($_POST['twilio_phone']),
         'bulksms_username' => secure($_POST['bulksms_username']),
         'bulksms_password' => secure($_POST['bulksms_password']),
-        'infobip_username' => secure($_POST['infobip_username']),
-        'infobip_password' => secure($_POST['infobip_password']),
+        'infobip_base_url' => secure($_POST['infobip_base_url']),
+        'infobip_api_key' => secure($_POST['infobip_api_key']),
+        'infobip_sender' => secure($_POST['infobip_sender']),
         'msg91_authkey' => secure($_POST['msg91_authkey']),
         'msg91_template_id' => secure($_POST['msg91_template_id']),
         'system_phone' => secure($_POST['system_phone'])
@@ -627,11 +703,13 @@ try {
     case 'push_notifications':
       /* prepare */
       $_POST['onesignal_notification_enabled'] = (isset($_POST['onesignal_notification_enabled'])) ? '1' : '0';
+      $_POST['onesignal_notify_button_enabled'] = (isset($_POST['onesignal_notify_button_enabled'])) ? '1' : '0';
       $_POST['onesignal_messenger_notification_enabled'] = (isset($_POST['onesignal_messenger_notification_enabled'])) ? '1' : '0';
       $_POST['onesignal_timeline_notification_enabled'] = (isset($_POST['onesignal_timeline_notification_enabled'])) ? '1' : '0';
       /* update */
       update_system_options([
         'onesignal_notification_enabled' => secure($_POST['onesignal_notification_enabled']),
+        'onesignal_notify_button_enabled' => secure($_POST['onesignal_notify_button_enabled']),
         'onesignal_app_id' => secure($_POST['onesignal_app_id']),
         'onesignal_api_key' => secure($_POST['onesignal_api_key']),
         'onesignal_messenger_notification_enabled' => secure($_POST['onesignal_messenger_notification_enabled']),
@@ -669,7 +747,7 @@ try {
       $_POST['audio_call_enabled'] = (isset($_POST['audio_call_enabled'])) ? '1' : '0';
       $_POST['video_call_enabled'] = (isset($_POST['video_call_enabled'])) ? '1' : '0';
       /* update */
-      update_system_options([
+      $options = [
         'audio_call_enabled' => secure($_POST['audio_call_enabled']),
         'video_call_enabled' => secure($_POST['video_call_enabled']),
         'audio_video_provider' => secure($_POST['audio_video_provider']),
@@ -681,7 +759,17 @@ try {
         'livekit_ws_url' => secure($_POST['livekit_ws_url']),
         'agora_call_app_id' => secure($_POST['agora_call_app_id']),
         'agora_call_app_certificate' => secure($_POST['agora_call_app_certificate'])
-      ]);
+      ];
+      update_system_options($options);
+      /* restart the chat socket server if the calls settings changed */
+      if ($system['chat_socket_enabled']) {
+        foreach (array_keys($options) as $option) {
+          if (($_POST[$option] ?? '') != $system[$option]) {
+            socket_io_action('restart');
+            break;
+          }
+        }
+      }
       break;
 
     case 'chat_socket':
@@ -690,6 +778,10 @@ try {
       $_POST['chat_socket_proxied'] = (isset($_POST['chat_socket_proxied'])) ? '1' : '0';
       $_POST['chat_socket_ssl_verify_peer'] = (isset($_POST['chat_socket_ssl_verify_peer'])) ? '1' : '0';
       $_POST['chat_socket_ssl_allow_self_signed'] = (isset($_POST['chat_socket_ssl_allow_self_signed'])) ? '1' : '0';
+      /* if switching socket server (php <-> nodejs) stop the currently running server & release the port */
+      if (isset($_POST['chat_socket_server']) && $_POST['chat_socket_server'] != $system['chat_socket_server']) {
+        socket_io_action('stop');
+      }
       /* update */
       update_system_options([
         'chat_socket_enabled' => secure($_POST['chat_socket_enabled']),
@@ -703,6 +795,82 @@ try {
         'chat_socket_ssl_verify_peer' => secure($_POST['chat_socket_ssl_verify_peer']),
         'chat_socket_ssl_allow_self_signed' => secure($_POST['chat_socket_ssl_allow_self_signed']),
       ]);
+      break;
+
+    case 'redis':
+      /* prepare */
+      $_POST['redis_enabled'] = (isset($_POST['redis_enabled'])) ? '1' : '0';
+      $_POST['redis_tls_enabled'] = (isset($_POST['redis_tls_enabled'])) ? '1' : '0';
+      $_POST['redis_host'] = trim($_POST['redis_host'] ?? '');
+      $_POST['redis_prefix'] = trim($_POST['redis_prefix'] ?? '');
+      /* valid inputs */
+      if (is_empty($_POST['redis_host'])) {
+        throw new Exception(__("You have to enter the Redis host"));
+      }
+      if (!ctype_digit((string) $_POST['redis_port']) || $_POST['redis_port'] < 1 || $_POST['redis_port'] > 65535) {
+        throw new Exception(__("Please enter a valid Redis port"));
+      }
+      if (!ctype_digit((string) $_POST['redis_database'])) {
+        throw new Exception(__("Please enter a valid Redis database number"));
+      }
+      if ($_POST['redis_prefix'] && !preg_match('/^[A-Za-z0-9:_\-.]{1,64}$/', $_POST['redis_prefix'])) {
+        throw new Exception(__("The key prefix can only contain letters, numbers and : _ - ."));
+      }
+      /* test the connection before enabling */
+      if ($_POST['redis_enabled']) {
+        $redis_settings = redis_settings([
+          'host' => $_POST['redis_host'],
+          'port' => $_POST['redis_port'],
+          'password' => $_POST['redis_password'] ?? '',
+          'database' => $_POST['redis_database'],
+          'prefix' => $_POST['redis_prefix'],
+          'tls' => $_POST['redis_tls_enabled'],
+        ]);
+        try {
+          $redis_client = redis_connect($redis_settings);
+          $redis_client->ping();
+        } catch (Throwable $e) {
+          throw new Exception(__("Couldn't connect to Redis, nothing was saved") . ": " . $e->getMessage());
+        }
+      }
+      /* update */
+      update_system_options([
+        'redis_enabled' => secure($_POST['redis_enabled']),
+        'redis_host' => secure($_POST['redis_host']),
+        'redis_port' => secure($_POST['redis_port']),
+        'redis_password' => secure($_POST['redis_password'] ?? ''),
+        'redis_database' => secure($_POST['redis_database']),
+        'redis_prefix' => secure($_POST['redis_prefix']),
+        'redis_tls_enabled' => secure($_POST['redis_tls_enabled']),
+      ]);
+      /* clear a stale pause from an earlier outage */
+      @unlink(redis_breaker_file());
+      /* changes made while Redis was off were never invalidated */
+      if ($_POST['redis_enabled']) {
+        $redis_client->incr($redis_settings['prefix'] . 'relations:epoch');
+      }
+      break;
+
+    case 'redis_features':
+      /* prepare */
+      $_POST['redis_widgets_enabled'] = (isset($_POST['redis_widgets_enabled'])) ? '1' : '0';
+      $_POST['redis_relations_enabled'] = (isset($_POST['redis_relations_enabled'])) ? '1' : '0';
+      $_POST['redis_sessions_enabled'] = (isset($_POST['redis_sessions_enabled'])) ? '1' : '0';
+      $_POST['redis_post_views_enabled'] = (isset($_POST['redis_post_views_enabled'])) ? '1' : '0';
+      /* write views still waiting in Redis before buffering stops */
+      if (!$_POST['redis_post_views_enabled']) {
+        $user->flush_post_views();
+      }
+      /* update */
+      update_system_options([
+        'redis_widgets_enabled' => secure($_POST['redis_widgets_enabled']),
+        'redis_relations_enabled' => secure($_POST['redis_relations_enabled']),
+        'redis_sessions_enabled' => secure($_POST['redis_sessions_enabled']),
+        'redis_post_views_enabled' => secure($_POST['redis_post_views_enabled']),
+      ]);
+      /* changes made while a feature was off were never invalidated */
+      relations_cache_reset();
+      break;
 
     case 'chat_apps':
       /* prepare */
@@ -713,23 +881,50 @@ try {
         'messaging_app_android_link' => secure($_POST['messaging_app_android_link']),
         'messaging_app_ios_link' => secure($_POST['messaging_app_ios_link']),
       ]);
+      break;
 
     case 'live':
       /* prepare */
       $_POST['live_enabled'] = (isset($_POST['live_enabled'])) ? '1' : '0';
-      $_POST['save_live_enabled'] = (isset($_POST['save_live_enabled'])) ? '1' : '0';
+      $_POST['live_rtmp_enabled'] = (isset($_POST['live_rtmp_enabled'])) ? '1' : '0';
+      $_POST['live_provider'] = (in_array($_POST['live_provider'], ['agora', 'livekit'])) ? $_POST['live_provider'] : 'agora';
       /* update */
       update_system_options([
         'live_enabled' => secure($_POST['live_enabled']),
-        'save_live_enabled' => secure($_POST['save_live_enabled']),
+        'live_provider' => secure($_POST['live_provider']),
         'agora_app_id' => secure($_POST['agora_app_id']),
         'agora_app_certificate' => secure($_POST['agora_app_certificate']),
         'agora_customer_id' => secure($_POST['agora_customer_id']),
         'agora_customer_certificate' => secure($_POST['agora_customer_certificate']),
+        'livekit_live_api_key' => secure($_POST['livekit_live_api_key']),
+        'livekit_live_api_secret' => secure($_POST['livekit_live_api_secret']),
+        'livekit_live_ws_url' => secure($_POST['livekit_live_ws_url']),
+        'live_rtmp_enabled' => secure($_POST['live_rtmp_enabled'])
+      ]);
+      break;
+
+    case 'live_recording':
+      /* prepare */
+      $_POST['save_live_enabled'] = (isset($_POST['save_live_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'save_live_enabled' => secure($_POST['save_live_enabled']),
         'agora_s3_bucket' => secure($_POST['agora_s3_bucket']),
         'agora_s3_region' => secure($_POST['agora_s3_region']),
         'agora_s3_key' => secure($_POST['agora_s3_key']),
-        'agora_s3_secret' => secure($_POST['agora_s3_secret'])
+        'agora_s3_secret' => secure($_POST['agora_s3_secret']),
+        'agora_s3_endpoint' => secure(rtrim(trim($_POST['agora_s3_endpoint']), '/')),
+        'agora_s3_public_url' => secure(rtrim(trim($_POST['agora_s3_public_url']), '/'))
+      ]);
+      break;
+
+    case 'live_moderation':
+      /* prepare */
+      $_POST['live_moderation_enabled'] = (isset($_POST['live_moderation_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'live_moderation_enabled' => secure($_POST['live_moderation_enabled']),
+        'live_chat_rules' => secure($_POST['live_chat_rules'])
       ]);
       break;
 
@@ -751,7 +946,23 @@ try {
       $_POST['watermark_videos_enabled'] = (isset($_POST['watermark_videos_enabled'])) ? '1' : '0';
       $_POST['audio_enabled'] = (isset($_POST['audio_enabled'])) ? '1' : '0';
       $_POST['file_enabled'] = (isset($_POST['file_enabled'])) ? '1' : '0';
+      $_POST['chat_files_enabled'] = (isset($_POST['chat_files_enabled'])) ? '1' : '0';
       $_POST['mask_file_path_enabled'] = (isset($_POST['mask_file_path_enabled'])) ? '1' : '0';
+      /* check upload sizes */
+      $upload_size_options = get_upload_size_options();
+      foreach (['max_photo_size', 'max_cover_size', 'max_avatar_size', 'max_video_size', 'max_audio_size', 'max_file_size', 'max_daily_upload_size'] as $upload_size_key) {
+        if (!isset($_POST[$upload_size_key]) || !is_numeric($_POST[$upload_size_key])) {
+          throw new Exception(__("Please select a valid upload size"));
+        }
+        $_POST[$upload_size_key] = (int) $_POST[$upload_size_key];
+        if (!array_key_exists($_POST[$upload_size_key], $upload_size_options) && !($upload_size_key == 'max_daily_upload_size' && $_POST[$upload_size_key] == 0)) {
+          throw new Exception(__("Please select a valid upload size"));
+        }
+      }
+      /* check chat max media */
+      if (!is_numeric($_POST['chat_max_media']) || $_POST['chat_max_media'] < 1 || $_POST['chat_max_media'] > 50) {
+        throw new Exception(__("Max media per chat message must be a number between 1 and 50"));
+      }
       /* check if allow_heif_images is enabled */
       if ($_POST['allow_heif_images'] && !extension_loaded('imagick')) {
         throw new Exception(__("The Imagick extension is required to enable HEIF/HEIC images support. Please enable it in your server configuration"));
@@ -778,15 +989,15 @@ try {
         'watermark_enabled' => secure($_POST['watermark_enabled']),
         'watermark_type' => secure($_POST['watermark_type']),
         'watermark_icon' => secure($_POST['watermark_icon']),
-        'watermark_position' => secure($_POST['watermark_position']),
-        'watermark_opacity' => secure($_POST['watermark_opacity']),
-        'watermark_xoffset' => secure($_POST['watermark_xoffset']),
-        'watermark_yoffset' => secure($_POST['watermark_yoffset']),
+        'watermark_opacity' => secure(get_watermark_opacity($_POST['watermark_opacity'])),
+        'watermark_x' => secure(get_watermark_percent($_POST['watermark_x'], 95)),
+        'watermark_y' => secure(get_watermark_percent($_POST['watermark_y'], 95)),
         'adult_images_enabled' => secure($_POST['adult_images_enabled']),
         'adult_images_action' => secure($_POST['adult_images_action']),
         'adult_images_api_key' => secure($_POST['adult_images_api_key']),
         'videos_enabled' => secure($_POST['videos_enabled']),
         'chat_videos_enabled' => secure($_POST['chat_videos_enabled']),
+        'chat_max_media' => secure((int) $_POST['chat_max_media']),
         'max_video_size' => secure($_POST['max_video_size']),
         'video_extensions' => secure($_POST['video_extensions']),
         'video_minimum_duration' => secure($_POST['video_minimum_duration']),
@@ -805,14 +1016,14 @@ try {
         'ffmpeg_2160p_enabled' => secure($_POST['ffmpeg_2160p_enabled']),
         'watermark_videos_enabled' => secure($_POST['watermark_videos_enabled']),
         'watermark_videos_icon' => secure($_POST['watermark_videos_icon']),
-        'watermark_videos_position' => secure($_POST['watermark_videos_position']),
-        'watermark_videos_opacity' => secure($_POST['watermark_videos_opacity']),
-        'watermark_videos_xoffset' => secure($_POST['watermark_videos_xoffset']),
-        'watermark_videos_yoffset' => secure($_POST['watermark_videos_yoffset']),
+        'watermark_videos_opacity' => secure(get_watermark_opacity($_POST['watermark_videos_opacity'])),
+        'watermark_videos_x' => secure(get_watermark_percent($_POST['watermark_videos_x'], 50)),
+        'watermark_videos_y' => secure(get_watermark_percent($_POST['watermark_videos_y'], 50)),
         'audio_enabled' => secure($_POST['audio_enabled']),
         'max_audio_size' => secure($_POST['max_audio_size']),
         'audio_extensions' => secure($_POST['audio_extensions']),
         'file_enabled' => secure($_POST['file_enabled']),
+        'chat_files_enabled' => secure($_POST['chat_files_enabled']),
         'mask_file_path_enabled' => secure($_POST['mask_file_path_enabled']),
         'max_file_size' => secure($_POST['max_file_size']),
         'file_extensions' => secure($_POST['file_extensions']),
@@ -834,6 +1045,9 @@ try {
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -860,6 +1074,9 @@ try {
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -884,6 +1101,9 @@ try {
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -910,6 +1130,9 @@ try {
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -936,6 +1159,9 @@ try {
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -962,6 +1188,9 @@ try {
           'backblaze_enabled' => '0',
           'cloudflare_r2_enabled' => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -988,6 +1217,9 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -1015,6 +1247,9 @@ try {
           'backblaze_enabled' => '0',
           'yandex_cloud_enabled'  => '0',
           'cloudflare_r2_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
           'ftp_enabled' => '0'
         ]);
       }
@@ -1029,16 +1264,133 @@ try {
       ]);
       break;
 
+    case 'ovh':
+      /* prepare */
+      $_POST['ovh_enabled'] = (isset($_POST['ovh_enabled'])) ? '1' : '0';
+      /* if enabled is set -> disable all other options */
+      if ($_POST['ovh_enabled']) {
+        update_system_options([
+          's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
+          'digitalocean_enabled' => '0',
+          'wasabi_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
+          'ftp_enabled' => '0'
+        ]);
+      }
+      /* update */
+      update_system_options([
+        'ovh_enabled' => secure($_POST['ovh_enabled']),
+        'ovh_bucket' => secure(trim($_POST['ovh_bucket'])),
+        'ovh_region' => secure(strtolower(trim($_POST['ovh_region']))),
+        'ovh_key' => secure(trim($_POST['ovh_key'])),
+        'ovh_secret' => secure(trim($_POST['ovh_secret']))
+      ]);
+      break;
+
+    case 'bunny':
+      /* prepare */
+      $_POST['bunny_enabled'] = (isset($_POST['bunny_enabled'])) ? '1' : '0';
+      $_POST['bunny_url'] = rtrim(trim($_POST['bunny_url']), '/');
+      if ($_POST['bunny_url'] != "" && !bunny_is_pull_zone_url($_POST['bunny_url'])) {
+        throw new Exception(__("Please enter your Bunny Pull Zone URL (Example: 'https://example.b-cdn.net'), not the storage endpoint"));
+      }
+      $_POST['bunny_region'] = bunny_region_from_endpoint($_POST['bunny_endpoint']);
+      if ($_POST['bunny_endpoint'] != "" && !$_POST['bunny_region']) {
+        throw new Exception(__("Please enter a valid S3 Region Endpoint URL (Example: 'https://de-s3.storage.bunnycdn.com')"));
+      }
+      /* if enabled is set -> disable all other options */
+      if ($_POST['bunny_enabled']) {
+        update_system_options([
+          's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
+          'digitalocean_enabled' => '0',
+          'wasabi_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'storj_enabled' => '0',
+          'ftp_enabled' => '0'
+        ]);
+      }
+      /* update */
+      update_system_options([
+        'bunny_enabled' => secure($_POST['bunny_enabled']),
+        'bunny_zone' => secure(trim($_POST['bunny_zone'])),
+        'bunny_password' => secure(trim($_POST['bunny_password'])),
+        'bunny_region' => secure($_POST['bunny_region']),
+        'bunny_url' => secure($_POST['bunny_url'])
+      ]);
+      break;
+
+    case 'storj':
+      /* prepare */
+      $_POST['storj_enabled'] = (isset($_POST['storj_enabled'])) ? '1' : '0';
+      $_POST['storj_endpoint'] = rtrim(trim($_POST['storj_endpoint']), '/');
+      if ($_POST['storj_endpoint'] != "" && (!filter_var($_POST['storj_endpoint'], FILTER_VALIDATE_URL) || !in_array(parse_url($_POST['storj_endpoint'], PHP_URL_SCHEME), ['http', 'https']))) {
+        throw new Exception(__("Please enter a valid Storj endpoint URL (Example: 'https://gateway.storjshare.io')"));
+      }
+      $_POST['storj_url'] = trim($_POST['storj_url']);
+      if ($_POST['storj_url'] != "") {
+        $_POST['storj_url'] = storj_public_url($_POST['storj_url']);
+        if (!$_POST['storj_url']) {
+          throw new Exception(__("Please enter your Storj share link (Example: 'https://link.storjshare.io/s/KEY/BUCKET') or custom domain"));
+        }
+      }
+      if ($_POST['storj_enabled'] && $_POST['storj_url'] == "") {
+        throw new Exception(__("Please enter your Storj share link or custom domain"));
+      }
+      /* if enabled is set -> disable all other options */
+      if ($_POST['storj_enabled']) {
+        update_system_options([
+          's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
+          'digitalocean_enabled' => '0',
+          'wasabi_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'ftp_enabled' => '0'
+        ]);
+      }
+      /* update */
+      update_system_options([
+        'storj_enabled' => secure($_POST['storj_enabled']),
+        'storj_bucket' => secure(trim($_POST['storj_bucket'])),
+        'storj_key' => secure(trim($_POST['storj_key'])),
+        'storj_secret' => secure(trim($_POST['storj_secret'])),
+        'storj_endpoint' => secure($_POST['storj_endpoint']),
+        'storj_url' => secure($_POST['storj_url'])
+      ]);
+      break;
+
     case 'ftp':
       /* prepare */
       $_POST['ftp_enabled'] = (isset($_POST['ftp_enabled'])) ? '1' : '0';
-      /* if enabled is set -> disable all other options [s3|digitalocean] */
+      /* if enabled is set -> disable all other options */
       if ($_POST['ftp_enabled']) {
         update_system_options([
           's3_enabled' => '0',
+          'google_cloud_enabled' => '0',
           'digitalocean_enabled' => '0',
           'wasabi_enabled' => '0',
-          'google_cloud_enabled' => '0',
+          'backblaze_enabled' => '0',
+          'yandex_cloud_enabled'  => '0',
+          'cloudflare_r2_enabled' => '0',
+          'pushr_enabled' => '0',
+          'ovh_enabled' => '0',
+          'bunny_enabled' => '0',
+          'storj_enabled' => '0',
         ]);
       }
       /* update */
@@ -1053,151 +1405,11 @@ try {
       ]);
       break;
 
-    case 'payments_settings':
-      /* prepare */
-      $_POST['payment_fees_enabled'] = (isset($_POST['payment_fees_enabled'])) ? '1' : '0';
-      $_POST['payment_vat_enabled'] = (isset($_POST['payment_vat_enabled'])) ? '1' : '0';
-      $_POST['payment_country_vat_enabled'] = (isset($_POST['payment_country_vat_enabled'])) ? '1' : '0';
-      /* update */
-      update_system_options([
-        'payment_fees_enabled' => secure($_POST['payment_fees_enabled']),
-        'payment_fees_percentage' => secure($_POST['payment_fees_percentage']),
-        'payment_vat_enabled' => secure($_POST['payment_vat_enabled']),
-        'payment_country_vat_enabled' => secure($_POST['payment_country_vat_enabled']),
-        'payment_vat_percentage' => secure($_POST['payment_vat_percentage']),
-      ]);
-      break;
-
-    case 'payments_methods':
-      /* prepare */
-      $_POST['paypal_enabled'] = (isset($_POST['paypal_enabled'])) ? '1' : '0';
-      $_POST['paypal_payouts_enabled'] = (isset($_POST['paypal_payouts_enabled'])) ? '1' : '0';
-      $_POST['creditcard_enabled'] = (isset($_POST['creditcard_enabled'])) ? '1' : '0';
-      $_POST['alipay_enabled'] = (isset($_POST['alipay_enabled'])) ? '1' : '0';
-      $_POST['cashapp_enabled'] = (isset($_POST['cashapp_enabled'])) ? '1' : '0';
-      $_POST['blik_enabled'] = (isset($_POST['blik_enabled'])) ? '1' : '0';
-      $_POST['eps_enabled'] = (isset($_POST['eps_enabled'])) ? '1' : '0';
-      $_POST['ideal_enabled'] = (isset($_POST['ideal_enabled'])) ? '1' : '0';
-      $_POST['bancontact_enabled'] = (isset($_POST['bancontact_enabled'])) ? '1' : '0';
-      $_POST['przelewy24_enabled'] = (isset($_POST['przelewy24_enabled'])) ? '1' : '0';
-      $_POST['oxxo_enabled'] = (isset($_POST['oxxo_enabled'])) ? '1' : '0';
-      $_POST['stripe_payment_element_enabled'] = (isset($_POST['stripe_payment_element_enabled'])) ? '1' : '0';
-      $_POST['paystack_enabled'] = (isset($_POST['paystack_enabled'])) ? '1' : '0';
-      $_POST['2checkout_enabled'] = (isset($_POST['2checkout_enabled'])) ? '1' : '0';
-      $_POST['authorize_net_enabled'] = (isset($_POST['authorize_net_enabled'])) ? '1' : '0';
-      $_POST['razorpay_enabled'] = (isset($_POST['razorpay_enabled'])) ? '1' : '0';
-      $_POST['cashfree_enabled'] = (isset($_POST['cashfree_enabled'])) ? '1' : '0';
-      $_POST['shift4_enabled'] = (isset($_POST['shift4_enabled'])) ? '1' : '0';
-      $_POST['myfatoorah_enabled'] = (isset($_POST['myfatoorah_enabled'])) ? '1' : '0';
-      $_POST['epayco_enabled'] = (isset($_POST['epayco_enabled'])) ? '1' : '0';
-      $_POST['flutterwave_enabled'] = (isset($_POST['flutterwave_enabled'])) ? '1' : '0';
-      $_POST['verotel_enabled'] = (isset($_POST['verotel_enabled'])) ? '1' : '0';
-      $_POST['mercadopago_enabled'] = (isset($_POST['mercadopago_enabled'])) ? '1' : '0';
-      $_POST['plisio_enabled'] = (isset($_POST['plisio_enabled'])) ? '1' : '0';
-      $_POST['coinpayments_enabled'] = (isset($_POST['coinpayments_enabled'])) ? '1' : '0';
-      $_POST['coinbase_enabled'] = (isset($_POST['coinbase_enabled'])) ? '1' : '0';
-      $_POST['ccbill_enabled'] = (isset($_POST['ccbill_enabled'])) ? '1' : '0';
-      /* update */
-      update_system_options([
-        'paypal_enabled' => secure($_POST['paypal_enabled']),
-        'paypal_payouts_enabled' => secure($_POST['paypal_payouts_enabled']),
-        'paypal_mode' => secure($_POST['paypal_mode']),
-        'paypal_id' => secure($_POST['paypal_id']),
-        'paypal_secret' => secure($_POST['paypal_secret']),
-        'paypal_webhook' => secure($_POST['paypal_webhook']),
-        'creditcard_enabled' => secure($_POST['creditcard_enabled']),
-        'alipay_enabled' => secure($_POST['alipay_enabled']),
-        'cashapp_enabled' => secure($_POST['cashapp_enabled']),
-        'blik_enabled' => secure($_POST['blik_enabled']),
-        'eps_enabled' => secure($_POST['eps_enabled']),
-        'ideal_enabled' => secure($_POST['ideal_enabled']),
-        'bancontact_enabled' => secure($_POST['bancontact_enabled']),
-        'przelewy24_enabled' => secure($_POST['przelewy24_enabled']),
-        'oxxo_enabled' => secure($_POST['oxxo_enabled']),
-        'stripe_payment_element_enabled' => secure($_POST['stripe_payment_element_enabled']),
-        'stripe_mode' => secure($_POST['stripe_mode']),
-        'stripe_test_secret' => secure($_POST['stripe_test_secret']),
-        'stripe_test_publishable' => secure($_POST['stripe_test_publishable']),
-        'stripe_live_secret' => secure($_POST['stripe_live_secret']),
-        'stripe_live_publishable' => secure($_POST['stripe_live_publishable']),
-        'stripe_webhook' => secure($_POST['stripe_webhook']),
-        'paystack_enabled' => secure($_POST['paystack_enabled']),
-        'paystack_secret' => secure($_POST['paystack_secret']),
-        '2checkout_enabled' => secure($_POST['2checkout_enabled']),
-        '2checkout_mode' => secure($_POST['2checkout_mode']),
-        '2checkout_merchant_code' => secure($_POST['2checkout_merchant_code']),
-        '2checkout_publishable_key' => secure($_POST['2checkout_publishable_key']),
-        '2checkout_private_key' => secure($_POST['2checkout_private_key']),
-        'authorize_net_enabled' => secure($_POST['authorize_net_enabled']),
-        'authorize_net_mode' => secure($_POST['authorize_net_mode']),
-        'authorize_net_api_login_id' => secure($_POST['authorize_net_api_login_id']),
-        'authorize_net_transaction_key' => secure($_POST['authorize_net_transaction_key']),
-        'razorpay_enabled' => secure($_POST['razorpay_enabled']),
-        'razorpay_key_id' => secure($_POST['razorpay_key_id']),
-        'razorpay_key_secret' => secure($_POST['razorpay_key_secret']),
-        'cashfree_enabled' => secure($_POST['cashfree_enabled']),
-        'cashfree_mode' => secure($_POST['cashfree_mode']),
-        'cashfree_client_id' => secure($_POST['cashfree_client_id']),
-        'cashfree_client_secret' => secure($_POST['cashfree_client_secret']),
-        'shift4_enabled' => secure($_POST['shift4_enabled']),
-        'shift4_api_key' => secure($_POST['shift4_api_key']),
-        'shift4_api_secret' => secure($_POST['shift4_api_secret']),
-        'myfatoorah_enabled' => secure($_POST['myfatoorah_enabled']),
-        'myfatoorah_mode' => secure($_POST['myfatoorah_mode']),
-        'myfatoorah_test_token' => secure($_POST['myfatoorah_test_token']),
-        'myfatoorah_live_token' => secure($_POST['myfatoorah_live_token']),
-        'myfatoorah_live_api_url' => secure($_POST['myfatoorah_live_api_url']),
-        'epayco_enabled' => secure($_POST['epayco_enabled']),
-        'epayco_mode' => secure($_POST['epayco_mode']),
-        'epayco_public_key' => secure($_POST['epayco_public_key']),
-        'epayco_private_key' => secure($_POST['epayco_private_key']),
-        'flutterwave_enabled' => secure($_POST['flutterwave_enabled']),
-        'flutterwave_mode' => secure($_POST['flutterwave_mode']),
-        'flutterwave_public_key' => secure($_POST['flutterwave_public_key']),
-        'flutterwave_secret_key' => secure($_POST['flutterwave_secret_key']),
-        'flutterwave_encryption_key' => secure($_POST['flutterwave_encryption_key']),
-        'verotel_enabled' => secure($_POST['verotel_enabled']),
-        'verotel_shop_id' => secure($_POST['verotel_shop_id']),
-        'verotel_signature_key' => secure($_POST['verotel_signature_key']),
-        'mercadopago_enabled' => secure($_POST['mercadopago_enabled']),
-        'mercadopago_public_key' => secure($_POST['mercadopago_public_key']),
-        'mercadopago_access_token' => secure($_POST['mercadopago_access_token']),
-        'plisio_enabled' => secure($_POST['plisio_enabled']),
-        'plisio_secret_key' => secure($_POST['plisio_secret_key']),
-        'coinpayments_enabled' => secure($_POST['coinpayments_enabled']),
-        'coinpayments_merchant_id' => secure($_POST['coinpayments_merchant_id']),
-        'coinpayments_ipn_secret' => secure($_POST['coinpayments_ipn_secret']),
-        'coinbase_enabled' => secure($_POST['coinbase_enabled']),
-        'coinbase_api_key' => secure($_POST['coinbase_api_key']),
-        'ccbill_enabled' => secure($_POST['ccbill_enabled']),
-        'ccbill_account_number' => secure($_POST['ccbill_account_number']),
-        'ccbill_recurring_subaccount_number' => secure($_POST['ccbill_recurring_subaccount_number']),
-        'ccbill_one_time_subaccount_number' => secure($_POST['ccbill_one_time_subaccount_number']),
-        'ccbill_flexform_id' => secure($_POST['ccbill_flexform_id']),
-        'ccbill_salt_key' => secure($_POST['ccbill_salt_key']),
-        'ccbill_datalink_username' => secure($_POST['ccbill_datalink_username']),
-        'ccbill_datalink_password' => secure($_POST['ccbill_datalink_password']),
-      ]);
-      break;
-
-    case 'bank':
-      /* prepare */
-      $_POST['bank_transfers_enabled'] = (isset($_POST['bank_transfers_enabled'])) ? '1' : '0';
-      /* update */
-      update_system_options([
-        'bank_transfers_enabled' => secure($_POST['bank_transfers_enabled']),
-        'bank_name' => secure($_POST['bank_name']),
-        'bank_account_number' => secure($_POST['bank_account_number']),
-        'bank_account_name' => secure($_POST['bank_account_name']),
-        'bank_account_routing' => secure($_POST['bank_account_routing']),
-        'bank_account_country' => secure($_POST['bank_account_country']),
-        'bank_transfer_note' => secure($_POST['bank_transfer_note'])
-      ]);
-      break;
-
     case 'security':
       /* prepare */
       $_POST['unusual_login_enabled'] = (isset($_POST['unusual_login_enabled'])) ? '1' : '0';
+      $_POST['ipinfo_enabled'] = (isset($_POST['ipinfo_enabled'])) ? '1' : '0';
+      $_POST['login_alerts_enabled'] = (isset($_POST['login_alerts_enabled'])) ? '1' : '0';
       $_POST['brute_force_detection_enabled'] = (isset($_POST['brute_force_detection_enabled'])) ? '1' : '0';
       $_POST['two_factor_enabled'] = (isset($_POST['two_factor_enabled'])) ? '1' : '0';
       $_POST['password_complexity_enabled'] = (isset($_POST['password_complexity_enabled'])) ? '1' : '0';
@@ -1208,6 +1420,9 @@ try {
       /* update */
       update_system_options([
         'unusual_login_enabled' => secure($_POST['unusual_login_enabled']),
+        'ipinfo_enabled' => secure($_POST['ipinfo_enabled']),
+        'ipinfo_token' => secure(trim($_POST['ipinfo_token'])),
+        'login_alerts_enabled' => secure($_POST['login_alerts_enabled']),
         'brute_force_detection_enabled' => secure($_POST['brute_force_detection_enabled']),
         'brute_force_bad_login_limit' => secure($_POST['brute_force_bad_login_limit'], 'int'),
         'brute_force_lockout_time' => secure($_POST['brute_force_lockout_time'], 'int'),
@@ -1248,15 +1463,20 @@ try {
         'chat_heartbeat' => secure($_POST['chat_heartbeat']),
         'offline_time' => secure($_POST['offline_time']),
         'newsfeed_results' => secure($_POST['newsfeed_results']),
+        'people_results' => secure($_POST['people_results']),
         'pages_results' => secure($_POST['pages_results']),
         'groups_results' => secure($_POST['groups_results']),
         'events_results' => secure($_POST['events_results']),
+        'watch_results' => secure($_POST['watch_results']),
+        'live_results' => secure($_POST['live_results']),
         'blogs_results' => secure($_POST['blogs_results']),
         'marketplace_results' => secure($_POST['marketplace_results']),
         'funding_results' => secure($_POST['funding_results']),
         'offers_results' => secure($_POST['offers_results']),
         'jobs_results' => secure($_POST['jobs_results']),
+        'dating_results' => secure($_POST['dating_results']),
         'courses_results' => secure($_POST['courses_results']),
+        'movies_results' => secure($_POST['movies_results']),
         'games_results' => secure($_POST['games_results']),
         'search_results' => secure($_POST['search_results']),
         'min_results' => secure($_POST['min_results']),
@@ -1273,52 +1493,14 @@ try {
       ]);
       break;
 
-    case 'wallet':
-      $_POST['wallet_enabled'] = (isset($_POST['wallet_enabled'])) ? '1' : '0';
-      $_POST['wallet_transfer_enabled'] = (isset($_POST['wallet_transfer_enabled'])) ? '1' : '0';
-      $_POST['wallet_withdrawal_enabled'] = (isset($_POST['wallet_withdrawal_enabled'])) ? '1' : '0';
-      /* check if ads enabled */
-      if ($system['ads_enabled'] && !$_POST['wallet_enabled']) {
-        throw new Exception(__("You can not disable wallet as long as Ads system enabled, Disable it first"));
-      }
-      /* check if ai credit enabled */
-      if (($system['ai_text_credit_enabled'] || $system['ai_image_credit_enabled']) && !$_POST['wallet_enabled']) {
-        throw new Exception(__("You can not disable wallet as long as AI Credit system enabled, Disable it first"));
-      }
-      $wallet_payment_methods = [];
-      if (isset($_POST['method_paypal'])) {
-        $wallet_payment_methods[] = "paypal";
-      }
-      if (isset($_POST['method_skrill'])) {
-        $wallet_payment_methods[] = "skrill";
-      }
-      if (isset($_POST['method_bank'])) {
-        $wallet_payment_methods[] = "bank";
-      }
-      if (isset($_POST['method_custom'])) {
-        $wallet_payment_methods[] = "custom";
-      }
-      if ($_POST['wallet_withdrawal_enabled'] && count($wallet_payment_methods) == 0) {
-        throw new Exception(__("You must select one withdrawal payment method at least"));
-      }
-      $wallet_payment_method = implode(",", $wallet_payment_methods);
-      /* update */
-      update_system_options([
-        'wallet_enabled' => secure($_POST['wallet_enabled']),
-        'wallet_transfer_enabled' => secure($_POST['wallet_transfer_enabled']),
-        'wallet_max_transfer' => secure($_POST['wallet_max_transfer']),
-        'wallet_withdrawal_enabled' => secure($_POST['wallet_withdrawal_enabled']),
-        'wallet_payment_method' => secure($wallet_payment_method),
-        'wallet_payment_method_custom' => secure($_POST['wallet_payment_method_custom']),
-        'wallet_min_withdrawal' => secure($_POST['wallet_min_withdrawal'])
-      ]);
-      break;
-
     case 'affiliates':
       /* prepare */
       $_POST['affiliates_enabled'] = (isset($_POST['affiliates_enabled'])) ? '1' : '0';
       $_POST['affiliates_money_withdraw_enabled'] = (isset($_POST['affiliates_money_withdraw_enabled'])) ? '1' : '0';
       $_POST['affiliates_money_transfer_enabled'] = (isset($_POST['affiliates_money_transfer_enabled'])) ? '1' : '0';
+      if (!licence_has_entitlement('monetization') || !licence_module_installed()) {
+        $_POST['affiliates_money_transfer_enabled'] = '0';
+      }
       if (!$_POST['affiliates_money_withdraw_enabled'] && !$_POST['affiliates_money_transfer_enabled']) {
         throw new Exception(__("You must enable one method at least, either payments withdrawal requests or wallet transfer"));
       }
@@ -1382,6 +1564,9 @@ try {
       $_POST['points_enabled'] = (isset($_POST['points_enabled'])) ? '1' : '0';
       $_POST['points_money_withdraw_enabled'] = (isset($_POST['points_money_withdraw_enabled'])) ? '1' : '0';
       $_POST['points_money_transfer_enabled'] = (isset($_POST['points_money_transfer_enabled'])) ? '1' : '0';
+      if (!licence_has_entitlement('monetization') || !licence_module_installed()) {
+        $_POST['points_money_transfer_enabled'] = '0';
+      }
       if (!$_POST['points_money_withdraw_enabled'] && !$_POST['points_money_transfer_enabled']) {
         throw new Exception(__("You must enable one method at least, either payments withdrawal requests or wallet transfer"));
       }
@@ -1424,32 +1609,14 @@ try {
       ]);
       break;
 
-    case 'paid_modules':
-      /* prepare */
-      $_POST['paid_blogs_enabled'] = (isset($_POST['paid_blogs_enabled'])) ? '1' : '0';
-      $_POST['paid_products_enabled'] = (isset($_POST['paid_products_enabled'])) ? '1' : '0';
-      $_POST['paid_funding_enabled'] = (isset($_POST['paid_funding_enabled'])) ? '1' : '0';
-      $_POST['paid_offers_enabled'] = (isset($_POST['paid_offers_enabled'])) ? '1' : '0';
-      $_POST['paid_jobs_enabled'] = (isset($_POST['paid_jobs_enabled'])) ? '1' : '0';
-      $_POST['paid_courses_enabled'] = (isset($_POST['paid_courses_enabled'])) ? '1' : '0';
-      /* update */
-      update_system_options([
-        'paid_blogs_enabled' => secure($_POST['paid_blogs_enabled']),
-        'paid_blogs_cost' => secure($_POST['paid_blogs_cost']),
-        'paid_products_enabled' => secure($_POST['paid_products_enabled']),
-        'paid_products_cost' => secure($_POST['paid_products_cost']),
-        'paid_funding_enabled' => secure($_POST['paid_funding_enabled']),
-        'paid_funding_cost' => secure($_POST['paid_funding_cost']),
-        'paid_offers_enabled' => secure($_POST['paid_offers_enabled']),
-        'paid_offers_cost' => secure($_POST['paid_offers_cost']),
-        'paid_jobs_enabled' => secure($_POST['paid_jobs_enabled']),
-        'paid_jobs_cost' => secure($_POST['paid_jobs_cost']),
-        'paid_courses_enabled' => secure($_POST['paid_courses_enabled']),
-        'paid_courses_cost' => secure($_POST['paid_courses_cost']),
-      ]);
-      break;
-
     case 'market':
+      $_POST['market_enabled'] = (isset($_POST['market_enabled'])) ? '1' : '0';
+      if (!licence_has_entitlement('monetization') || !licence_module_installed()) {
+        update_system_options([
+          'market_enabled' => secure($_POST['market_enabled']),
+        ]);
+        break;
+      }
       /* valid inputs */
       if (!is_numeric($_POST['market_delivery_days']) || $_POST['market_delivery_days'] <= 0) {
         throw new Exception(__("Please enter valid delivery days"));
@@ -1458,7 +1625,6 @@ try {
         throw new Exception(__("Please enter valid commission >= 0 and < 100"));
       }
       /* prepare */
-      $_POST['market_enabled'] = (isset($_POST['market_enabled'])) ? '1' : '0';
       $_POST['market_shopping_cart_enabled'] = (isset($_POST['market_shopping_cart_enabled'])) ? '1' : '0';
       $_POST['market_digital_products_enabled'] = (isset($_POST['market_digital_products_enabled'])) ? '1' : '0';
       $_POST['market_wallet_payment_enabled'] = (isset($_POST['market_wallet_payment_enabled'])) ? '1' : '0';
@@ -1502,64 +1668,78 @@ try {
       ]);
       break;
 
-    case 'funding':
-      /* valid inputs */
-      if (!is_numeric($_POST['funding_commission']) || $_POST['funding_commission'] < 0 || $_POST['funding_commission'] >= 100) {
-        throw new Exception(__("Please enter valid commission >= 0 and < 100"));
-      }
+    case 'stories':
       /* prepare */
-      $_POST['funding_enabled'] = (isset($_POST['funding_enabled'])) ? '1' : '0';
-      $_POST['funding_wallet_payment_enabled'] = (isset($_POST['funding_wallet_payment_enabled'])) ? '1' : '0';
-      $_POST['funding_money_withdraw_enabled'] = (isset($_POST['funding_money_withdraw_enabled'])) ? '1' : '0';
-      $_POST['funding_money_transfer_enabled'] = (isset($_POST['funding_money_transfer_enabled'])) ? '1' : '0';
-      if (!$_POST['funding_money_withdraw_enabled'] && !$_POST['funding_money_transfer_enabled']) {
-        throw new Exception(__("You must enable one method at least, either payments withdrawal requests or wallet transfer"));
+      foreach (['stories_enabled', 'stories_archive_enabled', 'stories_text_enabled', 'stories_reactions_enabled', 'stories_replies_enabled', 'stories_polls_enabled', 'stories_highlights_enabled', 'stories_music_enabled', 'stories_music_itunes_enabled', 'stories_music_library_enabled'] as $option) {
+        $_POST[$option] = (isset($_POST[$option])) ? '1' : '0';
       }
-      $funding_payment_methods = [];
-      if (isset($_POST['method_paypal'])) {
-        $funding_payment_methods[] = "paypal";
+      if (!is_numeric($_POST['stories_duration']) || $_POST['stories_duration'] < 1 || $_POST['stories_duration'] > 60) {
+        throw new Exception(__("The story duration must be between 1 and 60 seconds"));
       }
-      if (isset($_POST['method_skrill'])) {
-        $funding_payment_methods[] = "skrill";
+      if (!is_numeric($_POST['stories_video_max_duration']) || $_POST['stories_video_max_duration'] < 0) {
+        throw new Exception(__("Please enter a valid video length"));
       }
-      if (isset($_POST['method_bank'])) {
-        $funding_payment_methods[] = "bank";
+      if (!preg_match('/^[a-zA-Z]{2}$/', $_POST['stories_music_itunes_country'])) {
+        throw new Exception(__("Please enter a valid two letters country code"));
       }
-      if (isset($_POST['method_custom'])) {
-        $funding_payment_methods[] = "custom";
-      }
-      if ($_POST['funding_money_withdraw_enabled'] && count($funding_payment_methods) == 0) {
-        throw new Exception(__("You must select one withdrawal payment method at least"));
-      }
-      $funding_payment_method = implode(",", $funding_payment_methods);
       /* update */
       update_system_options([
-        'funding_enabled' => secure($_POST['funding_enabled']),
-        'funding_wallet_payment_enabled' => secure($_POST['funding_wallet_payment_enabled']),
-        'funding_money_withdraw_enabled' => secure($_POST['funding_money_withdraw_enabled']),
-        'funding_payment_method' => secure($funding_payment_method),
-        'funding_payment_method_custom' => secure($_POST['funding_payment_method_custom']),
-        'funding_min_withdrawal' => secure($_POST['funding_min_withdrawal']),
-        'funding_money_transfer_enabled' => secure($_POST['funding_money_transfer_enabled']),
-        'funding_commission' => secure($_POST['funding_commission'])
+        'stories_enabled' => secure($_POST['stories_enabled']),
+        'stories_design' => secure((isset($_POST['stories_design']) && $_POST['stories_design'] == 'cards') ? 'cards' : 'circles'),
+        'stories_duration' => secure($_POST['stories_duration'], 'int'),
+        'stories_video_max_duration' => secure($_POST['stories_video_max_duration'], 'int'),
+        'stories_archive_enabled' => secure($_POST['stories_archive_enabled']),
+        'stories_text_enabled' => secure($_POST['stories_text_enabled']),
+        'stories_reactions_enabled' => secure($_POST['stories_reactions_enabled']),
+        'stories_replies_enabled' => secure($_POST['stories_replies_enabled']),
+        'stories_polls_enabled' => secure($_POST['stories_polls_enabled']),
+        'stories_highlights_enabled' => secure($_POST['stories_highlights_enabled']),
+        'stories_music_enabled' => secure($_POST['stories_music_enabled']),
+        'stories_music_itunes_enabled' => secure($_POST['stories_music_itunes_enabled']),
+        'stories_music_library_enabled' => secure($_POST['stories_music_library_enabled']),
+        'stories_music_itunes_country' => secure(strtoupper($_POST['stories_music_itunes_country'])),
       ]);
       break;
 
-    case 'tips':
-      /* valid inputs */
-      if (!is_numeric($_POST['tips_min_amount']) || $_POST['tips_min_amount'] <= 0) {
-        throw new Exception(__("Please enter valid minimum tip amount"));
-      }
-      if (!is_numeric($_POST['tips_max_amount']) || $_POST['tips_max_amount'] <= 0) {
-        throw new Exception(__("Please enter valid maximum tip amount"));
-      }
+    case 'dating_settings':
       /* prepare */
-      $_POST['tips_enabled'] = (isset($_POST['tips_enabled'])) ? '1' : '0';
+      $_POST['dating_enabled'] = (isset($_POST['dating_enabled'])) ? '1' : '0';
+      $_POST['dating_verified_only'] = (isset($_POST['dating_verified_only'])) ? '1' : '0';
+      $_POST['dating_photos_approval'] = (isset($_POST['dating_photos_approval'])) ? '1' : '0';
+      $_POST['dating_free_likes_list'] = (isset($_POST['dating_free_likes_list'])) ? '1' : '0';
+      $_POST['dating_worldwide'] = (isset($_POST['dating_worldwide'])) ? '1' : '0';
+      /* valid inputs */
+      foreach (['dating_min_age', 'dating_max_photos', 'dating_max_interests', 'dating_free_swipes', 'dating_max_distance', 'dating_ads_frequency', 'dating_super_likes_pack', 'dating_boost_minutes'] as $option) {
+        if (is_empty($_POST[$option]) || !is_numeric($_POST[$option]) || $_POST[$option] < 0) {
+          throw new Exception(__("Please enter valid numbers"));
+        }
+      }
+      foreach (['dating_super_likes_price', 'dating_boost_price', 'dating_priority_message_price'] as $option) {
+        if (is_empty($_POST[$option]) || !is_numeric($_POST[$option]) || $_POST[$option] < 0) {
+          throw new Exception(__("Please enter valid prices"));
+        }
+      }
+      if ($_POST['dating_min_age'] < 18) {
+        throw new Exception(__("The minimum age can't be less than 18"));
+      }
       /* update */
       update_system_options([
-        'tips_enabled' => secure($_POST['tips_enabled']),
-        'tips_min_amount' => secure($_POST['tips_min_amount']),
-        'tips_max_amount' => secure($_POST['tips_max_amount']),
+        'dating_enabled' => secure($_POST['dating_enabled']),
+        'dating_verified_only' => secure($_POST['dating_verified_only']),
+        'dating_photos_approval' => secure($_POST['dating_photos_approval']),
+        'dating_free_likes_list' => secure($_POST['dating_free_likes_list']),
+        'dating_min_age' => secure($_POST['dating_min_age'], 'int'),
+        'dating_max_photos' => secure(max(1, (int) $_POST['dating_max_photos']), 'int'),
+        'dating_max_interests' => secure(max(1, (int) $_POST['dating_max_interests']), 'int'),
+        'dating_free_swipes' => secure($_POST['dating_free_swipes'], 'int'),
+        'dating_max_distance' => secure(max(1, (int) $_POST['dating_max_distance']), 'int'),
+        'dating_worldwide' => secure($_POST['dating_worldwide']),
+        'dating_ads_frequency' => secure($_POST['dating_ads_frequency'], 'int'),
+        'dating_super_likes_pack' => secure($_POST['dating_super_likes_pack'], 'int'),
+        'dating_super_likes_price' => secure($_POST['dating_super_likes_price'], 'float'),
+        'dating_boost_minutes' => secure(max(1, (int) $_POST['dating_boost_minutes']), 'int'),
+        'dating_boost_price' => secure($_POST['dating_boost_price'], 'float'),
+        'dating_priority_message_price' => secure($_POST['dating_priority_message_price'], 'float'),
       ]);
       break;
 
@@ -1570,6 +1750,7 @@ try {
       $_POST['cronjob_reset_pro_packages'] = (isset($_POST['cronjob_reset_pro_packages'])) ? '1' : '0';
       $_POST['cronjob_clear_pending_uploads'] = (isset($_POST['cronjob_clear_pending_uploads'])) ? '1' : '0';
       $_POST['cronjob_merits_reminder'] = (isset($_POST['cronjob_merits_reminder'])) ? '1' : '0';
+      $_POST['cronjob_post_views_cleanup'] = (isset($_POST['cronjob_post_views_cleanup'])) ? '1' : '0';
       /* update */
       update_system_options([
         'cronjob_enabled' => secure($_POST['cronjob_enabled']),
@@ -1577,6 +1758,7 @@ try {
         'cronjob_reset_pro_packages' => secure($_POST['cronjob_reset_pro_packages']),
         'cronjob_clear_pending_uploads' => secure($_POST['cronjob_clear_pending_uploads']),
         'cronjob_merits_reminder' => secure($_POST['cronjob_merits_reminder']),
+        'cronjob_post_views_cleanup' => secure($_POST['cronjob_post_views_cleanup']),
       ]);
       break;
 
@@ -1610,13 +1792,11 @@ try {
 
     case 'merits_widgets':
       /* prepare */
-      $_POST['merits_widgets_newsfeed'] = (isset($_POST['merits_widgets_newsfeed'])) ? '1' : '0';
       $_POST['merits_widgets_balance'] = (isset($_POST['merits_widgets_balance'])) ? '1' : '0';
       $_POST['merits_widgets_winners'] = (isset($_POST['merits_widgets_winners'])) ? '1' : '0';
       $_POST['merits_widgets_statistics'] = (isset($_POST['merits_widgets_statistics'])) ? '1' : '0';
       /* update */
       update_system_options([
-        'merits_widgets_newsfeed' => secure($_POST['merits_widgets_newsfeed']),
         'merits_widgets_balance' => secure($_POST['merits_widgets_balance']),
         'merits_widgets_winners' => secure($_POST['merits_widgets_winners']),
         'merits_widgets_statistics' => secure($_POST['merits_widgets_statistics']),

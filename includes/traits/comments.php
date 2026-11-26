@@ -25,11 +25,20 @@ trait CommentsTrait
    * @param string $sorting
    * @return array
    */
-  public function get_comments($node_id, $offset = 0, $is_post = true, $pass_privacy_check = true, $post = [], $sorting = "recent", $last_comment_id = null)
+  public function get_comments($node_id, $offset = 0, $is_post = true, $pass_privacy_check = true, $post = [], $sorting = "recent", $last_comment_id = null, $cursor = null)
   {
     global $db, $system;
     $comments = [];
+    $this->_cursor = null;
+    /* top comments stop after 50 pages (their order can't be read from an index) */
+    if ($sorting == 'top' && $offset > 50) {
+      return $comments;
+    }
     $offset *= $system['min_results'];
+    /* pages after the first continue from a cursor (the last comment id) instead of an offset */
+    $cursor = ($sorting != 'top') ? cursor_decode($cursor, ['int']) : null;
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['posts_comments.comment_id'], $cursor, $sorting != 'all') : "";
+    $limit_statement = ($cursor) ? sprintf(" LIMIT %s", secure($system['min_results'], 'int', false)) : sprintf(" LIMIT %s, %s", secure($offset, 'int', false), secure($system['min_results'], 'int', false));
     switch ($sorting) {
       case 'top':
         $order_query = " ORDER BY posts_comments.reaction_like_count DESC, posts_comments.reaction_love_count DESC, posts_comments.reaction_haha_count DESC, posts_comments.reaction_yay_count DESC, posts_comments.reaction_wow_count DESC, posts_comments.reaction_sad_count DESC, posts_comments.reaction_angry_count DESC, posts_comments.replies DESC";
@@ -55,7 +64,9 @@ trait CommentsTrait
       }
       /* get post comments */
       if (!$last_comment_id) {
-        $get_comments = $db->query(sprintf("SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'post' AND posts_comments.node_id = %s " . $order_query . " LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+        /* a post's first comments may have been loaded with its page by prefetch_posts() */
+        $get_comments = (!$offset && !$cursor && !in_array($sorting, ['top', 'all'])) ? $this->post_details('comments', $node_id) : null;
+        $get_comments ??= $db->query(sprintf("SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'post' AND posts_comments.node_id = %s " . $cursor_statement . $order_query . $limit_statement, secure($node_id, 'int')));
       } else {
         $get_comments = $db->query(sprintf("SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'post' AND posts_comments.node_id = %s AND posts_comments.comment_id > %s " . $order_query, secure($node_id, 'int'), secure($last_comment_id, 'int')));
       }
@@ -71,12 +82,18 @@ trait CommentsTrait
         $post = $photo['post'];
       }
       /* get photo comments */
-      $get_comments = $db->query(sprintf("SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'photo' AND posts_comments.node_id = %s " . $order_query . " LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+      $get_comments = $db->query(sprintf("SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'photo' AND posts_comments.node_id = %s " . $cursor_statement . $order_query . $limit_statement, secure($node_id, 'int')));
     }
     if ($get_comments->num_rows == 0) {
       return $comments;
     }
+    /* check if viewer can moderate the live of the post */
+    $live_moderator = $this->can_moderate_live($post);
+    $live_running = $live_moderator && $this->check_live_post($post['post_id']);
+    $post['can_moderate_live'] = $live_moderator;
+    $post['live_running'] = $live_running;
     while ($comment = $get_comments->fetch_assoc()) {
+      $last_read_id = $comment['comment_id'];
 
       /* pass comments_disabled from post to comment */
       $comment['comments_disabled'] = $post['comments_disabled'];
@@ -114,28 +131,14 @@ trait CommentsTrait
       $comment['text'] = $this->parse(["text" => $comment['text']]);
 
       /* get the comment author */
-      if ($comment['user_type'] == "user") {
-        /* user type */
-        $comment['author_id'] = $comment['user_id'];
-        $comment['author_picture'] = get_picture($comment['user_picture'], $comment['user_gender']);
-        $comment['author_url'] = $system['system_url'] . '/' . $comment['user_name'];
-        $comment['author_name'] = ($system['show_usernames_enabled']) ? $comment['user_name'] : $comment['user_firstname'] . " " . $comment['user_lastname'];
-        $comment['author_verified'] = $comment['user_verified'];
-      } else {
-        /* page type */
-        $comment['author_id'] = $comment['page_admin'];
-        $comment['author_picture'] = get_picture($comment['page_picture'], "page");
-        $comment['author_url'] = $system['system_url'] . '/pages/' . $comment['page_name'];
-        $comment['author_name'] = $comment['page_title'];
-        $comment['author_verified'] = $comment['page_verified'];
-      }
+      $this->_parse_comment_author($comment);
 
       /* check if viewer user react this comment */
       $comment['i_react'] = false;
       if ($this->_logged_in) {
         /* reaction */
         if ($comment['reactions_total_count'] > 0) {
-          $get_reaction = $db->query(sprintf("SELECT reaction FROM posts_comments_reactions WHERE user_id = %s AND comment_id = %s", secure($this->_data['user_id'], 'int'), secure($comment['comment_id'], 'int')));
+          $get_reaction = $this->post_details('comment_reactions', $comment['comment_id']) ?? $db->query(sprintf("SELECT reaction FROM posts_comments_reactions WHERE user_id = %s AND comment_id = %s", secure($this->_data['user_id'], 'int'), secure($comment['comment_id'], 'int')));
           if ($get_reaction->num_rows > 0) {
             $comment['i_react'] = true;
             $comment['i_reaction'] = $get_reaction->fetch_assoc()['reaction'];
@@ -169,10 +172,20 @@ trait CommentsTrait
         if ($post['in_event'] && $post['is_event_admin']) {
           $comment['delete_comment'] = true;
         }
+        /* viewer is a moderator of the live of the post */
+        if ($live_moderator) {
+          $this->_parse_comment_live_moderation($comment, $post, $live_running);
+        }
       }
 
       $comments[] = $comment;
     }
+    /* get the live moderation state of the comments authors */
+    if ($live_moderator) {
+      $this->_parse_comments_live_states($comments, $post);
+    }
+    /* the position after the last comment read */
+    $this->_cursor = ($sorting != 'top' && !$last_comment_id) ? cursor_encode([$last_read_id]) : null;
     return $comments;
   }
 
@@ -186,26 +199,37 @@ trait CommentsTrait
    * @param array $post
    * @return array
    */
-  public function get_replies($comment_id, $offset = 0, $pass_check = true, $post = [])
+  public function get_replies($comment_id, $offset = 0, $pass_check = true, $post = [], $cursor = null)
   {
     global $db, $system;
     $replies = [];
+    $this->_cursor = null;
     $offset *= $system['min_results'];
+    /* pages after the first continue from a cursor (the oldest reply id shown) instead of an offset */
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['posts_comments.comment_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf(" LIMIT %s", secure($system['min_results'], 'int', false)) : sprintf(" LIMIT %s, %s", secure($offset, 'int', false), secure($system['min_results'], 'int', false));
     if (!$pass_check) {
       $comment = $this->get_comment($comment_id);
       if (!$comment) {
         _error(403);
       }
       $post_author_id = $comment['post']['author_id'];
+      $live_post = $comment['post'];
     } else {
       $post_author_id = $post['author_id'];
+      $live_post = $post;
     }
     /* get replies */
-    $get_replies = $db->query(sprintf("SELECT * FROM (SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'comment' AND posts_comments.node_id = %s ORDER BY posts_comments.comment_id DESC LIMIT %s, %s) comments ORDER BY comments.comment_id ASC", secure($comment_id, 'int'), secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+    $get_replies = ((!$offset && !$cursor) ? $this->post_details('replies', $comment_id) : null) ?? $db->query(sprintf("SELECT * FROM (SELECT posts_comments.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name, pages.* FROM posts_comments LEFT JOIN users ON posts_comments.user_id = users.user_id AND posts_comments.user_type = 'user' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN pages ON posts_comments.user_id = pages.page_id AND posts_comments.user_type = 'page' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL) AND posts_comments.node_type = 'comment' AND posts_comments.node_id = %s" . $cursor_statement . " ORDER BY posts_comments.comment_id DESC" . $limit_statement . ") comments ORDER BY comments.comment_id ASC", secure($comment_id, 'int')));
     if ($get_replies->num_rows == 0) {
       return $replies;
     }
+    /* check if viewer can moderate the live of the post */
+    $live_moderator = $this->can_moderate_live($live_post);
+    $live_running = $live_moderator && ($live_post['live_running'] ?? $this->check_live_post($live_post['post_id']));
     while ($reply = $get_replies->fetch_assoc()) {
+      $oldest_read_id ??= $reply['comment_id'];
 
       /* pass comments_disabled from (post|comment) to reply */
       $reply['comments_disabled'] = (isset($post['comments_disabled'])) ? $post['comments_disabled'] : $comment['comments_disabled'];
@@ -238,29 +262,14 @@ trait CommentsTrait
       $reply['text'] = $this->parse(["text" => $reply['text']]);
 
       /* get the reply author */
-      if ($reply['user_type'] == "user") {
-        /* user type */
-        $reply['author_id'] = $reply['user_id'];
-        $reply['author_picture'] = get_picture($reply['user_picture'], $reply['user_gender']);
-        $reply['author_url'] = $system['system_url'] . '/' . $reply['user_name'];
-        $reply['author_user_name'] = $reply['user_name'];
-        $reply['author_name'] = ($system['show_usernames_enabled']) ? $reply['user_name'] : $reply['user_firstname'] . " " . $reply['user_lastname'];
-        $reply['author_verified'] = $reply['user_verified'];
-      } else {
-        /* page type */
-        $reply['author_id'] = $reply['page_admin'];
-        $reply['author_picture'] = get_picture($reply['page_picture'], "page");
-        $reply['author_url'] = $system['system_url'] . '/pages/' . $reply['page_name'];
-        $reply['author_name'] = $reply['page_title'];
-        $reply['author_verified'] = $reply['page_verified'];
-      }
+      $this->_parse_comment_author($reply);
 
       /* check if viewer user react this reply */
       $reply['i_react'] = false;
       if ($this->_logged_in) {
         /* reaction */
         if ($reply['reactions_total_count'] > 0) {
-          $get_reaction = $db->query(sprintf("SELECT reaction FROM posts_comments_reactions WHERE user_id = %s AND comment_id = %s", secure($this->_data['user_id'], 'int'), secure($reply['comment_id'], 'int')));
+          $get_reaction = $this->post_details('comment_reactions', $reply['comment_id']) ?? $db->query(sprintf("SELECT reaction FROM posts_comments_reactions WHERE user_id = %s AND comment_id = %s", secure($this->_data['user_id'], 'int'), secure($reply['comment_id'], 'int')));
           if ($get_reaction->num_rows > 0) {
             $reply['i_react'] = true;
             $reply['i_reaction'] = $get_reaction->fetch_assoc()['reaction'];
@@ -286,10 +295,20 @@ trait CommentsTrait
         if ($this->_data['user_id'] == $post_author_id) {
           $reply['delete_comment'] = true;
         }
+        /* viewer is a moderator of the live of the post */
+        if ($live_moderator) {
+          $this->_parse_comment_live_moderation($reply, $live_post, $live_running);
+        }
       }
 
       $replies[] = $reply;
     }
+    /* get the live moderation state of the replies authors */
+    if ($live_moderator) {
+      $this->_parse_comments_live_states($replies, $live_post);
+    }
+    /* the position after the oldest reply read */
+    $this->_cursor = cursor_encode([$oldest_read_id]);
     return $replies;
   }
 
@@ -302,11 +321,17 @@ trait CommentsTrait
    * @param string $message
    * @param string $photo
    * @param string $voice_note
+   * @param string $gif
    * @return array
    */
-  public function comment($handle, $node_id, $message, $photo, $voice_note)
+  public function comment($handle, $node_id, $message, $photo, $voice_note, $gif = '')
   {
     global $db, $system, $date;
+
+    /* check comments permission */
+    if (!$this->_data['can_comment']) {
+      throw new Exception(__("You don't have the permission to do this"));
+    }
 
     /* check max comments/hour limit */
     if ($system['max_comments_hour'] > 0 && $this->_data['user_group'] >= 3) {
@@ -330,6 +355,7 @@ trait CommentsTrait
     $comment['text'] = $message;
     $comment['image'] = $photo;
     $comment['voice_note'] = $voice_note;
+    $comment['gif'] = ($gif && $this->_data['can_send_gifs'] && valid_gif_url($gif)) ? $gif : null;
     $comment['time'] = $date;
     $comment['reaction_like_count'] = 0;
     $comment['reaction_love_count'] = 0;
@@ -375,6 +401,15 @@ trait CommentsTrait
       throw new Exception(__("Comments disabled for this post"));
     }
 
+    /* check if the viewer is restricted in the live */
+    if (($post['post_type'] ?? '') == 'live') {
+      $restriction = $this->get_live_restriction($post);
+      if ($restriction && !$this->can_moderate_live($post)) {
+        throw new Exception(($restriction['type'] == 'timeout') ? __("You have been timed out in this live, please try again later") : __("You can't comment on this live"));
+      }
+      $this->check_live_comment_rules($post, $message);
+    }
+
     /* check if there is any blocking between the viewer & the target */
     if (($post['user_type'] == "user" && $this->blocked($post['author_id'])) || ($handle == "comment" && $this->blocked($parent_comment['author_id']))) {
       _error(403);
@@ -384,22 +419,26 @@ trait CommentsTrait
     if (!$post['is_page_admin']) {
       $comment['user_id'] = $this->_data['user_id'];
       $comment['user_type'] = "user";
-      $comment['author_picture'] = $this->_data['user_picture'];
-      $comment['author_url'] = $system['system_url'] . '/' . $this->_data['user_name'];
-      $comment['author_user_name'] = $this->_data['user_name'];
-      $comment['author_name'] = $this->_data['user_fullname'];
-      $comment['author_verified'] = $this->_data['user_verified'];
+      $comment['user_name'] = $this->_data['user_name'];
+      $comment['user_firstname'] = $this->_data['user_firstname'];
+      $comment['user_lastname'] = $this->_data['user_lastname'];
+      $comment['user_gender'] = $this->_data['user_gender'];
+      $comment['user_picture'] = $this->_data['user_picture_raw'];
+      $comment['user_verified'] = $this->_data['user_verified'];
+      $comment['user_subscribed'] = $this->_data['user_subscribed'];
+      $comment['package_name'] = $this->_data['package_name'];
     } else {
       $comment['user_id'] = $post['page_id'];
       $comment['user_type'] = "page";
-      $comment['author_picture'] = get_picture($post['page_picture'], "page");
-      $comment['author_url'] = $system['system_url'] . '/pages/' . $post['page_name'];
-      $comment['author_name'] = $post['page_title'];
-      $comment['author_verified'] = $post['page_verified'];
+      $comment['page_admin'] = $post['page_admin'];
+      $comment['page_picture'] = $post['page_picture'];
+      $comment['page_name'] = $post['page_name'];
+      $comment['page_title'] = $post['page_title'];
+      $comment['page_verified'] = $post['page_verified'];
     }
 
     /* insert the comment */
-    $db->query(sprintf("INSERT INTO posts_comments (node_id, node_type, user_id, user_type, text, image, voice_note, time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", secure($comment['node_id'], 'int'), secure($comment['node_type']), secure($comment['user_id'], 'int'), secure($comment['user_type']), secure($comment['text']), secure($comment['image']), secure($comment['voice_note']), secure($comment['time'])));
+    $db->query(sprintf("INSERT INTO posts_comments (node_id, node_type, user_id, user_type, text, image, gif, voice_note, time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($comment['node_id'], 'int'), secure($comment['node_type']), secure($comment['user_id'], 'int'), secure($comment['user_type']), secure($comment['text']), secure($comment['image']), secure($comment['gif']), secure($comment['voice_note']), secure($comment['time'])));
     $comment['comment_id'] = $db->insert_id;
     /* remove pending uploads */
     remove_pending_uploads([$comment['image']]);
@@ -440,6 +479,9 @@ trait CommentsTrait
       $this->post_mentions($comment['text'], $node_id, "comment_" . $handle, 'comment_' . $comment['comment_id'], [$post['author_id']]);
     }
 
+    /* get the comment author */
+    $this->_parse_comment_author($comment);
+
     /* parse text */
     $comment['text_plain'] = htmlentities($comment['text'], ENT_QUOTES, 'utf-8');
     $comment['text'] = $this->parse(["text" => $comment['text_plain']]);
@@ -458,8 +500,87 @@ trait CommentsTrait
 
 
   /**
+   * _parse_comment_author
+   *
+   * @param array $comment
+   * @return void
+   */
+  private function _parse_comment_author(&$comment)
+  {
+    global $system;
+    if ($comment['user_type'] == "user") {
+      /* user type */
+      $comment['author_id'] = $comment['user_id'];
+      $comment['author_picture'] = get_picture($comment['user_picture'], $comment['user_gender']);
+      $comment['author_url'] = $system['system_url'] . '/' . $comment['user_name'];
+      $comment['author_user_name'] = $comment['user_name'];
+      $comment['author_name'] = ($system['show_usernames_enabled']) ? $comment['user_name'] : $comment['user_firstname'] . " " . $comment['user_lastname'];
+      $comment['author_verified'] = $comment['user_verified'];
+    } else {
+      /* page type */
+      $comment['author_id'] = $comment['page_admin'];
+      $comment['author_picture'] = get_picture($comment['page_picture'], "page");
+      $comment['author_url'] = $system['system_url'] . '/pages/' . $comment['page_name'];
+      $comment['author_name'] = $comment['page_title'];
+      $comment['author_verified'] = $comment['page_verified'];
+      $comment['user_subscribed'] = false;
+    }
+  }
+
+
+  /**
+   * _parse_comment_live_moderation
+   *
+   * @param array $comment
+   * @param array $post
+   * @param boolean $live_running
+   * @return void
+   */
+  private function _parse_comment_live_moderation(&$comment, $post, $live_running)
+  {
+    /* the host comments are managed by the host only */
+    if ($comment['author_id'] != $post['author_id'] || $this->can_manage_live_moderators($post)) {
+      $comment['delete_comment'] = true;
+    }
+    $comment['live_post_id'] = $post['post_id'];
+    $comment['live_moderate'] = $comment['user_type'] == "user" && $comment['user_id'] != $this->_data['user_id'] && $comment['user_id'] != $post['author_id'];
+    $comment['live_restrict'] = $comment['live_moderate'] && $live_running;
+    $comment['live_ban'] = $comment['live_moderate'];
+    $comment['live_moderators'] = $comment['live_moderate'] && $this->can_manage_live_moderators($post);
+  }
+
+
+  /**
+   * _parse_comments_live_states
+   *
+   * @param array $comments
+   * @param array $post
+   * @return void
+   */
+  private function _parse_comments_live_states(&$comments, $post)
+  {
+    $users_ids = [];
+    foreach ($comments as $comment) {
+      if (!empty($comment['live_moderate'])) {
+        $users_ids[] = (int) $comment['user_id'];
+      }
+    }
+    if (!$users_ids) {
+      return;
+    }
+    $states = $this->get_live_users_states($post, array_unique($users_ids));
+    foreach ($comments as &$comment) {
+      if (!empty($comment['live_moderate'])) {
+        $comment['live_restriction'] = $states['restrictions'][$comment['user_id']] ?? '';
+        $comment['live_is_moderator'] = isset($states['moderators'][$comment['user_id']]);
+      }
+    }
+  }
+
+
+  /**
    * get_comment
-   * 
+   *
    * @param integer $comment_id
    * @return array|false
    */
@@ -591,6 +712,10 @@ trait CommentsTrait
       if ($comment['post']['in_event'] && $comment['post']['is_event_admin']) {
         $comment['delete_comment'] = true;
       }
+      /* viewer is a moderator of the live of the post */
+      if ($this->can_moderate_live($comment['post']) && ($comment['author_id'] != $comment['post']['author_id'] || $this->can_manage_live_moderators($comment['post']))) {
+        $comment['delete_comment'] = true;
+      }
     }
     /* delete the comment */
     if ($comment['delete_comment']) {
@@ -629,6 +754,10 @@ trait CommentsTrait
       /* points balance */
       $this->points_balance("delete", $comment['post']['author_id'], "post_comment");
       $this->points_balance("delete", $comment['author_id'], "comment");
+      /* live moderation log */
+      if ($comment['post']['post_type'] == 'live' && $this->_data['user_id'] != $comment['author_id']) {
+        $this->_live_moderation_log($this->live_host($comment['post']), $comment['post']['post_id'], $comment['author_id'], 'delete_comment', html_entity_decode((string) $comment['text'], ENT_QUOTES));
+      }
     }
   }
 

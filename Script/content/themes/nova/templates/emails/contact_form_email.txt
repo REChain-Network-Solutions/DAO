@@ -1,0 +1,13 @@
+{__("Hi")},
+
+{__("You have received a new message through the contact form.")}
+
+{__("Subject")}: {$subject}
+{__("Sender Name")}: {$name}
+{__("Sender Email")}: {$email}
+
+{__("Message")}:
+{$message}
+
+---
+{__($system['system_title'])} — {$system['system_url']}

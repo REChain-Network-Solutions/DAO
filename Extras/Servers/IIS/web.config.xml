@@ -3,9 +3,37 @@
    <system.webServer>
       <rewrite>
          <rules>
+            <rule name="rule 1a-security-uploads" stopProcessing="true">
+              <match url="^content/uploads/.*\.(php[0-9]*|phtml|phtm|pht|phps|phar|cgi|pl|py|rb|asp|aspx|jsp|sh|bash|deb|exe|js|html?|htaccess)$" ignoreCase="true" />
+              <action type="CustomResponse" statusCode="403" statusReason="Forbidden" statusDescription="Forbidden" />
+            </rule>
+            <rule name="rule 1b-security-uploads-double-extension" stopProcessing="true">
+              <match url="^content/uploads/.*\.[^./]+\.[^./]+$" ignoreCase="true" />
+              <action type="CustomResponse" statusCode="403" statusReason="Forbidden" statusDescription="Forbidden" />
+            </rule>
+            <rule name="rule 1c-security-folders" stopProcessing="true">
+              <match url="^content/(cache|backups|themes/[^/]+/src)/" ignoreCase="true" />
+              <action type="CustomResponse" statusCode="403" statusReason="Forbidden" statusDescription="Forbidden" />
+            </rule>
+            <rule name="rule 1c-security-hidden" stopProcessing="true">
+              <match url="(^|/)\.(ht|svn|git)" ignoreCase="true" />
+              <action type="CustomResponse" statusCode="403" statusReason="Forbidden" statusDescription="Forbidden" />
+            </rule>
+            <rule name="rule 1c-security-files" stopProcessing="true">
+              <match url="(\.(htpasswd|ini|log|sh|inc|bak|tpl)|(^|/)(composer\.json|composer\.lock|package\.json|package-lock\.json|vite\.config\.m?js))$" ignoreCase="true" />
+              <action type="CustomResponse" statusCode="403" statusReason="Forbidden" statusDescription="Forbidden" />
+            </rule>
             <rule name="rule 1d" stopProcessing="true">
-              <match url=".*"  />
-              <action type="Rewrite" url="/-"  appendQueryString="true" />
+              <match url=".*" />
+              <conditions logicalGrouping="MatchAny">
+                <add input="{REQUEST_FILENAME}" matchType="IsFile" />
+                <add input="{REQUEST_FILENAME}" matchType="IsDirectory" />
+              </conditions>
+              <action type="None" />
+            </rule>
+            <rule name="rule 1e-apis-php" stopProcessing="true">
+              <match url="^apis/php/(.*)$" />
+              <action type="Rewrite" url="/apis/php/index.php" appendQueryString="true" />
             </rule>
             <rule name="rule 2d" stopProcessing="true">
               <match url="^install/?$"  />
@@ -155,6 +183,34 @@
               <match url="^live/?$"  />
               <action type="Rewrite" url="/live.php"  appendQueryString="true" />
             </rule>
+            <rule name="rule 32e" stopProcessing="true">
+              <match url="^live/following/?$"  />
+              <action type="Rewrite" url="/live.php?view=following"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32k" stopProcessing="true">
+              <match url="^live/manage/?$"  />
+              <action type="Rewrite" url="/live.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32i" stopProcessing="true">
+              <match url="^live/search/?$"  />
+              <action type="Rewrite" url="/live.php?view=search"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32j" stopProcessing="true">
+              <match url="^live/search/([^/]+)/?$"  />
+              <action type="Rewrite" url="/live.php?view=search&amp;query={UrlEncode:{R:1}}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32g" stopProcessing="true">
+              <match url="^live/category/([^/]+)/?$"  />
+              <action type="Rewrite" url="/live.php?view=category&amp;category_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32h" stopProcessing="true">
+              <match url="^live/category/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/live.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 32f" stopProcessing="true">
+              <match url="^live/create/?$"  />
+              <action type="Rewrite" url="/live.php?view=create"  appendQueryString="true" />
+            </rule>
             <rule name="rule 33d" stopProcessing="true">
               <match url="^posts/([^/]+)/?$"  />
               <action type="Rewrite" url="/post.php?post_id={R:1}"  appendQueryString="true" />
@@ -162,6 +218,10 @@
             <rule name="rule 34d" stopProcessing="true">
               <match url="^photos/([^/]+)/?$"  />
               <action type="Rewrite" url="/photo.php?photo_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 34e-embed" stopProcessing="true">
+              <match url="^embed/([^/]+)/?$" />
+              <action type="Rewrite" url="/embed.php?post_id={R:1}" appendQueryString="true" />
             </rule>
             <rule name="rule 35d" stopProcessing="true">
               <match url="^popular/?$"  />
@@ -175,13 +235,29 @@
               <match url="^saved/?$"  />
               <action type="Rewrite" url="/index.php?view=saved"  appendQueryString="true" />
             </rule>
+            <rule name="rule 37e-scheduled" stopProcessing="true">
+              <match url="^scheduled/?$" />
+              <action type="Rewrite" url="/index.php?view=scheduled" appendQueryString="true" />
+            </rule>
             <rule name="rule 38d" stopProcessing="true">
               <match url="^memories/?$"  />
               <action type="Rewrite" url="/index.php?view=memories"  appendQueryString="true" />
             </rule>
+            <rule name="rule 38e" stopProcessing="true">
+              <match url="^stories/archive/?$"  />
+              <action type="Rewrite" url="/index.php?view=stories_archive"  appendQueryString="true" />
+            </rule>
             <rule name="rule 39d" stopProcessing="true">
               <match url="^watch/?$"  />
               <action type="Rewrite" url="/watch.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 39h" stopProcessing="true">
+              <match url="^watch/following/?$"  />
+              <action type="Rewrite" url="/watch.php?view=following"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 39i" stopProcessing="true">
+              <match url="^watch/manage/?$"  />
+              <action type="Rewrite" url="/watch.php?view=manage"  appendQueryString="true" />
             </rule>
             <rule name="rule 39e" stopProcessing="true">
               <match url="^watch/category/([^/]+)/?$"  />
@@ -371,13 +447,21 @@
               <match url="^reels/([^/]+)/?$"  />
               <action type="Rewrite" url="/reels.php?view=reel&amp;post_id={R:1}"  appendQueryString="true" />
             </rule>
-            <rule name="rule 84d" stopProcessing="true">
-              <match url="^my/blogs/?$"  />
-              <action type="Rewrite" url="/index.php?view=blogs"  appendQueryString="true" />
-            </rule>
             <rule name="rule 85d" stopProcessing="true">
               <match url="^blogs/?$"  />
               <action type="Rewrite" url="/blogs.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 85g" stopProcessing="true">
+              <match url="^blogs/rss/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=rss"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 85e" stopProcessing="true">
+              <match url="^blogs/manage/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 85f" stopProcessing="true">
+              <match url="^blogs/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 86d" stopProcessing="true">
               <match url="^blogs/new/?$"  />
@@ -387,21 +471,53 @@
               <match url="^blogs/edit/([^/]+)/?$"  />
               <action type="Rewrite" url="/blogs.php?view=edit&amp;post_id={R:1}"  appendQueryString="true" />
             </rule>
+            <rule name="rule 87e" stopProcessing="true">
+              <match url="^blogs/search/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=search"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 87f" stopProcessing="true">
+              <match url="^blogs/search/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=search&amp;query={UrlEncode:{R:1}}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 87g" stopProcessing="true">
+              <match url="^blogs/search/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=search&amp;query={UrlEncode:{R:1}}&amp;page={UrlEncode:{R:2}}"  appendQueryString="true" />
+            </rule>
             <rule name="rule 88d" stopProcessing="true">
-              <match url="^blogs/category/([^/]+)/([^/]+)/?$"  />
+              <match url="^blogs/category/([^/]+)/?$"  />
               <action type="Rewrite" url="/blogs.php?view=category&amp;category_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 88e" stopProcessing="true">
+              <match url="^blogs/category/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 88g" stopProcessing="true">
+              <match url="^blogs/category/([^/]+)/([^/]+)/rss/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=rss&amp;category_id={R:1}&amp;category_url={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 88f" stopProcessing="true">
+              <match url="^blogs/category/([^/]+)/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}&amp;page={R:3}"  appendQueryString="true" />
             </rule>
             <rule name="rule 89d" stopProcessing="true">
               <match url="^blogs/([^/]+)/([^/]+)/?$"  />
               <action type="Rewrite" url="/blogs.php?view=blog&amp;post_id={R:1}"  appendQueryString="true" />
             </rule>
-            <rule name="rule 90d" stopProcessing="true">
-              <match url="^my/products/?$"  />
-              <action type="Rewrite" url="/index.php?view=products"  appendQueryString="true" />
+            <rule name="rule 89e" stopProcessing="true">
+              <match url="^blogs/([^/]+)/?$"  />
+              <action type="Rewrite" url="/blogs.php?page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 91d" stopProcessing="true">
               <match url="^market/?$"  />
               <action type="Rewrite" url="/market.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 91e" stopProcessing="true">
+              <match url="^market/manage/?$"  />
+              <action type="Rewrite" url="/market.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 91f" stopProcessing="true">
+              <match url="^market/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/market.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 92d" stopProcessing="true">
               <match url="^market/cart/?$"  />
@@ -443,13 +559,45 @@
               <match url="^market/([^/]+)/?$"  />
               <action type="Rewrite" url="/market.php?page={R:1}"  appendQueryString="true" />
             </rule>
-            <rule name="rule 102d" stopProcessing="true">
-              <match url="^my/funding/?$"  />
-              <action type="Rewrite" url="/index.php?view=funding"  appendQueryString="true" />
-            </rule>
             <rule name="rule 103d" stopProcessing="true">
               <match url="^funding/?$"  />
               <action type="Rewrite" url="/funding.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103e" stopProcessing="true">
+              <match url="^funding/manage/?$"  />
+              <action type="Rewrite" url="/funding.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103f" stopProcessing="true">
+              <match url="^funding/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103g" stopProcessing="true">
+              <match url="^funding/search/?$"  />
+              <action type="Rewrite" url="/funding.php?view=search"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103h" stopProcessing="true">
+              <match url="^funding/search/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=search&amp;query={UrlEncode:{R:1}}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103i" stopProcessing="true">
+              <match url="^funding/search/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=search&amp;query={UrlEncode:{R:1}}&amp;page={UrlEncode:{R:2}}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103j" stopProcessing="true">
+              <match url="^funding/category/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=category&amp;category_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103k" stopProcessing="true">
+              <match url="^funding/category/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103l" stopProcessing="true">
+              <match url="^funding/category/([^/]+)/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?view=category&amp;category_id={R:1}&amp;category_url={R:2}&amp;page={R:3}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 103m" stopProcessing="true">
+              <match url="^funding/([^/]+)/?$"  />
+              <action type="Rewrite" url="/funding.php?page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 104d" stopProcessing="true">
               <match url="^funding/([^/]+)/([^/]+)/?$"  />
@@ -458,6 +606,14 @@
             <rule name="rule 105d" stopProcessing="true">
               <match url="^offers/?$"  />
               <action type="Rewrite" url="/offers.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 105e" stopProcessing="true">
+              <match url="^offers/manage/?$"  />
+              <action type="Rewrite" url="/offers.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 105f" stopProcessing="true">
+              <match url="^offers/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/offers.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 106d" stopProcessing="true">
               <match url="^offers/search/?$"  />
@@ -491,6 +647,14 @@
               <match url="^jobs/?$"  />
               <action type="Rewrite" url="/jobs.php"  appendQueryString="true" />
             </rule>
+            <rule name="rule 113e" stopProcessing="true">
+              <match url="^jobs/manage/?$"  />
+              <action type="Rewrite" url="/jobs.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 113f" stopProcessing="true">
+              <match url="^jobs/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/jobs.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
+            </rule>
             <rule name="rule 114d" stopProcessing="true">
               <match url="^jobs/search/?$"  />
               <action type="Rewrite" url="/jobs.php?view=search"  appendQueryString="true" />
@@ -522,6 +686,14 @@
             <rule name="rule 121d" stopProcessing="true">
               <match url="^courses/?$"  />
               <action type="Rewrite" url="/courses.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 121e" stopProcessing="true">
+              <match url="^courses/manage/?$"  />
+              <action type="Rewrite" url="/courses.php?view=manage"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 121f" stopProcessing="true">
+              <match url="^courses/manage/([^/]+)/?$"  />
+              <action type="Rewrite" url="/courses.php?view=manage&amp;page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 122d" stopProcessing="true">
               <match url="^courses/search/?$"  />
@@ -555,6 +727,10 @@
               <match url="^forums/?$"  />
               <action type="Rewrite" url="/forums.php"  appendQueryString="true" />
             </rule>
+            <rule name="rule 129d-2" stopProcessing="true">
+              <match url="^forums/recent/?$"  />
+              <action type="Rewrite" url="/forums.php?view=recent"  appendQueryString="true" />
+            </rule>
             <rule name="rule 130d" stopProcessing="true">
               <match url="^forums/my-threads/?$"  />
               <action type="Rewrite" url="/forums.php?view=my-threads"  appendQueryString="true" />
@@ -571,6 +747,10 @@
               <match url="^forums/search-results/?$"  />
               <action type="Rewrite" url="/forums.php?view=search-results"  appendQueryString="true" />
             </rule>
+            <rule name="rule 133d-2" stopProcessing="true">
+              <match url="^forums/new-thread/?$"  />
+              <action type="Rewrite" url="/forums.php?view=new-thread"  appendQueryString="true" />
+            </rule>
             <rule name="rule 134d" stopProcessing="true">
               <match url="^forums/new-thread/([^/]+)/?$"  />
               <action type="Rewrite" url="/forums.php?view=new-thread&amp;forum_id={R:1}"  appendQueryString="true" />
@@ -586,6 +766,18 @@
             <rule name="rule 137d" stopProcessing="true">
               <match url="^forums/edit-reply/([^/]+)/?$"  />
               <action type="Rewrite" url="/forums.php?view=edit-reply&amp;reply_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 137d-2" stopProcessing="true">
+              <match url="^forums/rss/?$"  />
+              <action type="Rewrite" url="/forums.php?view=rss"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 137d-3" stopProcessing="true">
+              <match url="^forums/thread/([^/]+)/([^/]+)/rss/?$"  />
+              <action type="Rewrite" url="/forums.php?view=rss&amp;thread_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 137d-4" stopProcessing="true">
+              <match url="^forums/([^/]+)/([^/]+)/rss/?$"  />
+              <action type="Rewrite" url="/forums.php?view=rss&amp;forum_id={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 138d" stopProcessing="true">
               <match url="^forums/thread/([^/]+)/([^/]+)/?$"  />
@@ -639,6 +831,22 @@
               <match url="^games/played/?$"  />
               <action type="Rewrite" url="/games.php?view=played"  appendQueryString="true" />
             </rule>
+            <rule name="rule 150e" stopProcessing="true">
+              <match url="^games/played/([^/]+)/?$"  />
+              <action type="Rewrite" url="/games.php?view=played&amp;page={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 150f" stopProcessing="true">
+              <match url="^games/search/?$"  />
+              <action type="Rewrite" url="/games.php?view=search"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 150g" stopProcessing="true">
+              <match url="^games/search/([^/]+)/?$"  />
+              <action type="Rewrite" url="/games.php?view=search&amp;query={UrlEncode:{R:1}}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 150h" stopProcessing="true">
+              <match url="^games/search/([^/]+)/([^/]+)/?$"  />
+              <action type="Rewrite" url="/games.php?view=search&amp;query={UrlEncode:{R:1}}&amp;page={UrlEncode:{R:2}}"  appendQueryString="true" />
+            </rule>
             <rule name="rule 151d" stopProcessing="true">
               <match url="^games/genre/([^/]+)/?$"  />
               <action type="Rewrite" url="/games.php?view=genre&amp;genre_id={R:1}"  appendQueryString="true" />
@@ -654,6 +862,10 @@
             <rule name="rule 154d" stopProcessing="true">
               <match url="^games/([^/]+)/([^/]+)/?$"  />
               <action type="Rewrite" url="/games.php?view=game&amp;game_id={R:1}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 154e" stopProcessing="true">
+              <match url="^games/([^/]+)/?$"  />
+              <action type="Rewrite" url="/games.php?page={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 155d" stopProcessing="true">
               <match url="^api/([^/]+)/?$"  />
@@ -678,6 +890,14 @@
             <rule name="rule 160d" stopProcessing="true">
               <match url="^merits/?$"  />
               <action type="Rewrite" url="/merits.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 160e" stopProcessing="true">
+              <match url="^dating/?$"  />
+              <action type="Rewrite" url="/dating.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 160f" stopProcessing="true">
+              <match url="^dating/([^/]+)/?$"  />
+              <action type="Rewrite" url="/dating.php?view={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 161d" stopProcessing="true">
               <match url="^modcp/?$"  />
@@ -710,6 +930,26 @@
             <rule name="rule 168d" stopProcessing="true">
               <match url="^admincp/([^/]+)/([^/]+)/([^/]+)/?$"  />
               <action type="Rewrite" url="/admin.php?view={R:1}&amp;sub_view={R:2}&amp;id={R:3}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 172d" stopProcessing="true">
+              <match url="^sitemap\.xml$"  />
+              <action type="Rewrite" url="/sitemap.php"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 173d" stopProcessing="true">
+              <match url="^sitemap-([a-z]+)-([0-9]+)\.xml$"  />
+              <action type="Rewrite" url="/sitemap.php?view=part&amp;type={R:1}&amp;part={R:2}"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 174d" stopProcessing="true">
+              <match url="^robots\.txt$"  />
+              <action type="Rewrite" url="/sitemap.php?view=robots"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 175d" stopProcessing="true">
+              <match url="^llms\.txt$"  />
+              <action type="Rewrite" url="/sitemap.php?view=llms"  appendQueryString="true" />
+            </rule>
+            <rule name="rule 176d" stopProcessing="true">
+              <match url="^([a-f0-9]{32})\.txt$"  />
+              <action type="Rewrite" url="/sitemap.php?view=key&amp;key={R:1}"  appendQueryString="true" />
             </rule>
             <rule name="rule 169d" stopProcessing="true">
               <match url="^([^/]+)/?$"  />

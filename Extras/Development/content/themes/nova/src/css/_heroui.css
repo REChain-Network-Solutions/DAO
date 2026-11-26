@@ -1,0 +1,30 @@
+/* Full @heroui/styles minus the barrel (that re-imports Tailwind).
+   Usage: <div class="heroui">…</div> — do not mix FlyonUI .input/.modal/.btn inside.
+   Use hui-card / hui-avatar / hui-input / hui-textarea / hui-label / hui-input-group
+   (not card / avatar / input / textarea / label / input-group) so FlyonUI utilities do not win. */
+@import "tw-animate-css";
+@import "@heroui/styles/base/base.css" layer(base);
+@import "@heroui/styles/base/scrollbar.css" layer(base);
+@import "@heroui/styles/components/index.css" layer(components);
+@import "@heroui/styles/themes/default" layer(theme);
+@import "@heroui/styles/utilities";
+@import "@heroui/styles/variants";
+
+.heroui {
+  --accent: #523ae2;
+  --accent-foreground: #ffffff;
+}
+
+[data-theme="nova-dark"] .heroui {
+  --accent: #7c69f2;
+}
+
+[data-theme="admin"] .heroui {
+  --accent: oklch(20.5% 0 0);
+  --accent-foreground: oklch(98.5% 0 0);
+}
+
+[data-theme="admin-dark"] .heroui {
+  --accent: oklch(92.2% 0 0);
+  --accent-foreground: oklch(20.5% 0 0);
+}

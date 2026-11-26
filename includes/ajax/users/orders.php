@@ -33,30 +33,39 @@ try {
       if (!$user->_is_admin && !$user->_is_moderator) {
         throw new Exception(__("You don't have the right permission to access this"));
       }
+      if (!licence_has_entitlement('monetization')) {
+        licence_throw_admin_lock();
+      }
 
       // get order
       $smarty->assign('order', $user->get_order($_GET['id'], false, true));
 
       // return
       $return['template'] = $smarty->fetch("ajax.orders.view.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'edit':
 
       // get order
       $for_admin = ($user->_is_admin || $user->_is_moderator) ? true : false;
+      if ($for_admin && !licence_has_entitlement('monetization')) {
+        licence_throw_admin_lock();
+      }
       $smarty->assign('order', $user->get_order($_GET['id'], false, $for_admin));
 
       // return
       $return['template'] = $smarty->fetch("ajax.orders.edit.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'update':
 
       // update order
       $for_admin = ($user->_is_admin || $user->_is_moderator) ? true : false;
+      if ($for_admin && !licence_has_entitlement('monetization')) {
+        licence_throw_admin_lock();
+      }
       $user->update_order($_POST['order_id'], $_POST['status'], $_POST['tracking_link'], $_POST['tracking_number'], $for_admin);
 
       // return
@@ -67,6 +76,9 @@ try {
 
       // get order
       $for_admin = ($user->_is_admin || $user->_is_moderator) ? true : false;
+      if ($for_admin && !licence_has_entitlement('monetization')) {
+        licence_throw_admin_lock();
+      }
       $smarty->assign('order', $user->get_order($_GET['id'], true, $for_admin));
 
       // return

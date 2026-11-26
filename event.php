@@ -36,6 +36,10 @@ try {
   /* get the connection */
   $event['i_admin'] = $user->check_event_adminship($user->_data['user_id'], $event['event_id']);
   $event['i_joined'] = $user->check_event_membership($user->_data['user_id'], $event['event_id']);
+  /* add shortcut */
+  if ($user->_logged_in && $event['i_joined'] && ($event['i_joined']['is_going'] == '1' || $event['i_joined']['is_interested'] == '1')) {
+    $user->add_shortcut($event['event_id'], 'event');
+  }
   /* get event host */
   if ($event['event_page_id']) {
     $event['event_page'] = $user->get_page($event['event_page_id']);
@@ -61,6 +65,10 @@ try {
   /* get event videos count */
   if ($system['videos_enabled']) {
     $event['videos_count'] = $user->get_videos_count($event['event_id'], 'event');
+  }
+  /* get event reels count */
+  if ($system['reels_enabled']) {
+    $event['reels_count'] = $user->get_reels_count($event['event_id'], 'event');
   }
   /* get event reviews count */
   if ($system['events_reviews_enabled']) {
@@ -88,9 +96,6 @@ try {
       /* get custom fields */
       $smarty->assign('custom_fields', $user->get_custom_fields(["for" => "event", "get" => "profile", "node_id" => $event['event_id']]));
 
-      /* get invites */
-      $event['invites'] = $user->get_event_invites($event['event_id']);
-
       /* get photos */
       $event['photos'] = $user->get_photos($event['event_id'], 'event');
 
@@ -100,15 +105,6 @@ try {
         $event['pending_posts'] = $user->get_event_pending_posts($event['event_id'], $get_all);
       }
 
-      /* prepare publisher */
-      $smarty->assign('feelings', get_feelings());
-      $smarty->assign('feelings_types', get_feelings_types());
-      if ($system['colored_posts_enabled']) {
-        $smarty->assign('colored_patterns', $user->get_posts_colored_patterns());
-      }
-      if ($user->_data['can_upload_videos']) {
-        $smarty->assign('videos_categories', $user->get_categories("posts_videos_categories"));
-      }
       /* check if there is share URL */
       if ($_GET['url']) {
         $smarty->assign('url', $_GET['url']);
@@ -189,6 +185,10 @@ try {
       break;
 
     case 'products':
+      redirect('/events/' . $event['event_id'] . '/listings');
+      break;
+
+    case 'listings':
       /* get posts (products) */
       $posts = $user->get_posts(['get' => 'posts_event', 'id' => $event['event_id'], 'filter' => 'product']);
       /* assign variables */
@@ -203,6 +203,7 @@ try {
       /* get reviews */
       if ($event['reviews_count'] > 0) {
         $event['reviews'] = $user->get_reviews($event['event_id'], 'event');
+        $event['reviews_details'] = $user->get_reviews_details($event['event_id'], 'event');
       }
       break;
 
@@ -228,16 +229,6 @@ try {
         $event['members'] = $user->get_event_members($event['event_id'], 'invited');
       }
       $event['total_members'] = $event['event_invited'];
-      break;
-
-    case 'invites':
-      /* check if the viewer is a event member */
-      if (!$event['i_joined']) {
-        _error(404);
-      }
-      /* get invites */
-      $event['members'] = $user->get_event_invites($event['event_id']);
-      $event['total_members'] = count($event['members']);
       break;
 
     case 'search':

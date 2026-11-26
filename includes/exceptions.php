@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * exceptions
+ * 
+ * @package Sngine
+ * @author Zamblek
+ */
+
+/* ------------------------------- */
+/* Exceptions */
+/* ------------------------------- */
+
 // SQL Exception (500)
 class SQLException extends Exception
 {

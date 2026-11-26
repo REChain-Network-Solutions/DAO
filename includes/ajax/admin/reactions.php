@@ -14,14 +14,15 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_customization_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_customization_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
+
+// refresh the compiled system cache
+register_shutdown_function('system_cache_flush');
 
 // handle reactions
 try {

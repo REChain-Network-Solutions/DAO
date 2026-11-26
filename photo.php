@@ -32,7 +32,7 @@ try {
   $smarty->assign('photo', $photo);
 
   // get ads campaigns
-  $ads_campaigns = $user->ads_campaigns();
+  $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : [];
   /* assign variables */
   $smarty->assign('ads_campaigns', $ads_campaigns);
 

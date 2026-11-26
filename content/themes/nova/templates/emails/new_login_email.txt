@@ -1,0 +1,18 @@
+{__("Hi")} {$receiver['user_name']},
+
+{__("Your account was just logged in from a new location.")}
+
+{__("Country")}: {$login['country']}
+{__("Network")}: {$login['isp']}
+{__("IP Address")}: {$login['ip']}
+{__("Browser")}: {$login['browser']}
+{__("OS")}: {$login['os']}
+{__("Date")}: {$login['time']}
+
+{__("Review your sessions")}: {$system['system_url']}/settings/security/sessions
+
+{__("If this was not you, end the session and change your password immediately as your account may be compromised.")}
+
+---
+{__($system['system_title'])} — {$system['system_url']}
+{__("Manage email preferences")}: {$system['system_url']}/settings/notifications

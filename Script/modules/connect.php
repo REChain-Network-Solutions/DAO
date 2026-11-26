@@ -167,7 +167,6 @@ try {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response = curl_exec($ch);
-        curl_close($ch);
         $responseJson = json_decode($response, true);
         if ($responseJson['error']) {
           throw new Exception($responseJson['message']);
@@ -180,7 +179,6 @@ try {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response = curl_exec($ch);
-        curl_close($ch);
         $responseJson = json_decode($response, true);
         if ($responseJson['error']) {
           throw new Exception($responseJson['message']);

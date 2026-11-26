@@ -166,6 +166,7 @@ trait MeritsTrait
       $post_id = $db->insert_id;
       /* insert the merit post details */
       $db->query(sprintf("INSERT INTO posts_merits (post_id, category_id, message, image) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($category_id, 'int'), secure($message), secure($image)));
+      $this->refresh_post_search($post_id);
       /* notify the recepients */
       if ($system['merits_notifications_recipient']) {
         $this->post_notification(['to_user_id' => $recepients_id, 'action' => 'merit_received', 'node_url' => $post_id]);
@@ -185,6 +186,22 @@ trait MeritsTrait
    */
   public function get_merits_top_users()
   {
+    global $system;
+    /* the same for everyone in the current cycle */
+    $cycle_dates = $this->get_merits_cycle_dates();
+    return widget_cache('merits_top_users:' . md5(json_encode($cycle_dates)) . ':' . $system['current_language'], 300, function () {
+      return $this->build_merits_top_users();
+    });
+  }
+
+
+  /**
+   * build_merits_top_users
+   *
+   * @return array
+   */
+  private function build_merits_top_users()
+  {
     global $system, $db;
     $results = [];
     /* get merits current cycle dates */
@@ -192,7 +209,7 @@ trait MeritsTrait
     /* loop through the merits categories */
     $merits_categories = $this->get_categories("merits_categories");
     foreach ($merits_categories as $category) {
-      $get_top_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, COUNT(*) as count FROM users_merits INNER JOIN users ON users_merits.to_user_id = users.user_id WHERE users_merits.category_id = %s AND users_merits.sent_date >= %s AND users_merits.sent_date <= %s GROUP BY users_merits.to_user_id ORDER BY count DESC LIMIT 1", secure($category['category_id'], 'int'), secure($cycle_dates['start_date']), secure($cycle_dates['end_date'])));
+      $get_top_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, MAX(packages.name) AS package_name, COUNT(*) as count FROM users_merits INNER JOIN users ON users_merits.to_user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users_merits.category_id = %s AND users_merits.sent_date >= %s AND users_merits.sent_date <= %s GROUP BY users_merits.to_user_id ORDER BY count DESC LIMIT 1", secure($category['category_id'], 'int'), secure($cycle_dates['start_date']), secure($cycle_dates['end_date'])));
       if ($get_top_users->num_rows > 0) {
         $user = $get_top_users->fetch_assoc();
         $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
@@ -223,7 +240,7 @@ trait MeritsTrait
     $args['limit'] = (isset($args['limit'])) ? $args['limit'] : '10';
     /* get users */
     $where_query = ($args['category'] && $args['category'] != "all") ? " AND users_merits.category_id = " . secure($args['category'], 'int') : "";
-    $get_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_picture, COUNT(*) as count FROM users_merits INNER JOIN users ON users_merits.to_user_id = users.user_id WHERE users_merits.sent_date >= %s AND users_merits.sent_date <= %s %s GROUP BY users_merits.to_user_id ORDER BY count DESC LIMIT %s", secure($args['start_date']), secure($args['end_date']), $where_query, $args['limit']));
+    $get_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, MAX(packages.name) AS package_name, COUNT(*) as count FROM users_merits INNER JOIN users ON users_merits.to_user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users_merits.sent_date >= %s AND users_merits.sent_date <= %s %s GROUP BY users_merits.to_user_id ORDER BY count DESC LIMIT %s", secure($args['start_date']), secure($args['end_date']), $where_query, $args['limit']));
     if ($get_users->num_rows > 0) {
       while ($user = $get_users->fetch_assoc()) {
         $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);

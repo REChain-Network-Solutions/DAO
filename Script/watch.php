@@ -47,9 +47,9 @@ try {
 
       // get posts (watch)
       /* first get the videos from public */
-      $posts_discover = ($selected_country) ? $user->get_posts(['get' => 'discover', 'filter' => 'video', 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'discover', 'filter' => 'video']);
+      $posts_discover = ($selected_country) ? $user->get_posts(['get' => 'discover', 'filter' => 'video', 'results' => $system['watch_results'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'discover', 'filter' => 'video', 'results' => $system['watch_results']]);
       /* second get the videos from friends */
-      $posts_friends = ($selected_country) ? $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'newsfeed', 'filter' => 'video']);
+      $posts_friends = ($selected_country) ? $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'results' => $system['watch_results'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'results' => $system['watch_results']]);
       /* merge the two arrays */
       $posts = array_merge($posts_discover, $posts_friends);
       /* assign variables */
@@ -80,14 +80,36 @@ try {
 
       // get posts (watch)
       /* first get the videos from public */
-      $posts_discover = ($selected_country) ? $user->get_posts(['get' => 'discover', 'filter' => 'video', 'category' => $_GET['category_id'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'discover', 'filter' => 'video', 'category' => $_GET['category_id']]);
+      $posts_discover = ($selected_country) ? $user->get_posts(['get' => 'discover', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_GET['category_id'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'discover', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_GET['category_id']]);
       /* second get the videos from friends */
-      $posts_friends = ($selected_country) ? $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'category' => $_GET['category_id'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'category' => $_GET['category_id']]);
+      $posts_friends = ($selected_country) ? $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_GET['category_id'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_GET['category_id']]);
       /* merge the two arrays */
       $posts = array_merge($posts_discover, $posts_friends);
       /* assign variables */
       $smarty->assign('posts', $posts);
       $smarty->assign('view_title', __($current_category['category_name']));
+      break;
+
+    case 'following':
+      // page header
+      page_header(__("Watch") . ' | ' . __($system['system_title']));
+
+      // get posts (friends & following)
+      $posts = ($selected_country) ? $user->get_posts(['get' => 'following', 'filter' => 'video', 'results' => $system['watch_results'], 'country' => $selected_country['country_id']]) : $user->get_posts(['get' => 'following', 'filter' => 'video', 'results' => $system['watch_results']]);
+      /* assign variables */
+      $smarty->assign('posts', $posts);
+      $smarty->assign('view_title', ($system['friends_enabled']) ? __("Friends & Following") : __("Following"));
+      break;
+
+    case 'manage':
+      // page header
+      page_header(__("My Videos") . ' | ' . __($system['system_title']));
+
+      // get posts (my videos)
+      $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'video', 'results' => $system['watch_results']]);
+      /* assign variables */
+      $smarty->assign('posts', $posts);
+      $smarty->assign('view_title', __("My Videos"));
       break;
 
     default:

@@ -24,7 +24,7 @@ try {
       $user->getting_satrted_update($_POST);
 
       // return
-      return_json(['success' => true, 'message' => __("Your info has been updated")]);
+      return_json(['callback' => '$(".js_wizard-steps li:eq(2) a").removeClass("disabled").trigger("click");']);
       break;
 
     case 'finish':

@@ -24,19 +24,23 @@ trait AnnouncementsTrait
   {
     global $db, $date;
     $announcements = [];
-    $get_announcement = $db->query(sprintf('SELECT * FROM announcements WHERE start_date <= %1$s AND end_date >= %1$s', secure($date)));
-    if ($get_announcement->num_rows > 0) {
-      while ($announcement = $get_announcement->fetch_assoc()) {
-        /* check if the user already hide the announcement */
-        if ($this->_logged_in) {
-          $check = $db->query(sprintf("SELECT COUNT(*) as count FROM announcements_users WHERE announcement_id = %s AND user_id = %s", secure($announcement['announcement_id'], 'int'), secure($this->_data['user_id'], 'int')));
-          if ($check->fetch_assoc()['count'] > 0) {
-            continue;
-          }
-        }
-        $announcement['code'] = html_entity_decode($announcement['code'], ENT_QUOTES);
-        $announcements[] = $announcement;
+    /* announcements not ended yet (the same for everyone) */
+    $active_announcements = widget_cache('announcements', 60, function () use ($db, $date) {
+      return $db->query(sprintf('SELECT * FROM announcements WHERE end_date >= %s', secure($date)))->fetch_all(MYSQLI_ASSOC);
+    });
+    foreach ($active_announcements as $announcement) {
+      if ($announcement['start_date'] > $date || $announcement['end_date'] < $date) {
+        continue;
       }
+      /* check if the user already hide the announcement */
+      if ($this->_logged_in) {
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM announcements_users WHERE announcement_id = %s AND user_id = %s", secure($announcement['announcement_id'], 'int'), secure($this->_data['user_id'], 'int')));
+        if ($check->fetch_assoc()['count'] > 0) {
+          continue;
+        }
+      }
+      $announcement['code'] = html_entity_decode($announcement['code'], ENT_QUOTES);
+      $announcements[] = $announcement;
     }
     return $announcements;
   }

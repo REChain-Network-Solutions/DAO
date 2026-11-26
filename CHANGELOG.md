@@ -1,4 +1,259 @@
-﻿#== v4.4 == ( 31-05-2026 )
+﻿#== v5.0 == ( 20-10-2026 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Post Views Counting & Storage
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
+- [Updated] jQuery to v4.0
+- [Updated] Page Loading Performance
+- [Updated] JS Libraries Served Locally Instead of CDNs
+- [Updated] Audio/Video Calls UI
+- [Updated] Live Streaming UI
+- [Updated] Live Stream Notifications Now Reach Followers
+- [Updated] People Finder Search Uses Bookmarkable URLs
+- [Updated] Faster Ad Campaigns & Nearby People Suggestions (No Random Database Sorting)
+- [Updated] Faster Promoted Posts, Pages, Groups, Events & Pro Members Widgets
+- [Updated] Faster Suggested People, Pages, Groups, Events & Articles Widgets
+- [Updated] API People Suggestions Random Option Accepts true/false
+- [Updated] Faster People Near You Suggestions, Listing & People Finder
+- [Updated] Faster Distance Filter for Market, Jobs, Offers, Funding, Courses & Blogs
+- [Updated] Faster Load More for All Lists (Feeds, Comments, Chat, People, Reactions, Pages, Groups & Events)
+- [Updated] Faster Deep Pages in AdminCP, Directory, Forums & Support
+- [Updated] Faster Posts Search That Also Matches Titles (Blogs, Jobs, Products, Offers, Courses, Funding & Live)
+- [Updated] Videos Open in a Lightbox with Comments & Reactions
+- [Updated] Yandex Translation to Yandex Cloud Translate API
+- [Updated] Unusual Login Detection Only Ends Sessions That Move to Another Country (with IPinfo)
+- [Updated] Infobip SMS Provider to the Latest API (API Key, Base URL & Sender)
+- [Updated] Getting Started Saves Your Info When You Click Next (Country Is Optional Unless Location Is Required)
+- [Updated] Forums Revamp (New Categories Home, Recent Threads Page, Thread Timeline & Inline Reply)
+- [Updated] Upload Size Limits & Watermark Opacity Are Now Select Menus & Sliders (1 MB to 25 GB)
+- [Updated] Watermark Position Is Now Picked by Dragging on a Live Preview (Photos & Videos)
+- [Updated] Chat Socket Server Restarts Automatically When Audio/Video Call Settings Change
+- [Updated] Rich Text Editor Follows Night Mode
+- [Updated] PWA Install Banner Redesigned as a Compact Card
+- [Updated] FFmpeg Skips 1440p & 2160p Conversions for Reels
+
+- [Added] Reels Revamp
+- [Added] New Default Theme "Nova"
+- [Added] New 9 Landing Page Designs
+- [Added] Themes Demo
+- [Added] Theme Titles
+- [Added] Per-Theme Design (Colors, Wallpaper, Night Mode, Fluid Width & Custom CSS)
+- [Added] Per-Theme Mobile Bottom Bar (Drag to Choose & Reorder Items in AdminCP)
+- [Added] Country Flags
+- [Added] Translation Caching System
+- [Added] Original & Locked Views for Post Creator
+- [Added] Photos Layout System
+- [Added] Photo Order for Multi-Photo Posts
+- [Added] Full Post Editing via Publisher
+- [Added] Mutual Friends on Directory Cards
+- [Added] People You May Know Ranked by Mutual Friends
+- [Added] Load More for People Finder
+- [Added] Chat Messages Deletion
+- [Added] Chat Messages Reactions
+- [Added] Chat Messages Copy
+- [Added] Chat Messages Pin
+- [Added] Chat Messages Reply
+- [Added] Chat Attachments (Videos)
+- [Added] Chat Attachments (Files)
+- [Added] Chat Multiple Attachments (Photos|Videos|Files)
+- [Added] Chat Group Features (Add/Remove Users & Rename)
+- [Added] Chat Files Upload Toggle
+- [Added] Chat Files Download
+- [Added] GIFs in Chat Messages
+- [Added] GIFs in Comments
+- [Added] Admin Review for Reported Messages & Conversations
+- [Added] Pages Messages (Users Can Message Pages)
+- [Added] Pages Inbox for Page Admins
+- [Added] Pages Messages Toggle (Admin Panel & Page Settings)
+- [Added] Blogs RSS
+- [Added] Blogs Reading Time
+- [Added] New Blog Post Page Design
+- [Added] Blogs Search & Manage Pages
+- [Added] Save Blog Articles
+- [Added] Paid Preview Image for Blogs
+- [Added] Scheduled Blogs
+- [Added] Blogs Cover Required Option (Admin Panel)
+- [Added] Age Range for Ads
+- [Added] Higher-Budget Ads Priority Toggle
+- [Added] Ads Rotation per Viewer Session
+- [Added] Funding Search
+- [Added] Manage Pages for Market, Offers, Jobs & Courses
+- [Added] Games Search & Pagination
+- [Added] Movies Pagination
+- [Added] Admin Limits for People & Movies Results
+- [Added] Admin Command Palette
+- [Added] Quick Search Command Palette
+- [Added] Settings Search from Quick Search
+- [Added] Admin Dashboard Monthly Insights
+- [Added] Admin Stats for Groups, Events & Blogs
+- [Added] Re-Approval for Edited Posts
+- [Added] Post Edit Time Limit
+- [Added] Custom Unique Post Views Period (Lifetime or Days)
+- [Added] Post Views Reset & Cleanup (Garbage Collector & Cronjob)
+- [Added] OVH Object Storage Support
+- [Added] Bunny Storage Support
+- [Added] Storj Cloud Storage Support
+- [Added] Audio/Video Calls Controls (Mute Mic, Camera On/Off & Full Screen)
+- [Added] Audio/Video Calls Log in Conversations (Missed, Declined & Call Duration)
+- [Added] Live Stream Comments for Broadcasters
+- [Added] Real-Time Live Stream Comments, Replies & Reactions
+- [Added] Live Stream Flying Reactions
+- [Added] Live Stream Sound & Full Screen Controls for Viewers
+- [Added] iyzico Payment Support
+- [Added] LiveKit For Live Streaming
+- [Added] S3-Compatible Storage for Saved Live Videos (Cloudflare R2, Wasabi, DigitalOcean Spaces & Backblaze B2)
+- [Added] Live Streams Directory (Live Now & Ended Streams)
+- [Added] Live Streams Categories
+- [Added] Live Streams Search & Country Filter
+- [Added] Live Stream Title, Description & Category
+- [Added] Live Stream Audience (Public, Friends or Followers)
+- [Added] Go Live From OBS or Any RTMP Streaming Software (LiveKit)
+- [Added] Live Stream Moderators (Hosts Can Appoint Moderators)
+- [Added] Live Stream Timeout & Mute for Viewers
+- [Added] Live Stream Kick & Ban/Unban for Viewers
+- [Added] Live Stream Moderation From the Comment Menu
+- [Added] Live Stream Slow Mode
+- [Added] Live Stream Blocked Words, Links & Repeated Comments
+- [Added] Live Stream Chat Rules (Admin Default & Per Host)
+- [Added] Live Stream Moderation Log
+- [Added] Live Moderation Toggle (Admin Panel)
+- [Added] Live Module Description
+- [Added] Admin Limits for Watch & Live Results
+- [Added] Redis Support (Optional) With Connection Test & Monitor
+- [Added] Redis Cache for Widgets, Relationships, Sessions & Post Views
+- [Added] Redis Pools for Promoted & Pro Members Widgets
+- [Added] System Settings Cache
+- [Added] Clear System Cache Tool
+- [Added] Header Notifications, Messages & Friend Requests Load When Opened
+- [Added] Search Content Option for Blogs (Search Inside Blog Posts)
+- [Added] Search Index Tool in AdminCP
+- [Added] My Videos Tab in Watch
+- [Added] Friends & Following Tab in Watch
+- [Added] My Lives Tab in Live
+- [Added] Download Videos in Lightbox
+- [Added] Backups List with Download & Delete in AdminCP
+- [Added] Cronjob Last Run & Status in AdminCP
+- [Added] Translation Provider Selector with DeepL & LibreTranslate
+- [Added] Geolocation Provider Selector with OpenStreetMap (No API Key Needed)
+- [Added] IPinfo Integration (Session Locations, Auto Country for New Users & New Location Login Alerts)
+- [Added] Sitemap Generator in AdminCP (XML Sitemaps, robots.txt, llms.txt & IndexNow)
+- [Added] Dating Module (Swipe to Like, Pass or Super Like & Match)
+- [Added] Dating Profile Separate From the Main Profile (Photos, Bio, Interests & Preferences)
+- [Added] Dating Browse With Filters (Gender, Age, Distance, City & Interests)
+- [Added] Dating Likes & Matches (Matched Members Can Always Chat)
+- [Added] Dating Privacy (Hide From Friends, Hide Age, Hide Distance, Incognito, Pause & Leave)
+- [Added] Dating Safety (Minimum Age, Verified Members Only & Photos Approval)
+- [Added] Dating Admin Panel (Dashboard, Settings, Members, Photos Review & Interests)
+- [Added] Dating Perks for Pro Packages (Unlimited Swipes, See Who Liked You, Rewind, Incognito, Super Likes & Boosts)
+- [Added] Dating Super Likes Packs, Profile Boosts & Messages With a Like (Wallet)
+- [Added] Dating Ads Placement
+- [Added] Dating Permission to Permissions Groups & Moderators
+- [Added] Theme Fonts Option (Google Fonts CDN or Local Files)
+- [Added] Module Names (Rename Modules From Admin Panel > Design)
+- [Added] Left Panel Menu Manager per Theme (Sort, See More & Hide Items)
+- [Added] Stories Revamp (New Full-Screen Viewer & Composer)
+- [Added] Text Stories (Fonts, Colors & Backgrounds)
+- [Added] Stories Stickers, Emojis, Drawing & Filters
+- [Added] Stories Mention & Link Stickers
+- [Added] Stories Views & Viewers List
+- [Added] Stories Reactions
+- [Added] Stories Replies (Sent as Chat Messages)
+- [Added] Stories Music (iTunes Search & Admin Music Library)
+- [Added] Stories Polls
+- [Added] Stories Highlights on Profiles
+- [Added] Stories Privacy (Public, Friends, Close Friends & Hide Story From)
+- [Added] Stories Section in AdminCP (Dashboard, Settings, Active Stories & Music Library)
+- [Added] Report Stories
+- [Added] Stories Moderator Permission
+- [Added] Shortcuts (Pin to Top, Hide & Auto Sort for Pages, Groups, Events & Games)
+- [Added] Comments Permission in Permissions Groups (Control Who Can Comment & Reply)
+- [Added] Custom Verification Documents for Users & Pages (Rename or Disable Each Document)
+- [Added] Forums Pinned & Locked Threads
+- [Added] Forums Likes on Threads & Replies
+- [Added] Forums Threads Sorting (Latest, Top, Newest & Oldest)
+- [Added] Forums Colors & Icons
+- [Added] Forums RSS
+- [Added] Forums Suggested Threads
+- [Added] Forums Quoted Replies (Reply to a Reply)
+- [Added] Promoted Posts Carousel in Newsfeed (Up to 5 Posts)
+- [Added] Change License Key from AdminCP
+- [Added] End All Sessions of a User from AdminCP
+- [Added] Reset User Profile Info from AdminCP
+
+- [Fixed] Plisio Payment Bug
+- [Fixed] Discord Default Avatar Bug
+- [Fixed] Blogs Read More Showing the Current Blog
+- [Fixed] Live Stream Cloud Recording
+- [Fixed] Going Live From Events
+- [Fixed] Paid Live Stream Price Saved When Paid Option Disabled
+- [Fixed] Adult Image Blur on Upload
+- [Fixed] Comment Reactions Count Refresh
+- [Fixed] Posts Views Not Deleted With Posts
+- [Fixed] Video Calls Remote Stream With NodeJS Chat Sockets
+- [Fixed] Scheduled Photos Showing on Profile Before Publish Time
+- [Fixed] FFmpeg Vertical Video Quality Selection & Scaling
+- [Fixed] Listings Total Count When Filtering by Distance
+- [Fixed] Articles Missing From Distance Filter
+- [Fixed] Banned Users Showing in Pro Members Widget
+- [Fixed] Repeated Items in Load More When New Content Arrives
+- [Fixed] Page Numbers Past the Last Page Now Show the Last Page
+- [Fixed] Minor Bugs
+- [Fixed] Pending Uploads Handle Not Saved for Videos, Audios & Files
+- [Fixed] Hashtag Search Showing Unrelated Posts
+
+- [Removed] FontAwesome
+- [Removed] Bootstrap JS (Legacy JS Library)
+- [Removed] jQuery UI (Legacy JS Library)
+- [Removed] jQuery UI Touch Punch (Legacy JS Library)
+- [Removed] jQuery Touch Events (Legacy JS Library)
+- [Removed] jQuery Form (Legacy JS Library)
+- [Removed] jQuery Inview (Legacy JS Library)
+- [Removed] jQuery Fracs (Legacy JS Library)
+- [Removed] jQuery Treegrid (Legacy JS Library)
+- [Removed] JQ Image Drag (Legacy JS Library)
+- [Removed] Triggered Autocomplete (Legacy JS Library)
+- [Removed] Theia Sticky Sidebar (Legacy JS Library)
+- [Removed] Slick Carousel (Legacy JS Library)
+- [Removed] Zuck.js (Legacy JS Library)
+- [Removed] Clipboard.js (Legacy JS Library)
+- [Removed] EasyTimer.js (Legacy JS Library)
+- [Removed] XRegExp (Legacy JS Library)
+- [Removed] Merits Widgets on Newsfeed
+- [Removed] Visitor Sessions Log
+
+#== v4.5 == ( 31-08-2026 )
+- [Updated] Documentation
+- [Updated] System Security
+- [Updated] System Optimization
+- [Updated] Sngine PHP Dependencies
+- [Updated] Sngine JS Dependencies
+
+- [Added] New Install Wizard
+- [Added] New Update Wizard
+- [Added] Chat Sockets via NodeJS
+- [Added] Paid Media Chat Messages
+- [Added] Rich Text Posts
+- [Added] Accordion to Rich Text Editor
+- [Added] Video Embed Code
+- [Added] Incognito Mode
+- [Added] Panic Mode
+- [Added] Translate titles & descriptions for Pages, Groups, and Events
+- [Added] Translate Funding, Offer, Job, and Course titles
+- [Added] Country & Language fallbacks for Pages, Groups, and Events
+
+- [Fixed] Minor Bugs
+
+#== v4.4.2 == ( 18-06-2026 )
+- [Fixed] Minor Bugs
+- [Fixed] Critical Security Bug
+
+#== v4.4.1 == ( 10-06-2026 )
+- [Fixed] Minor Bugs
+- [Fixed] Critical Security Bug
+
+#== v4.4 == ( 31-05-2026 )
 - [Updated] Documentation
 - [Updated] System Security
 - [Updated] System Optimization

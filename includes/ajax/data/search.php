@@ -25,12 +25,11 @@ try {
 
   // get results
   $results = $user->search_quick($_POST['query']);
-  if ($results) {
-    /* assign variables */
-    $smarty->assign('results', $results);
-    /* return */
-    $return['results'] = $smarty->fetch("ajax.search.tpl");
-  }
+  /* assign variables */
+  $smarty->assign('results', $results);
+  $smarty->assign('query', $_POST['query']);
+  /* return */
+  $return['results'] = $smarty->fetch("ajax.search.tpl");
 
   // return & exit
   return_json($return);

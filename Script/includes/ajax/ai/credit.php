@@ -32,11 +32,14 @@ try {
   }
 
   // add credits
+  if (!method_exists($user, 'wallet_ai_credits_payment')) {
+    throw new Exception(__("You can't use this feature"));
+  }
   $user->wallet_ai_credits_payment($_POST['amount']);
 
   // return & exit
   $return['template'] = $smarty->fetch("ajax.ai." . $_POST['handle'] . ".tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template);";
+  $return['callback'] = "modal_content(response.template);";
   return_json($return);
 } catch (Exception $e) {
   return_json(['error' => true, 'message' => $e->getMessage()]);

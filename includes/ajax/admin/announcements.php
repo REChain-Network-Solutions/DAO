@@ -14,14 +14,15 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_reach_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_reach_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
+
+// refresh the cached announcements
+register_shutdown_function('cache_forget', 'widgets:announcements');
 
 // handle announcements
 try {
@@ -37,6 +38,9 @@ try {
       }
       if (is_empty($_POST['code'])) {
         throw new Exception(__("You have to enter the announcement HTML code"));
+      }
+      if (!isset($_POST['type']) || !in_array($_POST['type'], ['success', 'warning', 'danger', 'info'], true)) {
+        throw new Exception(__("You have to select a valid announcement type"));
       }
       if (is_empty($_POST['start_date'])) {
         throw new Exception(__("You have to enter the announcement start date"));
@@ -66,6 +70,9 @@ try {
       }
       if (is_empty($_POST['code'])) {
         throw new Exception(__("You have to enter the announcement HTML code"));
+      }
+      if (!isset($_POST['type']) || !in_array($_POST['type'], ['success', 'warning', 'danger', 'info'], true)) {
+        throw new Exception(__("You have to select a valid announcement type"));
       }
       if (is_empty($_POST['start_date'])) {
         throw new Exception(__("You have to enter the announcement start date"));

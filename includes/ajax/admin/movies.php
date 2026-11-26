@@ -14,9 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_movies_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_movies_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
@@ -64,12 +62,18 @@ try {
       $_POST['movie_genres'] = implode(',', $_POST['movie_genres']);
       /* validate price */
       if (isset($_POST['is_paid'])) {
+        if (!licence_has_entitlement('monetization') || !is_file(ABSPATH . 'includes/assets/js/core/payments.js')) {
+          throw new Exception(__("You can't use this feature"));
+        }
         if (!is_numeric($_POST['price']) || $_POST['price'] <= 0) {
           throw new Exception(__("Please enter a valid price"));
         }
       }
       /* prepare */
       $_POST['is_paid'] = (isset($_POST['is_paid'])) ? '1' : '0';
+      if ($_POST['is_paid'] && (!licence_has_entitlement('monetization') || !is_file(ABSPATH . 'includes/assets/js/core/payments.js'))) {
+        $_POST['is_paid'] = '0';
+      }
       /* insert */
       $db->query(sprintf("INSERT INTO movies (source, source_type, title, description, imdb_url, stars, release_year, duration, genres, poster, is_paid, price, available_for) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($source), secure($source_type), secure($_POST['title']), secure($_POST['description']), secure($_POST['imdb_url']), secure($_POST['stars']), secure($_POST['release_year'], 'int'), secure($_POST['duration'], 'int'), secure($_POST['movie_genres']), secure($_POST['poster']), secure($_POST['is_paid']), secure($_POST['price'], 'float'), secure($_POST['available_for'], 'int')));
       /* remove pending uploads */
@@ -122,12 +126,18 @@ try {
       $_POST['movie_genres'] = implode(',', $_POST['movie_genres']);
       /* validate price */
       if (isset($_POST['is_paid'])) {
+        if (!licence_has_entitlement('monetization') || !is_file(ABSPATH . 'includes/assets/js/core/payments.js')) {
+          throw new Exception(__("You can't use this feature"));
+        }
         if (!is_numeric($_POST['price']) || $_POST['price'] <= 0) {
           throw new Exception(__("Please enter a valid price"));
         }
       }
       /* prepare */
       $_POST['is_paid'] = (isset($_POST['is_paid'])) ? '1' : '0';
+      if ($_POST['is_paid'] && (!licence_has_entitlement('monetization') || !is_file(ABSPATH . 'includes/assets/js/core/payments.js'))) {
+        $_POST['is_paid'] = '0';
+      }
       /* update */
       $db->query(sprintf("UPDATE movies SET source = %s, source_type = %s, title = %s, description = %s, imdb_url = %s, stars = %s, release_year = %s, duration = %s, genres = %s, poster = %s, is_paid = %s, price = %s, available_for = %s WHERE movie_id = %s", secure($source), secure($source_type), secure($_POST['title']), secure($_POST['description']), secure($_POST['imdb_url']), secure($_POST['stars']), secure($_POST['release_year'], 'int'), secure($_POST['duration'], 'int'), secure($_POST['movie_genres']), secure($_POST['poster']), secure($_POST['is_paid']), secure($_POST['price'], 'float'), secure($_POST['available_for'], 'int'), secure($_GET['id'], 'int')));
       /* remove pending uploads */

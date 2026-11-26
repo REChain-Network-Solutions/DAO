@@ -41,7 +41,7 @@ try {
     case 'edit_title':
       // return
       $return['edit_title'] = $smarty->fetch("ajax.album.edit_title.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.edit_title);";
+      $return['callback'] = "modal_content(response.edit_title);";
       break;
 
     case 'add_photos':
@@ -51,7 +51,7 @@ try {
 
       // return
       $return['add_photos'] = $smarty->fetch("ajax.album.add_photos.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.add_photos); initialize_modal();";
+      $return['callback'] = "modal_content(response.add_photos, true); if ($('#publisher-wapper').length > 0) { $('#publisher-wapper').data('publisher-detached', $('#publisher-wapper').contents().detach()); } $('.publisher.mini textarea').trigger('click');";
       break;
 
     default:

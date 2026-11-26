@@ -1,0 +1,14 @@
+{__("Hi")} {$name},
+
+{__("Thank you for joining")} {__($system['system_title'])}!
+
+{__("To activate your account, please visit the link below")}:
+{$system['system_url']}/activation/{$email_verification_code}
+
+{__("Activation Code")}: {$email_verification_code}
+
+{__("If you did not create an account, you can safely ignore this email.")}
+
+---
+{__($system['system_title'])} — {$system['system_url']}
+{__("Manage email preferences")}: {$system['system_url']}/settings/notifications

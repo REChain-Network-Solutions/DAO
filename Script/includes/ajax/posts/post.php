@@ -27,90 +27,10 @@ try {
   if (!in_array($_POST['handle'], ['me', 'user', 'page', 'group', 'event'])) {
     _error(400);
   }
-  /* filter link */
-  if (isset($_POST['link'])) {
-    $_POST['link'] = json_decode($_POST['link']);
-    if (!is_object($_POST['link'])) {
-      _error(400);
-    }
-  }
-  /* filter photos */
-  $photos = [];
-  if (isset($_POST['photos'])) {
-    $_POST['photos'] = json_decode($_POST['photos']);
-    if (!is_object($_POST['photos'])) {
-      _error(400);
-    }
-    foreach ($_POST['photos'] as $photo) {
-      $photos[] = (array) $photo;
-    }
-    if (count($photos) == 0) {
-      _error(400);
-    }
-  }
-  /* filter voice_notes */
-  if (isset($_POST['voice_notes'])) {
-    $_POST['voice_notes'] = json_decode($_POST['voice_notes']);
-    if (!is_object($_POST['voice_notes'])) {
-      _error(400);
-    }
-  }
-  /* filter poll options */
-  if (isset($_POST['poll_options'])) {
-    $_POST['poll_options'] = json_decode($_POST['poll_options']);
-    if (!is_array($_POST['poll_options'])) {
-      _error(400);
-    }
-    /* check the options */
-    $options = [];
-    foreach ($_POST['poll_options'] as $option) {
-      if (strlen($option) > 255) {
-        throw new ValidationException(__("The poll option you provided is too long. Please try again"));
-      }
-      if (in_array($option, $options)) {
-        throw new ValidationException(__("This option was already added to the poll"));
-      }
-      if (!is_empty($option)) {
-        $options[] = $option;
-      }
-    }
-    /* check if poll options are less than 2 */
-    if (count($options) < 2) {
-      throw new ValidationException(__("Please add at least two options to the poll"));
-    }
-    /* check the question */
-    if (is_empty($_POST['message'])) {
-      throw new ValidationException(__("Ask a question so people know what your poll is about"));
-    }
-  }
-  /* filter reel */
-  if (isset($_POST['reel'])) {
-    $_POST['reel'] = json_decode($_POST['reel']);
-    if (!is_object($_POST['reel'])) {
-      _error(400);
-    }
-  }
-  /* filter video */
-  if (isset($_POST['video'])) {
-    $_POST['video'] = json_decode($_POST['video']);
-    if (!is_object($_POST['video'])) {
-      _error(400);
-    }
-  }
-  /* filter audio */
-  if (isset($_POST['audio'])) {
-    $_POST['audio'] = json_decode($_POST['audio']);
-    if (!is_object($_POST['audio'])) {
-      _error(400);
-    }
-  }
-  /* filter file */
-  if (isset($_POST['file'])) {
-    $_POST['file'] = json_decode($_POST['file']);
-    if (!is_object($_POST['file'])) {
-      _error(400);
-    }
-  }
+  $_POST = $user->normalize_publisher_attachments($_POST);
+  $photos = $_POST['photos'];
+  $photo_layout = $_POST['photo_layout'];
+  $options = $_POST['poll_options'];
 
   // initialize the return array
   $return = $inputs = [];
@@ -247,7 +167,7 @@ try {
     }
     $inputs['paid_text'] = $_POST['paid_text'];
     if (strlen($inputs['paid_text']) > 1000) {
-      throw new ValidationException(__("Paid post description is more than 1000 characters"));
+      throw new ValidationException(__("Paid content description is more than 1000 characters"));
     }
     if ($_POST['paid_image']) {
       $inputs['paid_image'] = $_POST['paid_image'];
@@ -281,10 +201,13 @@ try {
   $inputs['message'] = $_POST['message'];
   $inputs['link'] = $_POST['link'];
   $inputs['photos'] = $photos;
+  $inputs['photo_layout'] = $photo_layout;
   $inputs['album'] = $_POST['album'];
   $inputs['feeling_action'] = $_POST['feeling_action'];
   $inputs['feeling_value'] = $_POST['feeling_value'];
   $inputs['location'] = $_POST['location'];
+  $inputs['latitude'] = $_POST['latitude'] ?? '';
+  $inputs['longitude'] = $_POST['longitude'] ?? '';
   $inputs['colored_pattern'] = $_POST['colored_pattern'];
   $inputs['poll_options'] = $options;
   $inputs['reel'] = $_POST['reel'];
@@ -297,12 +220,6 @@ try {
   $inputs['post_as_page'] = $_POST['post_as_page'];
   /* publish */
   $post = $user->publisher($inputs);
-  /* assign variables */
-  $smarty->assign('post', $post);
-  $smarty->assign('_get', $_get);
-  /* return */
-  $return['post_id'] = $post['post_id'];
-  $return['post'] = $smarty->fetch("__feeds_post.tpl");
 
   /* check if approval required */
   if ($post['has_approved'] == '0') {
@@ -338,6 +255,12 @@ try {
       // return & exit
       return_json(['processing' => true]);
     } else {
+      /* get the published post */
+      $smarty->assign('post', $user->get_post($post['post_id'], false, true, true));
+      $smarty->assign('_get', $_get);
+      /* return */
+      $return['post_id'] = $post['post_id'];
+      $return['post'] = $smarty->fetch("__feeds_post.tpl");
       // return & exit
       return_json($return);
     }

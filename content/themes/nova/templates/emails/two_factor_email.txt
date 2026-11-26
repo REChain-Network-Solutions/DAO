@@ -1,0 +1,11 @@
+{__("Hi")} {$user['user_name']},
+
+{__("Use the 6-digit code below to complete your sign-in. This code is time-sensitive.")}
+
+{__("Two-factor authentication key")}: {$two_factor_key}
+
+{__("If you did not attempt to sign in, please change your password immediately.")}
+
+---
+{__($system['system_title'])} — {$system['system_url']}
+{__("Manage email preferences")}: {$system['system_url']}/settings/notifications

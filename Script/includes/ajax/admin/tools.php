@@ -200,6 +200,15 @@ try {
       return_json_async(['success' => true, 'message' => __("Your request has been sent successfully and will be processed in the background")]);
       /* delete rows */
       switch ($_POST['delete']) {
+        case 'expired_post_views':
+          $result = $user->clean_expired_post_views();
+          $deleted_rows_count = $result['deleted'];
+          break;
+
+        case 'post_views_reset':
+          $user->reset_post_views();
+          break;
+
         case 'users_not_activated':
           $db->query("DELETE FROM users WHERE user_activated = '0'");
           $deleted_rows_count = $db->affected_rows;
@@ -265,6 +274,14 @@ try {
           $deleted_rows_count = $get_posts->num_rows;
           break;
 
+        case 'stories_expired':
+          $deleted_rows_count = $user->delete_expired_stories();
+          break;
+
+        case 'stories_expired_all':
+          $deleted_rows_count = $user->delete_expired_stories(true);
+          break;
+
         case 'fake_users':
           $db->query("DELETE FROM users WHERE is_fake = '1'");
           $deleted_rows_count = $db->affected_rows;
@@ -323,8 +340,14 @@ try {
           /* delete post paid */
           $db->query("DELETE FROM posts_paid WHERE post_id NOT IN (SELECT post_id FROM posts)");
           $deleted_rows_count += $db->affected_rows;
+          /* delete posts search */
+          $db->query("DELETE FROM posts_search WHERE post_id NOT IN (SELECT post_id FROM posts)");
+          $deleted_rows_count += $db->affected_rows;
           /* delete post hidden */
           $db->query("DELETE FROM posts_hidden WHERE post_id NOT IN (SELECT post_id FROM posts)");
+          $deleted_rows_count += $db->affected_rows;
+          /* delete posts views */
+          $db->query("DELETE FROM posts_views WHERE post_id NOT IN (SELECT post_id FROM posts)");
           $deleted_rows_count += $db->affected_rows;
           /* delete posts_links */
           $db->query("DELETE FROM posts_links WHERE post_id NOT IN (SELECT post_id FROM posts)");
@@ -401,6 +424,11 @@ try {
           $smarty->clearCompiledTemplate();
           break;
 
+        case 'clear_system_cache':
+          /* clear compiled system config, reference data and translations */
+          system_cache_flush(true);
+          break;
+
         case 'resend_activation_emails':
           /* resend activation emails */
           $get_users = $db->query("SELECT user_id FROM users WHERE user_activated = '0'");
@@ -431,13 +459,36 @@ try {
       } elseif ($_POST['delete'] == "clear_compiled_templates") {
         $user->post_notification_async(__("All compiled templates have been cleared"));
         return_json(['success' => true, 'message' => __("All compiled templates have been cleared")]);
+      } elseif ($_POST['delete'] == "clear_system_cache") {
+        $user->post_notification_async(__("System cache has been cleared"));
+        return_json(['success' => true, 'message' => __("System cache has been cleared")]);
       } elseif ($_POST['delete'] == "resend_activation_emails") {
         $user->post_notification_async(__("Activation emails have been resent to all users who didn't activate their accounts"));
         return_json(['success' => true, 'message' => __("Activation emails have been resent to all users who didn't activate their accounts")]);
+      } elseif ($_POST['delete'] == "post_views_reset") {
+        $user->post_notification_async(__("Post views have been reset"));
+        return_json(['success' => true, 'message' => __("Post views have been reset")]);
+      } elseif ($_POST['delete'] == 'expired_post_views') {
+        $message = $deleted_rows_count . ' ' . __("expired post-view records deleted") . '. ' . ($result['remaining'] ? __("More expired records remain") : __("Cleanup is complete"));
+        $user->post_notification_async($message);
+        return_json(['success' => true, 'message' => $message]);
       } else {
         $user->post_notification_async(__("Garbage collector removed") . " " . $deleted_rows_count . " " . __("rows from the database"));
-        return_json(['success' => true, 'message' => __("Garbage collector removed") . "<span class='badge rounded-pill badge-lg bg-secondary mlr5'>" . $deleted_rows_count . "</span>" . __("rows from the database")]);
+        return_json(['success' => true, 'message' => __("Garbage collector removed") . "<span class='badge rounded-full badge-lg bg-secondary mlr5'>" . $deleted_rows_count . "</span>" . __("rows from the database")]);
       }
+      break;
+
+    case 'search-index':
+      // [BACKGROUND PROCESS]
+      /* return async */
+      return_json_async(['success' => true, 'message' => __("Your request has been sent successfully and will be processed in the background")]);
+      /* rebuild posts search index */
+      $db->query("UPDATE system_options SET option_value = '0' WHERE option_name = 'posts_search_cursor'");
+      while ($user->rebuild_posts_search() > 0);
+      /* post async notification */
+      $user->post_notification_async(__("Search index has been rebuilt"));
+      /* return */
+      return_json(['success' => true, 'message' => __("Search index has been rebuilt")]);
       break;
 
     case 'backups':

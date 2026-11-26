@@ -17,6 +17,7 @@ try {
 
     // page header
     page_header(__("Welcome to") . ' ' . __($system['system_title']));
+    $smarty->assign('visitor_ip', filter_var(get_user_ip(), FILTER_VALIDATE_IP) ?: '');
 
     if (!$system['newsfeed_public']) {
 
@@ -64,24 +65,24 @@ try {
         }
       }
 
-      // get boosted post
+      // get boosted posts
       if ($system['packages_enabled']) {
-        $smarty->assign('boosted_post', $user->get_boosted_post());
+        $smarty->assign('boosted_posts', $user->get_boosted_posts());
       }
 
       // get posts (newsfeed)
       $smarty->assign('posts', ($selected_country) ? $user->get_posts(['country' => $selected_country['country_id']]) : $user->get_posts());
 
       // get ads campaigns
-      $smarty->assign('ads_campaigns', $user->ads_campaigns());
+      $smarty->assign('ads_campaigns', method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : []);
     }
   } else {
 
     // user access
     user_access();
 
-    // get announcements
-    $smarty->assign('announcements', $user->get_announcements());
+    // get shortcuts
+    $smarty->assign('shortcuts', $user->get_shortcuts(['results' => 20]));
 
     // get view content
     switch ($_GET['view']) {
@@ -89,25 +90,12 @@ try {
         // page header
         page_header(__($system['system_title']));
 
-        // get merits categories
-        if ($system['merits_enabled'] && $system['merits_widgets_newsfeed']) {
-          $smarty->assign('merits_categories', $user->get_categories("merits_categories"));
-        }
+        // get announcements
+        $smarty->assign('announcements', $user->get_announcements());
 
         // get stories
         if ($system['stories_enabled']) {
           $smarty->assign('stories', $user->get_stories());
-          $smarty->assign('has_story', $user->get_my_story());
-        }
-
-        // prepare publisher
-        $smarty->assign('feelings', get_feelings());
-        $smarty->assign('feelings_types', get_feelings_types());
-        if ($system['colored_posts_enabled']) {
-          $smarty->assign('colored_patterns', $user->get_posts_colored_patterns());
-        }
-        if ($user->_data['can_upload_videos']) {
-          $smarty->assign('videos_categories', $user->get_categories("posts_videos_categories"));
         }
 
         // check daytime messages
@@ -132,9 +120,9 @@ try {
           }
         }
 
-        // get boosted post
+        // get boosted posts
         if ($system['packages_enabled']) {
-          $smarty->assign('boosted_post', $user->get_boosted_post());
+          $smarty->assign('boosted_posts', $user->get_boosted_posts());
         }
 
         // get posts (newsfeed)
@@ -238,96 +226,6 @@ try {
         $smarty->assign('posts', $posts);
         break;
 
-      case 'blogs':
-        // check if blogs enabled
-        if (!$system['blogs_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Blogs"));
-
-        // get posts (blogs)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'article']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
-      case 'products':
-        // check if market enabled
-        if (!$system['market_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Products"));
-
-        // get posts (products)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'product']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
-      case 'funding':
-        // check if funding enabled
-        if (!$system['funding_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Funding"));
-
-        // get posts (funding)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'funding']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
-      case 'offers':
-        // check if offers enabled
-        if (!$system['offers_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Offers"));
-
-        // get posts (offers)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'offer']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
-      case 'jobs':
-        // check if jobs enabled
-        if (!$system['jobs_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Jobs"));
-
-        // get posts (jobs)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'job']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
-      case 'courses':
-        // check if courses enabled
-        if (!$system['courses_enabled']) {
-          _error(404);
-        }
-
-        // page header
-        page_header(__("My Courses"));
-
-        // get posts (courses)
-        $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'course']);
-        /* assign variables */
-        $smarty->assign('posts', $posts);
-        break;
-
       case 'saved':
         // page header
         page_header(__("Saved Posts"));
@@ -356,6 +254,19 @@ try {
         $posts = $user->get_posts(['get' => 'memories']);
         /* assign variables */
         $smarty->assign('posts', $posts);
+        break;
+
+      case 'stories_archive':
+        // check if stories archive enabled
+        if (!$user->_logged_in || !$system['stories_enabled'] || !$system['stories_archive_enabled']) {
+          _error(404);
+        }
+
+        // page header
+        page_header(__("Stories Archive"));
+
+        // get stories archive
+        $smarty->assign('archive', $user->get_stories_archive($_GET['before'] ?? null));
         break;
 
       case 'boosted_posts':
@@ -458,7 +369,7 @@ try {
 
     // get promoted pages
     if ($system['packages_enabled'] && $system['pro_page_widget_enabled']) {
-      $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true]));
+      $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true, 'results' => $system['max_results']]));
     }
 
     // get promoted groups
@@ -495,7 +406,7 @@ try {
     }
 
     // get ads campaigns
-    $smarty->assign('ads_campaigns', $user->ads_campaigns());
+    $smarty->assign('ads_campaigns', method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : []);
   }
 
   // get trending hashtags

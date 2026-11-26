@@ -14,9 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_payments_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_payments_permission');
 
 // valid inputs
 if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
@@ -43,6 +41,9 @@ try {
       /* process the request */
       switch ($transfer_request['handle']) {
         case 'packages':
+          if (!method_exists($user, 'get_package') || !method_exists($user, 'update_user_package')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
           /* check package */
           $package = $user->get_package($transfer_request['package_id']);
           if (!$package) {
@@ -55,6 +56,9 @@ try {
           break;
 
         case 'wallet':
+          if (!method_exists($user, 'wallet_update_balance') || !method_exists($user, 'wallet_set_transaction')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
           /* update user wallet balance */
           $user->wallet_update_balance($transfer_request['price'], '+', $transfer_request['user_id']);
           /* wallet transaction */
@@ -64,6 +68,9 @@ try {
           break;
 
         case 'donate':
+          if (!method_exists($user, 'funding_donation')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
           /* funding donation */
           $user->funding_donation($transfer_request['post_id'], $transfer_request['price'], $transfer_request['user_id']);
           /* log payment */
@@ -71,6 +78,9 @@ try {
           break;
 
         case 'subscribe':
+          if (!method_exists($user, 'get_monetization_plan') || !method_exists($user, 'subscribe')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
           /* get monetization plan */
           $monetization_plan = $user->get_monetization_plan($transfer_request['plan_id'], true);
           if (!$monetization_plan) {
@@ -84,11 +94,26 @@ try {
           break;
 
         case 'paid_post':
+          if (!method_exists($user, 'unlock_paid_post')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
           /* unlock paid post */
           $user->unlock_paid_post($transfer_request['post_id'], $transfer_request['user_id']);
           /* log payment */
           $price = (isset($post['post_price_discounted']) && $post['post_price_discounted'] > 0) ? $post['post_price_discounted'] : $post['post_price'];
           $user->log_payment($transfer_request['user_id'], $price, 'bank', 'paid_post');
+          break;
+
+        case 'paid_message':
+          if (!method_exists($user, 'unlock_paid_message')) {
+            throw new Exception(__("Payments & Monetization module is not installed"));
+          }
+          /* unlock paid message */
+          $message_link = $user->unlock_paid_message($transfer_request['post_id'], $transfer_request['user_id']);
+          /* log payment */
+          $message = $user->get_conversation_message_by_id($transfer_request['post_id']);
+          $price = (isset($message['message_price_discounted']) && $message['message_price_discounted'] > 0) ? $message['message_price_discounted'] : $message['message_price'];
+          $user->log_payment($transfer_request['user_id'], $price, 'bank', 'paid_message');
           break;
 
         case 'movies':

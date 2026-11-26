@@ -17,9 +17,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_users_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_users_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
@@ -150,6 +148,8 @@ try {
       }
       /* update */
       $db->query(sprintf("UPDATE users SET user_verified = %s, user_banned = %s, user_banned_message = %s, user_activated = %s, user_started = %s, user_demo = %s, user_group = %s, user_group_custom = %s, user_name = %s, user_email = %s, user_email_verified = %s, user_phone = %s, user_phone_verified = %s, user_password = %s WHERE user_id = %s", secure($_POST['user_verified']), secure($_POST['user_banned']), secure($_POST['user_banned_message']), secure($_POST['user_activated']), secure($_POST['user_started']), secure($_POST['user_demo']), secure($user_group, 'int'), secure($custom_user_group, 'int'), secure($_POST['user_name']), secure($_POST['user_email']), secure($_POST['user_email_verified']), ($_POST['user_phone'] == null) ? 'null' : secure($_POST['user_phone']), secure($_POST['user_phone_verified']), secure($_POST['user_password']), secure($_GET['id'], 'int')));
+      /* refresh cached relationship lists (banned users drop out of followings) */
+      relations_cache_reset();
       /* return */
       return_json(['success' => true, 'message' => __("User info have been updated")]);
       break;
@@ -355,6 +355,9 @@ try {
         _error(400);
       }
       /* get package info */
+      if (!method_exists($user, 'get_package') || !method_exists($user, 'update_user_package')) {
+        throw new Exception(__("Payments & Monetization module is not installed"));
+      }
       $package = $user->get_package($_POST['package']);
       if (!$package) {
         _error(400);

@@ -28,7 +28,7 @@ if (!$system['market_enabled']) {
 
 // check market permission
 if (!$user->_data['can_sell_products']) {
-  if (!$user->check_module_package_permission("market_permission")) {
+  if ($user->check_module_package_permission("market_permission")) {
     return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
   } else {
     modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -70,7 +70,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.product.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'publish':
@@ -100,6 +100,10 @@ try {
         /* check product download URL */
         if (!is_empty($_POST['product']->product_url) && !valid_url($_POST['product']->product_url)) {
           return_json(['error' => true, 'message' => __("Please add valid product download URL")]);
+        }
+        /* check product file */
+        if (!is_empty($_POST['product']->product_file) && !is_valid_upload_source($_POST['product']->product_file)) {
+          _error(400);
         }
       } else {
         $_POST['product']->is_digital = '0';
@@ -141,6 +145,9 @@ try {
         }
         /* filter the photos */
         foreach ($_POST['photos'] as $photo) {
+          if (!is_valid_upload_source($photo->source ?? null)) {
+            _error(400);
+          }
           $photos[] = (array) $photo;
         }
         if (count($photos) == 0) {
@@ -195,7 +202,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.product.editor.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     default:

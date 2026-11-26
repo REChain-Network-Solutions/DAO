@@ -112,6 +112,7 @@ try {
       if ($post) {
         $smarty->assign('post', $post);
         $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+        $return['reactions_count'] = $post['reactions_total_count_formatted'];
       }
       break;
 
@@ -121,6 +122,7 @@ try {
       if ($post) {
         $smarty->assign('post', $post);
         $return['template'] = $smarty->fetch('__feeds_post.reactions_stats.tpl');
+        $return['reactions_count'] = $post['reactions_total_count_formatted'];
       }
       break;
 
@@ -182,11 +184,23 @@ try {
     case 'react_comment':
       // react comment
       $user->react_comment($_POST['id'], $_POST['reaction']);
+      /* get reactions stats */
+      $comment = $user->get_comment($_POST['id'], false);
+      if ($comment) {
+        $smarty->assign('_comment', $comment);
+        $return['template'] = $smarty->fetch('__feeds_comment.reactions_stats.tpl');
+      }
       break;
 
     case 'unreact_comment':
       // unreact comment
       $user->unreact_comment($_POST['id'], $_POST['reaction']);
+      /* get reactions stats */
+      $comment = $user->get_comment($_POST['id'], false);
+      if ($comment) {
+        $smarty->assign('_comment', $comment);
+        $return['template'] = $smarty->fetch('__feeds_comment.reactions_stats.tpl');
+      }
       break;
 
     case 'add_vote':
@@ -218,20 +232,33 @@ try {
       set_cookie('dt_msg', 'true');
       break;
 
-    case 'update_reel_views':
-      // update media views (reel)
-      $user->update_media_views('reel', $_POST['id']);
-      break;
-
     case 'update_video_views':
       // update media views (video)
       $user->update_media_views('video', $_POST['id']);
+      break;
+
+    case 'update_video_size':
+      // update video size
+      $user->update_video_size($_POST['id'], $_POST['width'], $_POST['height']);
       break;
 
     case 'update_audio_views':
       // update media views (audio)
       $user->update_media_views('audio', $_POST['id']);
       break;
+  }
+
+  /* poll results */
+  if (in_array($_POST['do'], ['add_vote', 'delete_vote', 'change_vote'])) {
+    $get_poll = $db->query(sprintf("SELECT posts_polls.post_id FROM posts_polls_options INNER JOIN posts_polls ON posts_polls_options.poll_id = posts_polls.poll_id WHERE posts_polls_options.option_id = %s", secure($_POST['id'], 'int')));
+    if ($get_poll->num_rows > 0) {
+      $poll = $user->get_poll($get_poll->fetch_assoc()['post_id']);
+      if ($poll) {
+        $smarty->assign('poll', $poll);
+        $return['template'] = $smarty->fetch('__feeds_post.poll.tpl');
+        $return['votes'] = $poll['votes'];
+      }
+    }
   }
 
   // return & exit

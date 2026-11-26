@@ -44,6 +44,10 @@ try {
   /* get the connection */
   $spage['i_admin'] = $user->check_page_adminship($user->_data['user_id'], $spage['page_id']);
   $spage['i_like'] = $user->check_page_membership($user->_data['user_id'], $spage['page_id']);
+  /* add shortcut */
+  if ($user->_logged_in && $spage['i_like']) {
+    $user->add_shortcut($spage['page_id'], 'page');
+  }
   /* get page posts count */
   $spage['posts_count'] = $user->get_posts_count($spage['page_id'], 'page');
   /* get page photos count */
@@ -51,6 +55,10 @@ try {
   /* get page videos count */
   if ($system['videos_enabled']) {
     $spage['videos_count'] = $user->get_videos_count($spage['page_id'], 'page');
+  }
+  /* get page reels count */
+  if ($system['reels_enabled']) {
+    $spage['reels_count'] = $user->get_reels_count($spage['page_id'], 'page');
   }
   /* get page reviews count */
   if ($system['pages_reviews_enabled']) {
@@ -64,6 +72,12 @@ try {
   $spage['can_receive_tips'] = $system['tips_enabled'] && $user->check_user_permission($spage['page_admin'], 'tips_permission');
   /* check if page's admin can monetize content */
   $spage['can_monetize_content'] = $system['monetization_enabled'] && $user->check_user_permission($spage['page_admin'], 'monetization_permission');
+  /* check if can receive messages */
+  $spage['can_receive_messages'] = $system['pages_messages_enabled'] && $spage['page_messages_enabled'];
+  /* get page unseen messages */
+  if ($spage['i_admin'] && $system['pages_messages_enabled']) {
+    $spage['unseen_messages_count'] = $user->get_page_unseen_conversations_count($spage['page_id']);
+  }
   /* check if page has monetization enabled && subscriptions plans */
   $spage['has_subscriptions_plans'] = $spage['can_monetize_content'] && $spage['page_monetization_enabled'] && $spage['page_monetization_plans'] > 0;
   /* check if the page needs subscription (exclude: admins & mods & page's admin) */
@@ -102,22 +116,10 @@ try {
         }
       }
 
-      /* get invites */
-      $spage['invites'] = $user->get_page_invites($spage['page_id']);
-
       /* get pinned post */
       $pinned_post = $user->get_post($spage['page_pinned_post'], true, false, true);
       $smarty->assign('pinned_post', $pinned_post);
 
-      /* prepare publisher */
-      $smarty->assign('feelings', get_feelings());
-      $smarty->assign('feelings_types', get_feelings_types());
-      if ($system['colored_posts_enabled']) {
-        $smarty->assign('colored_patterns', $user->get_posts_colored_patterns());
-      }
-      if ($user->_data['can_upload_videos']) {
-        $smarty->assign('videos_categories', $user->get_categories("posts_videos_categories"));
-      }
       /* check if there is share URL */
       if ($_GET['url']) {
         $smarty->assign('url', $_GET['url']);
@@ -196,6 +198,10 @@ try {
       break;
 
     case 'products':
+      redirect('/pages/' . $spage['page_name'] . '/listings');
+      break;
+
+    case 'listings':
       /* get content */
       if (!$spage['needs_subscription']) {
         /* get posts (products) */
@@ -213,6 +219,7 @@ try {
       /* get reviews */
       if ($spage['reviews_count'] > 0) {
         $spage['reviews'] = $user->get_reviews($spage['page_id']);
+        $spage['reviews_details'] = $user->get_reviews_details($spage['page_id'], 'page');
       }
       break;
 
@@ -236,15 +243,6 @@ try {
       if ($spage['subscribers_count'] > 0) {
         $spage['subscribers'] = $user->get_subscribers($spage['page_id'], 'page');
       }
-      break;
-
-    case 'invites':
-      /* check if the viewer is a page member */
-      if (!$spage['i_like']) {
-        _error(404);
-      }
-      /* get invites */
-      $spage['invites'] = $user->get_page_invites($spage['page_id']);
       break;
 
     case 'search':
@@ -315,7 +313,7 @@ try {
               }
 
               /* get monetozaion plans */
-              $smarty->assign('monetization_plans', $user->get_monetization_plans($spage['page_id'], 'page'));
+              $smarty->assign('monetization_plans', method_exists($user, 'get_monetization_plans') ? $user->get_monetization_plans($spage['page_id'], 'page') : []);
 
               /* get subscribers count */
               $smarty->assign('subscribers_count', $user->get_subscribers_count($spage['page_id'], 'page'));
@@ -323,7 +321,7 @@ try {
 
             case 'coupons':
               /* get coupons */
-              $smarty->assign('coupons', $user->get_monetization_coupons($spage['page_id'], 'page'));
+              $smarty->assign('coupons', method_exists($user, 'get_monetization_coupons') ? $user->get_monetization_coupons($spage['page_id'], 'page') : []);
               break;
 
             default:
@@ -332,6 +330,26 @@ try {
           }
           /* assign variables */
           $smarty->assign('show', $_GET['show']);
+          break;
+
+        case 'messages':
+          if (!$system['pages_messages_enabled']) {
+            _error(404);
+          }
+          /* get conversation */
+          $conversation = null;
+          if (isset($_GET['cid']) && is_numeric($_GET['cid'])) {
+            $conversation = $user->check_mutual_conversation($_GET['cid'], null, null, true);
+            if (!$conversation || $conversation['page_id'] != $spage['page_id']) {
+              _error(404);
+            }
+            $spage['unseen_messages_count'] = $user->get_page_unseen_conversations_count($spage['page_id']);
+          }
+          /* get conversations */
+          $conversations = $user->get_page_conversations($spage['page_id']);
+          /* assign variables */
+          $smarty->assign('conversations', $conversations);
+          $smarty->assign('conversation', $conversation);
           break;
 
         case 'verification':

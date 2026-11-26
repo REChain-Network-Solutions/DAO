@@ -45,6 +45,10 @@ try {
   $group['i_admin'] = $user->check_group_adminship($user->_data['user_id'], $group['group_id']);
   $group['i_joined'] = $user->check_group_membership($user->_data['user_id'], $group['group_id']);
   $group['i_invited'] = $user->check_group_invitation($user->_data['user_id'], $group['group_id']);
+  /* add shortcut */
+  if ($user->_logged_in && $group['i_joined'] == "approved") {
+    $user->add_shortcut($group['group_id'], 'group');
+  }
   /* get chatbox converstaion */
   if ($system['chat_enabled'] && $group['chatbox_enabled'] && $group['i_joined'] == "approved") {
     $group['chatbox_conversation'] = $user->get_chatbox($group['chatbox_conversation_id']);
@@ -56,6 +60,10 @@ try {
   /* get group videos count */
   if ($system['videos_enabled']) {
     $group['videos_count'] = $user->get_videos_count($group['group_id'], 'group');
+  }
+  /* get group reels count */
+  if ($system['reels_enabled']) {
+    $group['reels_count'] = $user->get_reels_count($group['group_id'], 'group');
   }
   /* get group reviews count */
   if ($system['groups_reviews_enabled']) {
@@ -113,9 +121,6 @@ try {
         }
       }
 
-      /* get invites */
-      $group['invites'] = $user->get_group_invites($group['group_id']);
-
       /* get photos */
       if (!$group['needs_subscription']) {
         $group['photos'] = $user->get_photos($group['group_id'], 'group');
@@ -132,15 +137,6 @@ try {
         $group['pending_posts'] = $user->get_group_pending_posts($group['group_id'], $get_all);
       }
 
-      /* prepare publisher */
-      $smarty->assign('feelings', get_feelings());
-      $smarty->assign('feelings_types', get_feelings_types());
-      if ($system['colored_posts_enabled']) {
-        $smarty->assign('colored_patterns', $user->get_posts_colored_patterns());
-      }
-      if ($user->_data['can_upload_videos']) {
-        $smarty->assign('videos_categories', $user->get_categories("posts_videos_categories"));
-      }
       /* check if there is share URL */
       if ($_GET['url']) {
         $smarty->assign('url', $_GET['url']);
@@ -239,6 +235,10 @@ try {
       break;
 
     case 'products':
+      redirect('/groups/' . $group['group_name'] . '/listings');
+      break;
+
+    case 'listings':
       /* get content */
       if (!$group['needs_subscription']) {
         /* get posts (products) */
@@ -256,6 +256,7 @@ try {
       /* get reviews */
       if ($group['reviews_count'] > 0) {
         $group['reviews'] = $user->get_reviews($group['group_id'], 'group');
+        $group['reviews_details'] = $user->get_reviews_details($group['group_id'], 'group');
       }
       break;
 
@@ -277,15 +278,6 @@ try {
       if ($group['subscribers_count'] > 0) {
         $group['subscribers'] = $user->get_subscribers($group['group_id'], 'group');
       }
-      break;
-
-    case 'invites':
-      /* check if the viewer is a group member */
-      if ($group['i_joined'] != "approved") {
-        _error(404);
-      }
-      /* get invites */
-      $group['invites'] = $user->get_group_invites($group['group_id']);
       break;
 
     case 'search':
@@ -361,7 +353,7 @@ try {
               }
 
               /* get monetozaion plans */
-              $smarty->assign('monetization_plans', $user->get_monetization_plans($group['group_id'], 'group'));
+              $smarty->assign('monetization_plans', method_exists($user, 'get_monetization_plans') ? $user->get_monetization_plans($group['group_id'], 'group') : []);
 
               /* get subscribers count */
               $smarty->assign('subscribers_count', $user->get_subscribers_count($group['group_id'], 'group'));
@@ -369,7 +361,7 @@ try {
 
             case 'coupons':
               /* get coupons */
-              $smarty->assign('coupons', $user->get_monetization_coupons($group['group_id'], 'group'));
+              $smarty->assign('coupons', method_exists($user, 'get_monetization_coupons') ? $user->get_monetization_coupons($group['group_id'], 'group') : []);
               break;
 
             default:

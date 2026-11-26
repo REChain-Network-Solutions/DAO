@@ -19,20 +19,20 @@ use Twilio\Values;
 abstract class ParticipantModels
 {
     /**
-     * @property string $channel
+     * @property string $channel Channel type for a Communication address.
      * @property string $address
      * @property string $channelId
     */
-    public static function createCreateParticipantInConversationRequestAddresses(array $payload = []): CreateParticipantInConversationRequestAddresses
+    public static function createCreateConversationWithConfigRequestParticipantsAddresses(array $payload = []): CreateConversationWithConfigRequestParticipantsAddresses
     {
-        return new CreateParticipantInConversationRequestAddresses($payload);
+        return new CreateConversationWithConfigRequestParticipantsAddresses($payload);
     }
 
     /**
      * @property string $name
-     * @property string $type
+     * @property string $type Type of Participant in the Conversation.
      * @property string $profileId
-     * @property CreateParticipantInConversationRequestAddresses[] $addresses
+     * @property CreateConversationWithConfigRequestParticipantsAddresses[] $addresses
     */
     public static function createCreateParticipantInConversationRequest(array $payload = []): CreateParticipantInConversationRequest
     {
@@ -41,9 +41,9 @@ abstract class ParticipantModels
 
     /**
      * @property string $name
-     * @property string $type
+     * @property string $type Type of Participant in the Conversation.
      * @property string $profileId
-     * @property CreateParticipantInConversationRequestAddresses[] $addresses
+     * @property CreateConversationWithConfigRequestParticipantsAddresses[] $addresses
     */
     public static function createUpdateParticipantInConversationRequest(array $payload = []): UpdateParticipantInConversationRequest
     {
@@ -52,10 +52,10 @@ abstract class ParticipantModels
 
 }
 
-class CreateParticipantInConversationRequestAddresses implements \JsonSerializable
+class CreateConversationWithConfigRequestParticipantsAddresses implements \JsonSerializable
 {
     /**
-     * @property string $channel
+     * @property string $channel Channel type for a Communication address.
      * @property string $address
      * @property string $channelId
     */
@@ -76,9 +76,13 @@ class CreateParticipantInConversationRequestAddresses implements \JsonSerializab
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'channel' => $this->channel,
-            'address' => $this->address
         ];
+        if (isset($this->channel)) {
+            $jsonString['channel'] = $this->channel;
+        }
+        if (isset($this->address)) {
+            $jsonString['address'] = $this->address;
+        }
         if (isset($this->channelId)) {
             $jsonString['channelId'] = $this->channelId;
         }
@@ -90,9 +94,9 @@ class CreateParticipantInConversationRequest implements \JsonSerializable
 {
     /**
      * @property string $name
-     * @property string $type
+     * @property string $type Type of Participant in the Conversation.
      * @property string $profileId
-     * @property CreateParticipantInConversationRequestAddresses[] $addresses
+     * @property CreateConversationWithConfigRequestParticipantsAddresses[] $addresses
     */
         protected $name;
         protected $type;
@@ -113,8 +117,10 @@ class CreateParticipantInConversationRequest implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'addresses' => $this->addresses
         ];
+        if (isset($this->addresses)) {
+            $jsonString['addresses'] = $this->addresses;
+        }
         if (isset($this->name)) {
             $jsonString['name'] = $this->name;
         }
@@ -132,9 +138,9 @@ class UpdateParticipantInConversationRequest implements \JsonSerializable
 {
     /**
      * @property string $name
-     * @property string $type
+     * @property string $type Type of Participant in the Conversation.
      * @property string $profileId
-     * @property CreateParticipantInConversationRequestAddresses[] $addresses
+     * @property CreateConversationWithConfigRequestParticipantsAddresses[] $addresses
     */
         protected $name;
         protected $type;

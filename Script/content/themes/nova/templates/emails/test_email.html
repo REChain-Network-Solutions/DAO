@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>{$template_subject}</title>
+    {include file='emails/__email_styles.tpl'}
+  </head>
+
+  <body>
+    <span class="preheader">{$template_subject}</span>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body">
+      <tr>
+        <td>&nbsp;</td>
+        <td class="container">
+
+          <div class="email-header">
+            <a href="{$system['system_url']}">
+              {if $system['system_logo']}
+              <img src="{$system['system_uploads']}/{$system['system_logo']}" alt="{__($system['system_title'])}">
+              {else}
+              <span class="site-name">{__($system['system_title'])}</span>
+              {/if}
+            </a>
+          </div>
+
+          <div class="content">
+            <table role="presentation" class="main">
+              <tr>
+                <td class="header-bar">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="wrapper">
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <h1>{__("Test Email")}</h1>
+                        <p>{__("Hi")},</p>
+                        <p>{__("This is a test email from")} <strong>{__($system['system_title'])}</strong>. {__("If you received this, your email configuration is working correctly.")}</p>
+                        <p>{__("No action is required.")}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="footer">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td class="content-block">
+                    <p>&copy; {$smarty.now|date_format:"%Y"} <a href="{$system['system_url']}">{__($system['system_title'])}</a>. {__("All rights reserved.")}</p>
+                    <p>{__("This is an automated test email sent from the admin panel of")} <a href="{$system['system_url']}">{__($system['system_title'])}</a>.</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+  </body>
+
+</html>

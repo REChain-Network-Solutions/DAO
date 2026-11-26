@@ -37,6 +37,24 @@
 foreach (glob(__DIR__ . '/traits/*.php') as $filename) {
   require_once $filename;
 }
+if (!trait_exists('CampaignsTrait')) {
+  trait CampaignsTrait {}
+}
+if (!trait_exists('FundingTrait')) {
+  trait FundingTrait {}
+}
+if (!trait_exists('MonetizationTrait')) {
+  trait MonetizationTrait {}
+}
+if (!trait_exists('PackagesTrait')) {
+  trait PackagesTrait {}
+}
+if (!trait_exists('PaymentsTrait')) {
+  trait PaymentsTrait {}
+}
+if (!trait_exists('WalletTrait')) {
+  trait WalletTrait {}
+}
 
 class User
 {
@@ -51,11 +69,13 @@ class User
     AnnouncementsTrait,
     BlogsTrait,
     CallsTrait,
+    CampaignsTrait,
     CategoriesTrait,
     ChatTrait,
     CommentsTrait,
     CoursesTrait,
     CustomFieldsTrait,
+    DatingTrait,
     DevelopersTrait,
     EventsTrait,
     ForumsTrait,
@@ -74,23 +94,33 @@ class User
     MonetizationTrait,
     MoviesTrait,
     NotificationsTrait,
+    OffersTrait,
     PackagesTrait,
     PagesTrait,
     PaymentsTrait,
     PhotosTrait,
     PointsTrait,
+    PostViewsTrait,
     PostsTrait,
     PublisherTrait,
-    EmojiesStickersTrait,
+    PublisherEditTrait,
     RealtimeTrait,
     ReelsTrait,
     ReportsTrait,
     ReviewsTrait,
+    RichTextTrait,
     SearchTrait,
+    ShortcutsTrait,
+    SitemapTrait,
+    StickersTrait,
+    StoriesAudienceTrait,
+    StoriesHighlightsTrait,
+    StoriesMusicTrait,
     StoriesTrait,
     SupportTrait,
     SystemTrait,
     ToolsTrait,
+    TranslationsTrait,
     VideosTrait,
     WalletTrait,
     WidgetsTrait;
@@ -108,22 +138,26 @@ class User
   public $_is_banned = false;
   public $_data = [];
   public $_master_data = [];
+  public $_cursor = null;
+
+  private $_connections_ids = [];
+  private $_posts_prefetch = null;
+  private $_conversations_prefetch = null;
 
   private $_cookie_user_id = "c_user";
   private $_cookie_user_token = "xs";
   private $_cookie_user_jwt = "user_jwt";
   private $_cookie_user_referrer = "ref";
   private $_cookie_user_login_as = "log_as";
-  private $_cookie_user_session = "user_session";
 
 
 
   /* ------------------------------- */
-  /* Constructor ✅ */
+  /* Constructor */
   /* ------------------------------- */
 
   /**
-   * __construct ✅
+   * __construct 
    * 
    * @param string $jwt
    * @return void
@@ -185,13 +219,11 @@ class User
           }
           $this->_data['user_permissions_group'] = $this->get_permissions_group($user_permissions_group);
         }
-        /* get master connected accounts */
-        $this->_data['connected_accounts'] = $this->get_connected_accounts($this->_data['user_master_account']);
         /* prepare full name */
         $this->_data['user_fullname'] = ($system['show_usernames_enabled']) ? $this->_data['user_name'] : $this->_data['user_firstname'] . " " . $this->_data['user_lastname'];
         /* check unusual login */
         if (!$this->_login_as && $system['unusual_login_enabled'] && !defined('SKIP_UNUSUAL_LOGIN_CHECK')) {
-          if ($this->_data['user_ip'] != get_user_ip()) {
+          if ($this->_check_unusual_login()) {
             return;
           }
         }
@@ -207,8 +239,10 @@ class User
         if ($system['current_language'] != $this->_data['user_language']) {
           $db->query(sprintf("UPDATE users SET user_language = %s WHERE user_id = %s", secure($system['current_language']), secure($this->_data['user_id'], 'int')));
         }
-        /* update user last seen */
-        $db->query(sprintf("UPDATE users SET user_last_seen = NOW() WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        /* update user last seen (at most once per half of the offline time) */
+        if (!$this->_data['user_last_seen'] || strtotime($this->_data['user_last_seen']) < time() - max(1, intdiv((int) $system['offline_time'], 2))) {
+          $db->query(sprintf("UPDATE users SET user_last_seen = NOW() WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
+        }
         /* active session */
         $this->_data['active_session_id'] = $this->_data['session_id'];
         $this->_data['active_session_token'] = $this->_data['session_token'];
@@ -217,14 +251,6 @@ class User
         $this->_data['user_picture_raw'] = $this->_data['user_picture'];
         $this->_data['user_picture'] = get_picture($this->_data['user_picture'], $this->_data['user_gender']);
         $this->_data['user_picture_full'] = ($this->_data['user_picture_full']) ? $system['system_uploads'] . '/' . $this->_data['user_picture_full'] : $this->_data['user_picture_full'];
-        /* get all friends ids */
-        $this->_data['friends_ids'] = $this->get_friends_ids();
-        /* get all followings ids */
-        $this->_data['followings_ids'] = $this->get_followings_ids();
-        /* get all friend requests ids */
-        $this->_data['friend_requests_ids'] = $this->get_friend_requests_ids();
-        /* get all friend requests sent ids */
-        $this->_data['friend_requests_sent_ids'] = $this->get_friend_requests_sent_ids();
         /* package permissions */
         $this->_data['can_boost_posts'] = false;
         $this->_data['can_boost_pages'] = false;
@@ -287,12 +313,17 @@ class User
         $this->_data['can_add_stories'] = $system['stories_enabled'] && $this->check_module_permission('stories_permission');
         /* check posts permission */
         $this->_data['can_publish_posts'] = $this->check_module_permission('posts_permission');
+        /* check comments permission */
+        $this->_data['can_comment'] = $this->check_module_permission('comments_permission');
+        $this->_data['can_upgrade_comments'] = !$this->_data['can_comment'] && $this->check_module_package_permission('comments_permission');
         /* check scheduled posts permission */
         $this->_data['can_schedule_posts'] = $system['posts_schedule_enabled'] && $this->check_module_permission('schedule_posts_permission');
         /* check anonymous posts permission */
         $this->_data['can_add_anonymous_posts'] = $system['anonymous_mode'] && $this->check_module_permission('anonymous_posts_permission');
         /* check collaborative posts permission */
         $this->_data['can_add_collaborative_posts'] = $system['collaborative_posts_enabled'] && $this->check_module_permission('collaborative_posts_permission');
+        /* check rich text posts permission */
+        $this->_data['can_add_rich_text_posts'] = $system['rich_text_posts_enabled'] && $this->check_module_permission('rich_text_posts_permission');
         /* check colored posts permission */
         $this->_data['can_add_colored_posts'] = $system['colored_posts_enabled'] && $this->check_module_permission('colored_posts_permission');
         /* check activity posts permission */
@@ -303,6 +334,8 @@ class User
         $this->_data['can_add_geolocation_posts'] = $system['geolocation_enabled'] && $this->check_module_permission('geolocation_posts_permission');
         /* check gif posts permission */
         $this->_data['can_add_gif_posts'] = $system['gif_enabled'] && $this->check_module_permission('gif_posts_permission');
+        /* check gifs (comments & messages) */
+        $this->_data['can_send_gifs'] = $system['gif_enabled'] && !is_empty($system['giphy_key']);
         /* check ai posts permission */
         $this->_data['can_generate_ai_posts'] = $system['ai_posts_enabled'] && $this->check_module_permission('ai_posts_permission');
         /* check ai blogs permission */
@@ -329,6 +362,8 @@ class User
         $this->_data['can_raise_funding'] = $system['funding_enabled'] && $this->check_module_permission('funding_permission');
         /* check monetization permission */
         $this->_data['can_monetize_content'] = $system['monetization_enabled'] && $this->check_module_permission('monetization_permission');
+        /* check dating permission */
+        $this->_data['can_use_dating'] = $system['dating_enabled'] && $this->check_module_permission('dating_permission');
         /* check tip permission */
         $this->_data['can_receive_tip'] = $system['tips_enabled'] && $this->check_module_permission('tips_permission');
         /* check is user ads free */
@@ -390,7 +425,7 @@ class User
   public function check_user_permission($user_id, $permission)
   {
     global $db, $system;
-    $get_profile = $db->query(sprintf("SELECT users.user_id, users.user_group, users.user_group_custom, users.user_verified, users.user_subscribed , users_groups.permissions_group_id, packages.package_permissions_group_id FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN users_groups ON users.user_group = '3' AND users.user_group_custom != '0' AND users.user_group_custom = users_groups.user_group_id WHERE users.user_id = %s", secure($user_id, 'int')));
+    $get_profile = $this->conversation_details('permission_profiles', $user_id) ?? $db->query(sprintf("SELECT users.user_id, users.user_group, users.user_group_custom, users.user_verified, users.user_subscribed , users_groups.permissions_group_id, packages.package_permissions_group_id FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN users_groups ON users.user_group = '3' AND users.user_group_custom != '0' AND users.user_group_custom = users_groups.user_group_id WHERE users.user_id = %s", secure($user_id, 'int')));
     if ($get_profile->num_rows == 0) {
       return false;
     }
@@ -500,12 +535,12 @@ class User
    */
   public function get_permissions_group($permissions_group_id)
   {
-    global $db;
-    $get_permissions_group = $db->query(sprintf("SELECT * FROM permissions_groups WHERE permissions_group_id = %s", secure($permissions_group_id, 'int')));
-    if ($get_permissions_group->num_rows == 0) {
-      return false;
+    foreach (system_cache_rows('permissions_groups', "SELECT * FROM permissions_groups") as $permissions_group) {
+      if ($permissions_group['permissions_group_id'] == $permissions_group_id) {
+        return $permissions_group;
+      }
     }
-    return $get_permissions_group->fetch_assoc();
+    return false;
   }
 
 
@@ -609,6 +644,179 @@ class User
 
 
   /**
+   * friends_ids
+   * 
+   * @return array
+   */
+  public function friends_ids()
+  {
+    return $this->_connections_ids['friends'] ??= ($this->_logged_in) ? relations_cache_get($this->_data['user_id'], 'friends', fn() => $this->get_friends_ids()) : [];
+  }
+
+
+  /**
+   * followings_ids
+   * 
+   * @return array
+   */
+  public function followings_ids()
+  {
+    return $this->_connections_ids['followings'] ??= ($this->_logged_in) ? relations_cache_get($this->_data['user_id'], 'followings', fn() => $this->get_followings_ids()) : [];
+  }
+
+
+  /**
+   * friend_requests_ids
+   * 
+   * @return array
+   */
+  public function friend_requests_ids()
+  {
+    return $this->_connections_ids['friend_requests'] ??= ($this->_logged_in) ? relations_cache_get($this->_data['user_id'], 'friend_requests', fn() => $this->get_friend_requests_ids()) : [];
+  }
+
+
+  /**
+   * friend_requests_sent_ids
+   * 
+   * @return array
+   */
+  public function friend_requests_sent_ids()
+  {
+    return $this->_connections_ids['friend_requests_sent'] ??= ($this->_logged_in) ? relations_cache_get($this->_data['user_id'], 'friend_requests_sent', fn() => $this->get_friend_requests_sent_ids()) : [];
+  }
+
+
+  /**
+   * preload_memberships
+   * 
+   * @param string $type
+   * @param array $nodes_ids
+   * @return void
+   */
+  public function preload_memberships($type, $nodes_ids)
+  {
+    global $db;
+    if (!$this->_logged_in || defined('SOCKET_SERVER') || (defined('POSTS_PREFETCH_DISABLED') && POSTS_PREFETCH_DISABLED)) {
+      return;
+    }
+    $nodes_ids = array_values(array_unique(array_filter(array_map('intval', $nodes_ids))));
+    if (!$nodes_ids) {
+      return;
+    }
+    $viewer_id = secure($this->_data['user_id'], 'int');
+    $nodes_list = implode(',', $nodes_ids);
+    switch ($type) {
+      case 'pages':
+        foreach ($nodes_ids as $node_id) {
+          $this->_connections_ids['page_likes'][$node_id] = false;
+        }
+        $get_likes = $db->query(sprintf("SELECT page_id FROM pages_likes WHERE user_id = %s AND page_id IN (%s)", $viewer_id, $nodes_list));
+        while ($like = $get_likes->fetch_assoc()) {
+          $this->_connections_ids['page_likes'][$like['page_id']] = true;
+        }
+        break;
+
+      case 'groups':
+        foreach ($nodes_ids as $node_id) {
+          $this->_connections_ids['group_membership'][$node_id] = false;
+        }
+        $get_memberships = $db->query(sprintf("SELECT group_id, approved FROM groups_members WHERE user_id = %s AND group_id IN (%s)", $viewer_id, $nodes_list));
+        while ($membership = $get_memberships->fetch_assoc()) {
+          $this->_connections_ids['group_membership'][$membership['group_id']] = ($membership['approved'] == '1') ? "approved" : "pending";
+        }
+        break;
+
+      case 'events':
+        foreach ($nodes_ids as $node_id) {
+          $this->_connections_ids['event_membership'][$node_id] = false;
+        }
+        $get_memberships = $db->query(sprintf("SELECT event_id, is_invited, is_interested, is_going FROM events_members WHERE user_id = %s AND event_id IN (%s)", $viewer_id, $nodes_list));
+        while ($membership = $get_memberships->fetch_assoc()) {
+          $this->_connections_ids['event_membership'][$membership['event_id']] = ['is_invited' => $membership['is_invited'], 'is_interested' => $membership['is_interested'], 'is_going' => $membership['is_going']];
+        }
+        break;
+    }
+  }
+
+
+  /**
+   * preload_people_cards
+   * 
+   * @param array $users_ids
+   * @return void
+   */
+  public function preload_people_cards($users_ids)
+  {
+    global $db, $system;
+    if (defined('SOCKET_SERVER') || (defined('POSTS_PREFETCH_DISABLED') && POSTS_PREFETCH_DISABLED)) {
+      return;
+    }
+    $users_ids = array_values(array_unique(array_filter(array_map('intval', $users_ids))));
+    if (!$users_ids) {
+      return;
+    }
+    $users_list = implode(',', $users_ids);
+    /* mutual friends (as get_mutual_friends_preview() with the default limit of 3) */
+    if ($this->_logged_in) {
+      $friends = array_fill_keys($users_ids, []);
+      $get_friends = $db->query(sprintf("SELECT t.owner_id, t.friend_id FROM (SELECT f.user_one_id AS owner_id, f.user_two_id AS friend_id FROM friends AS f WHERE f.status = 1 AND f.user_one_id IN (%1\$s) UNION SELECT f.user_two_id AS owner_id, f.user_one_id AS friend_id FROM friends AS f WHERE f.status = 1 AND f.user_two_id IN (%1\$s)) AS t INNER JOIN users AS u ON t.friend_id = u.user_id", $users_list));
+      while ($friend = $get_friends->fetch_assoc()) {
+        $friends[$friend['owner_id']][] = $friend['friend_id'];
+      }
+      $mutual_ids = $preview_ids = [];
+      foreach ($users_ids as $user_id) {
+        $mutual_ids[$user_id] = array_intersect($this->friends_ids(), $friends[$user_id]);
+        $preview_ids = array_merge($preview_ids, array_slice($mutual_ids[$user_id], 0, 3));
+      }
+      $previews = [];
+      if ($preview_ids) {
+        $get_previews = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture FROM users WHERE user_id IN (%s)", $this->spread_ids(array_unique($preview_ids))));
+        while ($preview = $get_previews->fetch_assoc()) {
+          $preview['user_picture'] = get_picture($preview['user_picture'], $preview['user_gender']);
+          $previews[$preview['user_id']] = $preview;
+        }
+      }
+      foreach ($users_ids as $user_id) {
+        /* a primary key IN () returns rows by ascending id */
+        $slice = array_map('intval', array_slice($mutual_ids[$user_id], 0, 3));
+        sort($slice);
+        $mutual_friends = [];
+        foreach ($slice as $preview_id) {
+          if (isset($previews[$preview_id])) {
+            $mutual_friends[] = $previews[$preview_id];
+          }
+        }
+        $this->_connections_ids['mutual_preview'][$user_id] = ['count' => count($mutual_ids[$user_id]), 'friends' => $mutual_friends];
+      }
+    }
+    /* card details (as get_user_card_details()) */
+    if ($system['work_info_enabled'] || $system['location_info_enabled'] || $system['education_info_enabled']) {
+      foreach ($users_ids as $user_id) {
+        $this->_connections_ids['card_info'][$user_id] = false;
+      }
+      $get_info = $db->query(sprintf("SELECT user_work_title, user_work_place, user_current_city, user_edu_major, user_edu_school, user_privacy_work, user_privacy_location, user_privacy_education, user_id AS prefetch_user_id FROM users WHERE user_id IN (%s)", $users_list));
+      while ($info = $get_info->fetch_assoc()) {
+        $info_user_id = $info['prefetch_user_id'];
+        unset($info['prefetch_user_id']);
+        $this->_connections_ids['card_info'][$info_user_id] = $info;
+      }
+    }
+  }
+
+
+  /**
+   * connected_accounts
+   * 
+   * @return array
+   */
+  public function connected_accounts()
+  {
+    return $this->_connections_ids['connected_accounts'] ??= ($this->_logged_in) ? $this->get_connected_accounts($this->_data['user_master_account']) : [];
+  }
+
+
+  /**
    * get_friends_followings_ids
    * 
    * @return array
@@ -617,9 +825,9 @@ class User
   {
     global $system;
     if ($system['friends_enabled']) {
-      return array_intersect($this->_data['friends_ids'], $this->_data['followings_ids']);
+      return array_intersect($this->friends_ids(), $this->followings_ids());
     } else {
-      return $this->_data['followings_ids'];
+      return $this->followings_ids();
     }
   }
 
@@ -633,9 +841,9 @@ class User
   {
     global $system;
     if ($system['friends_enabled']) {
-      return $this->_data['friends_ids'];
+      return $this->friends_ids();
     } else {
-      return $this->_data['followings_ids'];
+      return $this->followings_ids();
     }
   }
 
@@ -743,7 +951,7 @@ class User
   }
 
 
-  /** 
+  /**
    * get_groups_managed_ids
    * 
    * @return array
@@ -753,7 +961,7 @@ class User
     global $db;
     $groups = [];
     if ($this->_logged_in) {
-      $get_groups = $db->query(sprintf("SELECT groups.group_id FROM groups_admins INNER JOIN groups ON groups_admins.group_id = groups.group_id WHERE groups_admins.user_id = %s ORDER BY group_id DESC", secure($this->_data['user_id'], 'int')));
+      $get_groups = $db->query(sprintf("SELECT `groups`.group_id FROM groups_admins INNER JOIN `groups` ON groups_admins.group_id = `groups`.group_id WHERE groups_admins.user_id = %s ORDER BY group_id DESC", secure($this->_data['user_id'], 'int')));
       if ($get_groups->num_rows > 0) {
         while ($group = $get_groups->fetch_assoc()) {
           $groups[] = $group['group_id'];
@@ -795,7 +1003,7 @@ class User
     global $db;
     $events = [];
     if ($this->_logged_in) {
-      $get_events = $db->query(sprintf("SELECT events.event_id events WHERE event_admin = %s ORDER BY event_id DESC", secure($this->_data['user_id'], 'int')));
+      $get_events = $db->query(sprintf("SELECT `events`.event_id FROM `events` WHERE event_admin = %s ORDER BY event_id DESC", secure($this->_data['user_id'], 'int')));
       if ($get_events->num_rows > 0) {
         while ($event = $get_events->fetch_assoc()) {
           $events[] = $event['event_id'];
@@ -848,6 +1056,57 @@ class User
 
 
 
+  /**
+   * get_friends_first_page
+   * 
+   * @param string $table
+   * @param string $user_column
+   * @param string $where
+   * @param integer $offset
+   * @param integer $limit
+   * @param string $cursor
+   * @param string $key_column
+   * @return array
+   */
+  public function get_friends_first_page($table, $user_column, $where, $offset, $limit, $cursor = null, $key_column = null)
+  {
+    global $db;
+    $key = "`" . $table . "`." . ($key_column ?: $user_column);
+    $friends_ids = implode(',', array_unique(array_map('intval', $this->get_friends_followings_ids())));
+    $from = sprintf("FROM `%1\$s` INNER JOIN users ON `%1\$s`.%2\$s = users.user_id WHERE %3\$s", $table, $user_column, $where);
+    $cursor = cursor_decode($cursor, ['int', 'int']);
+    $keys = [];
+    $part = 1;
+    $friends_read = 0;
+    /* friends & followings */
+    if ($friends_ids !== "" && (!$cursor || $cursor[0] == 0)) {
+      $after = ($cursor) ? sprintf(" AND %s < %s", $key, secure($cursor[1], 'int')) : "";
+      $get_keys = $db->query(sprintf("SELECT %s AS list_key %s AND `%s`.%s IN (%s)" . $after . " ORDER BY %s DESC LIMIT %s", $key, $from, $table, $user_column, $friends_ids, $key, secure(($cursor) ? $limit : $offset + $limit, 'int', false)));
+      $keys = array_map('intval', array_column($get_keys->fetch_all(MYSQLI_ASSOC), 'list_key'));
+      $friends_read = count($keys);
+      if (!$cursor) {
+        $keys = array_slice($keys, $offset);
+      }
+      if ($keys) {
+        $part = 0;
+      }
+    }
+    /* everyone else */
+    if (count($keys) < $limit) {
+      $after = ($cursor && $cursor[0] == 1) ? sprintf(" AND %s < %s", $key, secure($cursor[1], 'int')) : "";
+      $others = ($friends_ids !== "") ? sprintf(" AND `%s`.%s NOT IN (%s)", $table, $user_column, $friends_ids) : "";
+      $get_keys = $db->query(sprintf("SELECT %s AS list_key %s" . $others . $after . " ORDER BY %s DESC LIMIT %s, %s", $key, $from, $key, secure(($cursor) ? 0 : max(0, $offset - $friends_read), 'int', false), secure($limit - count($keys), 'int', false)));
+      $others_keys = array_map('intval', array_column($get_keys->fetch_all(MYSQLI_ASSOC), 'list_key'));
+      if ($others_keys) {
+        $keys = array_merge($keys, $others_keys);
+        $part = 1;
+      }
+    }
+    return [$keys, ($keys) ? cursor_encode([$part, end($keys)]) : null];
+  }
+
+
+
   /* ------------------------------- */
   /* Get Users */
   /* ------------------------------- */
@@ -860,10 +1119,11 @@ class User
    * @param boolean $get_all
    * @return array
    */
-  public function get_friends($user_id, $offset = 0, $get_all = false)
+  public function get_friends($user_id, $offset = 0, $get_all = false, $cursor = null)
   {
     global $db, $system;
     $friends = [];
+    $this->_cursor = null;
     /* get the target user's privacy */
     $get_privacy = $db->query(sprintf("SELECT user_privacy_friends FROM users WHERE user_id = %s", secure($user_id, 'int')));
     $privacy = $get_privacy->fetch_assoc();
@@ -872,8 +1132,15 @@ class User
       return $friends;
     }
     $offset *= $system['max_results_even'];
-    $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_friends = $db->query(sprintf('SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM friends INNER JOIN users ON (friends.user_one_id = users.user_id AND friends.user_one_id != %1$s) OR (friends.user_two_id = users.user_id AND friends.user_two_id != %1$s) WHERE users.user_banned = "0" AND friends.status = 1 AND (friends.user_one_id = %1$s OR friends.user_two_id = %1$s) ' . $limit_statement, secure($user_id, 'int')));
+    /* newest friends first; pages after the first continue from a cursor (the friendship id) instead of an offset */
+    $cursor = ($get_all) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['friends.id'], $cursor) : "";
+    $side_limit = ($get_all) ? "" : sprintf(" LIMIT %s", secure(($cursor) ? $system['max_results_even'] : $offset + $system['max_results_even'], 'int', false));
+    $limit_statement = ($get_all) ? "" : (($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* each side of the friendship is read through its own index, then merged */
+    $side_query = "(SELECT friends.id, friends.%2\$s AS friend_id FROM friends INNER JOIN users ON friends.%2\$s = users.user_id WHERE friends.status = 1 AND friends.%1\$s = %3\$s AND users.user_banned = '0' AND users.user_incognito_enabled = '0'" . $cursor_statement . " ORDER BY friends.id DESC" . $side_limit . ")";
+    $get_friends = $db->query("SELECT friends.id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM (" . sprintf($side_query, 'user_one_id', 'user_two_id', secure($user_id, 'int')) . " UNION ALL " . sprintf($side_query, 'user_two_id', 'user_one_id', secure($user_id, 'int')) . ") AS friends INNER JOIN users ON friends.friend_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id ORDER BY friends.id DESC " . $limit_statement);
+    [$get_friends, $next_cursor] = cursor_result($get_friends);
     if ($get_friends->num_rows > 0) {
       while ($friend = $get_friends->fetch_assoc()) {
         $friend['user_picture'] = get_picture($friend['user_picture'], $friend['user_gender']);
@@ -883,6 +1150,7 @@ class User
         $friends[] = $friend;
       }
     }
+    $this->_cursor = ($get_all) ? null : $next_cursor;
     return $friends;
   }
 
@@ -908,7 +1176,7 @@ class User
       return $top_friends;
     }
     $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_top_friends = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users_top_friends INNER JOIN users ON users_top_friends.friend_id = users.user_id WHERE users.user_banned = '0' AND users_top_friends.user_id = %s " . $limit_statement, secure($user_id, 'int')));
+    $get_top_friends = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users_top_friends INNER JOIN users ON users_top_friends.friend_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_banned = '0' AND user_incognito_enabled = '0' AND users_top_friends.user_id = %s " . $limit_statement, secure($user_id, 'int')));
     if ($get_top_friends->num_rows > 0) {
       while ($top_friend = $get_top_friends->fetch_assoc()) {
         $top_friend['user_picture'] = get_picture($top_friend['user_picture'], $top_friend['user_gender']);
@@ -958,10 +1226,11 @@ class User
    * @param boolean $get_all
    * @return array
    */
-  public function get_followings($user_id, $offset = 0, $get_all = false)
+  public function get_followings($user_id, $offset = 0, $get_all = false, $cursor = null)
   {
     global $db, $system;
     $followings = [];
+    $this->_cursor = null;
     $offset *= $system['max_results_even'];
     /* get the target user's privacy */
     $get_privacy = $db->query(sprintf("SELECT user_privacy_followers FROM users WHERE user_id = %s", secure($user_id, 'int')));
@@ -970,8 +1239,12 @@ class User
     if (!$this->check_privacy($privacy['user_privacy_followers'], $user_id)) {
       return $followings;
     }
-    $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_followings = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM followings INNER JOIN users ON followings.following_id = users.user_id WHERE users.user_banned = '0' AND followings.user_id = %s " . $limit_statement, secure($user_id, 'int')));
+    /* newest first; pages after the first continue from a cursor (the following id) instead of an offset */
+    $cursor = ($get_all) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['followings.id'], $cursor) : "";
+    $limit_statement = ($get_all) ? "" : (($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    $get_followings = $db->query(sprintf("SELECT followings.id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM followings INNER JOIN users ON followings.following_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_banned = '0' AND user_incognito_enabled = '0' AND followings.user_id = %s " . $cursor_statement . " ORDER BY followings.id DESC " . $limit_statement, secure($user_id, 'int')));
+    [$get_followings, $next_cursor] = cursor_result($get_followings);
     if ($get_followings->num_rows > 0) {
       while ($following = $get_followings->fetch_assoc()) {
         $following['user_picture'] = get_picture($following['user_picture'], $following['user_gender']);
@@ -980,6 +1253,7 @@ class User
         $followings[] = $following;
       }
     }
+    $this->_cursor = ($get_all) ? null : $next_cursor;
     return $followings;
   }
 
@@ -994,7 +1268,7 @@ class User
   {
     global $db;
     $user_id = (isset($user_id)) ? $user_id : $this->_data['user_id'];
-    $get_followings_count = $db->query(sprintf("SELECT COUNT(*) AS count FROM followings INNER JOIN users ON followings.following_id = users.user_id WHERE users.user_banned = '0' AND followings.user_id = %s", secure($user_id, 'int')));
+    $get_followings_count = $db->query(sprintf("SELECT COUNT(*) AS count FROM followings INNER JOIN users ON followings.following_id = users.user_id WHERE users.user_banned = '0' AND user_incognito_enabled = '0' AND followings.user_id = %s", secure($user_id, 'int')));
     return $get_followings_count->fetch_assoc()['count'];
   }
 
@@ -1007,10 +1281,11 @@ class User
    * @param boolean $get_all
    * @return array
    */
-  public function get_followers($user_id, $offset = 0, $get_all = false)
+  public function get_followers($user_id, $offset = 0, $get_all = false, $cursor = null)
   {
     global $db, $system;
     $followers = [];
+    $this->_cursor = null;
     $offset *= $system['max_results_even'];
     /* get the target user's privacy */
     $get_privacy = $db->query(sprintf("SELECT user_privacy_followers FROM users WHERE user_id = %s", secure($user_id, 'int')));
@@ -1019,8 +1294,12 @@ class User
     if (!$this->check_privacy($privacy['user_privacy_followers'], $user_id)) {
       return $followers;
     }
-    $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_followers = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM followings INNER JOIN users ON followings.user_id = users.user_id WHERE users.user_banned = '0' AND followings.following_id = %s " . $limit_statement, secure($user_id, 'int')));
+    /* newest first; pages after the first continue from a cursor (the following id) instead of an offset */
+    $cursor = ($get_all) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['followings.id'], $cursor) : "";
+    $limit_statement = ($get_all) ? "" : (($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    $get_followers = $db->query(sprintf("SELECT followings.id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM followings INNER JOIN users ON followings.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_banned = '0' AND user_incognito_enabled = '0' AND followings.following_id = %s " . $cursor_statement . " ORDER BY followings.id DESC " . $limit_statement, secure($user_id, 'int')));
+    [$get_followers, $next_cursor] = cursor_result($get_followers);
     if ($get_followers->num_rows > 0) {
       while ($follower = $get_followers->fetch_assoc()) {
         $follower['user_picture'] = get_picture($follower['user_picture'], $follower['user_gender']);
@@ -1029,6 +1308,7 @@ class User
         $followers[] = $follower;
       }
     }
+    $this->_cursor = ($get_all) ? null : $next_cursor;
     return $followers;
   }
 
@@ -1043,7 +1323,7 @@ class User
   {
     global $db;
     $user_id = (isset($user_id)) ? $user_id : $this->_data['user_id'];
-    $get_followers_count = $db->query(sprintf("SELECT COUNT(*) AS count FROM followings INNER JOIN users ON followings.user_id = users.user_id WHERE users.user_banned = '0' AND followings.following_id = %s", secure($user_id, 'int')));
+    $get_followers_count = $db->query(sprintf("SELECT COUNT(*) AS count FROM followings INNER JOIN users ON followings.user_id = users.user_id WHERE users.user_banned = '0' AND user_incognito_enabled = '0' AND followings.following_id = %s", secure($user_id, 'int')));
     return $get_followers_count->fetch_assoc()['count'];
   }
 
@@ -1057,13 +1337,18 @@ class User
    * @param boolean $get_all
    * @return array
    */
-  public function get_subscribers($node_id, $node_type = 'profile', $offset = 0, $get_all = false)
+  public function get_subscribers($node_id, $node_type = 'profile', $offset = 0, $get_all = false, $cursor = null)
   {
     global $db, $system;
     $subscribers = [];
     $offset *= $system['max_results_even'];
-    $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_subscribers = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM subscribers INNER JOIN users ON subscribers.user_id = users.user_id WHERE users.user_banned = '0' AND subscribers.node_id = %s AND subscribers.node_type = %s " . $limit_statement, secure($node_id, 'int'), secure($node_type)));
+    /* newest first; pages after the first continue from a cursor (the subscription id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = ($get_all) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['subscribers.id'], $cursor) : "";
+    $limit_statement = ($get_all) ? "" : (($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    $get_subscribers = $db->query(sprintf("SELECT subscribers.id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM subscribers INNER JOIN users ON subscribers.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_banned = '0' AND subscribers.node_id = %s AND subscribers.node_type = %s " . $cursor_statement . " ORDER BY subscribers.id DESC " . $limit_statement, secure($node_id, 'int'), secure($node_type)));
+    [$get_subscribers, $next_cursor] = cursor_result($get_subscribers);
     if ($get_subscribers->num_rows > 0) {
       while ($subscriber = $get_subscribers->fetch_assoc()) {
         $subscriber['user_picture'] = get_picture($subscriber['user_picture'], $subscriber['user_gender']);
@@ -1072,6 +1357,7 @@ class User
         $subscribers[] = $subscriber;
       }
     }
+    $this->_cursor = ($get_all) ? null : ($next_cursor ?? null);
     return $subscribers;
   }
 
@@ -1100,7 +1386,7 @@ class User
    * @param boolean $get_all
    * @return array
    */
-  public function get_subscriptions($user_id, $offset = 0, $get_all = false)
+  public function get_subscriptions($user_id, $offset = 0, $get_all = false, $cursor = null)
   {
     global $db, $system;
     $subscriptions = [];
@@ -1112,8 +1398,13 @@ class User
       return $subscriptions;
     }
     $offset *= $system['max_results_even'];
-    $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
-    $get_subscriptions = $db->query(sprintf("SELECT subscribers.plan_id, subscribers.node_type, subscribers.user_id AS plan_user_id, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified, pages.*, `groups`.* FROM subscribers LEFT JOIN users ON subscribers.node_id = users.user_id AND subscribers.node_type = 'profile' AND users.user_banned = '0' LEFT JOIN pages ON subscribers.node_id = pages.page_id AND subscribers.node_type = 'page' LEFT JOIN `groups` ON subscribers.node_id = `groups`.group_id AND subscribers.node_type = 'group' WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL AND `groups`.group_name <=> NULL) AND subscribers.user_id = %s" . $limit_statement, secure($user_id, 'int')));
+    /* newest first; pages after the first continue from a cursor (the subscription id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = ($get_all) ? null : cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['subscribers.id'], $cursor) : "";
+    $limit_statement = ($get_all) ? "" : (($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    $get_subscriptions = $db->query(sprintf("SELECT subscribers.id AS `cursor`, subscribers.plan_id, subscribers.node_type, subscribers.user_id AS plan_user_id, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified, pages.*, `groups`.* FROM subscribers LEFT JOIN users ON subscribers.node_id = users.user_id AND subscribers.node_type = 'profile' AND users.user_banned = '0' LEFT JOIN pages ON subscribers.node_id = pages.page_id AND subscribers.node_type = 'page' LEFT JOIN `groups` ON subscribers.node_id = `groups`.group_id AND subscribers.node_type = 'group' LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE NOT (users.user_name <=> NULL AND pages.page_name <=> NULL AND `groups`.group_name <=> NULL) AND subscribers.user_id = %s" . $cursor_statement . " ORDER BY subscribers.id DESC " . $limit_statement, secure($user_id, 'int')));
+    [$get_subscriptions, $next_cursor] = cursor_result($get_subscriptions);
     if ($get_subscriptions->num_rows > 0) {
       while ($subscription = $get_subscriptions->fetch_assoc()) {
         /* get node picture */
@@ -1135,6 +1426,7 @@ class User
         $subscriptions[] = $subscription;
       }
     }
+    $this->_cursor = ($get_all) ? null : ($next_cursor ?? null);
     return $subscriptions;
   }
 
@@ -1160,12 +1452,18 @@ class User
    * @param integer $offset
    * @return array
    */
-  public function get_blocked($offset = 0)
+  public function get_blocked($offset = 0, $cursor = null)
   {
     global $db, $system;
     $blocks = [];
     $offset *= $system['max_results'];
-    $get_blocks = $db->query(sprintf('SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users_blocks INNER JOIN users ON users_blocks.blocked_id = users.user_id WHERE users_blocks.user_id = %s LIMIT %s, %s', secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last blocked user) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users_blocks.blocked_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    $get_blocks = $db->query(sprintf('SELECT users_blocks.blocked_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users_blocks INNER JOIN users ON users_blocks.blocked_id = users.user_id LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE users_blocks.user_id = %s' . $cursor_statement . ' ORDER BY users_blocks.blocked_id DESC ' . $limit_statement, secure($this->_data['user_id'], 'int')));
+    [$get_blocks, $next_cursor] = cursor_result($get_blocks);
     if ($get_blocks->num_rows > 0) {
       while ($block = $get_blocks->fetch_assoc()) {
         $block['user_fullname'] = ($system['show_usernames_enabled']) ? $block['user_name'] : $block['user_firstname'] . " " . $block['user_lastname'];
@@ -1175,7 +1473,8 @@ class User
       }
     }
     $has_more = (count($blocks) == $system['max_results']) ? true : false;
-    return ['data' => $blocks, 'has_more' => $has_more];
+    $this->_cursor = $next_cursor ?? null;
+    return ['data' => $blocks, 'has_more' => $has_more, 'cursor' => $this->_cursor];
   }
 
 
@@ -1205,23 +1504,32 @@ class User
    * @param integer $last_request_id
    * @return array
    */
-  public function get_friend_requests($offset = 0, $last_request_id = null)
+  public function get_friend_requests($offset = 0, $last_request_id = null, $cursor = null)
   {
     global $db, $system;
     $requests = [];
     $offset *= $system['max_results'];
+    /* newest first; pages after the first continue from a cursor (the last request id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['friends.id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
     if ($last_request_id !== null) {
       $get_requests = $db->query(sprintf("SELECT friends.id, friends.user_one_id as user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM friends INNER JOIN users ON friends.user_one_id = users.user_id WHERE friends.status = 0 AND friends.user_two_id = %s AND friends.id > %s ORDER BY friends.id DESC", secure($this->_data['user_id'], 'int'), secure($last_request_id, 'int')));
     } else {
-      $get_requests = $db->query(sprintf("SELECT friends.id, friends.user_one_id as user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM friends INNER JOIN users ON friends.user_one_id = users.user_id WHERE friends.status = 0 AND friends.user_two_id = %s ORDER BY friends.id DESC LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+      $get_requests = $db->query(sprintf("SELECT friends.id AS `cursor`, friends.id, friends.user_one_id as user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM friends INNER JOIN users ON friends.user_one_id = users.user_id WHERE friends.status = 0 AND friends.user_two_id = %s" . $cursor_statement . " ORDER BY friends.id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
+      [$get_requests, $next_cursor] = cursor_result($get_requests);
     }
     if ($get_requests->num_rows > 0) {
       while ($request = $get_requests->fetch_assoc()) {
         $request['user_picture'] = get_picture($request['user_picture'], $request['user_gender']);
-        $request['mutual_friends_count'] = $this->get_mutual_friends_count($request['user_id']);
+        $mutual_friends = $this->get_mutual_friends_preview($request['user_id']);
+        $request['mutual_friends_count'] = $mutual_friends['count'];
+        $request['mutual_friends'] = $mutual_friends['friends'];
         $requests[] = $request;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $requests;
   }
 
@@ -1232,19 +1540,28 @@ class User
    * @param integer $offset
    * @return array
    */
-  public function get_friend_requests_sent($offset = 0)
+  public function get_friend_requests_sent($offset = 0, $cursor = null)
   {
     global $db, $system;
     $requests = [];
     $offset *= $system['max_results'];
-    $get_requests = $db->query(sprintf("SELECT friends.user_two_id as user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM friends INNER JOIN users ON friends.user_two_id = users.user_id WHERE friends.status = 0 AND friends.user_one_id = %s LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last request id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['friends.id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    $get_requests = $db->query(sprintf("SELECT friends.id AS `cursor`, friends.user_two_id as user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM friends INNER JOIN users ON friends.user_two_id = users.user_id WHERE friends.status = 0 AND friends.user_one_id = %s" . $cursor_statement . " ORDER BY friends.id DESC " . $limit_statement, secure($this->_data['user_id'], 'int')));
+    [$get_requests, $next_cursor] = cursor_result($get_requests);
     if ($get_requests->num_rows > 0) {
       while ($request = $get_requests->fetch_assoc()) {
         $request['user_picture'] = get_picture($request['user_picture'], $request['user_gender']);
-        $request['mutual_friends_count'] = $this->get_mutual_friends_count($request['user_id']);
+        $mutual_friends = $this->get_mutual_friends_preview($request['user_id']);
+        $request['mutual_friends_count'] = $mutual_friends['count'];
+        $request['mutual_friends'] = $mutual_friends['friends'];
         $requests[] = $request;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $requests;
   }
 
@@ -1269,19 +1586,26 @@ class User
    * @param integer $offset
    * @return array
    */
-  public function get_mutual_friends($user_two_id, $offset = 0)
+  public function get_mutual_friends($user_two_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $mutual_friends = [];
     $offset *= $system['max_results'];
-    $mutual_friends_ids = array_intersect($this->_data['friends_ids'], $this->get_friends_ids($user_two_id));
-    $get_mutual_friends = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users WHERE user_id IN (%s) LIMIT %s, %s", $this->spread_ids($mutual_friends_ids), secure($offset, 'int', false), secure($system['max_results'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last user id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results'], 'int', false));
+    $mutual_friends_ids = array_intersect($this->friends_ids(), $this->get_friends_ids($user_two_id));
+    $get_mutual_friends = $db->query(sprintf("SELECT users.user_id AS `cursor`, user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE user_id IN (%s)" . $cursor_statement . " ORDER BY users.user_id DESC " . $limit_statement, $this->spread_ids($mutual_friends_ids)));
+    [$get_mutual_friends, $next_cursor] = cursor_result($get_mutual_friends);
     if ($get_mutual_friends->num_rows > 0) {
       while ($mutual_friend = $get_mutual_friends->fetch_assoc()) {
         $mutual_friend['user_picture'] = get_picture($mutual_friend['user_picture'], $mutual_friend['user_gender']);
         $mutual_friends[] = $mutual_friend;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $mutual_friends;
   }
 
@@ -1294,7 +1618,86 @@ class User
    */
   public function get_mutual_friends_count($user_two_id)
   {
-    return count(array_intersect($this->_data['friends_ids'], $this->get_friends_ids($user_two_id)));
+    return count(array_intersect($this->friends_ids(), $this->get_friends_ids($user_two_id)));
+  }
+
+
+  /**
+   * get_user_card_details
+   * 
+   * @param array $target
+   * @return array
+   */
+  public function get_user_card_details($target)
+  {
+    global $db, $system;
+    static $cache = [];
+    $user_id = (int) $target['user_id'];
+    if (isset($cache[$user_id])) {
+      return $cache[$user_id];
+    }
+    $details = ['mutual_friends_count' => 0, 'mutual_friends' => [], 'work' => null, 'location' => null, 'education' => null];
+    $is_me = ($this->_logged_in && $user_id == $this->_data['user_id']);
+    /* get mutual friends */
+    if ($this->_logged_in && !$is_me) {
+      if (isset($target['mutual_friends_count'])) {
+        $details['mutual_friends_count'] = $target['mutual_friends_count'];
+        $details['mutual_friends'] = (isset($target['mutual_friends'])) ? $target['mutual_friends'] : [];
+      } else {
+        $mutual_friends = $this->get_mutual_friends_preview($user_id);
+        $details['mutual_friends_count'] = $mutual_friends['count'];
+        $details['mutual_friends'] = $mutual_friends['friends'];
+      }
+    }
+    /* get basic info */
+    if ($system['work_info_enabled'] || $system['location_info_enabled'] || $system['education_info_enabled']) {
+      $card_info = $this->_connections_ids['card_info'] ?? [];
+      $get_info = (array_key_exists($user_id, $card_info)) ? new PrefetchedResult(($card_info[$user_id]) ? [$card_info[$user_id]] : []) : $db->query(sprintf("SELECT user_work_title, user_work_place, user_current_city, user_edu_major, user_edu_school, user_privacy_work, user_privacy_location, user_privacy_education FROM users WHERE user_id = %s", secure($user_id, 'int')));
+      if ($get_info->num_rows > 0) {
+        $info = $get_info->fetch_assoc();
+        $is_friend = ($this->_logged_in && in_array($user_id, $this->friends_ids()));
+        $can_see = function ($privacy) use ($is_me, $is_friend) {
+          return ($is_me || $privacy == "public" || ($privacy == "friends" && $is_friend));
+        };
+        if ($system['work_info_enabled'] && !is_empty($info['user_work_title']) && $can_see($info['user_privacy_work'])) {
+          $details['work'] = ['title' => $info['user_work_title'], 'place' => $info['user_work_place']];
+        }
+        if ($system['location_info_enabled'] && !is_empty($info['user_current_city']) && $can_see($info['user_privacy_location'])) {
+          $details['location'] = $info['user_current_city'];
+        }
+        if ($system['education_info_enabled'] && !is_empty($info['user_edu_school']) && $can_see($info['user_privacy_education'])) {
+          $details['education'] = ['major' => $info['user_edu_major'], 'school' => $info['user_edu_school']];
+        }
+      }
+    }
+    return $cache[$user_id] = $details;
+  }
+
+
+  /**
+   * get_mutual_friends_preview
+   * 
+   * @param integer $user_two_id
+   * @param integer $limit
+   * @return array
+   */
+  public function get_mutual_friends_preview($user_two_id, $limit = 3)
+  {
+    global $db;
+    /* loaded with its list by preload_people_cards() */
+    if ($limit == 3 && isset($this->_connections_ids['mutual_preview'][(int) $user_two_id])) {
+      return $this->_connections_ids['mutual_preview'][(int) $user_two_id];
+    }
+    $mutual_friends = [];
+    $mutual_friends_ids = array_intersect($this->friends_ids(), $this->get_friends_ids($user_two_id));
+    if ($mutual_friends_ids) {
+      $get_mutual_friends = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture FROM users WHERE user_id IN (%s) LIMIT %s", $this->spread_ids(array_slice($mutual_friends_ids, 0, $limit)), secure($limit, 'int', false)));
+      while ($mutual_friend = $get_mutual_friends->fetch_assoc()) {
+        $mutual_friend['user_picture'] = get_picture($mutual_friend['user_picture'], $mutual_friend['user_gender']);
+        $mutual_friends[] = $mutual_friend;
+      }
+    }
+    return ['count' => count($mutual_friends_ids), 'friends' => $mutual_friends];
   }
 
 
@@ -1305,48 +1708,169 @@ class User
    * @param boolean $random
    * @return array
    */
-  public function get_new_people($offset = 0, $random = false)
+  public function get_new_people($offset = 0, $random = false, $cursor = null)
   {
     global $db, $system;
     $results = [];
-    $offset *= $system['min_results'];
+    $this->_cursor = null;
+    $next_cursor = null;
+    $limit = ($random) ? $system['min_results'] : ($system['people_results'] ?? $system['min_results']);
+    $offset *= $limit;
     // prepare where statement
     $where = "";
     /* user not IN (friends, followings, friend requests & friend requests sent) */
-    $old_people_ids = array_unique(array_merge($this->_data['friends_ids'], $this->_data['followings_ids'], $this->_data['friend_requests_ids'], $this->_data['friend_requests_sent_ids']));
-    $where .= sprintf("WHERE users.user_id != '1' AND users.user_banned = '0' AND users.user_suggestions_hidden = '0' AND users.user_id != %s AND users.user_id NOT IN (%s)", secure($this->_data['user_id'], 'int'), $this->spread_ids($old_people_ids));
+    $old_people_ids = array_unique(array_merge($this->friends_ids(), $this->followings_ids(), $this->friend_requests_ids(), $this->friend_requests_sent_ids()));
+    $where .= sprintf("WHERE users.user_id != '1' AND users.user_banned = '0' AND user_incognito_enabled = '0' AND users.user_suggestions_hidden = '0' AND users.user_id != %s AND users.user_id NOT IN (%s)", secure($this->_data['user_id'], 'int'), $this->spread_ids($old_people_ids));
     /* check if activation enabled */
     if ($system['activation_enabled']) {
       $where .= " AND users.user_activated = '1'";
     }
+    /* get people with the most mutual friends first (random suggestions only) */
+    $mutual_people = [];
+    $excluded_ids = array_fill_keys(array_map('intval', $old_people_ids), true) + [1 => true, (int) $this->_data['user_id'] => true];
+    if ($random && $this->friends_ids()) {
+      /* the friends of up to 30 of the viewer's friends */
+      $friends_sample = $this->friends_ids();
+      shuffle($friends_sample);
+      $friends_sample = $this->spread_ids(array_slice($friends_sample, 0, 30));
+      $get_candidates = $db->query(sprintf("(SELECT user_two_id AS candidate_id FROM friends WHERE status = 1 AND user_one_id IN (%1\$s) LIMIT 1500) UNION ALL (SELECT user_one_id AS candidate_id FROM friends WHERE status = 1 AND user_two_id IN (%1\$s) LIMIT 1500)", $friends_sample));
+      $mutual_counts = [];
+      while ($candidate = $get_candidates->fetch_assoc()) {
+        $candidate_id = (int) $candidate['candidate_id'];
+        if (!isset($excluded_ids[$candidate_id])) {
+          $mutual_counts[$candidate_id] = ($mutual_counts[$candidate_id] ?? 0) + 1;
+        }
+      }
+      if ($mutual_counts) {
+        /* the 200 people with the most mutual friends (random among equal counts) */
+        $candidates_ids = array_keys($mutual_counts);
+        shuffle($candidates_ids);
+        usort($candidates_ids, fn($a, $b) => $mutual_counts[$b] <=> $mutual_counts[$a]);
+        $candidates_ids = array_slice($candidates_ids, 0, 200);
+        $get_mutual_people = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name AS package_name, users.user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id " . $where . " AND users.user_id IN (%s)", implode(',', $candidates_ids)));
+        $mutual_people = array_slice(rows_by_ids($get_mutual_people->fetch_all(MYSQLI_ASSOC), 'user_id', $candidates_ids), 0, $limit);
+      }
+      if ($mutual_people) {
+        $where .= sprintf(" AND users.user_id NOT IN (%s)", $this->spread_ids(array_column($mutual_people, 'user_id')));
+      }
+    }
+    $results_limit = $limit - count($mutual_people);
     /* get users */
-    if ($system['location_finder_enabled']) {
-      $unit = ($system['system_distance'] == "mile") ? 3958 : 6371;
-      $distance = 10000;
+    if ($results_limit <= 0) {
+      $get_users = false;
+    } elseif ($system['location_finder_enabled'] && valid_location($this->_data['user_latitude'] ?? null, $this->_data['user_longitude'] ?? null)) {
       if ($random) {
-        $get_users = $db->query(sprintf("SELECT * FROM (SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified, (%s * acos(cos(radians(%s)) * cos(radians(user_latitude)) * cos(radians(user_longitude) - radians(%s)) + sin(radians(%s)) * sin(radians(user_latitude))) ) AS distance FROM users " . $where . " HAVING distance < %s ORDER BY distance ASC LIMIT %s) tmp ORDER BY RAND() LIMIT %s", secure($unit, 'int'), secure($this->_data['user_latitude']), secure($this->_data['user_longitude']), secure($this->_data['user_latitude']), secure($distance, 'int'), secure($system['max_results'] * 2, 'int', false), secure($system['min_results'], 'int', false)));
+        /* the nearest people, picked at random */
+        $nearby_users = $this->get_nearby_people($where, 10000, 0, $system['max_results'] * 2);
+        shuffle($nearby_users);
+        $get_users = new PrefetchedResult(array_slice($nearby_users, 0, $results_limit));
       } else {
-        $get_users = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified, (%s * acos(cos(radians(%s)) * cos(radians(user_latitude)) * cos(radians(user_longitude) - radians(%s)) + sin(radians(%s)) * sin(radians(user_latitude))) ) AS distance FROM users " . $where . " HAVING distance < %s ORDER BY distance ASC LIMIT %s, %s", secure($unit, 'int'), secure($this->_data['user_latitude']), secure($this->_data['user_longitude']), secure($this->_data['user_latitude']), secure($distance, 'int'), secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+        $get_users = new PrefetchedResult($this->get_nearby_people($where, 10000, $offset, $limit));
       }
     } else {
       if ($random) {
-        $get_users = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users JOIN (SELECT CEIL(RAND() * (SELECT MAX(user_id) FROM users)) AS user_id) AS u " . $where . " AND users.user_id >= u.user_id ORDER BY users.user_id ASC LIMIT %s, %s", secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+        /* random people, sampled through the users ids */
+        $random_people = [];
+        $people_ids = sample_ids('users', 'user_id', "user_id > 0", $results_limit, [
+          'pivots' => 3,
+          'exclude' => array_merge(array_keys($excluded_ids), array_column($mutual_people, 'user_id')),
+          'filter' => function ($ids) use ($db, $where, &$random_people) {
+            $get_people = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id " . $where . " AND users.user_id IN (%s)", implode(',', $ids)));
+            while ($person = $get_people->fetch_assoc()) {
+              $random_people[$person['user_id']] = $person;
+            }
+            return array_keys($random_people);
+          },
+        ]);
+        $get_users = new PrefetchedResult(rows_by_ids($random_people, 'user_id', $people_ids));
       } else {
-        $get_users = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users " . $where . " LIMIT %s, %s", secure($offset, 'int', false), secure($system['min_results'], 'int', false)));
+        /* newest accounts first; pages after the first continue from a cursor (the last user id) instead of an offset */
+        $cursor = cursor_decode($cursor, ['int']);
+        $get_users = $db->query(sprintf("SELECT users.user_id AS `cursor`, user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id " . $where . (($cursor) ? " AND " . cursor_where(['users.user_id'], $cursor) : "") . " ORDER BY users.user_id DESC LIMIT %s, %s", secure(($cursor) ? 0 : $offset, 'int', false), secure($limit, 'int', false)));
+        [$get_users, $next_cursor] = cursor_result($get_users);
       }
     }
-    if ($get_users->num_rows > 0) {
+    $people = $mutual_people;
+    if ($get_users && $get_users->num_rows > 0) {
       while ($user = $get_users->fetch_assoc()) {
-        /* check if there is any blocking between the viewer & the target user */
-        if ($this->blocked($user['user_id'])) {
-          continue;
-        }
-        $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
-        $user['mutual_friends_count'] = $this->get_mutual_friends_count($user['user_id']);
-        $results[] = $user;
+        $people[] = $user;
       }
     }
+    $this->preload_people_cards(array_column($people, 'user_id'));
+    foreach ($people as $user) {
+      /* check if there is any blocking between the viewer & the target user */
+      if ($this->blocked($user['user_id'])) {
+        continue;
+      }
+      $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
+      $mutual_friends = $this->get_mutual_friends_preview($user['user_id']);
+      $user['mutual_friends_count'] = $mutual_friends['count'];
+      $user['mutual_friends'] = $mutual_friends['friends'];
+      $results[] = $user;
+    }
+    $this->_cursor = $next_cursor;
     return $results;
+  }
+
+
+  /**
+   * get_nearby_people
+   * 
+   * @param string $where
+   * @param float $max_distance
+   * @param integer $offset
+   * @param integer $limit
+   * @param string $join_query
+   * @return array
+   */
+  private function get_nearby_people($where, $max_distance, $offset, $limit, $join_query = "")
+  {
+    global $db, $system;
+    $unit_km = ($system['system_distance'] == "mile") ? 1.609344 : 1;
+    $nearby = nearby_ids('users_locations', 'user_id', $this->_data['user_latitude'], $this->_data['user_longitude'], $max_distance * $unit_km, $offset + $limit, [
+      'filter' => function ($ids) use ($db, $where, $join_query) {
+        return array_column($db->query("SELECT users.user_id FROM users " . $join_query . $where . " AND users.user_id IN (" . implode(',', $ids) . ")")->fetch_all(MYSQLI_ASSOC), 'user_id');
+      },
+    ]);
+    $nearby = array_slice($nearby, $offset, $limit, true);
+    if (!$nearby) {
+      return [];
+    }
+    $get_people = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE user_id IN (%s)", implode(',', array_keys($nearby))));
+    $people = rows_by_ids($get_people->fetch_all(MYSQLI_ASSOC), 'user_id', array_keys($nearby));
+    foreach ($people as &$person) {
+      $person['distance'] = $nearby[$person['user_id']] / $unit_km;
+    }
+    return $people;
+  }
+
+
+  /**
+   * update_location
+   * 
+   * @param mixed $latitude
+   * @param mixed $longitude
+   * @return void
+   */
+  public function update_location($latitude, $longitude)
+  {
+    global $db, $date;
+    if (!valid_location($latitude, $longitude)) {
+      return;
+    }
+    $latitude = round((float) $latitude, 7);
+    $longitude = round((float) $longitude, 7);
+    /* the same place, updated recently */
+    if (valid_location($this->_data['user_latitude'] ?? null, $this->_data['user_longitude'] ?? null) && $this->_data['user_location_updated'] && strtotime($this->_data['user_location_updated']) > time() - 900) {
+      if (location_distance($this->_data['user_latitude'], $this->_data['user_longitude'], $latitude, $longitude) < 0.1) {
+        return;
+      }
+    }
+    $db->query(sprintf("UPDATE users SET user_latitude = %s, user_longitude = %s, user_location_updated = %s WHERE user_id = %s", secure(sprintf("%.7F", $latitude)), secure(sprintf("%.7F", $longitude)), secure($date), secure($this->_data['user_id'], 'int')));
+    $db->query(sprintf("INSERT INTO users_locations (user_id, location) VALUES (%1\$s, %2\$s) ON DUPLICATE KEY UPDATE location = %2\$s", secure($this->_data['user_id'], 'int'), location_point($latitude, $longitude)));
+    $this->_data['user_latitude'] = sprintf("%.7F", $latitude);
+    $this->_data['user_longitude'] = sprintf("%.7F", $longitude);
+    $this->_data['user_location_updated'] = $date;
   }
 
 
@@ -1359,9 +1883,16 @@ class User
   {
     global $db, $system;
     $pro_members = [];
-    $get_pro_members = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users WHERE user_subscribed = '1' ORDER BY RAND() LIMIT %s", $system['max_results']));
-    if ($get_pro_members->num_rows > 0) {
-      while ($user = $get_pro_members->fetch_assoc()) {
+    $pro_members_ids = sample_ids('users', 'user_id', "user_subscribed = '1'", $system['max_results'], [
+      'pool' => 200,
+      'shared' => 'pro_members',
+      'filter' => function ($ids) use ($db) {
+        return array_column($db->query(sprintf("SELECT user_id FROM users WHERE user_id IN (%s) AND user_banned = '0'", implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'user_id');
+      },
+    ]);
+    if ($pro_members_ids) {
+      $get_pro_members = $db->query(sprintf("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE user_id IN (%s)", implode(',', $pro_members_ids)));
+      foreach (rows_by_ids($get_pro_members->fetch_all(MYSQLI_ASSOC), 'user_id', $pro_members_ids) as $user) {
         $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
         $pro_members[] = $user;
       }
@@ -1394,7 +1925,7 @@ class User
     $skipped_array = array_filter($skipped_array, [$this, "filter_ids"]);
     $skipped_statment = ($skipped_array) ? sprintf(" user_id NOT IN (%s) AND ", $this->spread_ids($skipped_array)) : "";
     /* get users */
-    $get_users = $db->query("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified, user_monetization_enabled, user_monetization_chat_price, user_monetization_call_price, user_privacy_chat FROM users WHERE user_id != " . secure($this->_data['user_id'], 'int') . " AND " . $skipped_statment . $where_statement . $order_statement . " LIMIT " . secure($system['min_results'], 'int', false));
+    $get_users = $db->query("SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified, user_monetization_enabled, user_monetization_chat_price, user_monetization_call_price, user_privacy_chat FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE user_id != " . secure($this->_data['user_id'], 'int') . " AND " . $skipped_statment . $where_statement . $order_statement . " LIMIT " . secure($system['min_results'], 'int', false));
     if ($get_users->num_rows > 0) {
       while ($user = $get_users->fetch_assoc()) {
         /* check if there is any blocking between the viewer & the target user */
@@ -1436,9 +1967,9 @@ class User
   {
     global $db, $system;
     if ($full_info) {
-      $requested_info = sprintf("users.*, (users.user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s))) AS user_is_online, users_groups.permissions_group_id, packages.package_permissions_group_id", secure($system['online_status_timeout'], 'int'));
+      $requested_info = sprintf("users.*, (users.user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s))) AS user_is_online, users_groups.permissions_group_id, packages.package_permissions_group_id, packages.name as package_name", secure($system['online_status_timeout'], 'int'));
     } else {
-      $requested_info = sprintf("users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified, users.user_last_seen, (users.user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s))) AS user_is_online", secure($system['offline_time'], 'int'));
+      $requested_info = sprintf("users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified, users.user_last_seen, (users.user_last_seen >= SUBTIME(NOW(), SEC_TO_TIME(%s))) AS user_is_online", secure($system['offline_time'], 'int'));
     }
     $get_user = $db->query(sprintf("SELECT %s FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id LEFT JOIN users_groups ON users.user_group = '3' AND users.user_group_custom != '0' AND users.user_group_custom = users_groups.user_group_id WHERE users.user_id = %s", $requested_info, secure($user_id, 'int')));
     if ($get_user->num_rows == 0) {
@@ -1472,8 +2003,10 @@ class User
         user_gender, 
         user_picture, 
         user_subscribed, 
+        packages.name as package_name, 
         user_verified 
       FROM users 
+      LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id 
       WHERE " . $where_query
     );
     if ($get_admins_moderators->num_rows > 0) {
@@ -1501,6 +2034,45 @@ class User
    * @return void
    */
   public function connect($do, $id, $uid = null)
+  {
+    try {
+      $this->connect_run($do, $id, $uid);
+    } finally {
+      $this->_connections_ids = [];
+      if (in_array($do, ['block', 'unblock', 'friend-accept', 'friend-decline', 'friend-add', 'friend-cancel', 'friend-remove', 'follow', 'unfollow'])) {
+        relations_cache_forget($this->_data['user_id'], $id);
+      }
+      if (in_array($do, ['friend-accept', 'friend-decline', 'friend-add', 'friend-cancel'])) {
+        $this->refresh_live_requests_lastid($this->_data['user_id'], $id);
+      }
+    }
+  }
+
+
+  /**
+   * refresh_live_requests_lastid
+   * 
+   * @param integer
+   * @return void
+   */
+  private function refresh_live_requests_lastid(...$users_ids)
+  {
+    global $db;
+    foreach (array_unique(array_filter(array_map('intval', $users_ids))) as $user_id) {
+      $db->query(sprintf('UPDATE users SET user_live_requests_lastid = (SELECT IFNULL(MAX(friends.id), 0) FROM friends WHERE friends.status = 0 AND friends.user_two_id = %1$s) WHERE user_id = %1$s', $user_id));
+    }
+  }
+
+
+  /**
+   * connect_run
+   * 
+   * @param string $do
+   * @param integer $id
+   * @param integer $uid
+   * @return void
+   */
+  private function connect_run($do, $id, $uid = null)
   {
     global $db, $system;
     /* valid inputs */
@@ -1540,6 +2112,10 @@ class User
         $db->query(sprintf("DELETE FROM followings WHERE user_id = %s AND following_id = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
         /* block the user */
         $db->query(sprintf("INSERT INTO users_blocks (user_id, blocked_id) VALUES (%s, %s)", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+        /* remove any dating match */
+        if ($system['dating_enabled']) {
+          $this->dating_unmatch($id);
+        }
         break;
 
       case 'unblock':
@@ -1612,12 +2188,12 @@ class User
           /* viewer check */
           $check_viewer_limit = $db->query(sprintf('SELECT COUNT(*) as count FROM friends WHERE (user_one_id = %1$s OR user_two_id = %1$s) AND status = 1', secure($this->_data['user_id'], 'int')));
           if ($check_viewer_limit->fetch_assoc()['count'] >= $system['max_friends'] && $this->_data['user_group'] >= 3) {
-            modal("MESSAGE", __("Maximum Limit Reached"), __("Your have reached the maximum limit of Friends" . " (" . $system['max_friends'] . " " . __("Friends") . ")"));
+            modal("MESSAGE", __("Maximum Limit Reached"), sprintf(__("You have reached the maximum limit of friends (%s)"), $system['max_friends']));
           }
           /* target check */
           $check_target_limit = $db->query(sprintf('SELECT COUNT(*) as count FROM friends WHERE (user_one_id = %1$s OR user_two_id = %1$s) AND status = 1', secure($id, 'int')));
           if ($check_target_limit->fetch_assoc()['count'] >= $system['max_friends'] && $target_user['user_group'] >= 3) {
-            modal("MESSAGE", __("Maximum Limit Reached"), __("This user has reached the maximum limit of Friends" . " (" . $system['max_friends'] . " " . __("Friends") . ")"));
+            modal("MESSAGE", __("Maximum Limit Reached"), sprintf(__("This user has reached the maximum limit of friends (%s)"), $system['max_friends']));
           }
         }
         /* add the friend request */
@@ -1691,6 +2267,8 @@ class User
         $db->query(sprintf("INSERT INTO pages_likes (user_id, page_id) VALUES (%s, %s)", secure($this->_data['user_id'], 'int'),  secure($id, 'int')));
         /* update likes counter +1 */
         $db->query(sprintf("UPDATE pages SET page_likes = page_likes + 1  WHERE page_id = %s", secure($id, 'int')));
+        /* add shortcut */
+        $this->add_shortcut($id, 'page');
         break;
 
       case 'page-unlike':
@@ -1702,6 +2280,8 @@ class User
         $db->query(sprintf("DELETE FROM pages_likes WHERE user_id = %s AND page_id = %s", secure($this->_data['user_id'], 'int'),  secure($id, 'int')));
         /* update likes counter -1 */
         $db->query(sprintf("UPDATE pages SET page_likes = IF(page_likes=0,0,page_likes-1) WHERE page_id = %s", secure($id, 'int')));
+        /* remove shortcut */
+        $this->remove_shortcut($id, 'page');
         break;
 
       case 'page-boost':
@@ -1724,6 +2304,7 @@ class User
         if (!$spage['page_boosted']) {
           /* boost page */
           $db->query(sprintf("UPDATE pages SET page_boosted = '1', page_boosted_by = %s WHERE page_id = %s", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_pages = user_boosted_pages + 1 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -1745,6 +2326,7 @@ class User
         if ($spage['page_boosted']) {
           /* unboost page */
           $db->query(sprintf("UPDATE pages SET page_boosted = '0', page_boosted_by = NULL WHERE page_id = %s", secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_pages = IF(user_boosted_pages=0,0,user_boosted_pages-1) WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -1846,6 +2428,8 @@ class User
         $db->query(sprintf("DELETE FROM pages_likes WHERE user_id = %s AND page_id = %s", secure($uid, 'int'), secure($id, 'int')));
         /* update members counter -1 */
         $db->query(sprintf("UPDATE pages SET page_likes = IF(page_likes=0,0,page_likes-1) WHERE page_id = %s", secure($id, 'int')));
+        /* remove shortcut */
+        $this->remove_shortcut($id, 'page', $uid);
         break;
 
       case 'group-join':
@@ -1870,8 +2454,10 @@ class User
         if ($approved) {
           /* update members counter +1 */
           $db->query(sprintf("UPDATE `groups` SET group_members = group_members + 1  WHERE group_id = %s", secure($id, 'int')));
+          /* add shortcut */
+          $this->add_shortcut($id, 'group');
         } else {
-          /* send notification (pending request) to group admin  */
+          /* send notification (pending request) to group admin */
           $this->post_notification(['to_user_id' => $group['group_admin'], 'action' => 'group_join', 'node_type' => $group['group_title'], 'node_url' => $group['group_name']]);
         }
         break;
@@ -1891,6 +2477,8 @@ class User
           /* delete notification (pending request) that sent to group admin */
           $this->delete_notification($group['group_admin'], 'group_join', $group['group_title'], $group['group_name']);
         }
+        /* remove shortcut */
+        $this->remove_shortcut($id, 'group');
         break;
 
       case 'group-invite':
@@ -1935,6 +2523,8 @@ class User
         $db->query(sprintf("UPDATE groups_members SET approved = '1' WHERE user_id = %s AND group_id = %s", secure($uid, 'int'), secure($id, 'int')));
         /* update members counter +1 */
         $db->query(sprintf("UPDATE `groups` SET group_members = group_members + 1  WHERE group_id = %s", secure($id, 'int')));
+        /* add shortcut */
+        $this->add_shortcut($id, 'group', $uid);
         /* send notification (group acceptance) to the target user */
         $this->post_notification(['to_user_id' => $uid, 'action' => 'group_accept', 'node_type' => $group['group_title'], 'node_url' => $group['group_name']]);
         break;
@@ -1976,6 +2566,7 @@ class User
         if (!$group['group_boosted']) {
           /* boost group */
           $db->query(sprintf("UPDATE `groups` SET group_boosted = '1', group_boosted_by = %s WHERE group_id = %s", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_groups = user_boosted_groups + 1 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -1997,6 +2588,7 @@ class User
         if ($group['group_boosted']) {
           /* unboost group */
           $db->query(sprintf("UPDATE `groups` SET group_boosted = '0', group_boosted_by = NULL WHERE group_id = %s", secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_groups = IF(user_boosted_groups=0,0,user_boosted_groups-1) WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -2073,6 +2665,8 @@ class User
         $db->query(sprintf("DELETE FROM groups_members WHERE user_id = %s AND group_id = %s", secure($uid, 'int'), secure($id, 'int')));
         /* update members counter -1 */
         $db->query(sprintf("UPDATE `groups` SET group_members = IF(group_members=0,0,group_members-1) WHERE group_id = %s", secure($id, 'int')));
+        /* remove shortcut */
+        $this->remove_shortcut($id, 'group', $uid);
         break;
 
       case 'event-go':
@@ -2110,6 +2704,8 @@ class User
           }
           /* update going counter +1 */
           $db->query(sprintf("UPDATE `events` SET event_going = event_going + 1  WHERE event_id = %s", secure($id, 'int')));
+          /* add shortcut */
+          $this->add_shortcut($id, 'event');
         }
         break;
 
@@ -2132,6 +2728,10 @@ class User
         }
         /* update going counter -1 */
         $db->query(sprintf("UPDATE `events` SET event_going = IF(event_going=0,0,event_going-1)  WHERE event_id = %s", secure($id, 'int')));
+        /* remove shortcut */
+        if (!$interested) {
+          $this->remove_shortcut($id, 'event');
+        }
         break;
 
       case 'event-interest':
@@ -2169,6 +2769,8 @@ class User
           }
           /* update interested counter +1 */
           $db->query(sprintf("UPDATE `events` SET event_interested = event_interested + 1  WHERE event_id = %s", secure($id, 'int')));
+          /* add shortcut */
+          $this->add_shortcut($id, 'event');
         }
         break;
 
@@ -2191,6 +2793,10 @@ class User
         }
         /* update interested counter -1 */
         $db->query(sprintf("UPDATE `events` SET event_interested = IF(event_interested=0,0,event_interested-1)  WHERE event_id = %s", secure($id, 'int')));
+        /* remove shortcut */
+        if (!$going) {
+          $this->remove_shortcut($id, 'event');
+        }
         break;
 
       case 'event-boost':
@@ -2213,6 +2819,7 @@ class User
         if (!$event['event_boosted']) {
           /* boost group */
           $db->query(sprintf("UPDATE `events` SET event_boosted = '1', event_boosted_by = %s WHERE event_id = %s", secure($this->_data['user_id'], 'int'), secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_events = user_boosted_events + 1 WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -2234,6 +2841,7 @@ class User
         if ($event['event_boosted']) {
           /* unboost event */
           $db->query(sprintf("UPDATE `events` SET event_boosted = '0', event_boosted_by = NULL WHERE event_id = %s", secure($id, 'int')));
+          widget_pools_forget();
           /* update user */
           $db->query(sprintf("UPDATE users SET user_boosted_events = IF(user_boosted_events=0,0,user_boosted_events-1) WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
         }
@@ -2325,7 +2933,7 @@ class User
 
   /**
    * banned
-   *
+   * 
    * @param integer $user_id
    * @return boolean
    */
@@ -2349,18 +2957,38 @@ class User
   public function blocked($user_id)
   {
     global $db;
-    /* bypass the block if the viewer is admin or moderator  */
+    /* bypass the block if the viewer is admin or moderator */
     if ($this->_data['user_group'] < 3) {
       return false;
     }
     /* check if there is any blocking between the viewer & the target */
     if ($this->_logged_in) {
-      $check = $db->query(sprintf('SELECT COUNT(*) as count FROM users_blocks WHERE (user_id = %1$s AND blocked_id = %2$s) OR (user_id = %2$s AND blocked_id = %1$s)', secure($this->_data['user_id'], 'int'),  secure($user_id, 'int')));
-      if ($check->fetch_assoc()['count'] > 0) {
-        return true;
-      }
+      return in_array($user_id, $this->blocks_ids());
     }
     return false;
+  }
+
+
+  /**
+   * blocks_ids
+   * 
+   * @return array
+   */
+  public function blocks_ids()
+  {
+    global $db;
+    /* long-running socket servers must see new blocks at once */
+    if (defined('SOCKET_SERVER')) {
+      unset($this->_connections_ids['blocks']);
+    }
+    return $this->_connections_ids['blocks'] ??= relations_cache_get($this->_data['user_id'], 'blocks', function () use ($db) {
+      $blocks = [];
+      $get_blocks = $db->query(sprintf('SELECT blocked_id AS user_id FROM users_blocks WHERE user_id = %1$s UNION SELECT user_id FROM users_blocks WHERE blocked_id = %1$s', secure($this->_data['user_id'], 'int')));
+      while ($block = $get_blocks->fetch_assoc()) {
+        $blocks[] = $block['user_id'];
+      }
+      return $blocks;
+    });
   }
 
 
@@ -2375,7 +3003,7 @@ class User
     global $system;
     /* check if there is any approved friendship/follow request between the viewer & the target */
     if ($this->_logged_in) {
-      $connections = $system['friends_enabled'] ? $this->_data['friends_ids'] : $this->_data['followings_ids'];
+      $connections = $system['friends_enabled'] ? $this->friends_ids() : $this->followings_ids();
       /* check if the viewer & the target are friends/following */
       return (in_array($user_id, $connections)) ? true : false;
     }
@@ -2412,7 +3040,7 @@ class User
   public function is_following($user_id)
   {
     if ($this->_logged_in) {
-      return (in_array($user_id, $this->_data['followings_ids'])) ? true : false;
+      return (in_array($user_id, $this->followings_ids())) ? true : false;
     }
     return false;
   }
@@ -2427,7 +3055,7 @@ class User
   public function is_friend_request($user_id)
   {
     if ($this->_logged_in) {
-      return (in_array($user_id, $this->_data['friend_requests_ids'])) ? true : false;
+      return (in_array($user_id, $this->friend_requests_ids())) ? true : false;
     }
     return false;
   }
@@ -2442,7 +3070,7 @@ class User
   public function is_friend_request_sent($user_id)
   {
     if ($this->_logged_in) {
-      return (in_array($user_id, $this->_data['friend_requests_sent_ids'])) ? true : false;
+      return (in_array($user_id, $this->friend_requests_sent_ids())) ? true : false;
     }
     return false;
   }
@@ -2516,6 +3144,11 @@ class User
       $this->delete_posts($user_id);
       /* delete the user */
       $db->query(sprintf("DELETE FROM users WHERE user_id = %s", secure($user_id, 'int')));
+      $db->query(sprintf("DELETE FROM users_locations WHERE user_id = %s", secure($user_id, 'int')));
+      /* delete user dating profile */
+      $this->delete_dating_profile($user_id);
+      /* delete user stories */
+      $this->delete_user_stories($user_id);
       /* delete user posts */
       $this->delete_posts($user_id);
       /* delete all user pages */
@@ -2542,12 +3175,33 @@ class User
       $db->query(sprintf("UPDATE `events` SET event_going = IF(event_going=0,0,event_going-1) WHERE event_id IN (SELECT event_id FROM events_members WHERE is_going = '1' AND user_id = %s)", secure($user_id, 'int')));
       /* delete the user from all joined events */
       $db->query(sprintf("DELETE FROM events_members WHERE user_id = %s", secure($user_id, 'int')));
+    /* delete the user shortcuts */
+    $db->query(sprintf("DELETE FROM users_shortcuts WHERE user_id = %s", secure($user_id, 'int')));
       /* delete all user friends connections */
+      $get_requested = $db->query(sprintf("SELECT user_two_id FROM friends WHERE status = 0 AND user_one_id = %s", secure($user_id, 'int')));
+      $requested_ids = array_column($get_requested->fetch_all(MYSQLI_ASSOC), 'user_two_id');
       $db->query(sprintf('DELETE FROM friends WHERE user_one_id = %1$s OR user_two_id = %1$s', secure($user_id, 'int')));
+      /* the requests this user sent are gone */
+      $this->refresh_live_requests_lastid(...$requested_ids);
       /* delete all user following connections */
       $db->query(sprintf('DELETE FROM followings WHERE user_id = %1$s OR following_id = %1$s', secure($user_id, 'int')));
+      /* refresh cached relationship lists */
+      relations_cache_reset();
       /* delete all user messages */
+      $get_conversations = $db->query(sprintf('SELECT conversations.conversation_id FROM conversations INNER JOIN conversations_messages ON conversations.last_message_id = conversations_messages.message_id WHERE conversations_messages.user_id = %s', secure($user_id, 'int')));
+      $conversations_ids = array_map('intval', array_column($get_conversations->fetch_all(MYSQLI_ASSOC), 'conversation_id'));
       $db->query(sprintf('DELETE FROM conversations_messages WHERE user_id = %s', secure($user_id, 'int')));
+      /* update the conversations with last message id */
+      if ($conversations_ids) {
+        $db->query(sprintf('UPDATE conversations SET last_message_id = (SELECT IFNULL(MAX(conversations_messages.message_id), 0) FROM conversations_messages WHERE conversations_messages.conversation_id = conversations.conversation_id) WHERE conversation_id IN (%s)', implode(',', $conversations_ids)));
+        /* delete the conversations with no messages left */
+        $get_empty_conversations = $db->query(sprintf('SELECT conversation_id FROM conversations WHERE conversation_id IN (%s) AND last_message_id = 0 AND node_id IS NULL', implode(',', $conversations_ids)));
+        $empty_conversations_ids = array_map('intval', array_column($get_empty_conversations->fetch_all(MYSQLI_ASSOC), 'conversation_id'));
+        if ($empty_conversations_ids) {
+          $db->query(sprintf('DELETE FROM conversations_users WHERE conversation_id IN (%s)', implode(',', $empty_conversations_ids)));
+          $db->query(sprintf('DELETE FROM conversations WHERE conversation_id IN (%s)', implode(',', $empty_conversations_ids)));
+        }
+      }
       /* delete all user notifications to the user */
       $db->query(sprintf('DELETE FROM notifications WHERE to_user_id = %s', secure($user_id, 'int')));
       /* delete all user notifications from the user */
@@ -2623,16 +3277,18 @@ class User
     /* check the type to get */
     if ($type == "user") {
       /* get user info */
-      $get_profile = $db->query(sprintf("SELECT * FROM users WHERE user_id = %s", secure($id, 'int')));
+      $get_profile = $db->query(sprintf("SELECT users.*, packages.name as package_name FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_id = %s", secure($id, 'int')));
       if ($get_profile->num_rows > 0) {
         $profile = $get_profile->fetch_assoc();
         /* get profile picture */
         $profile['user_picture'] = get_picture($profile['user_picture'], $profile['user_gender']);
         /* get followers count */
         $profile['followers_count'] = $this->get_followers_count($profile['user_id']);
-        /* get mutual friends count between the viewer and the target */
+        /* get mutual friends between the viewer and the target */
         if ($this->_logged_in && $this->_data['user_id'] != $profile['user_id']) {
-          $profile['mutual_friends_count'] = $this->get_mutual_friends_count($profile['user_id']);
+          $mutual_friends = $this->get_mutual_friends_preview($profile['user_id']);
+          $profile['mutual_friends_count'] = $mutual_friends['count'];
+          $profile['mutual_friends'] = $mutual_friends['friends'];
         }
         /* get the connection between the viewer & the target */
         if ($profile['user_id'] != $this->_data['user_id']) {
@@ -2722,10 +3378,10 @@ class User
           if (!valid_name($args['firstname'])) {
             throw new Exception(__("First name contains invalid characters"));
           }
-          if (strlen($args['firstname']) < $system['name_min_length']) {
+          if (mb_strlen($args['firstname'], 'UTF-8') < $system['name_min_length']) {
             throw new Exception(__("First name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
           }
-          if (strlen($args['firstname']) > $system['name_max_length']) {
+          if (mb_strlen($args['firstname'], 'UTF-8') > $system['name_max_length']) {
             throw new Exception(__("First name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
           }
           /* validate lastname */
@@ -2735,10 +3391,10 @@ class User
           if (!valid_name($args['lastname'])) {
             throw new Exception(__("Last name contains invalid characters"));
           }
-          if (strlen($args['lastname']) < $system['name_min_length']) {
+          if (mb_strlen($args['lastname'], 'UTF-8') < $system['name_min_length']) {
             throw new Exception(__("Last name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
           }
-          if (strlen($args['lastname']) > $system['name_max_length']) {
+          if (mb_strlen($args['lastname'], 'UTF-8') > $system['name_max_length']) {
             throw new Exception(__("Last name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
           }
         } else {
@@ -2952,6 +3608,8 @@ class User
         $args['user_tips_enabled'] = (isset($args['user_tips_enabled'])) ? '1' : '0';
         /* check if hidden from suggestions enabled */
         $args['user_suggestions_hidden'] = (isset($args['user_suggestions_hidden'])) ? '1' : '0';
+        /* check if incognito mode enabled */
+        $args['user_incognito_enabled'] = (isset($args['user_incognito_enabled'])) ? '1' : '0';
         /* check if chat enabled */
         $args['user_privacy_chat'] = (isset($args['user_privacy_chat'])) ? $args['user_privacy_chat'] : 'public';
         /* check if pokes enabled */
@@ -2993,6 +3651,7 @@ class User
                     user_newsletter_enabled = %s,
                     user_tips_enabled = %s,
                     user_suggestions_hidden = %s,
+                    user_incognito_enabled = %s,
                     user_privacy_chat = %s,
                     user_privacy_poke = %s,
                     user_privacy_gifts = %s,
@@ -3018,6 +3677,7 @@ class User
           secure($args['user_newsletter_enabled']),
           secure($args['user_tips_enabled']),
           secure($args['user_suggestions_hidden']),
+          secure($args['user_incognito_enabled']),
           secure($args['user_privacy_chat']),
           secure($args['user_privacy_poke']),
           secure($args['user_privacy_gifts']),
@@ -3201,16 +3861,15 @@ class User
       throw new ValidationException(__("You are not authorized to verify this page"));
     }
     /* valid inputs */
-    if ($system['verification_docs_required']) {
-      if (!isset($inputs['photo']) || is_empty($inputs['photo'])) {
-        throw new ValidationException(($node_type == 'page') ? __("Please attach your company incorporation file") : __("Please attach your photo"));
+    foreach (['photo', 'passport'] as $document) {
+      $option = 'verification_' . (($node_type == 'page') ? 'page' : 'user') . '_' . $document;
+      if ($system['verification_docs_required'] && $system[$option . '_enabled']) {
+        if (!isset($inputs[$document]) || is_empty($inputs[$document])) {
+          throw new ValidationException(__("Please attach") . ": " . __($system[$option . '_title']));
+        }
+      } else {
+        $inputs[$document] = '';
       }
-      if (!isset($inputs['passport']) || is_empty($inputs['passport'])) {
-        throw new ValidationException(($node_type == 'page') ? __("Please attach your tax file") : __("Please attach your Passport or National ID"));
-      }
-    } else {
-      $inputs['photo'] = '';
-      $inputs['passport'] = '';
     }
     if (!isset($inputs['message']) || is_empty($inputs['message'])) {
       throw new ValidationException(($node_type == 'page') ?  __("Please share why your page should be verified") : __("Please share why your account should be verified"));
@@ -3413,10 +4072,13 @@ class User
       $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
       if ($get_sessions->num_rows > 0) {
         while ($session = $get_sessions->fetch_assoc()) {
+          $session['user_location'] = $this->get_session_location($session);
           $sessions[] = $session;
         }
       }
       $user_data['information']['sessions'] = $sessions;
+      /* user dating profile */
+      $user_data['information']['dating'] = ($system['dating_enabled']) ? $this->get_dating_profile() : null;
     }
     /* friends */
     if ($_SESSION['download_friends']) {
@@ -3459,11 +4121,11 @@ class User
 
 
   /* ------------------------------- */
-  /* User Sign (in|up|out) ✅ */
+  /* User Sign (in|up|out) */
   /* ------------------------------- */
 
   /**
-   * sign_up ✅
+   * sign_up 
    * 
    * @param array $args
    * @param array $device_info
@@ -3494,19 +4156,19 @@ class User
       if (!valid_name($args['first_name'])) {
         throw new ValidationException(__("Your first name contains invalid characters"));
       }
-      if (strlen($args['first_name']) < $system['name_min_length']) {
+      if (mb_strlen($args['first_name'], 'UTF-8') < $system['name_min_length']) {
         throw new ValidationException(__("Your first name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
       }
-      if (strlen($args['first_name']) > $system['name_max_length']) {
+      if (mb_strlen($args['first_name'], 'UTF-8') > $system['name_max_length']) {
         throw new ValidationException(__("Your first name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
       }
       if (!valid_name($args['last_name'])) {
         throw new ValidationException(__("Your last name contains invalid characters"));
       }
-      if (strlen($args['last_name']) < $system['name_min_length']) {
+      if (mb_strlen($args['last_name'], 'UTF-8') < $system['name_min_length']) {
         throw new ValidationException(__("Your last name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
       }
-      if (strlen($args['last_name']) > $system['name_max_length']) {
+      if (mb_strlen($args['last_name'], 'UTF-8') > $system['name_max_length']) {
         throw new ValidationException(__("Your last name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
       }
     }
@@ -3607,6 +4269,8 @@ class User
     $db->query(sprintf("INSERT INTO users (user_group_custom, user_name, user_email, user_phone, user_password, user_firstname, user_lastname, user_gender, user_birthdate, user_registered, user_email_verification_code, user_phone_verification_code, user_newsletter_enabled, user_approved) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($custom_user_group), secure($args['username']), secure($args['email']), secure($args['phone']), secure(_password_hash($args['password'])), secure(ucwords($args['first_name'])), secure(ucwords($args['last_name'])), secure($args['gender']), secure($args['birth_date']), secure($date), secure($email_verification_code), secure($phone_verification_code), secure($newsletter_agree), secure($user_approved)));
     /* get user_id */
     $user_id = $db->insert_id;
+    /* set user country */
+    $this->_set_ip_country($user_id);
     /* set default privacy */
     $this->_set_default_privacy($user_id);
     /* insert custom fields values */
@@ -3666,7 +4330,7 @@ class User
 
 
   /**
-   * sign_in ✅
+   * sign_in 
    * 
    * @param string $username_email
    * @param string $password
@@ -3674,7 +4338,6 @@ class User
    * @param boolean $from_web
    * @param array $device_info
    * @param boolean $connecting_account
-   * 
    * @return void
    */
   public function sign_in($username_email, $password, $remember = false, $from_web = false, $device_info = [], $connecting_account = false)
@@ -3809,7 +4472,7 @@ class User
 
 
   /**
-   * sign_out ✅
+   * sign_out 
    * 
    * @param boolean $from_web
    * @return void
@@ -3856,7 +4519,10 @@ class User
       $db->query(sprintf("UPDATE users SET user_failed_login_count = 0 WHERE user_id = %s", secure($user_id, 'int')));
     }
     /* insert user session */
-    $db->query(sprintf("INSERT INTO users_sessions (session_token, session_date, user_id, user_ip, user_browser, user_os) VALUES (%s, %s, %s, %s, %s, %s)", secure($session_token), secure($date), secure($user_id, 'int'), secure(get_user_ip()), secure(get_user_browser()), secure(get_user_os())));
+    $ipinfo = ipinfo_lookup(get_user_ip());
+    $db->query(sprintf("INSERT INTO users_sessions (session_token, session_date, user_id, user_ip, user_ip_country, user_ip_isp, user_browser, user_os) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", secure($session_token), secure($date), secure($user_id, 'int'), secure(get_user_ip()), secure(($ipinfo) ? $ipinfo['country_code'] : 'null'), secure(($ipinfo) ? $ipinfo['isp'] : 'null'), secure(get_user_browser()), secure(get_user_os())));
+    /* check login location */
+    $this->_check_login_location($user_id, $ipinfo);
     /* secured cookies */
     $secured = (get_system_protocol() == "https") ? true : false;
     /* set authentication cookies */
@@ -3868,7 +4534,7 @@ class User
 
 
   /**
-   * _set_authentication_JWT ✅
+   * _set_authentication_JWT 
    * 
    * @param integer $user_id
    * @param array $device_info
@@ -3890,13 +4556,128 @@ class User
       $db->query(sprintf("UPDATE users SET user_failed_login_count = 0 WHERE user_id = %s", secure($user_id, 'int')));
     }
     /* insert user session */
-    $db->query(sprintf("INSERT INTO users_sessions (session_token, session_date, session_type, user_id, user_ip, user_os, user_os_version, user_device_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", secure($session_token), secure($date), secure($device_info['device_type']), secure($user_id, 'int'), secure(get_user_ip()), secure($device_info['device_os']), secure($device_info['device_os_version']), secure($device_info['device_name'])));
+    $ipinfo = ipinfo_lookup(get_user_ip());
+    $db->query(sprintf("INSERT INTO users_sessions (session_token, session_date, session_type, user_id, user_ip, user_ip_country, user_ip_isp, user_os, user_os_version, user_device_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", secure($session_token), secure($date), secure($device_info['device_type']), secure($user_id, 'int'), secure(get_user_ip()), secure(($ipinfo) ? $ipinfo['country_code'] : 'null'), secure(($ipinfo) ? $ipinfo['isp'] : 'null'), secure($device_info['device_os']), secure($device_info['device_os_version']), secure($device_info['device_name'])));
+    /* check login location */
+    $this->_check_login_location($user_id, $ipinfo);
     return $jwt;
   }
 
 
   /**
-   * _check_ip ✅
+   * _check_unusual_login
+   * 
+   * @return boolean
+   */
+  private function _check_unusual_login()
+  {
+    global $db;
+    $ip = get_user_ip();
+    if ($this->_data['user_ip'] == $ip) {
+      return false;
+    }
+    /* get current location */
+    $ipinfo = ipinfo_lookup($ip);
+    if (!$ipinfo) {
+      return true;
+    }
+    /* get session location */
+    $session_country = $this->_data['user_ip_country'];
+    if (!$session_country) {
+      $session_ipinfo = ipinfo_lookup($this->_data['user_ip']);
+      if (!$session_ipinfo) {
+        return true;
+      }
+      $session_country = $session_ipinfo['country_code'];
+    }
+    /* check if the country changed */
+    if ($session_country != $ipinfo['country_code']) {
+      $db->query(sprintf("DELETE FROM users_sessions WHERE session_id = %s", secure($this->_data['session_id'], 'int')));
+      return true;
+    }
+    /* update session */
+    $db->query(sprintf("UPDATE users_sessions SET user_ip = %s, user_ip_country = %s, user_ip_isp = %s WHERE session_id = %s", secure($ip), secure($ipinfo['country_code']), secure($ipinfo['isp']), secure($this->_data['session_id'], 'int')));
+    $this->_data['user_ip'] = $ip;
+    $this->_data['user_ip_country'] = $ipinfo['country_code'];
+    $this->_data['user_ip_isp'] = $ipinfo['isp'];
+    return false;
+  }
+
+
+  /**
+   * _check_login_location
+   * 
+   * @param integer $user_id
+   * @param array|false $ipinfo
+   * @return void
+   */
+  private function _check_login_location($user_id, $ipinfo)
+  {
+    global $db, $system, $date;
+    if (!$ipinfo) {
+      return;
+    }
+    /* get login countries */
+    $countries = [];
+    $get_countries = $db->query(sprintf("SELECT country_code FROM users_login_countries WHERE user_id = %s", secure($user_id, 'int')));
+    while ($country = $get_countries->fetch_assoc()) {
+      $countries[] = $country['country_code'];
+    }
+    if (in_array($ipinfo['country_code'], $countries)) {
+      return;
+    }
+    /* insert login country */
+    $db->query(sprintf("INSERT IGNORE INTO users_login_countries (user_id, country_code, time) VALUES (%s, %s, %s)", secure($user_id, 'int'), secure($ipinfo['country_code']), secure($date)));
+    if (!$countries || !$system['login_alerts_enabled']) {
+      return;
+    }
+    /* get receiver */
+    $get_receiver = $db->query(sprintf("SELECT user_name, user_email FROM users WHERE user_id = %s", secure($user_id, 'int')));
+    if ($get_receiver->num_rows == 0) {
+      return;
+    }
+    $receiver = $get_receiver->fetch_assoc();
+    $viewer_data = $this->_data;
+    try {
+      /* post notification */
+      $this->post_notification(['to_user_id' => $user_id, 'from_user_id' => $user_id, 'system_notification' => true, 'action' => 'new_login', 'node_url' => $ipinfo['country']]);
+      /* send email */
+      if ($receiver['user_email']) {
+        $subject = html_entity_decode(__($system['system_title']), ENT_QUOTES) . " " . __("New Login Alert");
+        $body = get_email_template("new_login_email", $subject, ["receiver" => $receiver, "login" => ['country' => $ipinfo['country'], 'isp' => $ipinfo['isp'], 'ip' => get_user_ip(), 'browser' => get_user_browser(), 'os' => get_user_os(), 'time' => $date]]);
+        _email($receiver['user_email'], $subject, $body['html'], $body['plain']);
+      }
+    } catch (Throwable $e) {
+      error_log('Login alert: ' . $e->getMessage());
+    } finally {
+      $this->_data = $viewer_data;
+    }
+  }
+
+
+  /**
+   * _set_ip_country
+   * 
+   * @param integer $user_id
+   * @return void
+   */
+  private function _set_ip_country($user_id)
+  {
+    global $db;
+    $ipinfo = ipinfo_lookup(get_user_ip());
+    if (!$ipinfo) {
+      return;
+    }
+    $country = $this->get_country_by_code($ipinfo['country_code']);
+    if (!$country || !$country['enabled']) {
+      return;
+    }
+    $db->query(sprintf("UPDATE users SET user_country = %s WHERE user_id = %s", secure($country['country_id'], 'int'), secure($user_id, 'int')));
+  }
+
+
+  /**
+   * _check_ip 
    * 
    * @return void
    */
@@ -3913,7 +4694,7 @@ class User
 
 
   /**
-   * _set_default_privacy ✅
+   * _set_default_privacy 
    * 
    * @return void
    */
@@ -3973,7 +4754,7 @@ class User
   /* ------------------------------- */
 
   /**
-   * login_as ✅
+   * login_as 
    * 
    * @param integer $user_id
    * @return void
@@ -4031,9 +4812,9 @@ class User
     $user_id = (isset($user_id)) ? $user_id : $this->_data['user_id'];
     $accounts = [];
     $get_accounts = $db->query(sprintf('
-    SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users WHERE user_id = %1$s 
+    SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE users.user_id = %1$s 
     UNION
-    SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users INNER JOIN users_accounts ON users.user_id = users_accounts.account_id WHERE users_accounts.user_id = %1$s', secure($user_id, 'int')));
+    SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users INNER JOIN users_accounts ON users.user_id = users_accounts.account_id LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE users_accounts.user_id = %1$s', secure($user_id, 'int')));
     if ($get_accounts->num_rows > 0) {
       while ($account = $get_accounts->fetch_assoc()) {
         $account['user_picture'] = get_picture($account['user_picture'], $account['user_gender']);
@@ -4098,7 +4879,7 @@ class User
   {
     global $db;
     /* search connected account if this account belongs to current user */
-    if (array_search($account_id, array_column($this->_data['connected_accounts'], 'user_id')) === false) {
+    if (array_search($account_id, array_column($this->connected_accounts(), 'user_id')) === false) {
       throw new Exception(__("Sorry, it looks like this account doesn't belong to you"));
     }
     $this->_set_authentication_cookies($account_id, true);
@@ -4115,7 +4896,7 @@ class User
   {
     global $db;
     /* search connected account if this account belongs to current user */
-    if (array_search($account_id, array_column($this->_data['connected_accounts'], 'user_id')) === false) {
+    if (array_search($account_id, array_column($this->connected_accounts(), 'user_id')) === false) {
       throw new Exception(__("Sorry, it looks like this account doesn't belong to you"));
     }
     /* remove from connected accounts */
@@ -4153,10 +4934,13 @@ class User
    */
   public function getting_satrted_update($args)
   {
-    global $db;
+    global $db, $system;
     /* validate country */
-    if ($args['country'] == "none") {
-      throw new ValidationException(__("You must select valid country"));
+    if (is_empty($args['country']) || $args['country'] == "none") {
+      if ($system['getting_started_location_required']) {
+        throw new ValidationException(__("You must select valid country"));
+      }
+      $args['country'] = 'null';
     } else {
       if (!$this->check_country($args['country'])) {
         throw new ValidationException(__("You must select valid country"));
@@ -4230,7 +5014,6 @@ class User
    * 
    * @param string $provider
    * @param object $user_profile
-   * 
    * @return void
    */
   public function social_signin($provider, $user_profile)
@@ -4402,19 +5185,19 @@ class User
       if (!valid_name($args['first_name'])) {
         throw new ValidationException(__("Your first name contains invalid characters"));
       }
-      if (strlen($args['first_name']) < $system['name_min_length']) {
+      if (mb_strlen($args['first_name'], 'UTF-8') < $system['name_min_length']) {
         throw new ValidationException(__("Your first name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
       }
-      if (strlen($args['first_name']) > $system['name_max_length']) {
+      if (mb_strlen($args['first_name'], 'UTF-8') > $system['name_max_length']) {
         throw new ValidationException(__("Your first name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
       }
       if (!valid_name($args['last_name'])) {
         throw new ValidationException(__("Your last name contains invalid characters"));
       }
-      if (strlen($args['last_name']) < $system['name_min_length']) {
+      if (mb_strlen($args['last_name'], 'UTF-8') < $system['name_min_length']) {
         throw new ValidationException(__("Your last name must be at least") . " " . $system['name_min_length'] . " " . __("characters long. Please try another"));
       }
-      if (strlen($args['last_name']) > $system['name_max_length']) {
+      if (mb_strlen($args['last_name'], 'UTF-8') > $system['name_max_length']) {
         throw new ValidationException(__("Your last name must be at most") . " " . $system['name_max_length'] . " " . __("characters long. Please try another"));
       }
     }
@@ -4492,11 +5275,20 @@ class User
     /* check user approved */
     $user_approved = ($system['users_approval_enabled']) ? '0' : '1';
     /* save avatar */
-    $avatar_name = save_picture_from_url($args['avatar']);
+    $avatar_name = '';
+    if (!is_empty($args['avatar'])) {
+      try {
+        $avatar_name = save_picture_from_url($args['avatar']);
+      } catch (Exception $e) {
+        $avatar_name = '';
+      }
+    }
     /* register user */
     $db->query(sprintf("INSERT INTO users (user_group_custom, user_name, user_email, user_phone, user_password, user_firstname, user_lastname, user_gender, user_birthdate, user_registered, user_email_verification_code, user_phone_verification_code, user_newsletter_enabled, user_approved, user_picture, $social_id, $social_connected) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '1')", secure($custom_user_group), secure($args['username']), secure($args['email']), secure($args['phone']), secure(_password_hash($args['password'])), secure(ucwords($args['first_name'])), secure(ucwords($args['last_name'])), secure($args['gender']), secure($args['birth_date']), secure($date), secure($email_verification_code), secure($phone_verification_code), secure($newsletter_agree), secure($user_approved), secure($avatar_name), secure($_SESSION['social_id'])));
     /* get user_id */
     $user_id = $db->insert_id;
+    /* set user country */
+    $this->_set_ip_country($user_id);
     /* set default privacy */
     $this->_set_default_privacy($user_id);
     /* insert custom fields values */
@@ -4557,11 +5349,11 @@ class User
 
 
   /* ------------------------------- */
-  /* Two-Factor Authentication ✅ */
+  /* Two-Factor Authentication */
   /* ------------------------------- */
 
   /**
-   * two_factor_authentication ✅
+   * two_factor_authentication 
    * 
    * @param string $two_factor_key
    * @param integer $user_id
@@ -4612,10 +5404,9 @@ class User
 
 
   /**
-   * disable_two_factor_authentication ✅
+   * disable_two_factor_authentication 
    * 
    * @param integer $user_id
-   * 
    * @return void
    */
   public function disable_two_factor_authentication($user_id)
@@ -4627,11 +5418,11 @@ class User
 
 
   /* ------------------------------- */
-  /* Password ✅ */
+  /* Password */
   /* ------------------------------- */
 
   /**
-   * forget_password ✅
+   * forget_password 
    * 
    * @param string $email
    * @param string $recaptcha_response
@@ -4685,7 +5476,7 @@ class User
 
 
   /**
-   * forget_password_confirm ✅
+   * forget_password_confirm 
    * 
    * @param string $email
    * @param string $reset_key
@@ -4706,7 +5497,7 @@ class User
 
 
   /**
-   * forget_password_reset ✅
+   * forget_password_reset 
    * 
    * @param string $email
    * @param string $reset_key
@@ -4740,7 +5531,7 @@ class User
 
 
   /* ------------------------------- */
-  /* Activation Email ✅ */
+  /* Activation Email */
   /* ------------------------------- */
 
   /**
@@ -4844,7 +5635,7 @@ class User
 
 
   /* ------------------------------- */
-  /* Activation Phone ✅ */
+  /* Activation Phone */
   /* ------------------------------- */
 
   /**
@@ -4934,11 +5725,11 @@ class User
 
 
   /* ------------------------------- */
-  /* Security Checks ✅ */
+  /* Security Checks */
   /* ------------------------------- */
 
   /**
-   * verify_password ✅
+   * verify_password 
    * 
    * @param string $password
    * @return void
@@ -4957,8 +5748,8 @@ class User
 
 
   /**
-   * check_password ✅
-   *
+   * check_password 
+   * 
    * @param string $password
    * @return void
    */
@@ -4996,7 +5787,7 @@ class User
 
 
   /**
-   * check_email ✅
+   * check_email 
    * 
    * @param string $email
    * @param boolean $return_info
@@ -5040,7 +5831,7 @@ class User
 
 
   /**
-   * check_phone ✅
+   * check_phone 
    * 
    * @param string $phone
    * @return boolean
@@ -5057,7 +5848,7 @@ class User
 
 
   /**
-   * check_username ✅
+   * check_username 
    * 
    * @param string $username
    * @param string $type
@@ -5098,7 +5889,7 @@ class User
 
 
   /**
-   * reserved_username ✅
+   * reserved_username 
    * 
    * @param string $username
    * @return boolean

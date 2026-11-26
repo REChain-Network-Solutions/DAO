@@ -27,53 +27,34 @@ trait SearchTrait
   {
     global $db, $system;
     $results = [];
+    /* check hashtag */
+    $hashtag = (mb_substr($query, 0, 1, 'UTF-8') == '#');
+    if ($hashtag) {
+      $query = mb_substr($query, 1, null, 'UTF-8');
+    }
     if ($tab != "posts") {
       $offset *= $system['search_results'];
     }
     switch ($tab) {
       case 'posts':
         /* search posts */
-        $results = $this->get_posts(['query' => $query, 'filter' => $data_type, 'offset' => $offset]);
-        break;
-
-      case 'blogs':
-        /* search blogs */
-        if ($system['blogs_enabled']) {
-          /* check if query is hashtag with _ */
-          if (strpos($query, "_") !== false) {
-            $query = '+' . str_replace("_", " +", $query);
-          }
-          $get_blogs = $db->query(sprintf(
-            '(SELECT post_id FROM posts_articles
-              WHERE MATCH(title) AGAINST(%1$s IN BOOLEAN MODE)
-              ORDER BY title ASC LIMIT %2$s, %3$s)
-              UNION
-              (SELECT post_id FROM posts_articles
-              WHERE MATCH(tags) AGAINST(%1$s IN BOOLEAN MODE)
-              ORDER BY title ASC LIMIT %2$s, %3$s)',
-            secure($query),
-            secure($offset, 'int', false),
-            secure($system['search_results'], 'int', false)
-          ));
-          if ($get_blogs->num_rows > 0) {
-            while ($blog = $get_blogs->fetch_assoc()) {
-              $blog = $this->get_post($blog['post_id']);
-              if ($blog) {
-                $results[] = $blog;
-              }
-            }
-          }
-        }
+        $results = $this->get_posts(['query' => $query, 'hashtag' => $hashtag, 'filter' => $data_type, 'offset' => $offset]);
         break;
 
       case 'users':
         /* search users */
-        $get_users = $db->query(sprintf('SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users WHERE user_banned = "0" AND (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s) ORDER BY user_firstname ASC LIMIT %2$s, %3$s', secure($query, 'search'), secure($offset, 'int', false), secure($system['search_results'], 'int', false)));
+        $get_users = $db->query(sprintf('SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE user_banned = "0" AND user_incognito_enabled = "0" AND (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s) ORDER BY user_firstname ASC LIMIT %2$s, %3$s', secure($query, 'search'), secure($offset, 'int', false), secure($system['search_results'], 'int', false)));
         if ($get_users->num_rows > 0) {
           while ($user = $get_users->fetch_assoc()) {
             $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
             /* get the connection between the viewer & the target */
             $user['connection'] = $this->connection($user['user_id']);
+            /* get mutual friends */
+            if ($this->_logged_in && $user['user_id'] != $this->_data['user_id']) {
+              $mutual_friends = $this->get_mutual_friends_preview($user['user_id']);
+              $user['mutual_friends_count'] = $mutual_friends['count'];
+              $user['mutual_friends'] = $mutual_friends['friends'];
+            }
             $results[] = $user;
           }
         }
@@ -139,7 +120,7 @@ trait SearchTrait
     global $db, $system;
     $results = [];
     /* search users */
-    $get_users = $db->query(sprintf('SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users WHERE user_banned = "0" AND (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s) LIMIT %2$s', secure($query, 'search'), secure($system['min_results'], 'int', false)));
+    $get_users = $db->query(sprintf('SELECT user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = "1" AND users.user_package = packages.package_id WHERE user_banned = "0" AND user_incognito_enabled = "0" AND (user_name LIKE %1$s OR user_firstname LIKE %1$s OR user_lastname LIKE %1$s OR CONCAT(user_firstname,  " ", user_lastname) LIKE %1$s) LIMIT %2$s', secure($query, 'search'), secure($system['min_results'], 'int', false)));
     if ($get_users->num_rows > 0) {
       while ($user = $get_users->fetch_assoc()) {
         $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
@@ -192,13 +173,71 @@ trait SearchTrait
         }
       }
     }
-    /* sort results */
-    function sort_results($a, $b)
-    {
-      return strcmp($a["sort"], $b["sort"]);
-    }
-    usort($results, 'sort_results');
+    /* sort results (users, pages, groups then events, each by name) */
+    $type_order = ['user' => 0, 'page' => 1, 'group' => 2, 'event' => 3];
+    usort($results, function ($a, $b) use ($type_order) {
+      $left = $type_order[$a['type']] ?? 9;
+      $right = $type_order[$b['type']] ?? 9;
+      if ($left !== $right) {
+        return $left - $right;
+      }
+      return strcmp($a['sort'] ?? '', $b['sort'] ?? '');
+    });
     return $results;
+  }
+
+
+  /**
+   * get_people_search_filters
+   *
+   * @param array $input
+   * @return array
+   */
+  public function get_people_search_filters($input)
+  {
+    if (!is_array($input)) {
+      throw new BadRequestException(__("Invalid search filters"));
+    }
+    $filters = [
+      'distance_value' => 5000,
+      'query' => '',
+      'city' => '',
+      'country' => 'none',
+      'gender' => 'any',
+      'relationship' => 'any',
+      'online_status' => 'any',
+      'verified_status' => 'any'
+    ];
+    foreach ($filters as $key => $default) {
+      if (isset($input[$key])) {
+        if (!is_scalar($input[$key])) {
+          throw new BadRequestException(__("Invalid search filters"));
+        }
+        $filters[$key] = $input[$key];
+      }
+    }
+    foreach ($this->get_custom_fields(['get' => 'search']) as $field) {
+      $key = 'fld_' . $field['field_id'];
+      if (!isset($input[$key])) {
+        continue;
+      }
+      $value = $input[$key];
+      if ($field['type'] == 'multipleselectbox') {
+        if (!is_array($value)) {
+          throw new BadRequestException(__("Invalid search filters"));
+        }
+        foreach ($value as $option) {
+          if (!is_scalar($option)) {
+            throw new BadRequestException(__("Invalid search filters"));
+          }
+        }
+        $value = array_values($value);
+      } elseif (!is_scalar($value)) {
+        throw new BadRequestException(__("Invalid search filters"));
+      }
+      $filters[$key] = $value;
+    }
+    return $filters;
   }
 
 
@@ -209,18 +248,27 @@ trait SearchTrait
    * @param string $query
    * @param string $city
    * @param string $country
-   * @param string $country
    * @param string $gender
    * @param string $relationship
    * @param string $online_status
-   * @param string verified_status
+   * @param string $verified_status
+   * @param integer $offset
+   * @param array $custom_fields
    * @return array
    */
-  public function search_users($distance, $query, $city, $country, $gender, $relationship, $online_status, $verified_status)
+  public function search_users($distance, $query, $city, $country, $gender, $relationship, $online_status, $verified_status, $offset = 0, $custom_fields = [], $cursor = null)
   {
     global $db, $system;
     $results = [];
-    $offset *= $system['max_results'];
+    $this->_cursor = null;
+    $next_cursor = null;
+    $people_results = $system['people_results'] ?? $system['max_results'];
+    /* validate offset */
+    $offset = filter_var($offset, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => intdiv(PHP_INT_MAX, max(1, (int) $people_results))]]);
+    if ($offset === false) {
+      throw new BadRequestException(__("Invalid offset"));
+    }
+    $offset *= $people_results;
     /* validate gender */
     if ($gender != "any" && !$this->check_gender($gender)) {
       return $results;
@@ -244,7 +292,7 @@ trait SearchTrait
     // prepare where statement
     $where = "";
     /* exclude the viewer & banned users */
-    $where .= sprintf("WHERE users.user_id != '1' AND users.user_banned = '0' AND users.user_suggestions_hidden = '0' AND users.user_id != %s", secure($this->_data['user_id'], 'int'));
+    $where .= sprintf("WHERE users.user_id != '1' AND users.user_banned = '0' AND users.user_suggestions_hidden = '0' AND user_incognito_enabled = '0' AND users.user_id != %s", secure($this->_data['user_id'], 'int'));
     /* exclude unactivated users if activation enabled */
     if ($system['activation_enabled']) {
       $where .= " AND users.user_activated = '1'";
@@ -258,16 +306,16 @@ trait SearchTrait
       $where .= sprintf(" AND user_current_city = %s", secure($city));
     }
     /* country */
-    if ($country != "none") {
+    if (isset($country) && $country != "none") {
       $where .= sprintf(" AND user_country = %s", secure($country));
     }
     /* gender */
     if ($gender != "any") {
-      $where .= " AND users.user_gender = '$gender'";
+      $where .= sprintf(" AND users.user_gender = %s", secure($gender, 'int'));
     }
     /* relationship */
     if (isset($relationship) && $relationship != "any") {
-      $where .= " AND users.user_relationship = '$relationship'";
+      $where .= sprintf(" AND users.user_relationship = %s", secure($relationship));
     }
     /* online status */
     if ($online_status != "any") {
@@ -284,37 +332,46 @@ trait SearchTrait
     /* custom fields */
     $join_query = "";
     $distinct_query = "";
-    $custom_fields_query = $this->search_custom_fields($_POST);
+    $custom_fields_query = $this->search_custom_fields($custom_fields);
     if ($custom_fields_query) {
       $where .= " AND " . $custom_fields_query;
     }
     /* build query */
-    if ($system['location_finder_enabled']) {
+    if ($system['location_finder_enabled'] && valid_location($this->_data['user_latitude'] ?? null, $this->_data['user_longitude'] ?? null)) {
       /* validate distance */
-      $unit = ($system['system_distance'] == "mile") ? 3958 : 6371;
       $distance = ($distance && is_numeric($distance) && $distance > 0) ? $distance : 25;
-      /* prepare query */
-      $query = sprintf("SELECT " . $distinct_query . " user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified, (%s * acos(cos(radians(%s)) * cos(radians(user_latitude)) * cos(radians(user_longitude) - radians(%s)) + sin(radians(%s)) * sin(radians(user_latitude))) ) AS distance FROM users ", secure($unit, 'int'), secure($this->_data['user_latitude']), secure($this->_data['user_longitude']), secure($this->_data['user_latitude']));
-      $query .= $join_query;
-      $query .= $where;
-      $query .= sprintf(" HAVING distance < %s ORDER BY distance ASC LIMIT %s", secure($distance, 'int'), secure($system['max_results'], 'int', false));
+      /* the nearest people */
+      $get_users = new PrefetchedResult($this->get_nearby_people($where, $distance, $offset, $people_results, $join_query));
     } else {
       /* prepare query */
-      $query = "SELECT " . $distinct_query . " user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, user_verified FROM users ";
+      /* pages after the first continue from a cursor (the last user id) instead of an offset */
+      $cursor = cursor_decode($cursor, ['int']);
+      if ($cursor) {
+        $where .= " AND " . cursor_where(['users.user_id'], $cursor, false);
+        $offset = 0;
+      }
+      $query = "SELECT " . $distinct_query . " users.user_id AS `cursor`, user_id, user_name, user_firstname, user_lastname, user_gender, user_picture, user_subscribed, packages.name as package_name, user_verified FROM users LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id ";
       $query .= $join_query;
       $query .= $where;
-      $query .= sprintf(" LIMIT %s", secure($system['max_results'], 'int', false));
+      $query .= sprintf(" ORDER BY users.user_id ASC LIMIT %s, %s", secure($offset, 'int', false), secure($people_results, 'int', false));
+      /* get users */
+      [$get_users, $next_cursor] = cursor_result($db->query($query));
     }
-    /* get users */
-    $get_users = $db->query($query);
     if ($get_users->num_rows > 0) {
       while ($user = $get_users->fetch_assoc()) {
         $user['user_picture'] = get_picture($user['user_picture'], $user['user_gender']);
         /* get the connection between the viewer & the target */
         $user['connection'] = $this->connection($user['user_id']);
+        /* get mutual friends */
+        if ($user['user_id'] != $this->_data['user_id']) {
+          $mutual_friends = $this->get_mutual_friends_preview($user['user_id']);
+          $user['mutual_friends_count'] = $mutual_friends['count'];
+          $user['mutual_friends'] = $mutual_friends['friends'];
+        }
         $results[] = $user;
       }
     }
+    $this->_cursor = $next_cursor;
     return $results;
   }
 
@@ -328,7 +385,7 @@ trait SearchTrait
   {
     global $db, $system;
     $results = [];
-    $get_search_log = $db->query(sprintf("SELECT users_searches.log_id, users_searches.node_type, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified, pages.*, `groups`.*, `events`.* FROM users_searches LEFT JOIN users ON users_searches.node_type = 'user' AND users_searches.node_id = users.user_id LEFT JOIN pages ON users_searches.node_type = 'page' AND users_searches.node_id = pages.page_id LEFT JOIN `groups` ON users_searches.node_type = 'group' AND users_searches.node_id = `groups`.group_id LEFT JOIN `events` ON users_searches.node_type = 'event' AND users_searches.node_id = `events`.event_id WHERE users_searches.user_id = %s ORDER BY users_searches.log_id DESC LIMIT %s", secure($this->_data['user_id'], 'int'), secure($system['min_results'], 'int', false)));
+    $get_search_log = $db->query(sprintf("SELECT users_searches.log_id, users_searches.node_type, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified, pages.*, `groups`.*, `events`.* FROM users_searches LEFT JOIN users ON users_searches.node_type = 'user' AND users_searches.node_id = users.user_id LEFT JOIN pages ON users_searches.node_type = 'page' AND users_searches.node_id = pages.page_id LEFT JOIN `groups` ON users_searches.node_type = 'group' AND users_searches.node_id = `groups`.group_id LEFT JOIN `events` ON users_searches.node_type = 'event' AND users_searches.node_id = `events`.event_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users_searches.user_id = %s ORDER BY users_searches.log_id DESC LIMIT %s", secure($this->_data['user_id'], 'int'), secure($system['min_results'], 'int', false)));
     if ($get_search_log->num_rows > 0) {
       while ($result = $get_search_log->fetch_assoc()) {
         switch ($result['node_type']) {
@@ -384,13 +441,26 @@ trait SearchTrait
 
 
   /**
+   * delete_search_log
+   * 
+   * @param integer $log_id
+   * @return void
+   */
+  public function delete_search_log($log_id)
+  {
+    global $db;
+    $db->query(sprintf("DELETE FROM users_searches WHERE log_id = %s AND user_id = %s", secure($log_id, 'int'), secure($this->_data['user_id'], 'int')));
+  }
+
+
+  /**
    * clear_search_log
    * 
    * @return void
    */
   public function clear_search_log()
   {
-    global $db, $system;
+    global $db;
     $db->query(sprintf("DELETE FROM users_searches WHERE user_id = %s", secure($this->_data['user_id'], 'int')));
   }
 }

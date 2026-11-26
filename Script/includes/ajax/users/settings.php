@@ -223,6 +223,16 @@ try {
       return_json();
       break;
 
+    case 'delete_search_log':
+      if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        _error(400);
+      }
+      $user->delete_search_log($_GET['id']);
+
+      // return
+      return_json();
+      break;
+
     case 'clear_search_log':
       $user->clear_search_log();
 

@@ -86,7 +86,7 @@ try {
 
     case 'potential_reach':
       // get potential reach
-      $potential_reach = $user->campaign_potential_reach($_POST['countries'], $_POST['gender'], $_POST['relationship']);
+      $potential_reach = $user->campaign_potential_reach($_POST['countries'] ?? [], $_POST['gender'] ?? 'all', $_POST['relationship'] ?? 'all', $_POST['age_min'] ?? null, $_POST['age_max'] ?? null);
 
       // return
       return_json($potential_reach);

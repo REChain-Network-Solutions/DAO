@@ -1,0 +1,37 @@
+========================================================
+== If you running Sngine v4.5 you can upgrade to v5.0 ==
+========================================================
+
+!!! IMPORTANT !!!
+==============================================================================================================
+== Backup your database and your website files just in case something wrong happened                        ==                                      
+==============================================================================================================
+
+1- Shutdown your system from the admin panel
+
+2- Upload all files located in the "Script" folder and replace all files and folders, Except:
+
+-- content/backups (folder)
+-- content/uploads (folder)
+-- includes/config.php (file)
+
+3- Copy "update.php" file to your server
+
+4- Run the "update.php" file (http://yourdomain.com/update.php)
+
+=========================================================
+== After Update ==
+=========================================================
+
+1- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
+
+2- Go to your admin panel (http://yourdomain.com/admincp) and make site live again
+
+3- Delete "update.php" from your script folder after updating
+
+And That's it, Have Fun :)
+
+=======================================================================================================
+
+If you need help/support:
+Open support ticket here and our team will help you: https://www.zamblek.com/support

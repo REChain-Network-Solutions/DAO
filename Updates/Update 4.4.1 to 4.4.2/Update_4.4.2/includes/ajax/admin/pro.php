@@ -1,0 +1,350 @@
+<?php
+
+/**
+ * ajax -> admin -> pro
+ * 
+ * @package Sngine
+ * @author Zamblek
+ */
+
+// fetch bootstrap
+require('../../../bootstrap.php');
+
+// check AJAX Request
+is_ajax();
+
+// check admin|moderator permission
+admin_access('mods_pro_permission');
+
+// check demo account
+if ($user->_data['user_demo']) {
+  modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
+}
+
+// handle pro
+try {
+
+  switch ($_GET['do']) {
+    case 'settings':
+      /* prepare */
+      $_POST['packages_enabled'] = (isset($_POST['packages_enabled']) || $_POST['registration_type'] == "paid") ? '1' : '0';
+      $_POST['packages_wallet_payment_enabled'] = (isset($_POST['packages_wallet_payment_enabled'])) ? '1' : '0';
+      $_POST['packages_ads_free_enabled'] = (isset($_POST['packages_ads_free_enabled'])) ? '1' : '0';
+      $_POST['pro_users_widget_enabled'] = (isset($_POST['pro_users_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_page_widget_enabled'] = (isset($_POST['pro_page_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_groups_widget_enabled'] = (isset($_POST['pro_groups_widget_enabled'])) ? '1' : '0';
+      $_POST['pro_events_widget_enabled'] = (isset($_POST['pro_events_widget_enabled'])) ? '1' : '0';
+      /* update */
+      update_system_options([
+        'packages_enabled' => secure($_POST['packages_enabled']),
+        'packages_wallet_payment_enabled' => secure($_POST['packages_wallet_payment_enabled']),
+        'packages_ads_free_enabled' => secure($_POST['packages_ads_free_enabled']),
+        'pro_users_widget_enabled' => secure($_POST['pro_users_widget_enabled']),
+        'pro_page_widget_enabled' => secure($_POST['pro_page_widget_enabled']),
+        'pro_groups_widget_enabled' => secure($_POST['pro_groups_widget_enabled']),
+        'pro_events_widget_enabled' => secure($_POST['pro_events_widget_enabled']),
+      ]);
+      /* return */
+      return_json(['success' => true, 'message' => __("Settings have been updated")]);
+      break;
+
+    case 'edit':
+      /* get the package */
+      $package = $user->get_package($_GET['id']);
+      /* prepare */
+      $_POST['package_hidden'] = (isset($_POST['package_hidden'])) ? '1' : '0';
+      $_POST['verification_badge_enabled'] = (isset($_POST['verification_badge_enabled'])) ? '1' : '0';
+      $_POST['boost_posts_enabled'] = (isset($_POST['boost_posts_enabled'])) ? '1' : '0';
+      $_POST['boost_pages_enabled'] = (isset($_POST['boost_pages_enabled'])) ? '1' : '0';
+      $_POST['boost_groups_enabled'] = (isset($_POST['boost_groups_enabled'])) ? '1' : '0';
+      $_POST['boost_events_enabled'] = (isset($_POST['boost_events_enabled'])) ? '1' : '0';
+      /* valid inputs */
+      if (is_empty($_POST['name'])) {
+        throw new Exception(__("You have to enter the package name"));
+      }
+      if (is_empty($_POST['price']) || !is_numeric($_POST['price']) || $_POST['price'] < 0) {
+        throw new Exception(__("You have to enter valid package price"));
+      }
+      if ($_POST['period'] != "life" && (is_empty($_POST['period_num']) || !is_numeric($_POST['period_num']) || $_POST['period_num'] == '0')) {
+        throw new Exception(__("You have to enter valid period number"));
+      }
+      if ($_POST['permissions_group'] != '0' && !$user->check_permissions_group($_POST['permissions_group'])) {
+        throw new Exception(__("You must select valid permissions group"));
+      }
+      if ($_POST['boost_posts_enabled']) {
+        if (is_empty($_POST['boost_posts']) || !is_numeric($_POST['boost_posts'])) {
+          throw new Exception(__("You have to enter valid boost posts number"));
+        }
+      } else {
+        $_POST['boost_posts'] = 0;
+      }
+      if ($_POST['boost_pages_enabled']) {
+        if (is_empty($_POST['boost_pages']) || !is_numeric($_POST['boost_pages'])) {
+          throw new Exception(__("You have to enter valid boost pages number"));
+        }
+      } else {
+        $_POST['boost_pages'] = 0;
+      }
+      if ($_POST['boost_groups_enabled']) {
+        if (is_empty($_POST['boost_groups']) || !is_numeric($_POST['boost_groups'])) {
+          throw new Exception(__("You have to enter valid boost groups number"));
+        }
+      } else {
+        $_POST['boost_groups'] = 0;
+      }
+      if ($_POST['boost_events_enabled']) {
+        if (is_empty($_POST['boost_events']) || !is_numeric($_POST['boost_events'])) {
+          throw new Exception(__("You have to enter valid boost events number"));
+        }
+      } else {
+        $_POST['boost_events'] = 0;
+      }
+      /* PayPal billing plan */
+      $paypal_billing_plan = $package['paypal_billing_plan'];
+      $paypal_recurring_enabled = $system['paypal_enabled'] && !is_empty($system['paypal_webhook']);
+      if ($paypal_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
+        /* check if PayPal billing plan is not created */
+        if (is_empty($paypal_billing_plan)) {
+          /* create PayPal billing plan */
+          $paypal_billing_plan = paypal_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+        } else {
+          /* check if the (name || description) is edited */
+          if ($package['name'] != $_POST['name'] || $package['custom_description'] != $_POST['custom_description']) {
+            /* update the plan */
+            paypal_edit_billing_plan($package['paypal_billing_plan'], $_POST['name'], $_POST['custom_description']);
+          }
+          /* check if the (period || period_num || price) is edited */
+          if ($package['period'] != $_POST['period'] || $package['period_num'] != $_POST['period_num'] || $package['price'] != $_POST['price']) {
+            /* replace the plan */
+            $paypal_billing_plan = paypal_replace_billing_plan($package['paypal_billing_plan'], $_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+          }
+        }
+      } else {
+        $paypal_billing_plan = '';
+        if ($paypal_recurring_enabled && $package['paypal_billing_plan']) {
+          paypal_deactivate_billing_plan($package['paypal_billing_plan']);
+        }
+      }
+      /* Stripe billing plan */
+      $stripe_billing_plan = $package['stripe_billing_plan'];
+      $stripe_recurring_enabled = $system['creditcard_enabled'] && !is_empty($system['stripe_webhook']);
+      if ($stripe_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
+        /* check if Stripe billing plan is not created */
+        if (is_empty($stripe_billing_plan)) {
+          /* create Stripe billing plan */
+          $stripe_billing_plan = stripe_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+        } else {
+          /* check if the (description) is edited */
+          if ($package['custom_description'] != $_POST['custom_description']) {
+            /* update the plan */
+            stripe_edit_billing_plan($package['stripe_billing_plan'], $_POST['custom_description']);
+          }
+          /* check if the (name || period || period_num || price) is edited */
+          if ($package['name'] != $_POST['name'] || $package['period'] != $_POST['period'] || $package['period_num'] != $_POST['period_num'] || $package['price'] != $_POST['price']) {
+            /* replace the plan */
+            $stripe_billing_plan = stripe_replace_billing_plan($package['stripe_billing_plan'], $_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+          }
+        }
+      } else {
+        $stripe_billing_plan = '';
+        if ($stripe_recurring_enabled && $package['stripe_billing_plan']) {
+          stripe_deactivate_billing_plan($package['stripe_billing_plan']);
+        }
+      }
+      /* remove all users recurring payments */
+      if ($paypal_billing_plan == '' && $stripe_billing_plan == '') {
+        $db->query(sprintf("DELETE FROM users_recurring_payments WHERE handle = 'packages' AND handle_id = %s", secure($_GET['id'], 'int')));
+      }
+      /* update */
+      $db->query(sprintf(
+        "UPDATE packages SET 
+          name = %s, 
+          price = %s, 
+          period_num = %s, 
+          period = %s, 
+          color = %s, 
+          icon = %s, 
+          custom_description = %s, 
+          package_order = %s,
+          package_hidden = %s, 
+          verification_badge_enabled = %s, 
+          package_permissions_group_id = %s, 
+          allowed_videos_categories = %s, 
+          allowed_blogs_categories = %s, 
+          allowed_products = %s, 
+          free_points = %s, 
+          boost_posts_enabled = %s, 
+          boost_posts = %s, 
+          boost_pages_enabled = %s, 
+          boost_pages = %s, 
+          boost_groups_enabled = %s, 
+          boost_groups = %s, 
+          boost_events_enabled = %s, 
+          boost_events = %s, 
+          paypal_billing_plan = %s, 
+          stripe_billing_plan = %s 
+          WHERE package_id = %s",
+        secure($_POST['name']),
+        secure($_POST['price']),
+        secure($_POST['period_num']),
+        secure($_POST['period']),
+        secure($_POST['color']),
+        secure($_POST['icon']),
+        secure($_POST['custom_description']),
+        secure($_POST['package_order'], 'int'),
+        secure($_POST['package_hidden']),
+        secure($_POST['verification_badge_enabled']),
+        secure($_POST['permissions_group']),
+        secure($_POST['allowed_videos_categories'], 'int'),
+        secure($_POST['allowed_blogs_categories'], 'int'),
+        secure($_POST['allowed_products'], 'int'),
+        secure($_POST['free_points'], 'int'),
+        secure($_POST['boost_posts_enabled']),
+        secure($_POST['boost_posts'], 'int'),
+        secure($_POST['boost_pages_enabled']),
+        secure($_POST['boost_pages'], 'int'),
+        secure($_POST['boost_groups_enabled']),
+        secure($_POST['boost_groups'], 'int'),
+        secure($_POST['boost_events_enabled']),
+        secure($_POST['boost_events'], 'int'),
+        secure($paypal_billing_plan),
+        secure($stripe_billing_plan),
+        secure($_GET['id'], 'int')
+      ));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['icon']]);
+      /* return */
+      return_json(['success' => true, 'message' => __("Package info have been updated")]);
+      break;
+
+    case 'add':
+      /* prepare */
+      $_POST['package_hidden'] = (isset($_POST['package_hidden'])) ? '1' : '0';
+      $_POST['verification_badge_enabled'] = (isset($_POST['verification_badge_enabled'])) ? '1' : '0';
+      $_POST['boost_posts_enabled'] = (isset($_POST['boost_posts_enabled'])) ? '1' : '0';
+      $_POST['boost_pages_enabled'] = (isset($_POST['boost_pages_enabled'])) ? '1' : '0';
+      $_POST['boost_groups_enabled'] = (isset($_POST['boost_groups_enabled'])) ? '1' : '0';
+      $_POST['boost_events_enabled'] = (isset($_POST['boost_events_enabled'])) ? '1' : '0';
+      /* valid inputs */
+      if (is_empty($_POST['name'])) {
+        throw new Exception(__("You have to enter the package name"));
+      }
+      if (is_empty($_POST['price']) || !is_numeric($_POST['price']) || $_POST['price'] < 0) {
+        throw new Exception(__("You have to enter valid package price"));
+      }
+      if ($_POST['period'] != "life" && (is_empty($_POST['period_num']) || !is_numeric($_POST['period_num']) || $_POST['period_num'] == '0')) {
+        throw new Exception(__("You have to enter valid period number"));
+      }
+      if ($_POST['permissions_group'] != '0' && !$user->check_permissions_group($_POST['permissions_group'])) {
+        throw new Exception(__("You must select valid permissions group"));
+      }
+      if ($_POST['boost_posts_enabled']) {
+        if (is_empty($_POST['boost_posts']) || !is_numeric($_POST['boost_posts'])) {
+          throw new Exception(__("You have to enter valid boost posts number"));
+        }
+      } else {
+        $_POST['boost_posts'] = 0;
+      }
+      if ($_POST['boost_pages_enabled']) {
+        if (is_empty($_POST['boost_pages']) || !is_numeric($_POST['boost_pages'])) {
+          throw new Exception(__("You have to enter valid boost pages number"));
+        }
+      } else {
+        $_POST['boost_pages'] = 0;
+      }
+      if ($_POST['boost_groups_enabled']) {
+        if (is_empty($_POST['boost_groups']) || !is_numeric($_POST['boost_groups'])) {
+          throw new Exception(__("You have to enter valid boost groups number"));
+        }
+      } else {
+        $_POST['boost_groups'] = 0;
+      }
+      if ($_POST['boost_events_enabled']) {
+        if (is_empty($_POST['boost_events']) || !is_numeric($_POST['boost_events'])) {
+          throw new Exception(__("You have to enter valid boost events number"));
+        }
+      } else {
+        $_POST['boost_events'] = 0;
+      }
+      /* PayPal billing plan */
+      $paypal_billing_plan = '';
+      $paypal_recurring_enabled = $system['paypal_enabled'] && !is_empty($system['paypal_webhook']);
+      if ($paypal_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
+        /* create PayPal billing plan */
+        $paypal_billing_plan = paypal_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+      }
+      /* Stripe billing plan */
+      $stripe_billing_plan = '';
+      $stripe_recurring_enabled = ($system['creditcard_enabled'] || $system['alipay_enabled'] || $system['blik_enabled'] || $system['eps_enabled'] || $system['ideal_enabled'] || $system['oxxo_enabled']) && !is_empty($system['stripe_webhook']);
+      if ($stripe_recurring_enabled && $_POST['price'] > 0 && $_POST['period'] != "life") {
+        /* create Stripe billing plan */
+        $stripe_billing_plan = stripe_create_billing_plan($_POST['name'], $_POST['custom_description'], $_POST['period_num'], $_POST['period'], $_POST['price']);
+      }
+      /* insert */
+      $db->query(sprintf(
+        "INSERT INTO packages (
+          name, 
+          price, 
+          period_num, 
+          period, 
+          color, 
+          icon, 
+          custom_description, 
+          package_order, 
+          package_hidden,
+          verification_badge_enabled,
+          package_permissions_group_id, 
+          allowed_videos_categories, 
+          allowed_blogs_categories, 
+          allowed_products, 
+          free_points, 
+          boost_posts_enabled, 
+          boost_posts, 
+          boost_pages_enabled, 
+          boost_pages, 
+          boost_groups_enabled, 
+          boost_groups, 
+          boost_events_enabled, 
+          boost_events, 
+          paypal_billing_plan, 
+          stripe_billing_plan
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        secure($_POST['name']),
+        secure($_POST['price']),
+        secure($_POST['period_num']),
+        secure($_POST['period']),
+        secure($_POST['color']),
+        secure($_POST['icon']),
+        secure($_POST['custom_description']),
+        secure($_POST['package_order'], 'int'),
+        secure($_POST['package_hidden']),
+        secure($_POST['verification_badge_enabled']),
+        secure($_POST['permissions_group'], 'int'),
+        secure($_POST['allowed_videos_categories'], 'int'),
+        secure($_POST['allowed_blogs_categories'], 'int'),
+        secure($_POST['allowed_products'], 'int'),
+        secure($_POST['free_points'], 'int'),
+        secure($_POST['boost_posts_enabled']),
+        secure($_POST['boost_posts'], 'int'),
+        secure($_POST['boost_pages_enabled']),
+        secure($_POST['boost_pages'], 'int'),
+        secure($_POST['boost_groups_enabled']),
+        secure($_POST['boost_groups'], 'int'),
+        secure($_POST['boost_events_enabled']),
+        secure($_POST['boost_events'], 'int'),
+        secure($paypal_billing_plan),
+        secure($stripe_billing_plan)
+      ));
+      /* remove pending uploads */
+      remove_pending_uploads([$_POST['icon']]);
+      /* return */
+      return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/pro/packages";']);
+      break;
+
+    default:
+      _error(400);
+      break;
+  }
+} catch (Exception $e) {
+  return_json(['error' => true, 'message' => $e->getMessage()]);
+}

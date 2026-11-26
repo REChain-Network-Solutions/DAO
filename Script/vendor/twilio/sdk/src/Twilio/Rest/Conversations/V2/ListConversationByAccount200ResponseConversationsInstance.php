@@ -35,7 +35,9 @@ use Twilio\Deserialize;
  * @property \DateTime $createdAt
  * @property \DateTime $updatedAt
  * @property string $configuration
+ * @property array<string,string> $metadata
  * @property string[] $participants
+ * @property string $actionId
  */
 class ListConversationByAccount200ResponseConversationsInstance extends InstanceResource
 {
@@ -44,9 +46,9 @@ class ListConversationByAccount200ResponseConversationsInstance extends Instance
      *
      * @param Version $version Version that contains the resource
      * @param mixed[] $payload The response payload
-     * @param string $sid
+     * @param string $id
      */
-    public function __construct(Version $version, array $payload, ?string $sid = null)
+    public function __construct(Version $version, array $payload, ?string $id = null)
     {
         $apiV1Version = new ApiV1Version($version->getDomain(), $version->version);
         parent::__construct($apiV1Version);
@@ -61,10 +63,12 @@ class ListConversationByAccount200ResponseConversationsInstance extends Instance
             'createdAt' => Deserialize::dateTime(Values::array_get($payload, 'createdAt')),
             'updatedAt' => Deserialize::dateTime(Values::array_get($payload, 'updatedAt')),
             'configuration' => Values::array_get($payload, 'configuration'),
+            'metadata' => Values::array_get($payload, 'metadata'),
             'participants' => Values::array_get($payload, 'participants'),
+            'actionId' => Values::array_get($payload, 'actionId'),
         ];
 
-        $this->solution = ['sid' => $sid ?: ($this->properties['sid'] ?? null), ];
+        $this->solution = ['id' => $id ?: ($this->properties['id'] ?? null), ];
     }
 
     /**
@@ -78,7 +82,7 @@ class ListConversationByAccount200ResponseConversationsInstance extends Instance
         if (!$this->context) {
             $this->context = new ConversationContext(
                 $this->version,
-                $this->solution['sid']
+                $this->solution['id']
             );
         }
 

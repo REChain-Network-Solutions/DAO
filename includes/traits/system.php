@@ -16,21 +16,17 @@ trait SystemTrait
 
   /**
    * get_languages
-   * 
+   *
    * @return array
    */
   public function get_languages()
   {
-    global $db;
     $languages = [];
-    $get_languages = $db->query("SELECT * FROM system_languages WHERE enabled = '1' ORDER BY language_order ASC");
-    if ($get_languages->num_rows > 0) {
-      while ($language = $get_languages->fetch_assoc()) {
-        $language['title_native'] = $language['title'];
-        $language['title'] = __($language['title']);
-        $language['flag'] = get_picture($language['flag'], 'language_flag');
-        $languages[] = $language;
-      }
+    foreach (system_cache_rows('languages', "SELECT * FROM system_languages WHERE enabled = '1' ORDER BY language_order ASC") as $language) {
+      $language['title_native'] = $language['title'];
+      $language['title'] = __($language['title']);
+      $language['flag'] = get_picture($language['flag'], 'language_flag');
+      $languages[] = $language;
     }
     return $languages;
   }
@@ -110,21 +106,33 @@ trait SystemTrait
   /* ------------------------------- */
 
   /**
-   * get_countries ✅
+   * prepare_country
+   *
+   * @param array $country
+   * @param boolean $translate_name
+   * @return array
+   */
+  private function prepare_country($country, $translate_name = false)
+  {
+    $country['country_name_native'] = $country['country_name'];
+    $country_name = __($country['country_name']);
+    if ($translate_name) {
+      $country['country_name'] = $country_name;
+    }
+    $country['country_name_with_flag'] = trim(($country['country_flag'] ?? '') . ' ' . $country_name);
+    return $country;
+  }
+
+  /**
+   * get_countries 
    * 
    * @return array
    */
   public function get_countries()
   {
-    global $db, $system;
     $countries = [];
-    $get_countries = $db->query("SELECT * FROM system_countries WHERE enabled = '1' ORDER BY country_order ASC");
-    if ($get_countries->num_rows > 0) {
-      while ($country = $get_countries->fetch_assoc()) {
-        $country['country_name_native'] = $country['country_name'];
-        $country['country_name'] = __($country['country_name']);
-        $countries[] = $country;
-      }
+    foreach (system_cache_rows('countries', "SELECT * FROM system_countries WHERE enabled = '1' ORDER BY country_order ASC") as $country) {
+      $countries[] = $this->prepare_country($country, true);
     }
     return $countries;
   }
@@ -160,7 +168,7 @@ trait SystemTrait
     if ($get_country->num_rows == 0) {
       return null;
     }
-    return $get_country->fetch_assoc();
+    return $this->prepare_country($get_country->fetch_assoc());
   }
 
 
@@ -177,7 +185,7 @@ trait SystemTrait
     if ($get_country->num_rows == 0) {
       return null;
     }
-    return $get_country->fetch_assoc();
+    return $this->prepare_country($get_country->fetch_assoc());
   }
 
 
@@ -194,7 +202,30 @@ trait SystemTrait
     if ($get_country->num_rows == 0) {
       return null;
     }
-    return $get_country->fetch_assoc();
+    return $this->prepare_country($get_country->fetch_assoc());
+  }
+
+
+  /**
+   * get_session_location
+   * 
+   * @param array $session
+   * @return string
+   */
+  public function get_session_location($session)
+  {
+    static $countries = null;
+    if (empty($session['user_ip_country'])) {
+      return '';
+    }
+    if ($countries === null) {
+      $countries = array_column($this->get_countries(), 'country_name', 'country_code');
+    }
+    $location = $countries[$session['user_ip_country']] ?? $session['user_ip_country'];
+    if (!empty($session['user_ip_isp'])) {
+      $location .= ' · ' . $session['user_ip_isp'];
+    }
+    return $location;
   }
 
 
@@ -260,11 +291,11 @@ trait SystemTrait
 
 
   /* ------------------------------- */
-  /* System Genders ✅ */
+  /* System Genders */
   /* ------------------------------- */
 
   /**
-   * get_genders ✅
+   * get_genders 
    * 
    * @param boolean $sorted
    * @return array
@@ -286,7 +317,7 @@ trait SystemTrait
 
 
   /**
-   * get_gender ✅
+   * get_gender 
    * 
    * @param integer $gender_id
    * @return string
@@ -303,7 +334,7 @@ trait SystemTrait
 
 
   /**
-   * check_gender ✅
+   * check_gender 
    * 
    * @param integer $gender_id
    * @return boolean
@@ -321,11 +352,11 @@ trait SystemTrait
 
 
   /* ------------------------------- */
-  /* Static Pages ✅ */
+  /* Static Pages */
   /* ------------------------------- */
 
   /**
-   * get_static_pages ✅
+   * get_static_pages 
    * 
    * @param boolean $in_footer
    * 
@@ -333,22 +364,19 @@ trait SystemTrait
    */
   public function get_static_pages()
   {
-    global $system, $db;
+    global $system;
     $static_pages = [];
-    $get_static_pages = $db->query("SELECT page_title, page_is_redirect, page_redirect_url, page_url, page_in_footer, page_in_sidebar, page_icon FROM static_pages ORDER BY page_order ASC");
-    if ($get_static_pages->num_rows > 0) {
-      while ($static_page = $get_static_pages->fetch_assoc()) {
-        $static_page['url'] = ($static_page['page_is_redirect']) ? $static_page['page_redirect_url'] : $system['system_url'] . '/static/' . $static_page['page_url'];
-        $static_page['page_icon'] = get_picture($static_page['page_icon'], 'static_page_icon');
-        $static_pages[] = $static_page;
-      }
+    foreach (system_cache_rows('static_pages', "SELECT page_title, page_is_redirect, page_redirect_url, page_url, page_in_footer, page_in_sidebar, page_icon FROM static_pages ORDER BY page_order ASC") as $static_page) {
+      $static_page['url'] = ($static_page['page_is_redirect']) ? $static_page['page_redirect_url'] : $system['system_url'] . '/static/' . $static_page['page_url'];
+      $static_page['page_icon'] = get_picture($static_page['page_icon'], 'static_page_icon');
+      $static_pages[] = $static_page;
     }
     return $static_pages;
   }
 
 
   /**
-   * get_static_page ✅
+   * get_static_page 
    * 
    * @param string $page_url
    * @return array
@@ -368,11 +396,11 @@ trait SystemTrait
 
 
   /* ------------------------------- */
-  /* Contact Us ✅ */
+  /* Contact Us */
   /* ------------------------------- */
 
   /**
-   * contact_us ✅
+   * contact_us 
    * 
    * @param string $name
    * @param string $email

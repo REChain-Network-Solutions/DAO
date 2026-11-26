@@ -10,6 +10,11 @@ Options -MultiViews
 	Order Allow,Deny
 	Deny from all
 </FilesMatch>
+<FilesMatch "(vite.config.mjs|vite.config.js)$">
+	Order Allow,Deny
+	Deny from all
+</FilesMatch>
+RedirectMatch 404 ^/content/themes/[^/]+/src/
 
 ## Cache Control ##
 <IfModule mod_headers.c>
@@ -141,10 +146,18 @@ RewriteRule ^settings/([^/]+)/([^/]+)/?$ settings.php?view=$1&sub_view=$2 [L,QSA
 
 # Live
 RewriteRule ^live/?$ live.php [L,QSA]
+RewriteRule ^live/following/?$ live.php?view=following [L,QSA]
+RewriteRule ^live/manage/?$ live.php?view=manage [L,QSA]
+RewriteRule ^live/search/?$ live.php?view=search [L,QSA]
+RewriteRule ^live/search/([^/]+)/?$ live.php?view=search&query=$1 [B,L,QSA]
+RewriteRule ^live/category/([^/]+)/?$ live.php?view=category&category_id=$1 [L,QSA]
+RewriteRule ^live/category/([^/]+)/([^/]+)/?$ live.php?view=category&category_id=$1&category_url=$2 [L,QSA]
+RewriteRule ^live/create/?$ live.php?view=create [L,QSA]
 
 # Posts & Photos
 RewriteRule ^posts/([^/]+)/?$ post.php?post_id=$1 [L,QSA]
 RewriteRule ^photos/([^/]+)/?$ photo.php?photo_id=$1 [L,QSA]
+RewriteRule ^embed/([^/]+)/?$ embed.php?post_id=$1 [L,QSA]
 
 # Popular
 RewriteRule ^popular/?$ index.php?view=popular [L,QSA]
@@ -160,9 +173,12 @@ RewriteRule ^scheduled/?$ index.php?view=scheduled [L,QSA]
 
 # Memories
 RewriteRule ^memories/?$ index.php?view=memories [L,QSA]
+RewriteRule ^stories/archive/?$ index.php?view=stories_archive [L,QSA]
 
 # Watch
 RewriteRule ^watch/?$ watch.php [L,QSA]
+RewriteRule ^watch/following/?$ watch.php?view=following [L,QSA]
+RewriteRule ^watch/manage/?$ watch.php?view=manage [L,QSA]
 RewriteRule ^watch/category/([^/]+)/?$ watch.php?view=category&category_id=$1 [L,QSA]
 RewriteRule ^watch/category/([^/]+)/([^/]+)/?$ watch.php?view=category&category_id=$1&category_url=$2 [L,QSA]
 RewriteRule ^watch/category/([^/]+)/([^/]+)/([^/]+)/?$ watch.php?view=category&category_id=$1&category_url=$2&page=$3 [L,QSA]
@@ -228,16 +244,26 @@ RewriteRule ^reels/?$ reels.php [L,QSA]
 RewriteRule ^reels/([^/]+)/?$ reels.php?view=reel&post_id=$1 [L,QSA]
 
 # Blogs
-RewriteRule ^my/blogs/?$ index.php?view=blogs [L,QSA]
 RewriteRule ^blogs/?$ blogs.php [L,QSA]
+RewriteRule ^blogs/rss/?$ blogs.php?view=rss [L,QSA]
+RewriteRule ^blogs/manage/?$ blogs.php?view=manage [L,QSA]
+RewriteRule ^blogs/manage/([^/]+)/?$ blogs.php?view=manage&page=$1 [L,QSA]
 RewriteRule ^blogs/new/?$ blogs.php?view=new [L,QSA]
 RewriteRule ^blogs/edit/([^/]+)/?$ blogs.php?view=edit&post_id=$1 [L,QSA]
-RewriteRule ^blogs/category/([^/]+)/([^/]+)/?$ blogs.php?view=category&category_id=$1 [L,QSA]
+RewriteRule ^blogs/search/?$ blogs.php?view=search [L,QSA]
+RewriteRule ^blogs/search/([^/]+)/?$ blogs.php?view=search&query=$1 [B,L,QSA]
+RewriteRule ^blogs/search/([^/]+)/([^/]+)/?$ blogs.php?view=search&query=$1&page=$2 [B,L,QSA]
+RewriteRule ^blogs/category/([^/]+)/?$ blogs.php?view=category&category_id=$1 [L,QSA]
+RewriteRule ^blogs/category/([^/]+)/([^/]+)/?$ blogs.php?view=category&category_id=$1&category_url=$2 [L,QSA]
+RewriteRule ^blogs/category/([^/]+)/([^/]+)/rss/?$ blogs.php?view=rss&category_id=$1&category_url=$2 [L,QSA]
+RewriteRule ^blogs/category/([^/]+)/([^/]+)/([^/]+)/?$ blogs.php?view=category&category_id=$1&category_url=$2&page=$3 [L,QSA]
 RewriteRule ^blogs/([^/]+)/([^/]+)/?$ blogs.php?view=blog&post_id=$1 [L,QSA]
+RewriteRule ^blogs/([^/]+)/?$ blogs.php?page=$1 [L,QSA]
 
 # Market
-RewriteRule ^my/products/?$ index.php?view=products [L,QSA]
 RewriteRule ^market/?$ market.php [L,QSA]
+RewriteRule ^market/manage/?$ market.php?view=manage [L,QSA]
+RewriteRule ^market/manage/([^/]+)/?$ market.php?view=manage&page=$1 [L,QSA]
 RewriteRule ^market/cart/?$ market.php?view=cart [L,QSA]
 RewriteRule ^market/orders/?$ market.php?view=orders [L,QSA]
 RewriteRule ^market/sales/?$ market.php?view=sales [L,QSA]
@@ -250,13 +276,22 @@ RewriteRule ^market/category/([^/]+)/([^/]+)/([^/]+)/?$ market.php?view=category
 RewriteRule ^market/([^/]+)/?$ market.php?page=$1 [L,QSA]
 
 # Funding
-RewriteRule ^my/funding/?$ index.php?view=funding [L,QSA]
 RewriteRule ^funding/?$ funding.php [L,QSA]
+RewriteRule ^funding/manage/?$ funding.php?view=manage [L,QSA]
+RewriteRule ^funding/manage/([^/]+)/?$ funding.php?view=manage&page=$1 [L,QSA]
+RewriteRule ^funding/search/?$ funding.php?view=search [L,QSA]
+RewriteRule ^funding/search/([^/]+)/?$ funding.php?view=search&query=$1 [B,L,QSA]
+RewriteRule ^funding/search/([^/]+)/([^/]+)/?$ funding.php?view=search&query=$1&page=$2 [B,L,QSA]
+RewriteRule ^funding/category/([^/]+)/?$ funding.php?view=category&category_id=$1 [L,QSA]
+RewriteRule ^funding/category/([^/]+)/([^/]+)/?$ funding.php?view=category&category_id=$1&category_url=$2 [L,QSA]
+RewriteRule ^funding/category/([^/]+)/([^/]+)/([^/]+)/?$ funding.php?view=category&category_id=$1&category_url=$2&page=$3 [L,QSA]
+RewriteRule ^funding/([^/]+)/?$ funding.php?page=$1 [L,QSA]
 RewriteRule ^funding/([^/]+)/([^/]+)/?$ funding.php?view=funding_request&post_id=$1 [L,QSA]
 
 # Offers
-RewriteRule ^my/offers/?$ index.php?view=offers [L,QSA]
 RewriteRule ^offers/?$ offers.php [L,QSA]
+RewriteRule ^offers/manage/?$ offers.php?view=manage [L,QSA]
+RewriteRule ^offers/manage/([^/]+)/?$ offers.php?view=manage&page=$1 [L,QSA]
 RewriteRule ^offers/search/?$ offers.php?view=search [L,QSA]
 RewriteRule ^offers/search/([^/]+)/?$ offers.php?view=search&query=$1 [B,L,QSA]
 RewriteRule ^offers/search/([^/]+)/([^/]+)/?$ offers.php?view=search&query=$1&page=$2 [B,L,QSA]
@@ -266,8 +301,9 @@ RewriteRule ^offers/category/([^/]+)/([^/]+)/([^/]+)/?$ offers.php?view=category
 RewriteRule ^offers/([^/]+)/?$ offers.php?page=$1 [L,QSA]
 
 # Jobs
-RewriteRule ^my/jobs/?$ index.php?view=jobs [L,QSA]
 RewriteRule ^jobs/?$ jobs.php [L,QSA]
+RewriteRule ^jobs/manage/?$ jobs.php?view=manage [L,QSA]
+RewriteRule ^jobs/manage/([^/]+)/?$ jobs.php?view=manage&page=$1 [L,QSA]
 RewriteRule ^jobs/search/?$ jobs.php?view=search [L,QSA]
 RewriteRule ^jobs/search/([^/]+)/?$ jobs.php?view=search&query=$1 [B,L,QSA]
 RewriteRule ^jobs/search/([^/]+)/([^/]+)/?$ jobs.php?view=search&query=$1&page=$2 [B,L,QSA]
@@ -277,8 +313,9 @@ RewriteRule ^jobs/category/([^/]+)/([^/]+)/([^/]+)/?$ jobs.php?view=category&cat
 RewriteRule ^jobs/([^/]+)/?$ jobs.php?page=$1 [L,QSA]
 
 # Courses
-RewriteRule ^my/courses/?$ index.php?view=courses [L,QSA]
 RewriteRule ^courses/?$ courses.php [L,QSA]
+RewriteRule ^courses/manage/?$ courses.php?view=manage [L,QSA]
+RewriteRule ^courses/manage/([^/]+)/?$ courses.php?view=manage&page=$1 [L,QSA]
 RewriteRule ^courses/search/?$ courses.php?view=search [L,QSA]
 RewriteRule ^courses/search/([^/]+)/?$ courses.php?view=search&query=$1 [B,L,QSA]
 RewriteRule ^courses/search/([^/]+)/([^/]+)/?$ courses.php?view=search&query=$1&page=$2 [B,L,QSA]
@@ -289,14 +326,19 @@ RewriteRule ^courses/([^/]+)/?$ courses.php?page=$1 [L,QSA]
 
 # Forums
 RewriteRule ^forums/?$ forums.php [L,QSA]
+RewriteRule ^forums/recent/?$ forums.php?view=recent [L,QSA]
 RewriteRule ^forums/my-threads/?$ forums.php?view=my-threads [L,QSA]
 RewriteRule ^forums/my-replies/?$ forums.php?view=my-replies [L,QSA]
 RewriteRule ^forums/search/?$ forums.php?view=search [L,QSA]
 RewriteRule ^forums/search-results/?$ forums.php?view=search-results [L,QSA]
+RewriteRule ^forums/new-thread/?$ forums.php?view=new-thread [L,QSA]
 RewriteRule ^forums/new-thread/([^/]+)/?$ forums.php?view=new-thread&forum_id=$1 [L,QSA]
 RewriteRule ^forums/edit-thread/([^/]+)/?$ forums.php?view=edit-thread&thread_id=$1 [L,QSA]
 RewriteRule ^forums/new-reply/([^/]+)/?$ forums.php?view=new-reply&thread_id=$1 [L,QSA]
 RewriteRule ^forums/edit-reply/([^/]+)/?$ forums.php?view=edit-reply&reply_id=$1 [L,QSA]
+RewriteRule ^forums/rss/?$ forums.php?view=rss [L,QSA]
+RewriteRule ^forums/thread/([^/]+)/([^/]+)/rss/?$ forums.php?view=rss&thread_id=$1 [L,QSA]
+RewriteRule ^forums/([^/]+)/([^/]+)/rss/?$ forums.php?view=rss&forum_id=$1 [L,QSA]
 RewriteRule ^forums/thread/([^/]+)/([^/]+)/?$ forums.php?view=thread&thread_id=$1 [L,QSA]
 RewriteRule ^forums/([^/]+)/([^/]+)/?$ forums.php?view=forum&forum_id=$1 [L,QSA]
 
@@ -314,10 +356,15 @@ RewriteRule ^movie/([^/]+)/([^/]+)/?$ movies.php?view=movie&movie_id=$1 [L,QSA]
 # Games
 RewriteRule ^games/?$ games.php [L,QSA]
 RewriteRule ^games/played/?$ games.php?view=played [L,QSA]
+RewriteRule ^games/played/([^/]+)/?$ games.php?view=played&page=$1 [L,QSA]
+RewriteRule ^games/search/?$ games.php?view=search [L,QSA]
+RewriteRule ^games/search/([^/]+)/?$ games.php?view=search&query=$1 [B,L,QSA]
+RewriteRule ^games/search/([^/]+)/([^/]+)/?$ games.php?view=search&query=$1&page=$2 [B,L,QSA]
 RewriteRule ^games/genre/([^/]+)/?$ games.php?view=genre&genre_id=$1 [L,QSA]
 RewriteRule ^games/genre/([^/]+)/([^/]+)/?$ games.php?view=genre&genre_id=$1&genre_url=$2 [L,QSA]
 RewriteRule ^games/genre/([^/]+)/([^/]+)/([^/]+)/?$ games.php?view=genre&genre_id=$1&genre_url=$2&page=$3 [L,QSA]
 RewriteRule ^games/([^/]+)/([^/]+)/?$ games.php?view=game&game_id=$1 [L,QSA]
+RewriteRule ^games/([^/]+)/?$ games.php?page=$1 [L,QSA]
 
 # Developers
 RewriteRule ^api/([^/]+)/?$ api.php?do=$1 [L,QSA]
@@ -328,6 +375,10 @@ RewriteRule ^share/?$ share.php [L,QSA]
 
 # Merits
 RewriteRule ^merits/?$ merits.php [L,QSA]
+
+# Dating
+RewriteRule ^dating/?$ dating.php [L,QSA]
+RewriteRule ^dating/([^/]+)/?$ dating.php?view=$1 [L,QSA]
 
 # Moderator Panel
 RewriteRule ^modcp/?$ moderator.php [L,QSA]
@@ -340,6 +391,13 @@ RewriteRule ^admincp/?$ admin.php [L,QSA]
 RewriteRule ^admincp/([^/]+)/?$ admin.php?view=$1 [L,QSA]
 RewriteRule ^admincp/([^/]+)/([^/]+)/?$ admin.php?view=$1&sub_view=$2 [L,QSA]
 RewriteRule ^admincp/([^/]+)/([^/]+)/([^/]+)/?$ admin.php?view=$1&sub_view=$2&id=$3 [L,QSA]
+
+# Sitemap
+RewriteRule ^sitemap\.xml$ sitemap.php [L,QSA]
+RewriteRule ^sitemap-([a-z]+)-([0-9]+)\.xml$ sitemap.php?view=part&type=$1&part=$2 [L,QSA]
+RewriteRule ^robots\.txt$ sitemap.php?view=robots [L,QSA]
+RewriteRule ^llms\.txt$ sitemap.php?view=llms [L,QSA]
+RewriteRule ^([a-f0-9]{32})\.txt$ sitemap.php?view=key&key=$1 [L,QSA]
 
 # Profile
 RewriteCond %{REQUEST_FILENAME} !-f

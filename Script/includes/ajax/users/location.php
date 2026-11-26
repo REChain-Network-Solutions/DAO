@@ -7,6 +7,9 @@
  * @author Zamblek
  */
 
+// this request only reads the session
+define('SESSION_READ_ONLY', true);
+
 // fetch bootstrap
 require('../../../bootstrap.php');
 
@@ -19,7 +22,7 @@ user_access(true);
 try {
 
   // update user location
-  $db->query(sprintf("UPDATE users SET user_latitude = %s, user_longitude = %s, user_location_updated = %s WHERE user_id = %s", secure($_POST['latitude']), secure($_POST['longitude']), secure($date), secure($user->_data['user_id'], 'int')));
+  $user->update_location($_POST['latitude'] ?? null, $_POST['longitude'] ?? null);
 
   // return
   return_json();

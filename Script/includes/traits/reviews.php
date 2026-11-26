@@ -22,27 +22,36 @@ trait ReviewsTrait
    * @param integer $offset
    * @return array
    */
-  public function get_reviews($node_id, $node_type = 'page', $offset = 0)
+  public function get_reviews($node_id, $node_type = 'page', $offset = 0, $cursor = null)
   {
     global $system, $db;
     $reviews = [];
     $offset *= $system['max_results_even'];
+    /* newest first; pages after the first continue from a cursor (the last review) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['reviews.review_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
     /* get reviews */
     switch ($node_type) {
       case 'page':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN pages ON reviews.node_type = 'page' AND reviews.node_id = pages.page_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id AS `cursor`, reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN pages ON reviews.node_type = 'page' AND reviews.node_id = pages.page_id WHERE reviews.node_id = %s" . $cursor_statement . " ORDER BY reviews.review_id DESC " . $limit_statement, secure($node_id, 'int')));
+        [$get_reviews, $next_cursor] = cursor_result($get_reviews);
         break;
 
       case 'group':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN `groups` ON reviews.node_type = 'group' AND reviews.node_id = `groups`.group_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id AS `cursor`, reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN `groups` ON reviews.node_type = 'group' AND reviews.node_id = `groups`.group_id WHERE reviews.node_id = %s" . $cursor_statement . " ORDER BY reviews.review_id DESC " . $limit_statement, secure($node_id, 'int')));
+        [$get_reviews, $next_cursor] = cursor_result($get_reviews);
         break;
 
       case 'event':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN events ON reviews.node_type = 'event' AND reviews.node_id = `events`.event_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id AS `cursor`, reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN events ON reviews.node_type = 'event' AND reviews.node_id = `events`.event_id WHERE reviews.node_id = %s" . $cursor_statement . " ORDER BY reviews.review_id DESC " . $limit_statement, secure($node_id, 'int')));
+        [$get_reviews, $next_cursor] = cursor_result($get_reviews);
         break;
 
       case 'post':
-        $get_reviews = $db->query(sprintf("SELECT reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN posts ON reviews.node_type = 'post' AND reviews.node_id = posts.post_id WHERE reviews.node_id = %s ORDER BY reviews.review_id DESC LIMIT %s, %s", secure($node_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+        $get_reviews = $db->query(sprintf("SELECT reviews.review_id AS `cursor`, reviews.review_id FROM reviews INNER JOIN users ON reviews.user_id = users.user_id INNER JOIN posts ON reviews.node_type = 'post' AND reviews.node_id = posts.post_id WHERE reviews.node_id = %s" . $cursor_statement . " ORDER BY reviews.review_id DESC " . $limit_statement, secure($node_id, 'int')));
+        [$get_reviews, $next_cursor] = cursor_result($get_reviews);
         break;
     }
     if ($get_reviews->num_rows > 0) {
@@ -53,6 +62,7 @@ trait ReviewsTrait
         }
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $reviews;
   }
 
@@ -105,7 +115,7 @@ trait ReviewsTrait
   {
     global $db, $system;
     /* get review */
-    $get_review = $db->query(sprintf("SELECT reviews.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM reviews INNER JOIN users ON reviews.user_id = users.user_id WHERE reviews.review_id = %s", secure($review_id, 'int')));
+    $get_review = $db->query(sprintf("SELECT reviews.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_verified, users.user_subscribed, packages.name as package_name FROM reviews INNER JOIN users ON reviews.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE reviews.review_id = %s", secure($review_id, 'int')));
     if ($get_review->num_rows == 0) {
       return false;
     }

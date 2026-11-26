@@ -15,6 +15,20 @@ if (!$system['blogs_enabled']) {
   _error(404);
 }
 
+// rss feed
+if (isset($_GET['view']) && $_GET['view'] == 'rss') {
+  if (!$system['system_public'] || !$system['blogs_rss_enabled']) {
+    _error(404);
+  }
+  try {
+    $user->get_blogs_feed([
+      'category_id' => $_GET['category_id'] ?? null,
+    ]);
+  } catch (Exception $e) {
+    _error(__("Error"), $e->getMessage());
+  }
+}
+
 // user access
 if ($user->_logged_in || !$system['system_public']) {
   user_access();
@@ -23,57 +37,93 @@ if ($user->_logged_in || !$system['system_public']) {
 try {
 
   // get view content
+  $_GET['view'] = (isset($_GET['view'])) ? $_GET['view'] : '';
   switch ($_GET['view']) {
     case '':
-      // page header
-      page_header(__("Blogs") . ' | ' . __($system['system_title']), __($system['system_description_blogs']));
-
-      // get selected country
-      if (isset($_GET['country'])) {
-        /* get selected country */
-        $selected_country = $user->get_country_by_name($_GET['country']);
-        /* assign variables */
-        $smarty->assign('selected_country', $selected_country);
-      }
-
-      // get blogs
-      $smarty->assign('blogs', $user->get_blogs(['country' => $selected_country['country_id']]));
-      break;
-
+    case 'search':
     case 'category':
-      // check category
-      $category = $user->get_category("blogs_categories", $_GET['category_id']);
-      if (!$category) {
-        _error(404);
-      }
-      /* assign variables */
-      $smarty->assign('category', $category);
+    case 'manage':
+      $args = [
+        'sort' => $_GET['sort'] ?? '',
+        'country' => $_GET['country'] ?? null,
+        'distance' => $_GET['distance'] ?? null,
+        'page' => $_GET['page'] ?? 1,
+      ];
+      switch ($_GET['view']) {
+        case '':
+          // page header
+          page_header(__("Blogs") . ' | ' . __($system['system_title']), __($system['system_description_blogs']));
 
-      // page header
-      page_header(__("Blogs") . ' &rsaquo; ' . __($category['category_name']) . ' | ' . __($system['system_title']), __($category['category_description']));
+          // get blogs categories
+          $smarty->assign('categories', $user->get_categories("blogs_categories"));
+          $smarty->assign('promoted_blogs', $user->get_promoted_blogs());
+          if ($system['blogs_rss_enabled']) {
+            $smarty->assign('rss_url', $system['system_url'] . '/blogs/rss');
+          }
+          $args['url'] = "";
+          break;
 
-      // get selected country
-      if (isset($_GET['country'])) {
-        /* get selected country */
-        $selected_country = $user->get_country_by_name($_GET['country']);
-        /* assign variables */
-        $smarty->assign('selected_country', $selected_country);
+        case 'search':
+          // check query
+          if (!isset($_GET['query']) || is_empty($_GET['query'])) {
+            redirect('/blogs');
+          }
+          /* assign variables */
+          $smarty->assign('query', htmlentities($_GET['query'], ENT_QUOTES, 'utf-8'));
+
+          // page header
+          page_header(__("Blogs") . ' &rsaquo; ' . __("Search") . ' | ' . __($system['system_title']), __($system['system_description_blogs']));
+
+          // get blogs categories
+          $smarty->assign('categories', $user->get_categories("blogs_categories"));
+          $args['query'] = $_GET['query'];
+          $args['url'] = "/search/" . $_GET['query'];
+          break;
+
+        case 'category':
+          // check category
+          $current_category = $user->get_category("blogs_categories", $_GET['category_id'], true);
+          if (!$current_category) {
+            _error(404);
+          }
+          /* assign variables */
+          $smarty->assign('current_category', $current_category);
+
+          // page header
+          page_header(__("Blogs") . ' &rsaquo; ' . __($current_category['category_name']) . ' | ' . __($system['system_title']), __($current_category['category_description']));
+
+          // get blogs categories (only sub-categories)
+          if (!$current_category['sub_categories'] && !$current_category['parent']) {
+            $categories = $user->get_categories("blogs_categories");
+          } else {
+            $categories = $user->get_categories("blogs_categories", $current_category['category_id']);
+          }
+          $smarty->assign('categories', $categories);
+          if ($system['blogs_rss_enabled']) {
+            $smarty->assign('rss_url', $system['system_url'] . '/blogs/category/' . $current_category['category_id'] . '/' . $current_category['category_url'] . '/rss');
+          }
+          $args['category'] = $current_category['category_id'];
+          $args['url'] = "/category/" . $current_category['category_id'] . "/" . $current_category['category_url'];
+          break;
+
+        case 'manage':
+          // user access
+          user_access();
+
+          // page header
+          page_header(__("My Blogs") . ' | ' . __($system['system_title']), __($system['system_description_blogs']));
+
+          $args['managed'] = true;
+          $args['user_id'] = $user->_data['user_id'];
+          $args['url'] = "/manage";
+          break;
       }
 
       // get blogs
-      $smarty->assign('blogs', $user->get_blogs(["category" => $_GET['category_id'], 'country' => $selected_country['country_id']]));
-
-      // get blogs categories (sub-categories & only parents)
-      $smarty->assign('blogs_categories', $user->get_categories("blogs_categories", $_GET['category_id'], false, true));
-
-      // get latest blogs
-      $smarty->assign('latest_blogs', $user->get_blogs(['random' => "true", 'results' => 5]));
+      $smarty->assign($user->get_blogs_listing($args));
 
       // get ads
-      $smarty->assign('ads', $user->ads('blog'));
-
-      // get widgets
-      $smarty->assign('widgets', $user->widgets('blog'));
+      $smarty->assign('ads', $user->ads('blogs'));
       break;
 
     case 'blog':
@@ -82,8 +132,24 @@ try {
       if (!$blog) {
         _error(404);
       }
+      // check if blog is still scheduled
+      if ($blog['still_scheduled'] && !$blog['manage_post']) {
+        _error(404);
+      }
+      // reading time
+      $reading_text = html_entity_decode(strip_tags(preg_replace('/<[^>]*>/', ' ', $blog['blog']['parsed_text'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      $reading_words = preg_match_all('/[\p{L}\p{N}]+(?:[\x{2019}\x{0027}-][\p{L}\p{N}]+)*/u', $reading_text);
+      $smarty->assign('reading_time', max(1, (int) ceil($reading_words / 200)));
+
       /* assign variables */
       $smarty->assign('blog', $blog);
+      if ($system['blogs_rss_enabled']) {
+        if (!empty($blog['blog']['category_id']) && !empty($blog['blog']['category_url'])) {
+          $smarty->assign('rss_url', $system['system_url'] . '/blogs/category/' . $blog['blog']['category_id'] . '/' . $blog['blog']['category_url'] . '/rss');
+        } else {
+          $smarty->assign('rss_url', $system['system_url'] . '/blogs/rss');
+        }
+      }
 
       // page header
       page_header($blog['og_title'] . ' | ' . __($system['system_title']), $blog['og_description'], $blog['og_image']);
@@ -92,7 +158,11 @@ try {
       $smarty->assign('blogs_categories', $user->get_categories("blogs_categories", 0, false, true));
 
       // get latest blogs
-      $smarty->assign('latest_blogs', $user->get_blogs(['random' => "true", 'results' => 5]));
+      $latest_blogs = $user->get_blogs(['random' => "true", 'results' => 6]);
+      $latest_blogs = array_values(array_filter($latest_blogs, function ($latest_blog) use ($blog) {
+        return $latest_blog['post_id'] != $blog['post_id'];
+      }));
+      $smarty->assign('latest_blogs', array_slice($latest_blogs, 0, 5));
 
       // get ads
       $smarty->assign('ads', $user->ads('blog'));
@@ -108,7 +178,7 @@ try {
 
       // check blogs permission
       if (!$user->_data['can_write_blogs']) {
-        if (!$user->check_module_package_permission("blogs_permission")) {
+        if ($user->check_module_package_permission("blogs_permission")) {
           redirect("/packages?highlight=true");
         }
         _error(404);
@@ -119,7 +189,7 @@ try {
 
       // get blog
       $blog = $user->get_post($_GET['post_id']);
-      if (!$blog) {
+      if (!$blog || !$blog['can_edit_post']) {
         _error(404);
       }
       /* assign variables */
@@ -135,7 +205,7 @@ try {
 
       // check blogs permission
       if (!$user->_data['can_write_blogs']) {
-        if (!$user->check_module_package_permission("blogs_permission")) {
+        if ($user->check_module_package_permission("blogs_permission")) {
           redirect("/packages?highlight=true");
         }
         _error(404);

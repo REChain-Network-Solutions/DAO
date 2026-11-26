@@ -11,7 +11,7 @@
 require('bootloader.php');
 
 // check if wallet enabled
-if (!$system['wallet_enabled']) {
+if (!$system['wallet_enabled'] || !method_exists($user, 'wallet_get_transactions')) {
   _error(404);
 }
 

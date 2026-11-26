@@ -61,13 +61,16 @@ try {
 
       // get promoted events
       if ($system['packages_enabled']) {
-        $smarty->assign('promoted_events', $user->get_events(['promoted' => true, 'results' => 4]));
+        $smarty->assign('promoted_events', $user->get_events(['promoted' => true, 'active_only' => true, 'results' => 3]));
       }
 
       // get new events
-      $events = $user->get_events(['suggested' => true, 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'sort' => 'upcoming', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "suggested_events");
       $smarty->assign('view_title', __("Discover"));
       break;
@@ -99,9 +102,12 @@ try {
       $smarty->assign('categories', $categories);
 
       // get category events
-      $events = $user->get_events(['suggested' => true, 'category_id' => $_GET['category_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'sort' => 'upcoming', 'category_id' => $_GET['category_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "category_events");
       $smarty->assign('view_title', __($current_category['category_name']));
       break;
@@ -114,9 +120,12 @@ try {
       page_header(__("Going Events") . ' | ' . __($system['system_title']));
 
       // get going events
-      $events = $user->get_events(['filter' => 'going', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['filter' => 'going', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "going_events");
       $smarty->assign('view_title', __("Going Events"));
       break;
@@ -129,9 +138,12 @@ try {
       page_header(__("Interested Events") . ' | ' . __($system['system_title']));
 
       // get interested events
-      $events = $user->get_events(['filter' => 'interested', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['filter' => 'interested', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "interested_events");
       $smarty->assign('view_title', __("Interested Events"));
       break;
@@ -144,9 +156,12 @@ try {
       page_header(__("Invited Events") . ' | ' . __($system['system_title']));
 
       // get invited events
-      $events = $user->get_events(['filter' => 'invited', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['filter' => 'invited', 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "invited_events");
       $smarty->assign('view_title', __("Invited Events"));
       break;
@@ -159,9 +174,12 @@ try {
       page_header(__("My Events") . ' | ' . __($system['system_title']));
 
       // get events
-      $events = $user->get_events(['managed' => true, 'user_id' => $user->_data['user_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['managed' => true, 'user_id' => $user->_data['user_id'], 'type' => $selected_type, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $events = $user->get_events($args);
+      $total = $user->get_events(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('events', $events);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "events");
       $smarty->assign('view_title', __("My Events"));
       break;

@@ -1,19 +1,50 @@
-# Don't list directory contents
-Options -Indexes
+# Don't list directory contents & disable CGI
+Options -Indexes -ExecCGI
 
-# Block double extensions from being uploaded or accessed, including htshells
-<FilesMatch ".*\.([^.]+)\.([^.]+)$">
-	Order Deny,Allow
-	Deny from all
-</FilesMatch>
+# Helper: deny rule that works on both Apache 2.4 and 2.2
+# (used inside the <FilesMatch> blocks below)
 
-# Disable script execution
-<Files ~ "\.(deb|phps|phtml|js|php)$">
-	Order Deny,Allow
-	Deny from all
-</Files>
+  # Block double extensions (e.g. shell.php.jpg) and ".ht*" / htshells — case-insensitive
+  <FilesMatch "(?i)\.([^.]+)\.([^.]+)$">
+    <IfModule mod_authz_core.c>
+      Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+      Order Deny,Allow
+      Deny from all
+    </IfModule>
+  </FilesMatch>
 
-# Only Enable it for FTP Uploads
-<IfModule mod_headers.c>
+  # Deny direct access to any script / executable file type — case-insensitive
+  <FilesMatch "(?i)\.(php|php[0-9]*|phtml|phtm|pht|phps|phar|cgi|pl|py|rb|asp|aspx|jsp|sh|bash|deb|exe|js|html?|htaccess)$">
+    <IfModule mod_authz_core.c>
+      Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+      Order Deny,Allow
+      Deny from all
+    </IfModule>
+  </FilesMatch>
+
+  # Belt-and-suspenders: turn the PHP engine OFF entirely in this directory,
+  # so even an extension we forgot to list above can never be executed.
+  <IfModule mod_php.c>
+    php_flag engine off
+  </IfModule>
+  <IfModule mod_php7.c>
+    php_flag engine off
+  </IfModule>
+  <IfModule mod_php5.c>
+    php_flag engine off
+  </IfModule>
+
+  # For AddHandler / FastCGI setups: strip any PHP (and other script) handlers/types
+  <IfModule mod_mime.c>
+    RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phtm .pht .phps .phar .cgi .pl .py
+    RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phtm .pht .phps .phar
+  </IfModule>
+
+  # Only Enable it for FTP Uploads
+  <IfModule mod_headers.c>
     #Header set Access-Control-Allow-Origin "*"
-</IfModule>
+  </IfModule>

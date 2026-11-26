@@ -119,7 +119,7 @@ trait CallsTrait
         $call_price = $to_user_info['user_monetization_call_price'];
         /* check if the viewer has enough balance */
         if ($this->_data['user_wallet_balance'] < $call_price) {
-          throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-link' data-toggle='modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
+          throw new Exception(__("There is not enough credit in your wallet. Recharge your wallet to continue.") . " " . "<strong class='text-primary cursor-pointer js_modal' data-url='#wallet-replenish'>" . __("Recharge Now") . "</strong>");
         }
       }
     }
@@ -214,9 +214,83 @@ trait CallsTrait
     }
     $call = $check_call->fetch_assoc();
     /* update the call */
-    $db->query(sprintf("UPDATE conversations_calls SET declined = '1', updated_time = %s WHERE call_id = %s", secure($date), secure($call_id, 'int')));
+    $db->query(sprintf('UPDATE conversations_calls SET declined = \'1\', ended_time = %1$s, ended_by = %2$s, updated_time = %1$s WHERE call_id = %3$s AND declined = \'0\'', secure($date), secure($this->_data['user_id'], 'int'), secure($call_id, 'int')));
+    /* log the call */
+    if ($db->affected_rows > 0) {
+      $call['log_message_id'] = $this->log_call($call);
+    }
     /* return */
     return $call;
+  }
+
+
+  /**
+   * get_message_call
+   * 
+   * @param integer $call_id
+   * @return array|null
+   */
+  public function get_message_call($call_id)
+  {
+    global $db, $system;
+    $get_call = $db->query(sprintf("SELECT conversations_calls.*, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture FROM conversations_calls INNER JOIN users ON conversations_calls.to_user_id = users.user_id WHERE conversations_calls.call_id = %s", secure($call_id, 'int')));
+    if ($get_call->num_rows == 0) {
+      return null;
+    }
+    $call = $get_call->fetch_assoc();
+    /* get the call status */
+    if ($call['answered_time']) {
+      $status = "completed";
+    } elseif ($call['ended_by'] == $call['to_user_id']) {
+      $status = "declined";
+    } else {
+      $status = "missed";
+    }
+    $duration = ($status == "completed" && $call['ended_time']) ? max(0, strtotime($call['ended_time']) - strtotime($call['answered_time'])) : 0;
+    /* return */
+    return [
+      'call_id' => $call['call_id'],
+      'is_video' => ($call['is_video_call'] == '1'),
+      'status' => $status,
+      'duration' => $duration,
+      'duration_formatted' => gmdate(($duration >= 3600) ? "H:i:s" : "i:s", $duration),
+      'to_user_id' => $call['to_user_id'],
+      'to_user_fullname' => ($system['show_usernames_enabled']) ? $call['user_name'] : $call['user_firstname'] . " " . $call['user_lastname'],
+      'to_user_picture' => get_picture($call['user_picture'], $call['user_gender']),
+    ];
+  }
+
+
+  /**
+   * log_call
+   * 
+   * @param array $call
+   * @return integer
+   */
+  public function log_call($call)
+  {
+    global $db, $date;
+    $other_user_id = ($call['from_user_id'] == $this->_data['user_id']) ? $call['to_user_id'] : $call['from_user_id'];
+    $receiver_seen = ($call['answered'] == '1') ? '1' : '0';
+    /* get the conversation (or start new one) */
+    $conversation_id = $this->get_mutual_conversation_id([$other_user_id]);
+    if (!$conversation_id) {
+      $db->query("INSERT INTO conversations (last_message_id) VALUES ('0')");
+      $conversation_id = $db->insert_id;
+      $db->query(sprintf("INSERT INTO conversations_users (conversation_id, user_id, seen) VALUES (%1\$s, %2\$s, '1'), (%1\$s, %3\$s, '1')", secure($conversation_id, 'int'), secure($call['from_user_id'], 'int'), secure($call['to_user_id'], 'int')));
+    }
+    /* insert the message */
+    $db->query(sprintf("INSERT INTO conversations_messages (conversation_id, user_id, message, image, video, voice_note, call_id, time) VALUES (%s, %s, '', '', '', '', %s, %s)", secure($conversation_id, 'int'), secure($call['from_user_id'], 'int'), secure($call['call_id'], 'int'), secure($date)));
+    $message_id = $db->insert_id;
+    /* update the conversation */
+    $db->query(sprintf("UPDATE conversations SET last_message_id = %s WHERE conversation_id = %s", secure($message_id, 'int'), secure($conversation_id, 'int')));
+    $db->query(sprintf("UPDATE conversations_users SET seen = '1', deleted = '0' WHERE conversation_id = %s AND user_id = %s", secure($conversation_id, 'int'), secure($call['from_user_id'], 'int')));
+    $db->query(sprintf("UPDATE conversations_users SET seen = '%s', deleted = '0' WHERE conversation_id = %s AND user_id = %s", $receiver_seen, secure($conversation_id, 'int'), secure($call['to_user_id'], 'int')));
+    /* update users live messages */
+    $db->query(sprintf("UPDATE users SET user_live_messages_lastid = %s WHERE user_id = %s", secure($message_id, 'int'), secure($call['from_user_id'], 'int')));
+    $db->query(sprintf("UPDATE users SET user_live_messages_lastid = %s" . (($receiver_seen == '0') ? ", user_live_messages_counter = user_live_messages_counter + 1" : "") . " WHERE user_id = %s", secure($message_id, 'int'), secure($call['to_user_id'], 'int')));
+    /* return */
+    return $message_id;
   }
 
 
@@ -240,7 +314,7 @@ trait CallsTrait
       $this->wallet_call_payment($this->_data['user_monetization_call_price'], $call['from_user_id'], $call['to_user_id']);
     }
     /* update the call */
-    $db->query(sprintf("UPDATE conversations_calls SET answered = '1', updated_time = %s WHERE call_id = %s", secure($date), secure($call_id, 'int')));
+    $db->query(sprintf('UPDATE conversations_calls SET answered = \'1\', answered_time = %1$s, updated_time = %1$s WHERE call_id = %2$s', secure($date), secure($call_id, 'int')));
     /* return */
     return $call;
   }

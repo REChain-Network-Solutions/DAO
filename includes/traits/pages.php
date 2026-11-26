@@ -28,7 +28,7 @@ trait PagesTrait
     $category_id = !isset($args['category_id']) ? null : $args['category_id'];
     $country = !isset($args['country']) ? null : $args['country'];
     $language = !isset($args['language']) ? null : $args['language'];
-    $random = !isset($args['random']) ? false : true;
+    $random = filter_var($args['random'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $get_all = !isset($args['get_all']) ? false : true;
     $offset = !isset($args['offset']) ? 0 : $args['offset'];
     $results = !isset($args['results']) ? $system['pages_results'] : $args['results'];
@@ -36,9 +36,19 @@ trait PagesTrait
     $boosted = !isset($args['boosted']) ? false : true;
     $suggested = !isset($args['suggested']) ? false : true;
     $managed = !isset($args['managed']) ? false : true;
+    $count = !isset($args['count']) ? false : true;
     /* initialize vars */
     $pages = [];
+    $this->_cursor = null;
+    if ($count) {
+      $offset = 0;
+      $results = PHP_INT_MAX;
+    }
     $offset *= $results;
+    /* prepare query (wrapped as a count when requested) */
+    $query = function ($sql) use ($db, $count) {
+      return $db->query(($count) ? "SELECT COUNT(*) AS count FROM (" . $sql . ") AS results" : $sql);
+    };
     /* prepare country statement */
     if ($country && $system['pages_location_filter_enabled'] && $country != "all") {
       $country_statement = sprintf(" AND page_country = %s ", secure($country, 'int'));
@@ -47,26 +57,52 @@ trait PagesTrait
     if ($language && $language != "all") {
       $language_statement = sprintf(" AND page_language = %s ", secure($language, 'int'));
     }
+    /* pages after the first continue from a cursor (the last page id) instead of an offset */
+    $use_cursor = !$count && !$get_all && !$promoted && !($suggested && $random);
+    $cursor = ($use_cursor) ? cursor_decode($args['cursor'] ?? null, ['int']) : null;
+    $language_statement = ($language_statement ?? "") . (($cursor) ? " AND " . cursor_where(['pages.page_id'], $cursor) : "");
+    if ($cursor) {
+      $offset = 0;
+    }
     if ($promoted) {
       /* get promoted pages */
-      $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' " . $country_statement . $language_statement . " ORDER BY RAND() LIMIT %s", $system['max_results']));
+      $residual_statement = ($country_statement ?? "") . ($language_statement ?? "");
+      if ($count) {
+        $get_pages = $query("SELECT page_id FROM pages WHERE page_boosted = '1' " . $residual_statement);
+      } else {
+        $filter = ($residual_statement) ? function ($ids) use ($db, $residual_statement) {
+          return array_column($db->query(sprintf("SELECT page_id FROM pages WHERE page_id IN (%s) " . $residual_statement, implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'page_id');
+        } : null;
+        $pages_ids = sample_ids('pages', 'page_id', "page_boosted = '1'", $results, ['pool' => 200, 'filter' => $filter, 'shared' => 'promoted_pages']);
+        $rows = ($pages_ids) ? $db->query(sprintf("SELECT * FROM pages WHERE page_id IN (%s)", implode(',', $pages_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_pages = new PrefetchedResult(rows_by_ids($rows, 'page_id', $pages_ids));
+      }
     } elseif ($boosted) {
       /* get the "viewer" boosted pages */
-      $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' AND page_boosted_by = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+      $get_pages = $query(sprintf("SELECT * FROM pages WHERE page_boosted = '1' AND page_boosted_by = %s " . $country_statement . $language_statement . " ORDER BY page_id DESC LIMIT %s, %s", secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } elseif ($suggested) {
       /* get suggested pages */
       $category_statement = ($category_id) ? "AND page_category = " . secure($category_id, 'int') : "";
-      $sort_statement = ($random) ? " ORDER BY RAND() " : " ORDER BY page_id DESC ";
-      $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_pages = $db->query(sprintf("SELECT * FROM pages WHERE page_id NOT IN (%s) %s " . $country_statement . $language_statement . $sort_statement .  " LIMIT %s, %s", $this->spread_ids($this->get_pages_ids()), $category_statement, secure($offset, 'int', false), secure($results, 'int', false)));
+      if ($random && !$count) {
+        /* random pages, sampled through the pages ids (or the category) */
+        $residual_statement = ($country_statement ?? "") . ($language_statement ?? "");
+        $filter = ($residual_statement) ? function ($ids) use ($db, $residual_statement) {
+          return array_column($db->query(sprintf("SELECT page_id FROM pages WHERE page_id IN (%s) " . $residual_statement, implode(',', $ids)))->fetch_all(MYSQLI_ASSOC), 'page_id');
+        } : null;
+        $pages_ids = sample_ids('pages', 'page_id', ($category_id) ? sprintf("page_category = %s", secure($category_id, 'int')) : "page_id > 0", $results, ['pivots' => 3, 'exclude' => $this->get_pages_ids(), 'filter' => $filter]);
+        $rows = ($pages_ids) ? $db->query(sprintf("SELECT * FROM pages WHERE page_id IN (%s)", implode(',', $pages_ids)))->fetch_all(MYSQLI_ASSOC) : [];
+        $get_pages = new PrefetchedResult(rows_by_ids($rows, 'page_id', $pages_ids));
+      } else {
+        $get_pages = $query(sprintf("SELECT * FROM pages WHERE page_id NOT IN (%s) %s " . $country_statement . $language_statement . " ORDER BY page_id DESC LIMIT %s, %s", $this->spread_ids($this->get_pages_ids()), $category_statement, secure($offset, 'int', false), secure($results, 'int', false)));
+      }
     } elseif ($managed) {
       /* get the "taget" all pages who admin */
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_pages = $db->query(sprintf("SELECT pages.* FROM pages_admins INNER JOIN pages ON pages_admins.page_id = pages.page_id WHERE pages_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY page_id DESC " . $limit_statement, secure($user_id, 'int')));
+      $get_pages = $query(sprintf("SELECT pages.* FROM pages_admins INNER JOIN pages ON pages_admins.page_id = pages.page_id WHERE pages_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY page_id DESC " . $limit_statement, secure($user_id, 'int')));
     } elseif ($user_id == null) {
       /* get the "viewer" pages who admin */
       $limit_statement = ($get_all) ? "" : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($results, 'int', false));
-      $get_pages = $db->query(sprintf("SELECT pages.* FROM pages_admins INNER JOIN pages ON pages_admins.page_id = pages.page_id WHERE pages_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY page_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+      $get_pages = $query(sprintf("SELECT pages.* FROM pages_admins INNER JOIN pages ON pages_admins.page_id = pages.page_id WHERE pages_admins.user_id = %s " . $country_statement . $language_statement . " ORDER BY page_id DESC " . $limit_statement, secure($this->_data['user_id'], 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
     } else {
       /* get the "target" liked pages*/
       /* get the target user's privacy */
@@ -74,18 +110,24 @@ trait PagesTrait
       $privacy = $get_privacy->fetch_assoc();
       /* check the target user's privacy */
       if (!$this->check_privacy($privacy['user_privacy_pages'], $user_id)) {
-        return $pages;
+        return ($count) ? 0 : $pages;
       }
-      $get_pages = $db->query(sprintf("SELECT pages.* FROM pages INNER JOIN pages_likes ON pages.page_id = pages_likes.page_id WHERE pages_likes.user_id = %s " . $country_statement . $language_statement . " LIMIT %s, %s", secure($user_id, 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+      $get_pages = $query(sprintf("SELECT pages.* FROM pages INNER JOIN pages_likes ON pages.page_id = pages_likes.page_id WHERE pages_likes.user_id = %s " . $country_statement . $language_statement . " ORDER BY pages.page_id DESC LIMIT %s, %s", secure($user_id, 'int'), secure($offset, 'int', false), secure($results, 'int', false)));
+    }
+    if ($count) {
+      return (int) $get_pages->fetch_assoc()['count'];
     }
     if ($get_pages->num_rows > 0) {
-      while ($page = $get_pages->fetch_assoc()) {
+      $rows = $get_pages->fetch_all(MYSQLI_ASSOC);
+      $this->preload_memberships('pages', array_column($rows, 'page_id'));
+      foreach ($rows as $page) {
         $page['page_picture'] = get_picture($page['page_picture'], 'page');
         /* check if the viewer liked the page */
         $page['i_like'] = $this->check_page_membership($this->_data['user_id'], $page['page_id']);
         $pages[] = $page;
       }
     }
+    $this->_cursor = ($use_cursor && !empty($rows)) ? cursor_encode([end($rows)['page_id']]) : null;
     return $pages;
   }
 
@@ -285,10 +327,11 @@ trait PagesTrait
         }
         /* prepare */
         $args['page_tips_enabled'] = (isset($args['page_tips_enabled'])) ? '1' : '0';
+        $args['page_messages_enabled'] = ($system['pages_messages_enabled']) ? ((isset($args['page_messages_enabled'])) ? '1' : '0') : $page['page_messages_enabled'];
         /* edit from admin panel */
         $args['page_verified'] = ($this->_data['user_group'] == 1 && isset($args['page_verified'])) ? $args['page_verified'] : $page['page_verified'];
         /* update page */
-        $db->query(sprintf("UPDATE pages SET page_category = %s, page_name = %s, page_title = %s, page_tips_enabled = %s, page_verified = %s WHERE page_id = %s", secure($args['category'], 'int'), secure($args['username']), secure($args['title']), secure($args['page_tips_enabled']), secure($args['page_verified']), secure($page_id, 'int')));
+        $db->query(sprintf("UPDATE pages SET page_category = %s, page_name = %s, page_title = %s, page_tips_enabled = %s, page_messages_enabled = %s, page_verified = %s WHERE page_id = %s", secure($args['category'], 'int'), secure($args['username']), secure($args['title']), secure($args['page_tips_enabled']), secure($args['page_messages_enabled']), secure($args['page_verified']), secure($page_id, 'int')));
         break;
 
       case 'info':
@@ -312,6 +355,8 @@ trait PagesTrait
         if (!is_empty($args['website']) && !valid_url($args['website'])) {
           throw new Exception(__("Please enter a valid website URL"));
         }
+        /* validate location */
+        $has_coordinates = !is_empty($args['location']) && valid_location($args['latitude'] ?? null, $args['longitude'] ?? null);
         /* set custom fields */
         $this->set_custom_fields($args, "page", "settings", $page_id);
         /* update page */
@@ -321,6 +366,8 @@ trait PagesTrait
             page_phone = %s, 
             page_website = %s, 
             page_location = %s, 
+            page_latitude = %s, 
+            page_longitude = %s, 
             page_country = %s, 
             page_language = %s, 
             page_description = %s 
@@ -329,6 +376,8 @@ trait PagesTrait
           secure($args['phone']),
           secure($args['website']),
           secure($args['location']),
+          secure($has_coordinates ? round((float) $args['latitude'], 7) : 'null'),
+          secure($has_coordinates ? round((float) $args['longitude'], 7) : 'null'),
           secure($args['country'], 'int'),
           secure($args['language'], 'int'),
           secure($args['description']),
@@ -448,12 +497,18 @@ trait PagesTrait
     }
     /* delete the page */
     $db->query(sprintf("DELETE FROM pages WHERE page_id = %s", secure($page_id, 'int')));
+    /* delete the page translations */
+    $this->delete_translations('page', $page_id);
     /* delete the page members */
     $db->query(sprintf("DELETE FROM pages_likes WHERE page_id = %s", secure($page_id, 'int')));
     /* delete the page admins */
     $db->query(sprintf("DELETE FROM pages_admins WHERE page_id = %s", secure($page_id, 'int')));
+    /* delete the page shortcuts */
+    $this->delete_shortcuts($page_id, 'page');
     /* delete the page events */
     $db->query(sprintf("DELETE FROM `events` WHERE event_page_id = %s", secure($page_id, 'int')));
+    /* delete the page conversations */
+    $this->delete_page_conversations($page_id);
   }
 
 
@@ -466,6 +521,10 @@ trait PagesTrait
   public function get_page_admins_ids($page_id)
   {
     global $db;
+    /* many posts on one page share the same page (reset by connect() and on every call in socket servers) */
+    if (!defined('SOCKET_SERVER') && isset($this->_connections_ids['page_admins'][$page_id])) {
+      return $this->_connections_ids['page_admins'][$page_id];
+    }
     $admins = [];
     $get_admins = $db->query(sprintf("SELECT user_id FROM pages_admins WHERE page_id = %s", secure($page_id, 'int')));
     if ($get_admins->num_rows > 0) {
@@ -473,7 +532,7 @@ trait PagesTrait
         $admins[] = $admin['user_id'];
       }
     }
-    return $admins;
+    return $this->_connections_ids['page_admins'][$page_id] = $admins;
   }
 
 
@@ -484,12 +543,18 @@ trait PagesTrait
    * @param integer $offset
    * @return array
    */
-  public function get_page_admins($page_id, $offset = 0)
+  public function get_page_admins($page_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $admins = [];
     $offset *= $system['max_results_even'];
-    $get_admins = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM pages_admins INNER JOIN users ON pages_admins.user_id = users.user_id WHERE pages_admins.page_id = %s LIMIT %s, %s", secure($page_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last admin id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['pages_admins.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_admins = $db->query(sprintf("SELECT pages_admins.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM pages_admins INNER JOIN users ON pages_admins.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE pages_admins.page_id = %s" . $cursor_statement . " ORDER BY pages_admins.user_id DESC " . $limit_statement, secure($page_id, 'int')));
+    [$get_admins, $next_cursor] = cursor_result($get_admins);
     if ($get_admins->num_rows > 0) {
       while ($admin = $get_admins->fetch_assoc()) {
         $admin['user_picture'] = get_picture($admin['user_picture'], $admin['user_gender']);
@@ -500,6 +565,7 @@ trait PagesTrait
         $admins[] = $admin;
       }
     }
+    $this->_cursor = $next_cursor ?? null;
     return $admins;
   }
 
@@ -511,12 +577,18 @@ trait PagesTrait
    * @param integer $offset
    * @return array
    */
-  public function get_page_members($page_id, $offset = 0)
+  public function get_page_members($page_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $members = [];
     $offset *= $system['max_results_even'];
-    $get_members = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM pages_likes INNER JOIN users ON pages_likes.user_id = users.user_id WHERE pages_likes.page_id = %s LIMIT %s, %s", secure($page_id, 'int'), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest accounts first; pages after the first continue from a cursor (the member id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['pages_likes.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_members = $db->query(sprintf("SELECT pages_likes.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM pages_likes INNER JOIN users ON pages_likes.user_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE pages_likes.page_id = %s" . $cursor_statement . " ORDER BY pages_likes.user_id DESC " . $limit_statement, secure($page_id, 'int')));
+    [$get_members, $next_cursor] = cursor_result($get_members);
     if ($get_members->num_rows > 0) {
       /* get page admins ids */
       $page_admins_ids = $this->get_page_admins_ids($page_id);
@@ -529,6 +601,7 @@ trait PagesTrait
         $members[] = $member;
       }
     }
+    $this->_cursor = $next_cursor;
     return $members;
   }
 
@@ -560,18 +633,25 @@ trait PagesTrait
    * @param integer $offset
    * @return array
    */
-  public function get_page_invites($page_id, $offset = 0)
+  public function get_page_invites($page_id, $offset = 0, $cursor = null)
   {
     global $db, $system;
     $friends = [];
     $offset *= $system['max_results_even'];
-    $get_friends = $db->query(sprintf("SELECT users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM users LEFT JOIN pages_likes ON users.user_id = pages_likes.user_id AND pages_likes.page_id = %s LEFT JOIN pages_invites ON users.user_id = pages_invites.user_id AND pages_invites.page_id = %s AND pages_invites.from_user_id = %s WHERE users.user_id IN (%s) AND pages_likes.id IS NULL AND pages_invites.id IS NULL LIMIT %s, %s", secure($page_id, 'int'), secure($page_id, 'int'), secure($this->_data['user_id'], 'int'), $this->spread_ids($this->_data['friends_ids']), secure($offset, 'int', false), secure($system['max_results_even'], 'int', false)));
+    /* newest first; pages after the first continue from a cursor (the last user id) instead of an offset */
+    $this->_cursor = null;
+    $cursor = cursor_decode($cursor, ['int']);
+    $cursor_statement = ($cursor) ? " AND " . cursor_where(['users.user_id'], $cursor) : "";
+    $limit_statement = ($cursor) ? sprintf("LIMIT %s", secure($system['max_results_even'], 'int', false)) : sprintf("LIMIT %s, %s", secure($offset, 'int', false), secure($system['max_results_even'], 'int', false));
+    $get_friends = $db->query(sprintf("SELECT users.user_id AS `cursor`, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM users LEFT JOIN pages_likes ON users.user_id = pages_likes.user_id AND pages_likes.page_id = %s LEFT JOIN pages_invites ON users.user_id = pages_invites.user_id AND pages_invites.page_id = %s AND pages_invites.from_user_id = %s LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE users.user_id IN (%s) AND pages_likes.id IS NULL AND pages_invites.id IS NULL" . $cursor_statement . " ORDER BY users.user_id DESC " . $limit_statement, secure($page_id, 'int'), secure($page_id, 'int'), secure($this->_data['user_id'], 'int'), $this->spread_ids($this->friends_ids())));
+    [$get_friends, $next_cursor] = cursor_result($get_friends);
     while ($friend = $get_friends->fetch_assoc()) {
       $friend['user_picture'] = get_picture($friend['user_picture'], $friend['user_gender']);
       $friend['connection'] = 'page_invite';
       $friend['node_id'] = $page_id;
       $friends[] = $friend;
     }
+    $this->_cursor = $next_cursor ?? null;
     return $friends;
   }
 
@@ -585,7 +665,7 @@ trait PagesTrait
    */
   public function check_page_adminship($user_id, $page_id)
   {
-    if ($this->_logged_in) {
+    if ($this->_logged_in && $page_id) {
       /* get page admins ids */
       $page_admins_ids = $this->get_page_admins_ids($page_id);
       if (in_array($user_id, $page_admins_ids)) {
@@ -606,6 +686,10 @@ trait PagesTrait
   public function check_page_membership($user_id, $page_id)
   {
     global $db;
+    /* loaded with its list by preload_memberships() */
+    if ($this->_logged_in && $user_id == $this->_data['user_id'] && isset($this->_connections_ids['page_likes']) && array_key_exists((int) $page_id, $this->_connections_ids['page_likes'])) {
+      return $this->_connections_ids['page_likes'][(int) $page_id];
+    }
     if ($this->_logged_in) {
       $get_likes = $db->query(sprintf("SELECT COUNT(*) as count FROM pages_likes WHERE user_id = %s AND page_id = %s", secure($user_id, 'int'), secure($page_id, 'int')));
       if ($get_likes->fetch_assoc()['count'] > 0) {

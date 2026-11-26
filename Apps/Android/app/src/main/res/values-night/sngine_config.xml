@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Dark mode overrides for res/values/sngine_config.xml.
+    Sngine follows the phone's dark mode, so these should match your dark theme.
+    Remove a line to use the light value in dark mode too.
+-->
+<resources>
+
+    <color name="system_bar_background">#1A1A1A</color>
+    <bool name="light_system_bars">false</bool>
+    <color name="splash_background">#1A1A1A</color>
+    <color name="page_background">#1A1A1A</color>
+
+</resources>

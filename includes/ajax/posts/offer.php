@@ -28,7 +28,7 @@ if (!$system['offers_enabled']) {
 
 // check offers permission
 if (!$user->_data['can_create_offers']) {
-  if (!$user->check_module_package_permission("offers_permission")) {
+  if ($user->check_module_package_permission("offers_permission")) {
     return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
   } else {
     modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -62,7 +62,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.offer.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'publish':
@@ -145,8 +145,14 @@ try {
       /* filter photos */
       $photos = [];
       $_POST['photos'] = json_decode($_POST['photos']);
+      if (!is_object($_POST['photos'])) {
+        _error(400);
+      }
       /* filter the photos */
       foreach ($_POST['photos'] as $photo) {
+        if (!is_valid_upload_source($photo->source ?? null)) {
+          _error(400);
+        }
         $photos[] = (array) $photo;
       }
       if (count($photos) == 0) {
@@ -223,7 +229,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.offer.editor.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     default:

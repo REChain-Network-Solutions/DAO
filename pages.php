@@ -49,13 +49,16 @@ try {
 
       // get promoted pages
       if ($system['packages_enabled']) {
-        $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true, 'results' => 4]));
+        $smarty->assign('promoted_pages', $user->get_pages(['promoted' => true, 'results' => 3]));
       }
 
       // get new pages
-      $pages = $user->get_pages(['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $pages = $user->get_pages($args);
+      $total = $user->get_pages(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('pages', $pages);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "suggested_pages");
       $smarty->assign('view_title', __("Discover"));
       break;
@@ -87,9 +90,12 @@ try {
       $smarty->assign('categories', $categories);
 
       // get category pages
-      $pages = $user->get_pages(['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['suggested' => true, 'category_id' => $_GET['category_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $pages = $user->get_pages($args);
+      $total = $user->get_pages(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('pages', $pages);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "category_pages");
       $smarty->assign('view_title', __($current_category['category_name']));
       break;
@@ -102,9 +108,12 @@ try {
       page_header(__("Liked Pages") . ' | ' . __($system['system_title']));
 
       // get liked pages
-      $pages = $user->get_pages(['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $pages = $user->get_pages($args);
+      $total = $user->get_pages(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('pages', $pages);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "liked_pages");
       $smarty->assign('view_title', __("Liked Pages"));
       break;
@@ -117,9 +126,12 @@ try {
       page_header(__("My Pages") . ' | ' . __($system['system_title']));
 
       // get managed pages
-      $pages = $user->get_pages(['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']]);
+      $args = ['managed' => true, 'user_id' => $user->_data['user_id'], 'country' => $selected_country['country_id'], 'language' => $selected_language['language_id']];
+      $pages = $user->get_pages($args);
+      $total = $user->get_pages(array_merge($args, ['count' => true]));
       /* assign variables */
       $smarty->assign('pages', $pages);
+      $smarty->assign('total', $total);
       $smarty->assign('get', "pages");
       $smarty->assign('view_title', __("My Pages"));
       break;

@@ -34,6 +34,12 @@ try {
   }
   $smarty->assign('merits_ranking_users', $user->get_merits_ranking($config));
   $smarty->assign('config', $config);
+
+  // get merits balance
+  $user->_data['merits_balance'] = $user->get_user_merits_balance();
+
+  // get merits cycle dates
+  $smarty->assign('merits_cycle', $user->get_merits_cycle_dates());
 } catch (Exception $e) {
   _error(__("Error"), $e->getMessage());
 }

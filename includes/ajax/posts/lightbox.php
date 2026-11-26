@@ -35,6 +35,7 @@ try {
   /* assign variables */
   $smarty->assign('photo', $photo);
   /* return */
+  $return['download'] = $system['system_url'] . '/downloads.php?type=photo&id=' . $photo['photo_id'];
   $return['next'] = $photo['next'];
   $return['prev'] = $photo['prev'];
   $return['lightbox'] = $smarty->fetch("ajax.lightbox.tpl");

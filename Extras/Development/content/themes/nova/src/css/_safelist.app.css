@@ -1,0 +1,2 @@
+@source inline("grid-cols-[minmax(0,1fr)_9rem] icon-[simple-icons--alipay] icon-[simple-icons--bitcoin] icon-[simple-icons--paypal] icon-[tabler--cash-banknote] icon-[tabler--percentage] md:col-span-5 md:col-span-7");
+@source inline("md:grid-cols-12 text-[#00186A] text-[#007bff] text-[#28a745] text-[#4CAF50] text-[#5B9EDD] text-[#8798CC] text-[#FFC107]");

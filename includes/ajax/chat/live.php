@@ -70,7 +70,7 @@ try {
     if ($user->_data['user_chat_enabled']) {
       /* return */
       $return['master']['chat_enabled'] = '1';
-    } elseif (!$user->_data['user_chat_enabled'] && $_GET['chat_enabled']) {
+    } elseif (!$user->_data['user_chat_enabled'] && $_POST['chat_enabled']) {
       /* return */
       $return['master']['chat_enabled'] = '0';
     }
@@ -79,6 +79,8 @@ try {
     if (($key = array_search(NULL, $_SESSION['chat_boxes_opened'])) !== false) {
       unset($_SESSION['chat_boxes_opened'][$key]);
     }
+    /* release the session lock (no more session writes) */
+    session_write_close();
 
     // [3] & [4] & [5]
     if (!(empty($chat_boxes_opened_client) && empty($_SESSION['chat_boxes_opened']))) {
@@ -117,6 +119,7 @@ try {
             /* get new messages */
             $messages = $user->get_conversation_messages($conversation['conversation_id'], 0, $chat_boxes_opened_client[$conversation['conversation_id']])['messages'];
             /* assign variables */
+            $smarty->assign('conversation', $conversation);
             $smarty->assign('messages', $messages);
             /* return */
             $last_message = end($messages);
@@ -133,7 +136,7 @@ try {
             $return_this = true;
           }
           /* [4] check single user's chat status (online|offline) */
-          if (!$conversation['multiple_recipients']) {
+          if (!$conversation['multiple_recipients'] && !empty($conversation['recipients'])) {
             $return_this = true;
             /* update single user's chat status */
             $conversation['user_online'] = ($user->user_online($conversation['recipients'][0]['user_id'])) ? true : false;
@@ -159,19 +162,21 @@ try {
   // [7] [get] updated thread
   if (isset($_POST['opened_thread'])) {
     /* get conversation */
-    $conversation = $user->get_conversation($_POST['opened_thread']['conversation_id']);
+    $as_page = !empty($_POST['opened_thread']['as_page']);
+    $conversation = $user->get_conversation($_POST['opened_thread']['conversation_id'], $as_page);
     if ($conversation) {
       $return_this = false;
       /* [1] check for a new messages for this converstaion */
       if ($conversation['last_message_id'] != $_POST['opened_thread']['last_message_id']) {
         $return_this = true;
         /* get new messages */
-        $messages = $user->get_conversation_messages($conversation['conversation_id'], 0, $_POST['opened_thread']['last_message_id'])['messages'];
+        $messages = $user->get_conversation_messages($conversation['conversation_id'], 0, $_POST['opened_thread']['last_message_id'], $as_page)['messages'];
         /* assign variables */
+        $smarty->assign('conversation', $conversation);
         $smarty->assign('messages', $messages);
         /* return */
         $last_message = end($messages);
-        $conversation['is_me'] = ($last_message['user_id'] == $user->_data['user_id']) ? true : false;
+        $conversation['is_me'] = ($last_message && $user->is_my_message($last_message, $as_page)) ? true : false;
         $conversation['messages_count'] = count($messages);
         $conversation['messages'] = $smarty->fetch("ajax.chat.messages.tpl");
       }

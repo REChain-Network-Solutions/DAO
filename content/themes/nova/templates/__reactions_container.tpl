@@ -1,0 +1,9 @@
+<!-- reactions-container -->
+<div class="reactions-container fixed z-50 hidden rounded-full border border-base-content/10 bg-base-100 p-1 w-max max-w-[calc(100vw-1rem)] shadow-xl in-[.chat-widget]:p-0.5">
+  {foreach $system['reactions_enabled'] as $reaction}
+    <div class="reactions_item reaction reaction-{$reaction@iteration} js_react-{$_handle} relative float-start mx-0.5 size-10 p-0.5 in-[.chat-widget]:mx-px in-[.chat-widget]:size-8 animate-reaction-in cursor-pointer transition-[scale,translate] duration-200 hover:z-10 hover:-translate-y-1 hover:scale-125 after:pointer-events-none after:absolute after:-top-1 after:left-1/2 after:-translate-x-1/2 after:-translate-y-full after:rounded-full after:bg-neutral/85 after:px-2 after:text-[10px] after:leading-4 after:font-bold after:whitespace-nowrap after:text-neutral-content after:opacity-0 after:transition-opacity after:content-[attr(data-title)] hover:after:opacity-100 motion-reduce:animate-none motion-reduce:[&_img]:animate-none {if $reaction@iteration == 1}[&_img]:origin-bottom [&_img]:animate-reaction-bounce{elseif $reaction@iteration == 2}[&_img]:animate-reaction-heartbeat{elseif $reaction@iteration == 3}[&_img]:origin-top [&_img]:animate-reaction-swing{elseif $reaction@iteration == 4}[&_img]:animate-reaction-pulse{elseif $reaction@iteration == 5}[&_img]:animate-reaction-fade-down{elseif $reaction@iteration == 6}[&_img]:animate-reaction-swing{else}[&_img]:animate-reaction-head-shake{/if}" style="animation-duration: {$reaction@iteration * 100}ms;" data-reaction="{$reaction['reaction']}" data-reaction-color="{$reaction['color']}" data-title="{__($reaction['title'])}">
+      {include file='__reaction_emojis.tpl' _reaction=$reaction['reaction'] _reaction_large=true}
+    </div>
+  {/foreach}
+</div>
+<!-- reactions-container -->

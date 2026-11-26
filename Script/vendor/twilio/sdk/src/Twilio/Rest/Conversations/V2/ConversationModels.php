@@ -19,7 +19,18 @@ use Twilio\Values;
 abstract class ConversationModels
 {
     /**
+     * @property string $flowId The Studio Flow to run.
+    */
+    public static function createConversationWorkflow(array $payload = []): ConversationWorkflow
+    {
+        return new ConversationWorkflow($payload);
+    }
+
+    /**
      * @property string[] $intelligenceConfigurationIds A list of Conversational Intelligence configuration IDs.
+     * @property string[] $traitExtractionStrategyIds A list of Trait Extraction Strategy IDs.
+     * @property string[] $observationExtractionStrategyIds A list of Observation Extraction Strategy IDs.
+     * @property ConversationWorkflow[] $workflows The Workflows to associate with this Conversation. Overrides the Configuration's own.
     */
     public static function createCreateConversationWithConfigRequestConfiguration(array $payload = []): CreateConversationWithConfigRequestConfiguration
     {
@@ -27,7 +38,7 @@ abstract class ConversationModels
     }
 
     /**
-     * @property string $channel
+     * @property string $channel Channel type for a Communication address.
      * @property string $address
      * @property string $channelId
     */
@@ -52,6 +63,7 @@ abstract class ConversationModels
      * @property string $name The name of the conversation.
      * @property CreateConversationWithConfigRequestConfiguration $configuration
      * @property CreateConversationWithConfigRequestParticipants[] $participants Optional list of Participants to create with the Conversation.
+     * @property array<string,string> $metadata Optional customer-managed key-value metadata for this Conversation. Maximum 8 entries; keys up to 128 characters allowing alphanumeric characters, periods, underscores, and dashes; values up to 512 characters.
     */
     public static function createCreateConversationWithConfigRequest(array $payload = []): CreateConversationWithConfigRequest
     {
@@ -76,9 +88,10 @@ abstract class ConversationModels
     }
 
     /**
-     * @property string $name The name of the Conversation.
-     * @property string $status The state of the Conversation.
+     * @property string|null $name The name of the Conversation.
+     * @property string $status Lifecycle status of a Conversation.
      * @property PatchConversationByIdRequestConfiguration $configuration
+     * @property array<string,string> $metadata Merge patch for customer-managed metadata (max 8 entries after merge). Provided keys are added or updated; keys set to null are removed; keys not mentioned are preserved.
     */
     public static function createPatchConversationByIdRequest(array $payload = []): PatchConversationByIdRequest
     {
@@ -87,7 +100,8 @@ abstract class ConversationModels
 
     /**
      * @property string $name The name of the Conversation.
-     * @property string $status The state of the Conversation.
+     * @property string $status Lifecycle status of a Conversation.
+     * @property array<string,string> $metadata Customer-managed key-value metadata for this Conversation. Maximum 8 entries; keys up to 128 characters allowing alphanumeric characters, periods, underscores, and dashes; values up to 512 characters.
     */
     public static function createUpdateConversationByIdRequest(array $payload = []): UpdateConversationByIdRequest
     {
@@ -105,11 +119,13 @@ abstract class ConversationModels
     /**
      * @property string $displayName A human-readable name for the configuration. Limited to 32 characters.
      * @property string $description Human-readable description for the Configuration.
-     * @property string $conversationGroupingType Type of Conversation grouping strategy: - `GROUP_BY_PROFILE`: Groups Communications by resolved Profile from the Memory Store.   A Profile is looked up or created for `CUSTOMER` Participant types. All Communications from the same Profile are in the same Conversation, regardless of address or channel. - `GROUP_BY_PARTICIPANT_ADDRESSES`: Groups Communications by Participant addresses across all channels.   A customer using +18005550100 will be in the same Conversation whether they contact by SMS, WhatsApp, or RCS. - `GROUP_BY_PARTICIPANT_ADDRESSES_AND_CHANNEL_TYPE`: Groups Communications by both Participant addresses AND channel.   A customer using +18005550100 by SMS will be in a different Conversation than the same customer by Voice.
+     * @property ConversationsV2ConversationGroupingType $conversationGroupingType
      * @property string $memoryStoreId Memory Store ID for Profile resolution.
      * @property array<string,mixed> $channelSettings Channel-specific parameters forwarded as-is to the downstream sending service. Allows passing backend-specific fields without requiring API changes.
      * @property ConversationsV2StatusCallbackConfig[] $statusCallbacks List of default webhook configurations applied to Conversations under this Configuration.
      * @property string[] $intelligenceConfigurationIds List of Intelligence Configuration IDs configured for this Configuration.
+     * @property string[] $traitExtractionStrategyIds A list of Trait Extraction Strategy IDs.
+     * @property string[] $observationExtractionStrategyIds A list of Observation Extraction Strategy IDs.
      * @property bool $memoryExtractionEnabled Whether memory extraction is enabled for conversations under this configuration. Defaults to false.
      * @property ConversationsV2ConversationsV1Bridge $conversationsV1Bridge
     */
@@ -120,14 +136,49 @@ abstract class ConversationModels
 
 }
 
+class ConversationWorkflow implements \JsonSerializable
+{
+    /**
+     * @property string $flowId The Studio Flow to run.
+    */
+        protected $flowId;
+    public function __construct(array $payload = []) {
+        $this->flowId = Values::array_get($payload, 'flowId');
+    }
+
+    public function toArray(): array
+    {
+        return $this->jsonSerialize();
+    }
+
+    public function jsonSerialize(): array
+    {
+        $jsonString = [
+        ];
+        if (isset($this->flowId)) {
+            $jsonString['flowId'] = $this->flowId;
+        }
+        return $jsonString;
+    }
+}
+
 class CreateConversationWithConfigRequestConfiguration implements \JsonSerializable
 {
     /**
      * @property string[] $intelligenceConfigurationIds A list of Conversational Intelligence configuration IDs.
+     * @property string[] $traitExtractionStrategyIds A list of Trait Extraction Strategy IDs.
+     * @property string[] $observationExtractionStrategyIds A list of Observation Extraction Strategy IDs.
+     * @property ConversationWorkflow[] $workflows The Workflows to associate with this Conversation. Overrides the Configuration's own.
     */
         protected $intelligenceConfigurationIds;
+        protected $traitExtractionStrategyIds;
+        protected $observationExtractionStrategyIds;
+        protected $workflows;
     public function __construct(array $payload = []) {
         $this->intelligenceConfigurationIds = Values::array_get($payload, 'intelligenceConfigurationIds');
+        $this->traitExtractionStrategyIds = Values::array_get($payload, 'traitExtractionStrategyIds');
+        $this->observationExtractionStrategyIds = Values::array_get($payload, 'observationExtractionStrategyIds');
+        $this->workflows = Values::array_get($payload, 'workflows');
     }
 
     public function toArray(): array
@@ -142,6 +193,15 @@ class CreateConversationWithConfigRequestConfiguration implements \JsonSerializa
         if (isset($this->intelligenceConfigurationIds)) {
             $jsonString['intelligenceConfigurationIds'] = $this->intelligenceConfigurationIds;
         }
+        if (isset($this->traitExtractionStrategyIds)) {
+            $jsonString['traitExtractionStrategyIds'] = $this->traitExtractionStrategyIds;
+        }
+        if (isset($this->observationExtractionStrategyIds)) {
+            $jsonString['observationExtractionStrategyIds'] = $this->observationExtractionStrategyIds;
+        }
+        if (isset($this->workflows)) {
+            $jsonString['workflows'] = $this->workflows;
+        }
         return $jsonString;
     }
 }
@@ -149,7 +209,7 @@ class CreateConversationWithConfigRequestConfiguration implements \JsonSerializa
 class CreateConversationWithConfigRequestParticipantsAddresses implements \JsonSerializable
 {
     /**
-     * @property string $channel
+     * @property string $channel Channel type for a Communication address.
      * @property string $address
      * @property string $channelId
     */
@@ -170,9 +230,13 @@ class CreateConversationWithConfigRequestParticipantsAddresses implements \JsonS
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'channel' => $this->channel,
-            'address' => $this->address
         ];
+        if (isset($this->channel)) {
+            $jsonString['channel'] = $this->channel;
+        }
+        if (isset($this->address)) {
+            $jsonString['address'] = $this->address;
+        }
         if (isset($this->channelId)) {
             $jsonString['channelId'] = $this->channelId;
         }
@@ -231,16 +295,19 @@ class CreateConversationWithConfigRequest implements \JsonSerializable
      * @property string $name The name of the conversation.
      * @property CreateConversationWithConfigRequestConfiguration $configuration
      * @property CreateConversationWithConfigRequestParticipants[] $participants Optional list of Participants to create with the Conversation.
+     * @property array<string,string> $metadata Optional customer-managed key-value metadata for this Conversation. Maximum 8 entries; keys up to 128 characters allowing alphanumeric characters, periods, underscores, and dashes; values up to 512 characters.
     */
         protected $configurationId;
         protected $name;
         protected $configuration;
         protected $participants;
+        protected $metadata;
     public function __construct(array $payload = []) {
         $this->configurationId = Values::array_get($payload, 'configurationId');
         $this->name = Values::array_get($payload, 'name');
         $this->configuration = Values::array_get($payload, 'configuration');
         $this->participants = Values::array_get($payload, 'participants');
+        $this->metadata = Values::array_get($payload, 'metadata');
     }
 
     public function toArray(): array
@@ -251,8 +318,10 @@ class CreateConversationWithConfigRequest implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'configurationId' => $this->configurationId
         ];
+        if (isset($this->configurationId)) {
+            $jsonString['configurationId'] = $this->configurationId;
+        }
         if (isset($this->name)) {
             $jsonString['name'] = $this->name;
         }
@@ -261,6 +330,9 @@ class CreateConversationWithConfigRequest implements \JsonSerializable
         }
         if (isset($this->participants)) {
             $jsonString['participants'] = $this->participants;
+        }
+        if (isset($this->metadata)) {
+            $jsonString['metadata'] = $this->metadata;
         }
         return $jsonString;
     }
@@ -287,8 +359,10 @@ class ConversationsV2StatusCallbackConfig implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'url' => $this->url
         ];
+        if (isset($this->url)) {
+            $jsonString['url'] = $this->url;
+        }
         if (isset($this->method)) {
             $jsonString['method'] = $this->method;
         }
@@ -325,17 +399,20 @@ class PatchConversationByIdRequestConfiguration implements \JsonSerializable
 class PatchConversationByIdRequest implements \JsonSerializable
 {
     /**
-     * @property string $name The name of the Conversation.
-     * @property string $status The state of the Conversation.
+     * @property string|null $name The name of the Conversation.
+     * @property string $status Lifecycle status of a Conversation.
      * @property PatchConversationByIdRequestConfiguration $configuration
+     * @property array<string,string> $metadata Merge patch for customer-managed metadata (max 8 entries after merge). Provided keys are added or updated; keys set to null are removed; keys not mentioned are preserved.
     */
         protected $name;
         protected $status;
         protected $configuration;
+        protected $metadata;
     public function __construct(array $payload = []) {
         $this->name = Values::array_get($payload, 'name');
         $this->status = Values::array_get($payload, 'status');
         $this->configuration = Values::array_get($payload, 'configuration');
+        $this->metadata = Values::array_get($payload, 'metadata');
     }
 
     public function toArray(): array
@@ -356,6 +433,9 @@ class PatchConversationByIdRequest implements \JsonSerializable
         if (isset($this->configuration)) {
             $jsonString['configuration'] = $this->configuration;
         }
+        if (isset($this->metadata)) {
+            $jsonString['metadata'] = $this->metadata;
+        }
         return $jsonString;
     }
 }
@@ -364,13 +444,16 @@ class UpdateConversationByIdRequest implements \JsonSerializable
 {
     /**
      * @property string $name The name of the Conversation.
-     * @property string $status The state of the Conversation.
+     * @property string $status Lifecycle status of a Conversation.
+     * @property array<string,string> $metadata Customer-managed key-value metadata for this Conversation. Maximum 8 entries; keys up to 128 characters allowing alphanumeric characters, periods, underscores, and dashes; values up to 512 characters.
     */
         protected $name;
         protected $status;
+        protected $metadata;
     public function __construct(array $payload = []) {
         $this->name = Values::array_get($payload, 'name');
         $this->status = Values::array_get($payload, 'status');
+        $this->metadata = Values::array_get($payload, 'metadata');
     }
 
     public function toArray(): array
@@ -381,10 +464,15 @@ class UpdateConversationByIdRequest implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'status' => $this->status
         ];
+        if (isset($this->status)) {
+            $jsonString['status'] = $this->status;
+        }
         if (isset($this->name)) {
             $jsonString['name'] = $this->name;
+        }
+        if (isset($this->metadata)) {
+            $jsonString['metadata'] = $this->metadata;
         }
         return $jsonString;
     }
@@ -408,8 +496,10 @@ class ConversationsV2ConversationsV1Bridge implements \JsonSerializable
     public function jsonSerialize(): array
     {
         $jsonString = [
-            'serviceId' => $this->serviceId
         ];
+        if (isset($this->serviceId)) {
+            $jsonString['serviceId'] = $this->serviceId;
+        }
         return $jsonString;
     }
 }
@@ -419,11 +509,13 @@ class ListConversationByAccount200ResponseConversationsConfiguration implements 
     /**
      * @property string $displayName A human-readable name for the configuration. Limited to 32 characters.
      * @property string $description Human-readable description for the Configuration.
-     * @property string $conversationGroupingType Type of Conversation grouping strategy: - `GROUP_BY_PROFILE`: Groups Communications by resolved Profile from the Memory Store.   A Profile is looked up or created for `CUSTOMER` Participant types. All Communications from the same Profile are in the same Conversation, regardless of address or channel. - `GROUP_BY_PARTICIPANT_ADDRESSES`: Groups Communications by Participant addresses across all channels.   A customer using +18005550100 will be in the same Conversation whether they contact by SMS, WhatsApp, or RCS. - `GROUP_BY_PARTICIPANT_ADDRESSES_AND_CHANNEL_TYPE`: Groups Communications by both Participant addresses AND channel.   A customer using +18005550100 by SMS will be in a different Conversation than the same customer by Voice.
+     * @property ConversationsV2ConversationGroupingType $conversationGroupingType
      * @property string $memoryStoreId Memory Store ID for Profile resolution.
      * @property array<string,mixed> $channelSettings Channel-specific parameters forwarded as-is to the downstream sending service. Allows passing backend-specific fields without requiring API changes.
      * @property ConversationsV2StatusCallbackConfig[] $statusCallbacks List of default webhook configurations applied to Conversations under this Configuration.
      * @property string[] $intelligenceConfigurationIds List of Intelligence Configuration IDs configured for this Configuration.
+     * @property string[] $traitExtractionStrategyIds A list of Trait Extraction Strategy IDs.
+     * @property string[] $observationExtractionStrategyIds A list of Observation Extraction Strategy IDs.
      * @property bool $memoryExtractionEnabled Whether memory extraction is enabled for conversations under this configuration. Defaults to false.
      * @property ConversationsV2ConversationsV1Bridge $conversationsV1Bridge
     */
@@ -434,6 +526,8 @@ class ListConversationByAccount200ResponseConversationsConfiguration implements 
         protected $channelSettings;
         protected $statusCallbacks;
         protected $intelligenceConfigurationIds;
+        protected $traitExtractionStrategyIds;
+        protected $observationExtractionStrategyIds;
         protected $memoryExtractionEnabled;
         protected $conversationsV1Bridge;
     public function __construct(array $payload = []) {
@@ -444,6 +538,8 @@ class ListConversationByAccount200ResponseConversationsConfiguration implements 
         $this->channelSettings = Values::array_get($payload, 'channelSettings');
         $this->statusCallbacks = Values::array_get($payload, 'statusCallbacks');
         $this->intelligenceConfigurationIds = Values::array_get($payload, 'intelligenceConfigurationIds');
+        $this->traitExtractionStrategyIds = Values::array_get($payload, 'traitExtractionStrategyIds');
+        $this->observationExtractionStrategyIds = Values::array_get($payload, 'observationExtractionStrategyIds');
         $this->memoryExtractionEnabled = Values::array_get($payload, 'memoryExtractionEnabled');
         $this->conversationsV1Bridge = Values::array_get($payload, 'conversationsV1Bridge');
     }
@@ -477,6 +573,12 @@ class ListConversationByAccount200ResponseConversationsConfiguration implements 
         }
         if (isset($this->intelligenceConfigurationIds)) {
             $jsonString['intelligenceConfigurationIds'] = $this->intelligenceConfigurationIds;
+        }
+        if (isset($this->traitExtractionStrategyIds)) {
+            $jsonString['traitExtractionStrategyIds'] = $this->traitExtractionStrategyIds;
+        }
+        if (isset($this->observationExtractionStrategyIds)) {
+            $jsonString['observationExtractionStrategyIds'] = $this->observationExtractionStrategyIds;
         }
         if (isset($this->memoryExtractionEnabled)) {
             $jsonString['memoryExtractionEnabled'] = $this->memoryExtractionEnabled;

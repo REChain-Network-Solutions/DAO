@@ -29,7 +29,7 @@ if (file_exists(ABSPATH . 'includes/config.php')) {
 
 // set debugging settings
 ini_set("display_errors", true);
-error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 
 
 // get functions
@@ -37,61 +37,112 @@ require(ABSPATH . 'includes/functions.php');
 
 
 // check system requirements
+$requirements_matrix = [
+  'PHP'             => ['PHP 8.4+', 'PHP version 8.4 or higher'],
+  'mysqli'          => ['MySQLi', 'MySQLi PHP extension'],
+  'curl'            => ['cURL', 'cURL PHP extension'],
+  'openssl'         => ['OpenSSL', 'OpenSSL PHP extension'],
+  'mbstring'        => ['Mbstring', 'Mbstring extension for UTF-8 strings'],
+  'gd'              => ['GD Library', 'GD Library to handle images'],
+  'fileinfo'        => ['Fileinfo', 'Fileinfo extension for file uploads'],
+  'zip'             => ['ZIP', 'ZIP extension for taking backups'],
+  'allow_url_fopen' => ['allow_url_fopen', 'allow_url_fopen must be enabled'],
+  'htaccess'        => ['.htaccess', '.htaccess file for pretty links'],
+  'config'          => ['includes/ writable', 'includes folder must be writable'],
+];
 $requirements_errors = check_system_requirements();
+$requirements_ok = empty($requirements_errors);
 
-get_system_url();
+
+// check AJAX Request
+$is_stream = $is_ajax = is_ajax(false);
+
+
+// turn off mysqli errors
+mysqli_report(MYSQLI_REPORT_OFF);
+
+
+// verify licence (wizard step, before install)
+if (isset($_POST['verify_licence'])) {
+  header('Content-Type: application/json; charset=utf-8');
+  header('Cache-Control: no-cache');
+  try {
+    if (is_empty($_POST['purchase_code'] ?? '')) {
+      echo json_encode(['success' => false, 'message' => 'Please enter a valid purchase code']);
+      exit;
+    }
+    $licence = get_licence_key($_POST['purchase_code'], 'install');
+    echo json_encode([
+      'success' => true,
+      'monetization' => !empty($licence['entitlements']['monetization']),
+    ]);
+  } catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+  }
+  exit;
+}
+
 
 // install
 if (isset($_POST['submit'])) {
 
   // check system requirements errors
   if ($requirements_errors) {
-    _error("Error", "You need to check the system requirements to continue, Back to your hosting support for help.");
-  }
-
-
-  // check purchase code
-  try {
-    $licence_key = get_licence_key($_POST['purchase_code']);
-    if (is_empty($_POST['purchase_code']) || $licence_key === false) {
-      _error("Error", "Please enter a valid purchase code");
-    }
-    $session_hash = $licence_key;
-  } catch (Exception $e) {
-    _error("Error", $e->getMessage());
-  }
-
-
-  // init database connection
-  try {
-    $db = init_db_connection($_POST['db_host'], $_POST['db_username'], $_POST['db_password'], $_POST['db_name'], $_POST['db_port']);
-  } catch (Exception $e) {
-    _error('DB_ERROR');
+    stream_fail("You need to check the system requirements to continue, Back to your hosting support for help.");
   }
 
 
   // check admin data
   /* check email */
   if (!valid_email($_POST['admin_email'])) {
-    _error("Error", "Please enter a valid email address");
+    stream_fail("Please enter a valid email address");
   }
   /* check username */
   if (!valid_username($_POST['admin_username'])) {
-    _error("Error", "Please enter a valid username (a-z0-9_.) with minimum 3 characters long");
+    stream_fail("Please enter a valid username (a-z0-9_.) with minimum 3 characters long");
   }
-  if (in_array(strtolower($_POST['admin_username']), ['install', 'static', 'contact', 'contacts', 'sign', 'signin', 'login', 'signup', 'register', 'signout', 'logout', 'reset', 'activation', 'connect', 'revoke', 'packages', 'started', 'search', 'friends', 'messages', 'message', 'notifications', 'notification', 'settings', 'setting', 'posts', 'post', 'photos', 'photo', 'create', 'pages', 'page', 'groups', 'group', 'events', 'event', 'games', 'game', 'saved', 'forums', 'forum', 'blogs', 'blog', 'articles', 'article', 'directory', 'products', 'product', 'market', 'admincp', 'admin', 'admins', 'modcp', 'moderator', 'moderators', 'moderatorcp', 'chat', 'ads', 'wallet', 'boosted', 'people', 'popular', 'movies', 'movie',  'api', 'apis', 'oauth', 'authorize', 'anonymous', 'jobs', 'job'])) {
-    _error("Error", "You can't use" . " <strong>" . $_POST['admin_username'] . "</strong> " . "as username");
+  if (in_array(strtolower($_POST['admin_username']), ['install', 'static', 'contact', 'contacts', 'sign', 'signin', 'login', 'signup', 'register', 'signout', 'logout', 'reset', 'activation', 'connect', 'revoke', 'packages', 'started', 'search', 'friends', 'messages', 'message', 'notifications', 'notification', 'settings', 'setting', 'posts', 'post', 'photos', 'photo', 'create', 'pages', 'page', 'groups', 'group', 'events', 'event', 'games', 'game', 'saved', 'forums', 'forum', 'blogs', 'blog', 'articles', 'article', 'directory', 'products', 'product', 'market', 'admincp', 'admin', 'admins', 'modcp', 'moderator', 'moderators', 'moderatorcp', 'chat', 'ads', 'wallet', 'boosted', 'people', 'popular', 'movies', 'movie', 'dating', 'api', 'apis', 'oauth', 'authorize', 'anonymous', 'jobs', 'job'])) {
+    stream_fail("You can't use" . " <strong>" . $_POST['admin_username'] . "</strong> " . "as username");
   }
   /* check password */
   if (is_empty($_POST['admin_password']) || strlen($_POST['admin_password']) < 6) {
-    _error("Error", "Your password must be at least 6 characters long. Please try another");
+    stream_fail("Your password must be at least 6 characters long. Please try another");
   }
   if (strlen($_POST['admin_password']) > 64) {
-    _error("Error", "Your password must be less than 64 characters long. Please try another");
+    stream_fail("Your password must be less than 64 characters long. Please try another");
   }
 
 
-  // init the database
+  // open the streaming response
+  stream_start();
+
+
+  // step 1: verifying purchase code
+  stream_progress(4, 'Verifying purchase code');
+  try {
+    if (is_empty($_POST['purchase_code'])) {
+      stream_fail("Please enter a valid purchase code");
+    }
+    $licence = get_licence_key($_POST['purchase_code'], 'install');
+    $licence_key = $_POST['purchase_code'];
+  } catch (Exception $e) {
+    stream_fail($e->getMessage());
+  }
+
+
+  // step 2: connecting to the database
+  stream_progress(18, 'Connecting to the database');
+  try {
+    $db = init_db_connection($_POST['db_host'], $_POST['db_username'], $_POST['db_password'], $_POST['db_name'], $_POST['db_port']);
+  } catch (Exception $e) {
+    stream_fail("Error establishing a database connection. Please verify your database name, username, password, host and port, then try again.");
+  }
+  if (!check_db_version($db)) {
+    stream_fail("Your database server is not supported. Sngine requires MySQL 8.0+ or MariaDB 10.6+, Back to your hosting support for help.");
+  }
+
+
+  // step 3: building the database structure
   $structure = "
     
     SET SQL_MODE = `NO_AUTO_VALUE_ON_ZERO`;
@@ -126,6 +177,8 @@ if (isset($_POST['submit'])) {
       `audience_countries` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `audience_gender` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `audience_relationship` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `audience_age_min` tinyint UNSIGNED DEFAULT NULL,
+      `audience_age_max` tinyint UNSIGNED DEFAULT NULL,
       `ads_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `ads_description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `ads_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -340,7 +393,9 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `conversations` (
       `conversation_id` int UNSIGNED NOT NULL,
       `last_message_id` int UNSIGNED NOT NULL,
+      `pinned_message_id` int UNSIGNED DEFAULT NULL,
       `color` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `name` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
       `node_id` int UNSIGNED DEFAULT NULL,
       `node_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
@@ -361,6 +416,9 @@ if (isset($_POST['submit'])) {
       `room` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `answered` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `declined` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `answered_time` datetime DEFAULT NULL,
+      `ended_time` datetime DEFAULT NULL,
+      `ended_by` int UNSIGNED DEFAULT NULL,
       `created_time` datetime NOT NULL,
       `updated_time` datetime NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
@@ -375,11 +433,21 @@ if (isset($_POST['submit'])) {
       `message_id` int UNSIGNED NOT NULL,
       `conversation_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
+      `page_id` int UNSIGNED DEFAULT NULL,
       `message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `is_paid` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `message_price` float NOT NULL DEFAULT '0',
+      `paid_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `paid_image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `for_adult` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `gif` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
       `video` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `voice_note` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `product_post_id` int UNSIGNED DEFAULT NULL,
+      `story_id` int UNSIGNED DEFAULT NULL,
+      `reply_to` int UNSIGNED DEFAULT NULL,
+      `call_id` int UNSIGNED DEFAULT NULL,
       `reaction_like_count` int UNSIGNED NOT NULL DEFAULT '0',
       `reaction_love_count` int UNSIGNED NOT NULL DEFAULT '0',
       `reaction_haha_count` int UNSIGNED NOT NULL DEFAULT '0',
@@ -389,6 +457,34 @@ if (isset($_POST['submit'])) {
       `reaction_angry_count` int UNSIGNED NOT NULL DEFAULT '0',
       `time` datetime NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `conversations_messages_media`
+    --
+
+    CREATE TABLE `conversations_messages_media` (
+      `media_id` int UNSIGNED NOT NULL,
+      `message_id` int UNSIGNED NOT NULL,
+      `media_type` enum('photo','video','audio','file') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `source` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `size` bigint UNSIGNED NOT NULL DEFAULT '0'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `conversations_messages_paid`
+    --
+
+    CREATE TABLE `conversations_messages_paid` (
+      `id` int UNSIGNED NOT NULL,
+      `message_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
@@ -502,6 +598,156 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `dating_interests`
+    --
+
+    CREATE TABLE `dating_interests` (
+      `interest_id` int UNSIGNED NOT NULL,
+      `title` varchar(64) COLLATE utf8mb4_general_ci NOT NULL,
+      `icon` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `interest_order` int UNSIGNED NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    --
+    -- Dumping data for table `dating_interests`
+    --
+
+    INSERT INTO `dating_interests` (`interest_id`, `title`, `icon`, `interest_order`) VALUES
+    (1, 'Music', '🎵', 1),
+    (2, 'Travel', '✈️', 2),
+    (3, 'Coffee', '☕', 3),
+    (4, 'Fitness', '💪', 4),
+    (5, 'Foodie', '🍽️', 5),
+    (6, 'Movies', '🎬', 6),
+    (7, 'Pets', '🐶', 7),
+    (8, 'Books', '📚', 8),
+    (9, 'Art', '🎨', 9),
+    (10, 'Gaming', '🎮', 10),
+    (11, 'Nature', '🌿', 11),
+    (12, 'Beach', '🏖️', 12),
+    (13, 'Photography', '📷', 13),
+    (14, 'Cooking', '🍳', 14),
+    (15, 'Dancing', '💃', 15);
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_locations`
+    --
+
+    CREATE TABLE `dating_locations` (
+      `user_id` int UNSIGNED NOT NULL,
+      `location` point NOT NULL /*!80003 SRID 0 */
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_matches`
+    --
+
+    CREATE TABLE `dating_matches` (
+      `match_id` int UNSIGNED NOT NULL,
+      `user_one_id` int UNSIGNED NOT NULL,
+      `user_two_id` int UNSIGNED NOT NULL,
+      `status` enum('active','unmatched') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'active',
+      `unmatched_by` int UNSIGNED DEFAULT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_photos`
+    --
+
+    CREATE TABLE `dating_photos` (
+      `photo_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `source` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+      `status` enum('pending','approved') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'approved',
+      `photo_order` tinyint UNSIGNED NOT NULL DEFAULT '0',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_profiles`
+    --
+
+    CREATE TABLE `dating_profiles` (
+      `user_id` int UNSIGNED NOT NULL,
+      `status` enum('active','paused','suspended') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'active',
+      `gender` int UNSIGNED NOT NULL,
+      `birthdate` date NOT NULL,
+      `show_genders` varchar(64) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `min_age` tinyint UNSIGNED NOT NULL DEFAULT '18',
+      `max_age` tinyint UNSIGNED NOT NULL DEFAULT '99',
+      `max_distance` smallint UNSIGNED NOT NULL DEFAULT '100',
+      `bio` text COLLATE utf8mb4_general_ci,
+      `country_id` int UNSIGNED NOT NULL DEFAULT '0',
+      `city` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `city_key` varchar(160) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `latitude` decimal(10,7) DEFAULT NULL,
+      `longitude` decimal(10,7) DEFAULT NULL,
+      `hide_from_friends` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `incognito` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `hide_age` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `hide_distance` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `boosted_until` datetime DEFAULT NULL,
+      `super_likes_balance` int UNSIGNED NOT NULL DEFAULT '0',
+      `super_likes_included` int UNSIGNED NOT NULL DEFAULT '0',
+      `boosts_included` int UNSIGNED NOT NULL DEFAULT '0',
+      `included_period` char(7) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_profiles_interests`
+    --
+
+    CREATE TABLE `dating_profiles_interests` (
+      `user_id` int UNSIGNED NOT NULL,
+      `interest_id` int UNSIGNED NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_purchases`
+    --
+
+    CREATE TABLE `dating_purchases` (
+      `purchase_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `item` enum('super_likes','boost','priority_message') COLLATE utf8mb4_general_ci NOT NULL,
+      `quantity` int UNSIGNED NOT NULL DEFAULT '1',
+      `amount` float NOT NULL DEFAULT '0',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `dating_swipes`
+    --
+
+    CREATE TABLE `dating_swipes` (
+      `swipe_id` bigint UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `target_id` int UNSIGNED NOT NULL,
+      `action` enum('pass','like','super') COLLATE utf8mb4_general_ci NOT NULL,
+      `pending` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `message` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `developers_apps`
     --
 
@@ -565,1818 +811,6 @@ if (isset($_POST['submit'])) {
       `access_token` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `access_token_date` datetime DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
-
-    -- --------------------------------------------------------
-
-    --
-    -- Table structure for table `emojis`
-    --
-
-    CREATE TABLE `emojis` (
-      `emoji_id` int UNSIGNED NOT NULL,
-      `unicode_char` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-      `class` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
-
-    --
-    -- Dumping data for table `emojis`
-    --
-
-    INSERT INTO `emojis` (`emoji_id`, `unicode_char`, `class`) VALUES
-    (1, '😀', 'grinning-face'),
-    (2, '😃', 'grinning-face-with-big-eyes'),
-    (3, '😄', 'grinning-face-with-smiling-eyes'),
-    (4, '😁', 'beaming-face-with-smiling-eyes'),
-    (5, '😆', 'grinning-squinting-face'),
-    (6, '😅', 'grinning-face-with-sweat'),
-    (7, '🤣', 'rolling-on-the-floor-laughing'),
-    (8, '😂', 'face-with-tears-of-joy'),
-    (9, '🙂', 'slightly-smiling-face'),
-    (10, '🙃', 'upside-down-face'),
-    (11, '😉', 'winking-face'),
-    (12, '😊', 'smiling-face-with-smiling-eyes'),
-    (13, '😇', 'smiling-face-with-halo'),
-    (14, '🥰', 'smiling-face-with-hearts'),
-    (15, '😍', 'smiling-face-with-heart-eyes'),
-    (16, '🤩', 'star-struck'),
-    (17, '😘', 'face-blowing-a-kiss'),
-    (18, '😗', 'kissing-face'),
-    (19, '☺️', 'smiling-face'),
-    (20, '😚', 'kissing-face-with-closed-eyes'),
-    (21, '😙', 'kissing-face-with-smiling-eyes'),
-    (22, '🥲', 'smiling-face-with-tear'),
-    (23, '😋', 'face-savoring-food'),
-    (24, '😛', 'face-with-tongue'),
-    (25, '😜', 'winking-face-with-tongue'),
-    (26, '🤪', 'zany-face'),
-    (27, '😝', 'squinting-face-with-tongue'),
-    (28, '🤑', 'money-mouth-face'),
-    (29, '🤗', 'hugging-face'),
-    (30, '🤭', 'face-with-hand-over-mouth'),
-    (31, '🤫', 'shushing-face'),
-    (32, '🤔', 'thinking-face'),
-    (33, '🤐', 'zipper-mouth-face'),
-    (34, '🤨', 'face-with-raised-eyebrow'),
-    (35, '😐', 'neutral-face'),
-    (36, '😑', 'expressionless-face'),
-    (37, '😶', 'face-without-mouth'),
-    (39, '😏', 'smirking-face'),
-    (40, '😒', 'unamused-face'),
-    (41, '🙄', 'face-with-rolling-eyes'),
-    (42, '😬', 'grimacing-face'),
-    (44, '🤥', 'lying-face'),
-    (45, '😌', 'relieved-face'),
-    (46, '😔', 'pensive-face'),
-    (47, '😪', 'sleepy-face'),
-    (48, '🤤', 'drooling-face'),
-    (49, '😴', 'sleeping-face'),
-    (50, '😷', 'face-with-medical-mask'),
-    (51, '🤒', 'face-with-thermometer'),
-    (52, '🤕', 'face-with-head-bandage'),
-    (53, '🤢', 'nauseated-face'),
-    (54, '🤮', 'face-vomiting'),
-    (55, '🤧', 'sneezing-face'),
-    (56, '🥵', 'hot-face'),
-    (57, '🥶', 'cold-face'),
-    (58, '🥴', 'woozy-face'),
-    (59, '😵', 'knocked-out-face'),
-    (61, '🤯', 'exploding-head'),
-    (62, '🤠', 'cowboy-hat-face'),
-    (63, '🥳', 'partying-face'),
-    (64, '🥸', 'disguised-face'),
-    (65, '😎', 'smiling-face-with-sunglasses'),
-    (66, '🤓', 'nerd-face'),
-    (67, '🧐', 'face-with-monocle'),
-    (68, '😕', 'confused-face'),
-    (69, '😟', 'worried-face'),
-    (70, '🙁', 'slightly-frowning-face'),
-    (71, '☹️', 'frowning-face'),
-    (72, '😮', 'face-with-open-mouth'),
-    (73, '😯', 'hushed-face'),
-    (74, '😲', 'astonished-face'),
-    (75, '😳', 'flushed-face'),
-    (76, '🥺', 'pleading-face'),
-    (77, '😦', 'frowning-face-with-open-mouth'),
-    (78, '😧', 'anguished-face'),
-    (79, '😨', 'fearful-face'),
-    (80, '😰', 'anxious-face-with-sweat'),
-    (81, '😥', 'sad-but-relieved-face'),
-    (82, '😢', 'crying-face'),
-    (83, '😭', 'loudly-crying-face'),
-    (84, '😱', 'face-screaming-in-fear'),
-    (85, '😖', 'confounded-face'),
-    (86, '😣', 'persevering-face'),
-    (87, '😞', 'disappointed-face'),
-    (88, '😓', 'downcast-face-with-sweat'),
-    (89, '😩', 'weary-face'),
-    (90, '😫', 'tired-face'),
-    (91, '🥱', 'yawning-face'),
-    (92, '😤', 'face-with-steam-from-nose'),
-    (93, '😡', 'pouting-face'),
-    (94, '😠', 'angry-face'),
-    (95, '🤬', 'face-with-symbols-on-mouth'),
-    (96, '😈', 'smiling-face-with-horns'),
-    (97, '👿', 'angry-face-with-horns'),
-    (98, '💀', 'skull'),
-    (99, '☠️', 'skull-and-crossbones'),
-    (100, '💩', 'pile-of-poo'),
-    (101, '🤡', 'clown-face'),
-    (102, '👹', 'ogre'),
-    (103, '👺', 'goblin'),
-    (104, '👻', 'ghost'),
-    (105, '👽', 'alien'),
-    (106, '👾', 'alien-monster'),
-    (107, '🤖', 'robot'),
-    (108, '😺', 'grinning-cat'),
-    (109, '😸', 'grinning-cat-with-smiling-eyes'),
-    (110, '😹', 'cat-with-tears-of-joy'),
-    (111, '😻', 'smiling-cat-with-heart-eyes'),
-    (112, '😼', 'cat-with-wry-smile'),
-    (113, '😽', 'kissing-cat'),
-    (114, '🙀', 'weary-cat'),
-    (115, '😿', 'crying-cat'),
-    (116, '😾', 'pouting-cat'),
-    (117, '🙈', 'see-no-evil-monkey'),
-    (118, '🙉', 'hear-no-evil-monkey'),
-    (119, '🙊', 'speak-no-evil-monkey'),
-    (120, '💋', 'kiss-mark'),
-    (121, '💌', 'love-letter'),
-    (122, '💘', 'heart-with-arrow'),
-    (123, '💝', 'heart-with-ribbon'),
-    (124, '💖', 'sparkling-heart'),
-    (125, '💗', 'growing-heart'),
-    (126, '💓', 'beating-heart'),
-    (127, '💞', 'revolving-hearts'),
-    (128, '💕', 'two-hearts'),
-    (129, '💟', 'heart-decoration'),
-    (130, '❣️', 'heart-exclamation'),
-    (131, '💔', 'broken-heart'),
-    (132, '❤️‍🔥', 'heart-on-fire'),
-    (133, '❤️‍🩹', 'mending-heart'),
-    (134, '❤️', 'red-heart'),
-    (135, '🧡', 'orange-heart'),
-    (136, '💛', 'yellow-heart'),
-    (137, '💚', 'green-heart'),
-    (138, '💙', 'blue-heart'),
-    (139, '💜', 'purple-heart'),
-    (140, '🤎', 'brown-heart'),
-    (141, '🖤', 'black-heart'),
-    (142, '🤍', 'white-heart'),
-    (143, '💯', 'hundred-points'),
-    (144, '💢', 'anger-symbol'),
-    (145, '💥', 'collision'),
-    (146, '💫', 'dizzy'),
-    (147, '💦', 'sweat-droplets'),
-    (148, '💨', 'dashing-away'),
-    (149, '🕳️', 'hole'),
-    (150, '💣', 'bomb'),
-    (151, '💬', 'speech-balloon'),
-    (153, '🗨️', 'left-speech-bubble'),
-    (154, '🗯️', 'right-anger-bubble'),
-    (155, '💭', 'thought-balloon'),
-    (156, '💤', 'zzz'),
-    (157, '👋', 'waving-hand'),
-    (158, '🤚', 'raised-back-of-hand'),
-    (159, '🖐️', 'hand-with-fingers-splayed'),
-    (160, '✋', 'raised-hand'),
-    (161, '🖖', 'vulcan-salute'),
-    (162, '👌', 'ok-hand'),
-    (163, '🤌', 'pinched-fingers'),
-    (164, '🤏', 'pinching-hand'),
-    (165, '✌️', 'victory-hand'),
-    (166, '🤞', 'crossed-fingers'),
-    (167, '🤟', 'love-you-gesture'),
-    (168, '🤘', 'sign-of-the-horns'),
-    (169, '🤙', 'call-me-hand'),
-    (170, '👈', 'backhand-index-pointing-left'),
-    (171, '👉', 'backhand-index-pointing-right'),
-    (172, '👆', 'backhand-index-pointing-up'),
-    (173, '🖕', 'middle-finger'),
-    (174, '👇', 'backhand-index-pointing-down'),
-    (175, '☝️', 'index-pointing-up'),
-    (176, '👍', 'thumbs-up'),
-    (177, '👎', 'thumbs-down'),
-    (178, '✊', 'raised-fist'),
-    (179, '👊', 'oncoming-fist'),
-    (180, '🤛', 'left-facing-fist'),
-    (181, '🤜', 'right-facing-fist'),
-    (182, '👏', 'clapping-hands'),
-    (183, '🙌', 'raising-hands'),
-    (184, '👐', 'open-hands'),
-    (185, '🤲', 'palms-up-together'),
-    (186, '🤝', 'handshake'),
-    (187, '🙏', 'folded-hands'),
-    (188, '✍️', 'writing-hand'),
-    (189, '💅', 'nail-polish'),
-    (190, '🤳', 'selfie'),
-    (191, '💪', 'flexed-biceps'),
-    (192, '🦾', 'mechanical-arm'),
-    (193, '🦿', 'mechanical-leg'),
-    (194, '🦵', 'leg'),
-    (195, '🦶', 'foot'),
-    (196, '👂', 'ear'),
-    (197, '🦻', 'ear-with-hearing-aid'),
-    (198, '👃', 'nose'),
-    (199, '🧠', 'brain'),
-    (200, '🫀', 'anatomical-heart'),
-    (201, '🫁', 'lungs'),
-    (202, '🦷', 'tooth'),
-    (203, '🦴', 'bone'),
-    (204, '👀', 'eyes'),
-    (205, '👁️', 'eye'),
-    (206, '👅', 'tongue'),
-    (207, '👄', 'mouth'),
-    (208, '👶', 'baby'),
-    (209, '🧒', 'child'),
-    (210, '👦', 'boy'),
-    (211, '👧', 'girl'),
-    (212, '🧑', 'person'),
-    (213, '👱', 'person-blond-hair'),
-    (214, '👨', 'man'),
-    (215, '🧔', 'person-beard'),
-    (216, '🧔‍♂️', 'man-beard'),
-    (217, '🧔‍♀️', 'woman-beard'),
-    (218, '👨‍🦰', 'man-red-hair'),
-    (219, '👨‍🦱', 'man-curly-hair'),
-    (220, '👨‍🦳', 'man-white-hair'),
-    (221, '👨‍🦲', 'man-bald'),
-    (222, '👩', 'woman'),
-    (223, '👩‍🦰', 'woman-red-hair'),
-    (224, '🧑‍🦰', 'person-red-hair'),
-    (225, '👩‍🦱', 'woman-curly-hair'),
-    (226, '🧑‍🦱', 'person-curly-hair'),
-    (227, '👩‍🦳', 'woman-white-hair'),
-    (228, '🧑‍🦳', 'person-white-hair'),
-    (229, '👩‍🦲', 'woman-bald'),
-    (230, '🧑‍🦲', 'person-bald'),
-    (231, '👱‍♀️', 'woman-blond-hair'),
-    (232, '👱‍♂️', 'man-blond-hair'),
-    (233, '🧓', 'older-person'),
-    (234, '👴', 'old-man'),
-    (235, '👵', 'old-woman'),
-    (236, '🙍', 'person-frowning'),
-    (237, '🙍‍♂️', 'man-frowning'),
-    (238, '🙍‍♀️', 'woman-frowning'),
-    (239, '🙎', 'person-pouting'),
-    (240, '🙎‍♂️', 'man-pouting'),
-    (241, '🙎‍♀️', 'woman-pouting'),
-    (242, '🙅', 'person-gesturing-no'),
-    (243, '🙅‍♂️', 'man-gesturing-no'),
-    (244, '🙅‍♀️', 'woman-gesturing-no'),
-    (245, '🙆', 'person-gesturing-ok'),
-    (246, '🙆‍♂️', 'man-gesturing-ok'),
-    (247, '🙆‍♀️', 'woman-gesturing-ok'),
-    (248, '💁', 'person-tipping-hand'),
-    (249, '💁‍♂️', 'man-tipping-hand'),
-    (250, '💁‍♀️', 'woman-tipping-hand'),
-    (251, '🙋', 'person-raising-hand'),
-    (252, '🙋‍♂️', 'man-raising-hand'),
-    (253, '🙋‍♀️', 'woman-raising-hand'),
-    (254, '🧏', 'deaf-person'),
-    (255, '🧏‍♂️', 'deaf-man'),
-    (256, '🧏‍♀️', 'deaf-woman'),
-    (257, '🙇', 'person-bowing'),
-    (258, '🙇‍♂️', 'man-bowing'),
-    (259, '🙇‍♀️', 'woman-bowing'),
-    (260, '🤦', 'person-facepalming'),
-    (261, '🤦‍♂️', 'man-facepalming'),
-    (262, '🤦‍♀️', 'woman-facepalming'),
-    (263, '🤷', 'person-shrugging'),
-    (264, '🤷‍♂️', 'man-shrugging'),
-    (265, '🤷‍♀️', 'woman-shrugging'),
-    (266, '🧑‍⚕️', 'health-worker'),
-    (267, '👨‍⚕️', 'man-health-worker'),
-    (268, '👩‍⚕️', 'woman-health-worker'),
-    (269, '🧑‍🎓', 'student'),
-    (270, '👨‍🎓', 'man-student'),
-    (271, '👩‍🎓', 'woman-student'),
-    (272, '🧑‍🏫', 'teacher'),
-    (273, '👨‍🏫', 'man-teacher'),
-    (274, '👩‍🏫', 'woman-teacher'),
-    (275, '🧑‍⚖️', 'judge'),
-    (276, '👨‍⚖️', 'man-judge'),
-    (277, '👩‍⚖️', 'woman-judge'),
-    (278, '🧑‍🌾', 'farmer'),
-    (279, '👨‍🌾', 'man-farmer'),
-    (280, '👩‍🌾', 'woman-farmer'),
-    (281, '🧑‍🍳', 'cook'),
-    (282, '👨‍🍳', 'man-cook'),
-    (283, '👩‍🍳', 'woman-cook'),
-    (284, '🧑‍🔧', 'mechanic'),
-    (285, '👨‍🔧', 'man-mechanic'),
-    (286, '👩‍🔧', 'woman-mechanic'),
-    (287, '🧑‍🏭', 'factory-worker'),
-    (288, '👨‍🏭', 'man-factory-worker'),
-    (289, '👩‍🏭', 'woman-factory-worker'),
-    (290, '🧑‍💼', 'office-worker'),
-    (291, '👨‍💼', 'man-office-worker'),
-    (292, '👩‍💼', 'woman-office-worker'),
-    (293, '🧑‍🔬', 'scientist'),
-    (294, '👨‍🔬', 'man-scientist'),
-    (295, '👩‍🔬', 'woman-scientist'),
-    (296, '🧑‍💻', 'technologist'),
-    (297, '👨‍💻', 'man-technologist'),
-    (298, '👩‍💻', 'woman-technologist'),
-    (299, '🧑‍🎤', 'singer'),
-    (300, '👨‍🎤', 'man-singer'),
-    (301, '👩‍🎤', 'woman-singer'),
-    (302, '🧑‍🎨', 'artist'),
-    (303, '👨‍🎨', 'man-artist'),
-    (304, '👩‍🎨', 'woman-artist'),
-    (305, '🧑‍✈️', 'pilot'),
-    (306, '👨‍✈️', 'man-pilot'),
-    (307, '👩‍✈️', 'woman-pilot'),
-    (308, '🧑‍🚀', 'astronaut'),
-    (309, '👨‍🚀', 'man-astronaut'),
-    (310, '👩‍🚀', 'woman-astronaut'),
-    (311, '🧑‍🚒', 'firefighter'),
-    (312, '👨‍🚒', 'man-firefighter'),
-    (313, '👩‍🚒', 'woman-firefighter'),
-    (314, '👮', 'police-officer'),
-    (315, '👮‍♂️', 'man-police-officer'),
-    (316, '👮‍♀️', 'woman-police-officer'),
-    (317, '🕵️', 'detective'),
-    (318, '🕵️‍♂️', 'man-detective'),
-    (319, '🕵️‍♀️', 'woman-detective'),
-    (320, '💂', 'guard'),
-    (321, '💂‍♂️', 'man-guard'),
-    (322, '💂‍♀️', 'woman-guard'),
-    (323, '🥷', 'ninja'),
-    (324, '👷', 'construction-worker'),
-    (325, '👷‍♂️', 'man-construction-worker'),
-    (326, '👷‍♀️', 'woman-construction-worker'),
-    (327, '🤴', 'prince'),
-    (328, '👸', 'princess'),
-    (329, '👳', 'person-wearing-turban'),
-    (330, '👳‍♂️', 'man-wearing-turban'),
-    (331, '👳‍♀️', 'woman-wearing-turban'),
-    (332, '👲', 'person-with-skullcap'),
-    (333, '🧕', 'woman-with-headscarf'),
-    (334, '🤵', 'person-in-tuxedo'),
-    (335, '🤵‍♂️', 'man-in-tuxedo'),
-    (336, '🤵‍♀️', 'woman-in-tuxedo'),
-    (337, '👰', 'person-with-veil'),
-    (338, '👰‍♂️', 'man-with-veil'),
-    (339, '👰‍♀️', 'woman-with-veil'),
-    (340, '🤰', 'pregnant-woman'),
-    (341, '🤱', 'breast-feeding'),
-    (342, '👩‍🍼', 'woman-feeding-baby'),
-    (343, '👨‍🍼', 'man-feeding-baby'),
-    (344, '🧑‍🍼', 'person-feeding-baby'),
-    (345, '👼', 'baby-angel'),
-    (346, '🎅', 'santa-claus'),
-    (348, '🧑‍🎄', 'mx-claus'),
-    (349, '🦸', 'superhero'),
-    (350, '🦸‍♂️', 'man-superhero'),
-    (351, '🦸‍♀️', 'woman-superhero'),
-    (352, '🦹', 'supervillain'),
-    (353, '🦹‍♂️', 'man-supervillain'),
-    (354, '🦹‍♀️', 'woman-supervillain'),
-    (355, '🧙', 'mage'),
-    (356, '🧙‍♂️', 'man-mage'),
-    (357, '🧙‍♀️', 'woman-mage'),
-    (358, '🧚', 'fairy'),
-    (359, '🧚‍♂️', 'man-fairy'),
-    (360, '🧚‍♀️', 'woman-fairy'),
-    (361, '🧛', 'vampire'),
-    (362, '🧛‍♂️', 'man-vampire'),
-    (363, '🧛‍♀️', 'woman-vampire'),
-    (364, '🧜', 'merperson'),
-    (365, '🧜‍♂️', 'merman'),
-    (366, '🧜‍♀️', 'mermaid'),
-    (367, '🧝', 'elf'),
-    (368, '🧝‍♂️', 'man-elf'),
-    (369, '🧝‍♀️', 'woman-elf'),
-    (370, '🧞', 'genie'),
-    (371, '🧞‍♂️', 'man-genie'),
-    (372, '🧞‍♀️', 'woman-genie'),
-    (373, '🧟', 'zombie'),
-    (374, '🧟‍♂️', 'man-zombie'),
-    (375, '🧟‍♀️', 'woman-zombie'),
-    (376, '💆', 'person-getting-massage'),
-    (377, '💆‍♂️', 'man-getting-massage'),
-    (378, '💆‍♀️', 'woman-getting-massage'),
-    (379, '💇', 'person-getting-haircut'),
-    (380, '💇‍♂️', 'man-getting-haircut'),
-    (381, '💇‍♀️', 'woman-getting-haircut'),
-    (382, '🚶', 'person-walking'),
-    (383, '🚶‍♂️', 'man-walking'),
-    (384, '🚶‍♀️', 'woman-walking'),
-    (385, '🧍', 'person-standing'),
-    (386, '🧍‍♂️', 'man-standing'),
-    (387, '🧍‍♀️', 'woman-standing'),
-    (388, '🧎', 'person-kneeling'),
-    (389, '🧎‍♂️', 'man-kneeling'),
-    (390, '🧎‍♀️', 'woman-kneeling'),
-    (391, '🧑‍🦯', 'person-with-white-cane'),
-    (392, '👨‍🦯', 'man-with-white-cane'),
-    (393, '👩‍🦯', 'woman-with-white-cane'),
-    (394, '🧑‍🦼', 'person-in-motorized-wheelchair'),
-    (395, '👨‍🦼', 'man-in-motorized-wheelchair'),
-    (396, '👩‍🦼', 'woman-in-motorized-wheelchair'),
-    (397, '🧑‍🦽', 'person-in-manual-wheelchair'),
-    (398, '👨‍🦽', 'man-in-manual-wheelchair'),
-    (399, '👩‍🦽', 'woman-in-manual-wheelchair'),
-    (400, '🏃', 'person-running'),
-    (401, '🏃‍♂️', 'man-running'),
-    (402, '🏃‍♀️', 'woman-running'),
-    (403, '💃', 'woman-dancing'),
-    (404, '🕺', 'man-dancing'),
-    (405, '🕴️', 'person-in-suit-levitating'),
-    (406, '👯', 'people-with-bunny-ears'),
-    (407, '👯‍♂️', 'men-with-bunny-ears'),
-    (408, '👯‍♀️', 'women-with-bunny-ears'),
-    (409, '🧖', 'person-in-steamy-room'),
-    (410, '🧖‍♂️', 'man-in-steamy-room'),
-    (411, '🧖‍♀️', 'woman-in-steamy-room'),
-    (412, '🧗', 'person-climbing'),
-    (413, '🧗‍♂️', 'man-climbing'),
-    (414, '🧗‍♀️', 'woman-climbing'),
-    (415, '🤺', 'person-fencing'),
-    (416, '🏇', 'horse-racing'),
-    (417, '⛷️', 'skier'),
-    (418, '🏂', 'snowboarder'),
-    (419, '🏌️', 'person-golfing'),
-    (420, '🏌️‍♂️', 'man-golfing'),
-    (421, '🏌️‍♀️', 'woman-golfing'),
-    (422, '🏄', 'person-surfing'),
-    (423, '🏄‍♂️', 'man-surfing'),
-    (424, '🏄‍♀️', 'woman-surfing'),
-    (425, '🚣', 'person-rowing-boat'),
-    (426, '🚣‍♂️', 'man-rowing-boat'),
-    (427, '🚣‍♀️', 'woman-rowing-boat'),
-    (428, '🏊', 'person-swimming'),
-    (429, '🏊‍♂️', 'man-swimming'),
-    (430, '🏊‍♀️', 'woman-swimming'),
-    (431, '⛹️', 'person-bouncing-ball'),
-    (432, '⛹️‍♂️', 'man-bouncing-ball'),
-    (433, '⛹️‍♀️', 'woman-bouncing-ball'),
-    (434, '🏋️', 'person-lifting-weights'),
-    (435, '🏋️‍♂️', 'man-lifting-weights'),
-    (436, '🏋️‍♀️', 'woman-lifting-weights'),
-    (437, '🚴', 'person-biking'),
-    (438, '🚴‍♂️', 'man-biking'),
-    (439, '🚴‍♀️', 'woman-biking'),
-    (440, '🚵', 'person-mountain-biking'),
-    (441, '🚵‍♂️', 'man-mountain-biking'),
-    (442, '🚵‍♀️', 'woman-mountain-biking'),
-    (443, '🤸', 'person-cartwheeling'),
-    (444, '🤸‍♂️', 'man-cartwheeling'),
-    (445, '🤸‍♀️', 'woman-cartwheeling'),
-    (446, '🤼', 'people-wrestling'),
-    (447, '🤼‍♂️', 'men-wrestling'),
-    (448, '🤼‍♀️', 'women-wrestling'),
-    (449, '🤽', 'person-playing-water-polo'),
-    (450, '🤽‍♂️', 'man-playing-water-polo'),
-    (451, '🤽‍♀️', 'woman-playing-water-polo'),
-    (452, '🤾', 'person-playing-handball'),
-    (453, '🤾‍♂️', 'man-playing-handball'),
-    (454, '🤾‍♀️', 'woman-playing-handball'),
-    (455, '🤹', 'person-juggling'),
-    (456, '🤹‍♂️', 'man-juggling'),
-    (457, '🤹‍♀️', 'woman-juggling'),
-    (458, '🧘', 'person-in-lotus-position'),
-    (459, '🧘‍♂️', 'man-in-lotus-position'),
-    (460, '🧘‍♀️', 'woman-in-lotus-position'),
-    (461, '🛀', 'person-taking-bath'),
-    (462, '🛌', 'person-in-bed'),
-    (463, '🧑‍🤝‍🧑', 'people-holding-hands'),
-    (464, '👭', 'women-holding-hands'),
-    (465, '👫', 'woman-and-man-holding-hands'),
-    (466, '👬', 'men-holding-hands'),
-    (467, '💏', 'kiss'),
-    (468, '👩‍❤️‍💋‍👨', 'kiss-woman-man'),
-    (469, '👨‍❤️‍💋‍👨', 'kiss-man-man'),
-    (470, '👩‍❤️‍💋‍👩', 'kiss-woman-woman'),
-    (471, '💑', 'couple-with-heart'),
-    (472, '👩‍❤️‍👨', 'couple-with-heart-woman-man'),
-    (473, '👨‍❤️‍👨', 'couple-with-heart-man-man'),
-    (474, '👩‍❤️‍👩', 'couple-with-heart-woman-woman'),
-    (475, '👪', 'family'),
-    (476, '👨‍👩‍👦', 'family-man-woman-boy'),
-    (477, '👨‍👩‍👧', 'family-man-woman-girl'),
-    (478, '👨‍👩‍👧‍👦', 'family-man-woman-girl-boy'),
-    (479, '👨‍👩‍👦‍👦', 'family-man-woman-boy-boy'),
-    (480, '👨‍👩‍👧‍👧', 'family-man-woman-girl-girl'),
-    (481, '👨‍👨‍👦', 'family-man-man-boy'),
-    (482, '👨‍👨‍👧', 'family-man-man-girl'),
-    (483, '👨‍👨‍👧‍👦', 'family-man-man-girl-boy'),
-    (484, '👨‍👨‍👦‍👦', 'family-man-man-boy-boy'),
-    (485, '👨‍👨‍👧‍👧', 'family-man-man-girl-girl'),
-    (486, '👩‍👩‍👦', 'family-woman-woman-boy'),
-    (487, '👩‍👩‍👧', 'family-woman-woman-girl'),
-    (488, '👩‍👩‍👧‍👦', 'family-woman-woman-girl-boy'),
-    (489, '👩‍👩‍👦‍👦', 'family-woman-woman-boy-boy'),
-    (490, '👩‍👩‍👧‍👧', 'family-woman-woman-girl-girl'),
-    (491, '👨‍👦', 'family-man-boy'),
-    (492, '👨‍👦‍👦', 'family-man-boy-boy'),
-    (493, '👨‍👧', 'family-man-girl'),
-    (494, '👨‍👧‍👦', 'family-man-girl-boy'),
-    (495, '👨‍👧‍👧', 'family-man-girl-girl'),
-    (496, '👩‍👦', 'family-woman-boy'),
-    (497, '👩‍👦‍👦', 'family-woman-boy-boy'),
-    (498, '👩‍👧', 'family-woman-girl'),
-    (499, '👩‍👧‍👦', 'family-woman-girl-boy'),
-    (500, '👩‍👧‍👧', 'family-woman-girl-girl'),
-    (501, '🗣️', 'speaking-head'),
-    (502, '👤', 'bust-in-silhouette'),
-    (503, '👥', 'busts-in-silhouette'),
-    (504, '🫂', 'people-hugging'),
-    (505, '👣', 'footprints'),
-    (506, '🦰', 'red-hair'),
-    (507, '🦱', 'curly-hair'),
-    (508, '🦳', 'white-hair'),
-    (509, '🦲', 'bald'),
-    (510, '🐵', 'monkey-face'),
-    (511, '🐒', 'monkey'),
-    (512, '🦍', 'gorilla'),
-    (513, '🦧', 'orangutan'),
-    (514, '🐶', 'dog-face'),
-    (515, '🐕', 'dog'),
-    (516, '🦮', 'guide-dog'),
-    (517, '🐕‍🦺', 'service-dog'),
-    (518, '🐩', 'poodle'),
-    (519, '🐺', 'wolf'),
-    (520, '🦊', 'fox'),
-    (521, '🦝', 'raccoon'),
-    (522, '🐱', 'cat-face'),
-    (523, '🐈', 'cat'),
-    (524, '🐈‍⬛', 'black-cat'),
-    (525, '🦁', 'lion'),
-    (526, '🐯', 'tiger-face'),
-    (527, '🐅', 'tiger'),
-    (528, '🐆', 'leopard'),
-    (529, '🐴', 'horse-face'),
-    (530, '🐎', 'horse'),
-    (531, '🦄', 'unicorn'),
-    (532, '🦓', 'zebra'),
-    (533, '🦌', 'deer'),
-    (534, '🦬', 'bison'),
-    (535, '🐮', 'cow-face'),
-    (536, '🐂', 'ox'),
-    (537, '🐃', 'water-buffalo'),
-    (538, '🐄', 'cow'),
-    (539, '🐷', 'pig-face'),
-    (540, '🐖', 'pig'),
-    (541, '🐗', 'boar'),
-    (542, '🐽', 'pig-nose'),
-    (543, '🐏', 'ram'),
-    (544, '🐑', 'ewe'),
-    (545, '🐐', 'goat'),
-    (546, '🐪', 'camel'),
-    (547, '🐫', 'two-hump-camel'),
-    (548, '🦙', 'llama'),
-    (549, '🦒', 'giraffe'),
-    (550, '🐘', 'elephant'),
-    (551, '🦣', 'mammoth'),
-    (552, '🦏', 'rhinoceros'),
-    (553, '🦛', 'hippopotamus'),
-    (554, '🐭', 'mouse-face'),
-    (555, '🐁', 'mouse'),
-    (556, '🐀', 'rat'),
-    (557, '🐹', 'hamster'),
-    (558, '🐰', 'rabbit-face'),
-    (559, '🐇', 'rabbit'),
-    (560, '🐿️', 'chipmunk'),
-    (561, '🦫', 'beaver'),
-    (562, '🦔', 'hedgehog'),
-    (563, '🦇', 'bat'),
-    (564, '🐻', 'bear'),
-    (565, '🐻‍❄️', 'polar-bear'),
-    (566, '🐨', 'koala'),
-    (567, '🐼', 'panda'),
-    (568, '🦥', 'sloth'),
-    (569, '🦦', 'otter'),
-    (570, '🦨', 'skunk'),
-    (571, '🦘', 'kangaroo'),
-    (572, '🦡', 'badger'),
-    (573, '🐾', 'paw-prints'),
-    (574, '🦃', 'turkey'),
-    (575, '🐔', 'chicken'),
-    (576, '🐓', 'rooster'),
-    (577, '🐣', 'hatching-chick'),
-    (578, '🐤', 'baby-chick'),
-    (579, '🐥', 'front-facing-baby-chick'),
-    (580, '🐦', 'bird'),
-    (581, '🐧', 'penguin'),
-    (582, '🕊️', 'dove'),
-    (583, '🦅', 'eagle'),
-    (584, '🦆', 'duck'),
-    (585, '🦢', 'swan'),
-    (586, '🦉', 'owl'),
-    (587, '🦤', 'dodo'),
-    (588, '🪶', 'feather'),
-    (589, '🦩', 'flamingo'),
-    (590, '🦚', 'peacock'),
-    (591, '🦜', 'parrot'),
-    (592, '🐸', 'frog'),
-    (593, '🐊', 'crocodile'),
-    (594, '🐢', 'turtle'),
-    (595, '🦎', 'lizard'),
-    (596, '🐍', 'snake'),
-    (597, '🐲', 'dragon-face'),
-    (598, '🐉', 'dragon'),
-    (599, '🦕', 'sauropod'),
-    (600, '🦖', 't-rex'),
-    (601, '🐳', 'spouting-whale'),
-    (602, '🐋', 'whale'),
-    (603, '🐬', 'dolphin'),
-    (604, '🦭', 'seal'),
-    (605, '🐟', 'fish'),
-    (606, '🐠', 'tropical-fish'),
-    (607, '🐡', 'blowfish'),
-    (608, '🦈', 'shark'),
-    (609, '🐙', 'octopus'),
-    (610, '🐚', 'spiral-shell'),
-    (611, '🐌', 'snail'),
-    (612, '🦋', 'butterfly'),
-    (613, '🐛', 'bug'),
-    (614, '🐜', 'ant'),
-    (615, '🐝', 'honeybee'),
-    (616, '🪲', 'beetle'),
-    (617, '🐞', 'lady-beetle'),
-    (618, '🦗', 'cricket'),
-    (619, '🪳', 'cockroach'),
-    (620, '🕷️', 'spider'),
-    (621, '🕸️', 'spider-web'),
-    (622, '🦂', 'scorpion'),
-    (623, '🦟', 'mosquito'),
-    (624, '🪰', 'fly'),
-    (625, '🪱', 'worm'),
-    (626, '🦠', 'microbe'),
-    (627, '💐', 'bouquet'),
-    (628, '🌸', 'cherry-blossom'),
-    (629, '💮', 'white-flower'),
-    (630, '🏵️', 'rosette'),
-    (631, '🌹', 'rose'),
-    (632, '🥀', 'wilted-flower'),
-    (633, '🌺', 'hibiscus'),
-    (634, '🌻', 'sunflower'),
-    (635, '🌼', 'blossom'),
-    (636, '🌷', 'tulip'),
-    (637, '🌱', 'seedling'),
-    (638, '🪴', 'potted-plant'),
-    (639, '🌲', 'evergreen-tree'),
-    (640, '🌳', 'deciduous-tree'),
-    (641, '🌴', 'palm-tree'),
-    (642, '🌵', 'cactus'),
-    (643, '🌾', 'sheaf-of-rice'),
-    (644, '🌿', 'herb'),
-    (645, '☘️', 'shamrock'),
-    (646, '🍀', 'four-leaf-clover'),
-    (647, '🍁', 'maple-leaf'),
-    (648, '🍂', 'fallen-leaf'),
-    (649, '🍃', 'leaf-fluttering-in-wind'),
-    (650, '🍇', 'grapes'),
-    (651, '🍈', 'melon'),
-    (652, '🍉', 'watermelon'),
-    (653, '🍊', 'tangerine'),
-    (654, '🍋', 'lemon'),
-    (655, '🍌', 'banana'),
-    (656, '🍍', 'pineapple'),
-    (657, '🥭', 'mango'),
-    (658, '🍎', 'red-apple'),
-    (659, '🍏', 'green-apple'),
-    (660, '🍐', 'pear'),
-    (661, '🍑', 'peach'),
-    (662, '🍒', 'cherries'),
-    (663, '🍓', 'strawberry'),
-    (664, '🫐', 'blueberries'),
-    (665, '🥝', 'kiwi-fruit'),
-    (666, '🍅', 'tomato'),
-    (667, '🫒', 'olive'),
-    (668, '🥥', 'coconut'),
-    (669, '🥑', 'avocado'),
-    (670, '🍆', 'eggplant'),
-    (671, '🥔', 'potato'),
-    (672, '🥕', 'carrot'),
-    (673, '🌽', 'ear-of-corn'),
-    (674, '🌶️', 'hot-pepper'),
-    (675, '🫑', 'bell-pepper'),
-    (676, '🥒', 'cucumber'),
-    (677, '🥬', 'leafy-green'),
-    (678, '🥦', 'broccoli'),
-    (679, '🧄', 'garlic'),
-    (680, '🧅', 'onion'),
-    (681, '🍄', 'mushroom'),
-    (682, '🥜', 'peanuts'),
-    (683, '🌰', 'chestnut'),
-    (684, '🍞', 'bread'),
-    (685, '🥐', 'croissant'),
-    (686, '🥖', 'baguette-bread'),
-    (687, '🫓', 'flatbread'),
-    (688, '🥨', 'pretzel'),
-    (689, '🥯', 'bagel'),
-    (690, '🥞', 'pancakes'),
-    (691, '🧇', 'waffle'),
-    (692, '🧀', 'cheese-wedge'),
-    (693, '🍖', 'meat-on-bone'),
-    (694, '🍗', 'poultry-leg'),
-    (695, '🥩', 'cut-of-meat'),
-    (696, '🥓', 'bacon'),
-    (697, '🍔', 'hamburger'),
-    (698, '🍟', 'french-fries'),
-    (699, '🍕', 'pizza'),
-    (700, '🌭', 'hot-dog'),
-    (701, '🥪', 'sandwich'),
-    (702, '🌮', 'taco'),
-    (703, '🌯', 'burrito'),
-    (704, '🫔', 'tamale'),
-    (705, '🥙', 'stuffed-flatbread'),
-    (706, '🧆', 'falafel'),
-    (707, '🥚', 'egg'),
-    (708, '🍳', 'cooking'),
-    (709, '🥘', 'shallow-pan-of-food'),
-    (710, '🍲', 'pot-of-food'),
-    (711, '🫕', 'fondue'),
-    (712, '🥣', 'bowl-with-spoon'),
-    (713, '🥗', 'green-salad'),
-    (714, '🍿', 'popcorn'),
-    (715, '🧈', 'butter'),
-    (716, '🧂', 'salt'),
-    (717, '🥫', 'canned-food'),
-    (718, '🍱', 'bento-box'),
-    (719, '🍘', 'rice-cracker'),
-    (720, '🍙', 'rice-ball'),
-    (721, '🍚', 'cooked-rice'),
-    (722, '🍛', 'curry-rice'),
-    (723, '🍜', 'steaming-bowl'),
-    (724, '🍝', 'spaghetti'),
-    (725, '🍠', 'roasted-sweet-potato'),
-    (726, '🍢', 'oden'),
-    (727, '🍣', 'sushi'),
-    (728, '🍤', 'fried-shrimp'),
-    (729, '🍥', 'fish-cake-with-swirl'),
-    (730, '🥮', 'moon-cake'),
-    (731, '🍡', 'dango'),
-    (732, '🥟', 'dumpling'),
-    (733, '🥠', 'fortune-cookie'),
-    (734, '🥡', 'takeout-box'),
-    (735, '🦀', 'crab'),
-    (736, '🦞', 'lobster'),
-    (737, '🦐', 'shrimp'),
-    (738, '🦑', 'squid'),
-    (739, '🦪', 'oyster'),
-    (740, '🍦', 'soft-ice-cream'),
-    (741, '🍧', 'shaved-ice'),
-    (742, '🍨', 'ice-cream'),
-    (743, '🍩', 'doughnut'),
-    (744, '🍪', 'cookie'),
-    (745, '🎂', 'birthday-cake'),
-    (746, '🍰', 'shortcake'),
-    (747, '🧁', 'cupcake'),
-    (748, '🥧', 'pie'),
-    (749, '🍫', 'chocolate-bar'),
-    (750, '🍬', 'candy'),
-    (751, '🍭', 'lollipop'),
-    (752, '🍮', 'custard'),
-    (753, '🍯', 'honey-pot'),
-    (754, '🍼', 'baby-bottle'),
-    (755, '🥛', 'glass-of-milk'),
-    (756, '☕', 'hot-beverage'),
-    (757, '🫖', 'teapot'),
-    (758, '🍵', 'teacup-without-handle'),
-    (759, '🍶', 'sake'),
-    (760, '🍾', 'bottle-with-popping-cork'),
-    (761, '🍷', 'wine-glass'),
-    (762, '🍸', 'cocktail-glass'),
-    (763, '🍹', 'tropical-drink'),
-    (764, '🍺', 'beer-mug'),
-    (765, '🍻', 'clinking-beer-mugs'),
-    (766, '🥂', 'clinking-glasses'),
-    (767, '🥃', 'tumbler-glass'),
-    (768, '🥤', 'cup-with-straw'),
-    (769, '🧋', 'bubble-tea'),
-    (770, '🧃', 'beverage-box'),
-    (771, '🧉', 'mate'),
-    (772, '🧊', 'ice'),
-    (773, '🥢', 'chopsticks'),
-    (774, '🍽️', 'fork-and-knife-with-plate'),
-    (775, '🍴', 'fork-and-knife'),
-    (776, '🥄', 'spoon'),
-    (777, '🔪', 'kitchen-knife'),
-    (778, '🏺', 'amphora'),
-    (779, '🌍', 'globe-showing-europe-africa'),
-    (780, '🌎', 'globe-showing-americas'),
-    (781, '🌏', 'globe-showing-asia-australia'),
-    (782, '🌐', 'globe-with-meridians'),
-    (783, '🗺️', 'world-map'),
-    (784, '🗾', 'map-of-japan'),
-    (785, '🧭', 'compass'),
-    (786, '🏔️', 'snow-capped-mountain'),
-    (787, '⛰️', 'mountain'),
-    (788, '🌋', 'volcano'),
-    (789, '🗻', 'mount-fuji'),
-    (790, '🏕️', 'camping'),
-    (791, '🏖️', 'beach-with-umbrella'),
-    (792, '🏜️', 'desert'),
-    (793, '🏝️', 'desert-island'),
-    (794, '🏞️', 'national-park'),
-    (795, '🏟️', 'stadium'),
-    (796, '🏛️', 'classical-building'),
-    (797, '🏗️', 'building-construction'),
-    (798, '🧱', 'brick'),
-    (799, '🪨', 'rock'),
-    (800, '🪵', 'wood'),
-    (801, '🛖', 'hut'),
-    (802, '🏘️', 'houses'),
-    (803, '🏚️', 'derelict-house'),
-    (804, '🏠', 'house'),
-    (805, '🏡', 'house-with-garden'),
-    (806, '🏢', 'office-building'),
-    (807, '🏣', 'japanese-post-office'),
-    (808, '🏤', 'post-office'),
-    (809, '🏥', 'hospital'),
-    (810, '🏦', 'bank'),
-    (811, '🏨', 'hotel'),
-    (812, '🏩', 'love-hotel'),
-    (813, '🏪', 'convenience-store'),
-    (814, '🏫', 'school'),
-    (815, '🏬', 'department-store'),
-    (816, '🏭', 'factory'),
-    (817, '🏯', 'japanese-castle'),
-    (818, '🏰', 'castle'),
-    (819, '💒', 'wedding'),
-    (820, '🗼', 'tokyo-tower'),
-    (821, '🗽', 'statue-of-liberty'),
-    (822, '⛪', 'church'),
-    (823, '🕌', 'mosque'),
-    (824, '🛕', 'hindu-temple'),
-    (825, '🕍', 'synagogue'),
-    (826, '⛩️', 'shinto-shrine'),
-    (827, '🕋', 'kaaba'),
-    (828, '⛲', 'fountain'),
-    (829, '⛺', 'tent'),
-    (830, '🌁', 'foggy'),
-    (831, '🌃', 'night-with-stars'),
-    (832, '🏙️', 'cityscape'),
-    (833, '🌄', 'sunrise-over-mountains'),
-    (834, '🌅', 'sunrise'),
-    (835, '🌆', 'cityscape-at-dusk'),
-    (836, '🌇', 'sunset'),
-    (837, '🌉', 'bridge-at-night'),
-    (838, '♨️', 'hot-springs'),
-    (839, '🎠', 'carousel-horse'),
-    (840, '🎡', 'ferris-wheel'),
-    (841, '🎢', 'roller-coaster'),
-    (842, '💈', 'barber-pole'),
-    (843, '🎪', 'circus-tent'),
-    (844, '🚂', 'locomotive'),
-    (845, '🚃', 'railway-car'),
-    (846, '🚄', 'high-speed-train'),
-    (847, '🚅', 'bullet-train'),
-    (848, '🚆', 'train'),
-    (849, '🚇', 'metro'),
-    (850, '🚈', 'light-rail'),
-    (851, '🚉', 'station'),
-    (852, '🚊', 'tram'),
-    (853, '🚝', 'monorail'),
-    (854, '🚞', 'mountain-railway'),
-    (855, '🚋', 'tram-car'),
-    (856, '🚌', 'bus'),
-    (857, '🚍', 'oncoming-bus'),
-    (858, '🚎', 'trolleybus'),
-    (859, '🚐', 'minibus'),
-    (860, '🚑', 'ambulance'),
-    (861, '🚒', 'fire-engine'),
-    (862, '🚓', 'police-car'),
-    (863, '🚔', 'oncoming-police-car'),
-    (864, '🚕', 'taxi'),
-    (865, '🚖', 'oncoming-taxi'),
-    (866, '🚗', 'automobile'),
-    (867, '🚘', 'oncoming-automobile'),
-    (868, '🚙', 'sport-utility-vehicle'),
-    (869, '🛻', 'pickup-truck'),
-    (870, '🚚', 'delivery-truck'),
-    (871, '🚛', 'articulated-lorry'),
-    (872, '🚜', 'tractor'),
-    (873, '🏎️', 'racing-car'),
-    (874, '🏍️', 'motorcycle'),
-    (875, '🛵', 'motor-scooter'),
-    (876, '🦽', 'manual-wheelchair'),
-    (877, '🦼', 'motorized-wheelchair'),
-    (878, '🛺', 'auto-rickshaw'),
-    (879, '🚲', 'bicycle'),
-    (880, '🛴', 'kick-scooter'),
-    (881, '🛹', 'skateboard'),
-    (882, '🛼', 'roller-skate'),
-    (883, '🚏', 'bus-stop'),
-    (884, '🛣️', 'motorway'),
-    (885, '🛤️', 'railway-track'),
-    (886, '🛢️', 'oil-drum'),
-    (887, '⛽', 'fuel-pump'),
-    (888, '🚨', 'police-car-light'),
-    (889, '🚥', 'horizontal-traffic-light'),
-    (890, '🚦', 'vertical-traffic-light'),
-    (891, '🛑', 'stop-sign'),
-    (892, '🚧', 'construction'),
-    (893, '⚓', 'anchor'),
-    (894, '⛵', 'sailboat'),
-    (895, '🛶', 'canoe'),
-    (896, '🚤', 'speedboat'),
-    (897, '🛳️', 'passenger-ship'),
-    (898, '⛴️', 'ferry'),
-    (899, '🛥️', 'motor-boat'),
-    (900, '🚢', 'ship'),
-    (901, '✈️', 'airplane'),
-    (902, '🛩️', 'small-airplane'),
-    (903, '🛫', 'airplane-departure'),
-    (904, '🛬', 'airplane-arrival'),
-    (905, '🪂', 'parachute'),
-    (906, '💺', 'seat'),
-    (907, '🚁', 'helicopter'),
-    (908, '🚟', 'suspension-railway'),
-    (909, '🚠', 'mountain-cableway'),
-    (910, '🚡', 'aerial-tramway'),
-    (911, '🛰️', 'satellite'),
-    (912, '🚀', 'rocket'),
-    (913, '🛸', 'flying-saucer'),
-    (914, '🛎️', 'bellhop-bell'),
-    (915, '🧳', 'luggage'),
-    (916, '⌛', 'hourglass-done'),
-    (917, '⏳', 'hourglass-not-done'),
-    (918, '⌚', 'watch'),
-    (919, '⏰', 'alarm-clock'),
-    (920, '⏱️', 'stopwatch'),
-    (921, '⏲️', 'timer-clock'),
-    (922, '🕰️', 'mantelpiece-clock'),
-    (923, '🕛', 'twelve-o-clock'),
-    (924, '🕧', 'twelve-thirty'),
-    (925, '🕐', 'one-o-clock'),
-    (926, '🕜', 'one-thirty'),
-    (927, '🕑', 'two-o-clock'),
-    (928, '🕝', 'two-thirty'),
-    (929, '🕒', 'three-o-clock'),
-    (930, '🕞', 'three-thirty'),
-    (931, '🕓', 'four-o-clock'),
-    (932, '🕟', 'four-thirty'),
-    (933, '🕔', 'five-o-clock'),
-    (934, '🕠', 'five-thirty'),
-    (935, '🕕', 'six-o-clock'),
-    (936, '🕡', 'six-thirty'),
-    (937, '🕖', 'seven-o-clock'),
-    (938, '🕢', 'seven-thirty'),
-    (939, '🕗', 'eight-o-clock'),
-    (940, '🕣', 'eight-thirty'),
-    (941, '🕘', 'nine-o-clock'),
-    (942, '🕤', 'nine-thirty'),
-    (943, '🕙', 'ten-o-clock'),
-    (944, '🕥', 'ten-thirty'),
-    (945, '🕚', 'eleven-o-clock'),
-    (946, '🕦', 'eleven-thirty'),
-    (947, '🌑', 'new-moon'),
-    (948, '🌒', 'waxing-crescent-moon'),
-    (949, '🌓', 'first-quarter-moon'),
-    (950, '🌔', 'waxing-gibbous-moon'),
-    (951, '🌕', 'full-moon'),
-    (952, '🌖', 'waning-gibbous-moon'),
-    (953, '🌗', 'last-quarter-moon'),
-    (954, '🌘', 'waning-crescent-moon'),
-    (955, '🌙', 'crescent-moon'),
-    (956, '🌚', 'new-moon-face'),
-    (957, '🌛', 'first-quarter-moon-face'),
-    (958, '🌜', 'last-quarter-moon-face'),
-    (959, '🌡️', 'thermometer'),
-    (960, '☀️', 'sun'),
-    (961, '🌝', 'full-moon-face'),
-    (962, '🌞', 'sun-with-face'),
-    (963, '🪐', 'ringed-planet'),
-    (964, '⭐', 'star'),
-    (965, '🌟', 'glowing-star'),
-    (966, '🌠', 'shooting-star'),
-    (967, '🌌', 'milky-way'),
-    (968, '☁️', 'cloud'),
-    (969, '⛅', 'sun-behind-cloud'),
-    (970, '⛈️', 'cloud-with-lightning-and-rain'),
-    (971, '🌤️', 'sun-behind-small-cloud'),
-    (972, '🌥️', 'sun-behind-large-cloud'),
-    (973, '🌦️', 'sun-behind-rain-cloud'),
-    (974, '🌧️', 'cloud-with-rain'),
-    (975, '🌨️', 'cloud-with-snow'),
-    (976, '🌩️', 'cloud-with-lightning'),
-    (977, '🌪️', 'tornado'),
-    (978, '🌫️', 'fog'),
-    (979, '🌬️', 'wind-face'),
-    (980, '🌀', 'cyclone'),
-    (981, '🌈', 'rainbow'),
-    (982, '🌂', 'closed-umbrella'),
-    (983, '☂️', 'umbrella'),
-    (984, '☔', 'umbrella-with-rain-drops'),
-    (985, '⛱️', 'umbrella-on-ground'),
-    (986, '⚡', 'high-voltage'),
-    (987, '❄️', 'snowflake'),
-    (988, '☃️', 'snowman'),
-    (989, '⛄', 'snowman-without-snow'),
-    (990, '☄️', 'comet'),
-    (991, '🔥', 'fire'),
-    (992, '💧', 'droplet'),
-    (993, '🌊', 'water-wave'),
-    (994, '🎃', 'jack-o-lantern'),
-    (995, '🎄', 'christmas-tree'),
-    (996, '🎆', 'fireworks'),
-    (997, '🎇', 'sparkler'),
-    (998, '🧨', 'firecracker'),
-    (999, '✨', 'sparkles'),
-    (1000, '🎈', 'balloon'),
-    (1001, '🎉', 'party-popper'),
-    (1002, '🎊', 'confetti-ball'),
-    (1003, '🎋', 'tanabata-tree'),
-    (1004, '🎍', 'pine-decoration'),
-    (1005, '🎎', 'japanese-dolls'),
-    (1006, '🎏', 'carp-streamer'),
-    (1007, '🎐', 'wind-chime'),
-    (1008, '🎑', 'moon-viewing-ceremony'),
-    (1009, '🧧', 'red-envelope'),
-    (1010, '🎀', 'ribbon'),
-    (1011, '🎁', 'wrapped-gift'),
-    (1012, '🎗️', 'reminder-ribbon'),
-    (1013, '🎟️', 'admission-tickets'),
-    (1014, '🎫', 'ticket'),
-    (1015, '🎖️', 'military-medal'),
-    (1016, '🏆', 'trophy'),
-    (1017, '🏅', 'sports-medal'),
-    (1018, '🥇', '1st-place-medal'),
-    (1019, '🥈', '2nd-place-medal'),
-    (1020, '🥉', '3rd-place-medal'),
-    (1021, '⚽', 'soccer-ball'),
-    (1022, '⚾', 'baseball'),
-    (1023, '🥎', 'softball'),
-    (1024, '🏀', 'basketball'),
-    (1025, '🏐', 'volleyball'),
-    (1026, '🏈', 'american-football'),
-    (1027, '🏉', 'rugby-football'),
-    (1028, '🎾', 'tennis'),
-    (1029, '🥏', 'flying-disc'),
-    (1030, '🎳', 'bowling'),
-    (1031, '🏏', 'cricket-game'),
-    (1032, '🏑', 'field-hockey'),
-    (1033, '🏒', 'ice-hockey'),
-    (1034, '🥍', 'lacrosse'),
-    (1035, '🏓', 'ping-pong'),
-    (1036, '🏸', 'badminton'),
-    (1037, '🥊', 'boxing-glove'),
-    (1038, '🥋', 'martial-arts-uniform'),
-    (1039, '🥅', 'goal-net'),
-    (1040, '⛳', 'flag-in-hole'),
-    (1041, '⛸️', 'ice-skate'),
-    (1042, '🎣', 'fishing-pole'),
-    (1043, '🤿', 'diving-mask'),
-    (1044, '🎽', 'running-shirt'),
-    (1045, '🎿', 'skis'),
-    (1046, '🛷', 'sled'),
-    (1047, '🥌', 'curling-stone'),
-    (1048, '🎯', 'bullseye'),
-    (1049, '🪀', 'yo-yo'),
-    (1050, '🪁', 'kite'),
-    (1051, '🎱', 'pool-8-ball'),
-    (1052, '🔮', 'crystal-ball'),
-    (1053, '🪄', 'magic-wand'),
-    (1054, '🧿', 'nazar-amulet'),
-    (1055, '🎮', 'video-game'),
-    (1056, '🕹️', 'joystick'),
-    (1057, '🎰', 'slot-machine'),
-    (1058, '🎲', 'game-die'),
-    (1059, '🧩', 'puzzle-piece'),
-    (1060, '🧸', 'teddy-bear'),
-    (1062, '🪆', 'nesting-dolls'),
-    (1063, '♠️', 'spade-suit'),
-    (1064, '♥️', 'heart-suit'),
-    (1065, '♦️', 'diamond-suit'),
-    (1066, '♣️', 'club-suit'),
-    (1067, '♟️', 'chess-pawn'),
-    (1068, '🃏', 'joker'),
-    (1069, '🀄', 'mahjong-red-dragon'),
-    (1070, '🎴', 'flower-playing-cards'),
-    (1071, '🎭', 'performing-arts'),
-    (1072, '🖼️', 'framed-picture'),
-    (1073, '🎨', 'artist-palette'),
-    (1074, '🧵', 'thread'),
-    (1075, '🪡', 'sewing-needle'),
-    (1076, '🧶', 'yarn'),
-    (1077, '🪢', 'knot'),
-    (1078, '👓', 'glasses'),
-    (1079, '🕶️', 'sunglasses'),
-    (1080, '🥽', 'goggles'),
-    (1081, '🥼', 'lab-coat'),
-    (1082, '🦺', 'safety-vest'),
-    (1083, '👔', 'necktie'),
-    (1084, '👕', 't-shirt'),
-    (1085, '👖', 'jeans'),
-    (1086, '🧣', 'scarf'),
-    (1087, '🧤', 'gloves'),
-    (1088, '🧥', 'coat'),
-    (1089, '🧦', 'socks'),
-    (1090, '👗', 'dress'),
-    (1091, '👘', 'kimono'),
-    (1092, '🥻', 'sari'),
-    (1093, '🩱', 'one-piece-swimsuit'),
-    (1094, '🩲', 'briefs'),
-    (1095, '🩳', 'shorts'),
-    (1096, '👙', 'bikini'),
-    (1097, '👚', 'woman-s-clothes'),
-    (1098, '👛', 'purse'),
-    (1099, '👜', 'handbag'),
-    (1100, '👝', 'clutch-bag'),
-    (1101, '🛍️', 'shopping-bags'),
-    (1102, '🎒', 'backpack'),
-    (1103, '🩴', 'thong-sandal'),
-    (1104, '👞', 'man-s-shoe'),
-    (1105, '👟', 'running-shoe'),
-    (1106, '🥾', 'hiking-boot'),
-    (1107, '🥿', 'flat-shoe'),
-    (1108, '👠', 'high-heeled-shoe'),
-    (1109, '👡', 'woman-s-sandal'),
-    (1110, '🩰', 'ballet-shoes'),
-    (1111, '👢', 'woman-s-boot'),
-    (1112, '👑', 'crown'),
-    (1113, '👒', 'woman-s-hat'),
-    (1114, '🎩', 'top-hat'),
-    (1115, '🎓', 'graduation-cap'),
-    (1116, '🧢', 'billed-cap'),
-    (1117, '🪖', 'military-helmet'),
-    (1118, '⛑️', 'rescue-worker-s-helmet'),
-    (1119, '📿', 'prayer-beads'),
-    (1120, '💄', 'lipstick'),
-    (1121, '💍', 'ring'),
-    (1122, '💎', 'gem-stone'),
-    (1123, '🔇', 'muted-speaker'),
-    (1124, '🔈', 'speaker-low-volume'),
-    (1125, '🔉', 'speaker-medium-volume'),
-    (1126, '🔊', 'speaker-high-volume'),
-    (1127, '📢', 'loudspeaker'),
-    (1128, '📣', 'megaphone'),
-    (1129, '📯', 'postal-horn'),
-    (1130, '🔔', 'bell'),
-    (1131, '🔕', 'bell-with-slash'),
-    (1132, '🎼', 'musical-score'),
-    (1133, '🎵', 'musical-note'),
-    (1134, '🎶', 'musical-notes'),
-    (1135, '🎙️', 'studio-microphone'),
-    (1136, '🎚️', 'level-slider'),
-    (1137, '🎛️', 'control-knobs'),
-    (1138, '🎤', 'microphone'),
-    (1139, '🎧', 'headphone'),
-    (1140, '📻', 'radio'),
-    (1141, '🎷', 'saxophone'),
-    (1142, '🪗', 'accordion'),
-    (1143, '🎸', 'guitar'),
-    (1144, '🎹', 'musical-keyboard'),
-    (1145, '🎺', 'trumpet'),
-    (1146, '🎻', 'violin'),
-    (1147, '🪕', 'banjo'),
-    (1148, '🥁', 'drum'),
-    (1149, '🪘', 'long-drum'),
-    (1150, '📱', 'mobile-phone'),
-    (1151, '📲', 'mobile-phone-with-arrow'),
-    (1152, '☎️', 'telephone'),
-    (1153, '📞', 'telephone-receiver'),
-    (1154, '📟', 'pager'),
-    (1155, '📠', 'fax-machine'),
-    (1156, '🔋', 'battery'),
-    (1157, '🔌', 'electric-plug'),
-    (1158, '💻', 'laptop'),
-    (1159, '🖥️', 'desktop-computer'),
-    (1160, '🖨️', 'printer'),
-    (1161, '⌨️', 'keyboard'),
-    (1162, '🖱️', 'computer-mouse'),
-    (1163, '🖲️', 'trackball'),
-    (1164, '💽', 'computer-disk'),
-    (1165, '💾', 'floppy-disk'),
-    (1166, '💿', 'optical-disk'),
-    (1167, '📀', 'dvd'),
-    (1168, '🧮', 'abacus'),
-    (1169, '🎥', 'movie-camera'),
-    (1170, '🎞️', 'film-frames'),
-    (1171, '📽️', 'film-projector'),
-    (1172, '🎬', 'clapper-board'),
-    (1173, '📺', 'television'),
-    (1174, '📷', 'camera'),
-    (1175, '📸', 'camera-with-flash'),
-    (1176, '📹', 'video-camera'),
-    (1177, '📼', 'videocassette'),
-    (1178, '🔍', 'magnifying-glass-tilted-left'),
-    (1179, '🔎', 'magnifying-glass-tilted-right'),
-    (1180, '🕯️', 'candle'),
-    (1181, '💡', 'light-bulb'),
-    (1182, '🔦', 'flashlight'),
-    (1183, '🏮', 'red-paper-lantern'),
-    (1184, '🪔', 'diya-lamp'),
-    (1185, '📔', 'notebook-with-decorative-cover'),
-    (1186, '📕', 'closed-book'),
-    (1187, '📖', 'open-book'),
-    (1188, '📗', 'green-book'),
-    (1189, '📘', 'blue-book'),
-    (1190, '📙', 'orange-book'),
-    (1191, '📚', 'books'),
-    (1192, '📓', 'notebook'),
-    (1193, '📒', 'ledger'),
-    (1194, '📃', 'page-with-curl'),
-    (1195, '📜', 'scroll'),
-    (1196, '📄', 'page-facing-up'),
-    (1197, '📰', 'newspaper'),
-    (1198, '🗞️', 'rolled-up-newspaper'),
-    (1199, '📑', 'bookmark-tabs'),
-    (1200, '🔖', 'bookmark'),
-    (1201, '🏷️', 'label'),
-    (1202, '💰', 'money-bag'),
-    (1203, '🪙', 'coin'),
-    (1204, '💴', 'yen-banknote'),
-    (1205, '💵', 'dollar-banknote'),
-    (1206, '💶', 'euro-banknote'),
-    (1207, '💷', 'pound-banknote'),
-    (1208, '💸', 'money-with-wings'),
-    (1209, '💳', 'credit-card'),
-    (1210, '🧾', 'receipt'),
-    (1211, '💹', 'chart-increasing-with-yen'),
-    (1212, '✉️', 'envelope'),
-    (1213, '📧', 'e-mail'),
-    (1214, '📨', 'incoming-envelope'),
-    (1215, '📩', 'envelope-with-arrow'),
-    (1216, '📤', 'outbox-tray'),
-    (1217, '📥', 'inbox-tray'),
-    (1218, '📦', 'package'),
-    (1219, '📫', 'closed-mailbox-with-raised-flag'),
-    (1220, '📪', 'closed-mailbox-with-lowered-flag'),
-    (1221, '📬', 'open-mailbox-with-raised-flag'),
-    (1222, '📭', 'open-mailbox-with-lowered-flag'),
-    (1223, '📮', 'postbox'),
-    (1224, '🗳️', 'ballot-box-with-ballot'),
-    (1225, '✏️', 'pencil'),
-    (1226, '✒️', 'black-nib'),
-    (1227, '🖋️', 'fountain-pen'),
-    (1228, '🖊️', 'pen'),
-    (1229, '🖌️', 'paintbrush'),
-    (1230, '🖍️', 'crayon'),
-    (1231, '📝', 'memo'),
-    (1232, '💼', 'briefcase'),
-    (1233, '📁', 'file-folder'),
-    (1234, '📂', 'open-file-folder'),
-    (1235, '🗂️', 'card-index-dividers'),
-    (1236, '📅', 'calendar'),
-    (1237, '📆', 'tear-off-calendar'),
-    (1238, '🗒️', 'spiral-notepad'),
-    (1239, '🗓️', 'spiral-calendar'),
-    (1240, '📇', 'card-index'),
-    (1241, '📈', 'chart-increasing'),
-    (1242, '📉', 'chart-decreasing'),
-    (1243, '📊', 'bar-chart'),
-    (1244, '📋', 'clipboard'),
-    (1245, '📌', 'pushpin'),
-    (1246, '📍', 'round-pushpin'),
-    (1247, '📎', 'paperclip'),
-    (1248, '🖇️', 'linked-paperclips'),
-    (1249, '📏', 'straight-ruler'),
-    (1250, '📐', 'triangular-ruler'),
-    (1251, '✂️', 'scissors'),
-    (1252, '🗃️', 'card-file-box'),
-    (1253, '🗄️', 'file-cabinet'),
-    (1254, '🗑️', 'wastebasket'),
-    (1255, '🔒', 'locked'),
-    (1256, '🔓', 'unlocked'),
-    (1257, '🔏', 'locked-with-pen'),
-    (1258, '🔐', 'locked-with-key'),
-    (1259, '🔑', 'key'),
-    (1260, '🗝️', 'old-key'),
-    (1261, '🔨', 'hammer'),
-    (1262, '🪓', 'axe'),
-    (1263, '⛏️', 'pick'),
-    (1264, '⚒️', 'hammer-and-pick'),
-    (1265, '🛠️', 'hammer-and-wrench'),
-    (1266, '🗡️', 'dagger'),
-    (1267, '⚔️', 'crossed-swords'),
-    (1268, '🔫', 'water-pistol'),
-    (1269, '🪃', 'boomerang'),
-    (1270, '🏹', 'bow-and-arrow'),
-    (1271, '🛡️', 'shield'),
-    (1272, '🪚', 'carpentry-saw'),
-    (1273, '🔧', 'wrench'),
-    (1274, '🪛', 'screwdriver'),
-    (1275, '🔩', 'nut-and-bolt'),
-    (1276, '⚙️', 'gear'),
-    (1277, '🗜️', 'clamp'),
-    (1278, '⚖️', 'balance-scale'),
-    (1279, '🦯', 'white-cane'),
-    (1280, '🔗', 'link'),
-    (1281, '⛓️', 'chains'),
-    (1282, '🪝', 'hook'),
-    (1283, '🧰', 'toolbox'),
-    (1284, '🧲', 'magnet'),
-    (1285, '🪜', 'ladder'),
-    (1286, '⚗️', 'alembic'),
-    (1287, '🧪', 'test-tube'),
-    (1288, '🧫', 'petri-dish'),
-    (1289, '🧬', 'dna'),
-    (1290, '🔬', 'microscope'),
-    (1291, '🔭', 'telescope'),
-    (1292, '📡', 'satellite-antenna'),
-    (1293, '💉', 'syringe'),
-    (1294, '🩸', 'drop-of-blood'),
-    (1295, '💊', 'pill'),
-    (1296, '🩹', 'adhesive-bandage'),
-    (1297, '🩺', 'stethoscope'),
-    (1298, '🚪', 'door'),
-    (1299, '🛗', 'elevator'),
-    (1300, '🪞', 'mirror'),
-    (1301, '🪟', 'window'),
-    (1302, '🛏️', 'bed'),
-    (1303, '🛋️', 'couch-and-lamp'),
-    (1304, '🪑', 'chair'),
-    (1305, '🚽', 'toilet'),
-    (1306, '🪠', 'plunger'),
-    (1307, '🚿', 'shower'),
-    (1308, '🛁', 'bathtub'),
-    (1309, '🪤', 'mouse-trap'),
-    (1310, '🪒', 'razor'),
-    (1311, '🧴', 'lotion-bottle'),
-    (1312, '🧷', 'safety-pin'),
-    (1313, '🧹', 'broom'),
-    (1314, '🧺', 'basket'),
-    (1315, '🧻', 'roll-of-paper'),
-    (1316, '🪣', 'bucket'),
-    (1317, '🧼', 'soap'),
-    (1318, '🪥', 'toothbrush'),
-    (1319, '🧽', 'sponge'),
-    (1320, '🧯', 'fire-extinguisher'),
-    (1321, '🛒', 'shopping-cart'),
-    (1322, '🚬', 'cigarette'),
-    (1323, '⚰️', 'coffin'),
-    (1324, '🪦', 'headstone'),
-    (1325, '⚱️', 'funeral-urn'),
-    (1326, '🗿', 'moai'),
-    (1327, '🪧', 'placard'),
-    (1328, '🏧', 'atm-sign'),
-    (1329, '🚮', 'litter-in-bin-sign'),
-    (1330, '🚰', 'potable-water'),
-    (1331, '♿', 'wheelchair-symbol'),
-    (1332, '🚹', 'men-s-room'),
-    (1333, '🚺', 'women-s-room'),
-    (1334, '🚻', 'restroom'),
-    (1335, '🚼', 'baby-symbol'),
-    (1336, '🚾', 'water-closet'),
-    (1337, '🛂', 'passport-control'),
-    (1338, '🛃', 'customs'),
-    (1339, '🛄', 'baggage-claim'),
-    (1340, '🛅', 'left-luggage'),
-    (1341, '⚠️', 'warning'),
-    (1342, '🚸', 'children-crossing'),
-    (1343, '⛔', 'no-entry'),
-    (1344, '🚫', 'prohibited'),
-    (1345, '🚳', 'no-bicycles'),
-    (1346, '🚭', 'no-smoking'),
-    (1347, '🚯', 'no-littering'),
-    (1348, '🚱', 'non-potable-water'),
-    (1349, '🚷', 'no-pedestrians'),
-    (1350, '📵', 'no-mobile-phones'),
-    (1351, '🔞', 'no-one-under-eighteen'),
-    (1352, '☢️', 'radioactive'),
-    (1353, '☣️', 'biohazard'),
-    (1354, '⬆️', 'up-arrow'),
-    (1355, '↗️', 'up-right-arrow'),
-    (1356, '➡️', 'right-arrow'),
-    (1357, '↘️', 'down-right-arrow'),
-    (1358, '⬇️', 'down-arrow'),
-    (1359, '↙️', 'down-left-arrow'),
-    (1360, '⬅️', 'left-arrow'),
-    (1361, '↖️', 'up-left-arrow'),
-    (1362, '↕️', 'up-down-arrow'),
-    (1363, '↔️', 'left-right-arrow'),
-    (1364, '↩️', 'right-arrow-curving-left'),
-    (1365, '↪️', 'left-arrow-curving-right'),
-    (1366, '⤴️', 'right-arrow-curving-up'),
-    (1367, '⤵️', 'right-arrow-curving-down'),
-    (1368, '🔃', 'clockwise-vertical-arrows'),
-    (1369, '🔄', 'counterclockwise-arrows-button'),
-    (1370, '🔙', 'back-arrow'),
-    (1371, '🔚', 'end-arrow'),
-    (1372, '🔛', 'on-arrow'),
-    (1373, '🔜', 'soon-arrow'),
-    (1374, '🔝', 'top-arrow'),
-    (1375, '🛐', 'place-of-worship'),
-    (1376, '⚛️', 'atom-symbol'),
-    (1377, '🕉️', 'om'),
-    (1378, '✡️', 'star-of-david'),
-    (1379, '☸️', 'wheel-of-dharma'),
-    (1380, '☯️', 'yin-yang'),
-    (1381, '✝️', 'latin-cross'),
-    (1382, '☦️', 'orthodox-cross'),
-    (1383, '☪️', 'star-and-crescent'),
-    (1384, '☮️', 'peace-symbol'),
-    (1385, '🕎', 'menorah'),
-    (1386, '🔯', 'dotted-six-pointed-star'),
-    (1387, '♈', 'aries'),
-    (1388, '♉', 'taurus'),
-    (1389, '♊', 'gemini'),
-    (1390, '♋', 'cancer'),
-    (1391, '♌', 'leo'),
-    (1392, '♍', 'virgo'),
-    (1393, '♎', 'libra'),
-    (1394, '♏', 'scorpio'),
-    (1395, '♐', 'sagittarius'),
-    (1396, '♑', 'capricorn'),
-    (1397, '♒', 'aquarius'),
-    (1398, '♓', 'pisces'),
-    (1399, '⛎', 'ophiuchus'),
-    (1400, '🔀', 'shuffle-tracks-button'),
-    (1401, '🔁', 'repeat-button'),
-    (1402, '🔂', 'repeat-single-button'),
-    (1403, '▶️', 'play-button'),
-    (1404, '⏩', 'fast-forward-button'),
-    (1405, '⏭️', 'next-track-button'),
-    (1406, '⏯️', 'play-or-pause-button'),
-    (1407, '◀️', 'reverse-button'),
-    (1408, '⏪', 'fast-reverse-button'),
-    (1409, '⏮️', 'last-track-button'),
-    (1410, '🔼', 'upwards-button'),
-    (1411, '⏫', 'fast-up-button'),
-    (1412, '🔽', 'downwards-button'),
-    (1413, '⏬', 'fast-down-button'),
-    (1414, '⏸️', 'pause-button'),
-    (1415, '⏹️', 'stop-button'),
-    (1416, '⏺️', 'record-button'),
-    (1417, '⏏️', 'eject-button'),
-    (1418, '🎦', 'cinema'),
-    (1419, '🔅', 'dim-button'),
-    (1420, '🔆', 'bright-button'),
-    (1421, '📶', 'antenna-bars'),
-    (1422, '📳', 'vibration-mode'),
-    (1423, '📴', 'mobile-phone-off'),
-    (1424, '♀️', 'female-sign'),
-    (1425, '♂️', 'male-sign'),
-    (1426, '⚧️', 'transgender-symbol'),
-    (1427, '✖️', 'multiply'),
-    (1428, '➕', 'plus'),
-    (1429, '➖', 'minus'),
-    (1430, '➗', 'divide'),
-    (1431, '♾️', 'infinity'),
-    (1432, '‼️', 'double-exclamation-mark'),
-    (1433, '⁉️', 'exclamation-question-mark'),
-    (1434, '❓', 'red-question-mark'),
-    (1435, '❔', 'white-question-mark'),
-    (1436, '❕', 'white-exclamation-mark'),
-    (1437, '❗', 'red-exclamation-mark'),
-    (1438, '〰️', 'wavy-dash'),
-    (1439, '💱', 'currency-exchange'),
-    (1440, '💲', 'heavy-dollar-sign'),
-    (1441, '⚕️', 'medical-symbol'),
-    (1442, '♻️', 'recycling-symbol'),
-    (1443, '⚜️', 'fleur-de-lis'),
-    (1444, '🔱', 'trident-emblem'),
-    (1445, '📛', 'name-badge'),
-    (1446, '🔰', 'japanese-symbol-for-beginner'),
-    (1447, '⭕', 'hollow-red-circle'),
-    (1448, '✅', 'check-mark-button'),
-    (1449, '☑️', 'check-box-with-check'),
-    (1450, '✔️', 'check-mark'),
-    (1451, '❌', 'cross-mark'),
-    (1452, '❎', 'cross-mark-button'),
-    (1453, '➰', 'curly-loop'),
-    (1454, '➿', 'double-curly-loop'),
-    (1455, '〽️', 'part-alternation-mark'),
-    (1456, '✳️', 'eight-spoked-asterisk'),
-    (1457, '✴️', 'eight-pointed-star'),
-    (1458, '❇️', 'sparkle'),
-    (1459, '©️', 'copyright'),
-    (1460, '®️', 'registered'),
-    (1461, '™️', 'trade-mark'),
-    (1462, '0️⃣', 'keycap-0'),
-    (1463, '1️⃣', 'keycap-1'),
-    (1464, '2️⃣', 'keycap-2'),
-    (1465, '3️⃣', 'keycap-3'),
-    (1466, '4️⃣', 'keycap-4'),
-    (1467, '5️⃣', 'keycap-5'),
-    (1468, '6️⃣', 'keycap-6'),
-    (1469, '7️⃣', 'keycap-7'),
-    (1470, '8️⃣', 'keycap-8'),
-    (1471, '9️⃣', 'keycap-9'),
-    (1472, '🔟', 'keycap-10'),
-    (1473, '🔠', 'input-latin-uppercase'),
-    (1474, '🔡', 'input-latin-lowercase'),
-    (1475, '🔢', 'input-numbers'),
-    (1476, '🔣', 'input-symbols'),
-    (1477, '🔤', 'input-latin-letters'),
-    (1478, '🅰️', 'a-button-blood-type'),
-    (1479, '🆎', 'ab-button-blood-type'),
-    (1480, '🅱️', 'b-button-blood-type'),
-    (1481, '🆑', 'cl-button'),
-    (1482, '🆒', 'cool-button'),
-    (1483, '🆓', 'free-button'),
-    (1484, 'ℹ️', 'information'),
-    (1485, '🆔', 'id-button'),
-    (1486, 'Ⓜ️', 'circled-m'),
-    (1487, '🆕', 'new-button'),
-    (1488, '🆖', 'ng-button'),
-    (1489, '🅾️', 'o-button-blood-type'),
-    (1490, '🆗', 'ok-button'),
-    (1491, '🅿️', 'p-button'),
-    (1492, '🆘', 'sos-button'),
-    (1493, '🆙', 'up-button'),
-    (1494, '🆚', 'vs-button'),
-    (1495, '🈁', 'japanese-here-button'),
-    (1496, '🈂️', 'japanese-service-charge-button'),
-    (1497, '🈷️', 'japanese-monthly-amount-button'),
-    (1498, '🈶', 'japanese-not-free-of-charge-button'),
-    (1499, '🈯', 'japanese-reserved-button'),
-    (1500, '🉐', 'japanese-bargain-button'),
-    (1501, '🈹', 'japanese-discount-button'),
-    (1502, '🈚', 'japanese-free-of-charge-button'),
-    (1503, '🈲', 'japanese-prohibited-button'),
-    (1504, '🉑', 'japanese-acceptable-button'),
-    (1505, '🈸', 'japanese-application-button'),
-    (1506, '🈴', 'japanese-passing-grade-button'),
-    (1507, '🈳', 'japanese-vacancy-button'),
-    (1508, '㊗️', 'japanese-congratulations-button'),
-    (1509, '㊙️', 'japanese-secret-button'),
-    (1510, '🈺', 'japanese-open-for-business-button'),
-    (1511, '🈵', 'japanese-no-vacancy-button'),
-    (1512, '🔴', 'red-circle'),
-    (1513, '🟠', 'orange-circle'),
-    (1514, '🟡', 'yellow-circle'),
-    (1515, '🟢', 'green-circle'),
-    (1516, '🔵', 'blue-circle'),
-    (1517, '🟣', 'purple-circle'),
-    (1518, '🟤', 'brown-circle'),
-    (1519, '⚫', 'black-circle'),
-    (1520, '⚪', 'white-circle'),
-    (1521, '🟥', 'red-square'),
-    (1522, '🟧', 'orange-square'),
-    (1523, '🟨', 'yellow-square'),
-    (1524, '🟩', 'green-square'),
-    (1525, '🟦', 'blue-square'),
-    (1526, '🟪', 'purple-square'),
-    (1527, '🟫', 'brown-square'),
-    (1528, '⬛', 'black-large-square'),
-    (1529, '⬜', 'white-large-square'),
-    (1530, '◼️', 'black-medium-square'),
-    (1531, '◻️', 'white-medium-square'),
-    (1532, '◾', 'black-medium-small-square'),
-    (1533, '◽', 'white-medium-small-square'),
-    (1534, '▪️', 'black-small-square'),
-    (1535, '▫️', 'white-small-square'),
-    (1536, '🔶', 'large-orange-diamond'),
-    (1537, '🔷', 'large-blue-diamond'),
-    (1538, '🔸', 'small-orange-diamond'),
-    (1539, '🔹', 'small-blue-diamond'),
-    (1540, '🔺', 'red-triangle-pointed-up'),
-    (1541, '🔻', 'red-triangle-pointed-down'),
-    (1542, '💠', 'diamond-with-a-dot'),
-    (1543, '🔘', 'radio-button'),
-    (1544, '🔳', 'white-square-button'),
-    (1545, '🔲', 'black-square-button'),
-    (1546, '🏁', 'chequered-flag'),
-    (1547, '🚩', 'triangular-flag'),
-    (1548, '🎌', 'crossed-flags'),
-    (1549, '🏴', 'black-flag'),
-    (1550, '🏳️', 'white-flag'),
-    (1551, '🏳️‍🌈', 'rainbow-flag'),
-    (1552, '🏳️‍⚧️', 'transgender-flag'),
-    (1553, '🏴‍☠️', 'pirate-flag'),
-    (1554, '🇦🇨', 'flag-ascension-island'),
-    (1555, '🇦🇩', 'flag-andorra'),
-    (1556, '🇦🇪', 'flag-united-arab-emirates'),
-    (1557, '🇦🇫', 'flag-afghanistan'),
-    (1558, '🇦🇬', 'flag-antigua-barbuda'),
-    (1559, '🇦🇮', 'flag-anguilla'),
-    (1560, '🇦🇱', 'flag-albania'),
-    (1561, '🇦🇲', 'flag-armenia'),
-    (1562, '🇦🇴', 'flag-angola'),
-    (1563, '🇦🇶', 'flag-antarctica'),
-    (1564, '🇦🇷', 'flag-argentina'),
-    (1565, '🇦🇸', 'flag-american-samoa'),
-    (1566, '🇦🇹', 'flag-austria'),
-    (1567, '🇦🇺', 'flag-australia'),
-    (1568, '🇦🇼', 'flag-aruba'),
-    (1569, '🇦🇿', 'flag-azerbaijan'),
-    (1570, '🇧🇦', 'flag-bosnia-herzegovina'),
-    (1571, '🇧🇧', 'flag-barbados'),
-    (1572, '🇧🇩', 'flag-bangladesh'),
-    (1573, '🇧🇪', 'flag-belgium'),
-    (1574, '🇧🇫', 'flag-burkina-faso'),
-    (1575, '🇧🇬', 'flag-bulgaria'),
-    (1576, '🇧🇭', 'flag-bahrain'),
-    (1577, '🇧🇮', 'flag-burundi'),
-    (1578, '🇧🇯', 'flag-benin'),
-    (1579, '🇧🇲', 'flag-bermuda'),
-    (1580, '🇧🇳', 'flag-brunei'),
-    (1581, '🇧🇴', 'flag-bolivia'),
-    (1582, '🇧🇶', 'flag-caribbean-netherlands'),
-    (1583, '🇧🇷', 'flag-brazil'),
-    (1584, '🇧🇸', 'flag-bahamas'),
-    (1585, '🇧🇹', 'flag-bhutan'),
-    (1586, '🇧🇻', 'flag-bouvet-island'),
-    (1587, '🇧🇼', 'flag-botswana'),
-    (1588, '🇧🇾', 'flag-belarus'),
-    (1589, '🇧🇿', 'flag-belize'),
-    (1590, '🇨🇦', 'flag-canada'),
-    (1591, '🇨🇨', 'flag-cocos-keeling-islands'),
-    (1592, '🇨🇩', 'flag-congo-kinshasa'),
-    (1593, '🇨🇫', 'flag-central-african-republic'),
-    (1594, '🇨🇬', 'flag-congo-brazzaville'),
-    (1595, '🇨🇭', 'flag-switzerland'),
-    (1596, '🇨🇰', 'flag-cook-islands'),
-    (1597, '🇨🇱', 'flag-chile'),
-    (1598, '🇨🇲', 'flag-cameroon'),
-    (1599, '🇨🇳', 'flag-china'),
-    (1600, '🇨🇴', 'flag-colombia'),
-    (1601, '🇨🇵', 'flag-clipperton-island'),
-    (1602, '🇨🇷', 'flag-costa-rica'),
-    (1603, '🇨🇺', 'flag-cuba'),
-    (1604, '🇨🇻', 'flag-cape-verde'),
-    (1605, '🇨🇽', 'flag-christmas-island'),
-    (1606, '🇨🇾', 'flag-cyprus'),
-    (1607, '🇨🇿', 'flag-czechia'),
-    (1608, '🇩🇪', 'flag-germany'),
-    (1609, '🇩🇬', 'flag-diego-garcia'),
-    (1610, '🇩🇯', 'flag-djibouti'),
-    (1611, '🇩🇰', 'flag-denmark'),
-    (1612, '🇩🇲', 'flag-dominica'),
-    (1613, '🇩🇴', 'flag-dominican-republic'),
-    (1614, '🇩🇿', 'flag-algeria'),
-    (1615, '🇪🇦', 'flag-ceuta-melilla'),
-    (1616, '🇪🇨', 'flag-ecuador'),
-    (1617, '🇪🇪', 'flag-estonia'),
-    (1618, '🇪🇬', 'flag-egypt'),
-    (1619, '🇪🇭', 'flag-western-sahara'),
-    (1620, '🇪🇷', 'flag-eritrea'),
-    (1621, '🇪🇸', 'flag-spain'),
-    (1622, '🇪🇹', 'flag-ethiopia'),
-    (1623, '🇪🇺', 'flag-european-union'),
-    (1624, '🇫🇮', 'flag-finland'),
-    (1625, '🇫🇯', 'flag-fiji'),
-    (1626, '🇫🇰', 'flag-falkland-islands'),
-    (1627, '🇫🇲', 'flag-micronesia'),
-    (1628, '🇫🇴', 'flag-faroe-islands'),
-    (1629, '🇫🇷', 'flag-france'),
-    (1630, '🇬🇦', 'flag-gabon'),
-    (1631, '🇬🇧', 'flag-united-kingdom'),
-    (1632, '🇬🇩', 'flag-grenada'),
-    (1633, '🇬🇪', 'flag-georgia'),
-    (1634, '🇬🇫', 'flag-french-guiana'),
-    (1635, '🇬🇬', 'flag-guernsey'),
-    (1636, '🇬🇭', 'flag-ghana'),
-    (1637, '🇬🇮', 'flag-gibraltar'),
-    (1638, '🇬🇱', 'flag-greenland'),
-    (1639, '🇬🇲', 'flag-gambia'),
-    (1640, '🇬🇳', 'flag-guinea'),
-    (1641, '🇬🇵', 'flag-guadeloupe'),
-    (1642, '🇬🇶', 'flag-equatorial-guinea'),
-    (1643, '🇬🇷', 'flag-greece'),
-    (1644, '🇬🇸', 'flag-south-georgia-south-sandwich-islands'),
-    (1645, '🇬🇹', 'flag-guatemala'),
-    (1646, '🇬🇺', 'flag-guam'),
-    (1647, '🇬🇼', 'flag-guinea-bissau'),
-    (1648, '🇬🇾', 'flag-guyana'),
-    (1649, '🇭🇰', 'flag-hong-kong-sar-china'),
-    (1650, '🇭🇲', 'flag-heard-mcdonald-islands'),
-    (1651, '🇭🇳', 'flag-honduras'),
-    (1652, '🇭🇷', 'flag-croatia'),
-    (1653, '🇭🇹', 'flag-haiti'),
-    (1654, '🇭🇺', 'flag-hungary'),
-    (1655, '🇮🇨', 'flag-canary-islands'),
-    (1656, '🇮🇩', 'flag-indonesia'),
-    (1657, '🇮🇪', 'flag-ireland'),
-    (1658, '🇮🇱', 'flag-israel'),
-    (1659, '🇮🇲', 'flag-isle-of-man'),
-    (1660, '🇮🇳', 'flag-india'),
-    (1661, '🇮🇴', 'flag-british-indian-ocean-territory'),
-    (1662, '🇮🇶', 'flag-iraq'),
-    (1663, '🇮🇷', 'flag-iran'),
-    (1664, '🇮🇸', 'flag-iceland'),
-    (1665, '🇮🇹', 'flag-italy'),
-    (1666, '🇯🇪', 'flag-jersey'),
-    (1667, '🇯🇲', 'flag-jamaica'),
-    (1668, '🇯🇴', 'flag-jordan'),
-    (1669, '🇯🇵', 'flag-japan'),
-    (1670, '🇰🇪', 'flag-kenya'),
-    (1671, '🇰🇬', 'flag-kyrgyzstan'),
-    (1672, '🇰🇭', 'flag-cambodia'),
-    (1673, '🇰🇮', 'flag-kiribati'),
-    (1674, '🇰🇲', 'flag-comoros'),
-    (1675, '🇰🇵', 'flag-north-korea'),
-    (1676, '🇰🇷', 'flag-south-korea'),
-    (1677, '🇰🇼', 'flag-kuwait'),
-    (1678, '🇰🇾', 'flag-cayman-islands'),
-    (1679, '🇰🇿', 'flag-kazakhstan'),
-    (1680, '🇱🇦', 'flag-laos'),
-    (1681, '🇱🇧', 'flag-lebanon'),
-    (1682, '🇱🇮', 'flag-liechtenstein'),
-    (1683, '🇱🇰', 'flag-sri-lanka'),
-    (1684, '🇱🇷', 'flag-liberia'),
-    (1685, '🇱🇸', 'flag-lesotho'),
-    (1686, '🇱🇹', 'flag-lithuania'),
-    (1687, '🇱🇺', 'flag-luxembourg'),
-    (1688, '🇱🇻', 'flag-latvia'),
-    (1689, '🇱🇾', 'flag-libya'),
-    (1690, '🇲🇦', 'flag-morocco'),
-    (1691, '🇲🇨', 'flag-monaco'),
-    (1692, '🇲🇩', 'flag-moldova'),
-    (1693, '🇲🇪', 'flag-montenegro'),
-    (1694, '🇲🇬', 'flag-madagascar'),
-    (1695, '🇲🇭', 'flag-marshall-islands'),
-    (1696, '🇲🇰', 'flag-north-macedonia'),
-    (1697, '🇲🇱', 'flag-mali'),
-    (1698, '🇲🇲', 'flag-myanmar-burma'),
-    (1699, '🇲🇳', 'flag-mongolia'),
-    (1700, '🇲🇴', 'flag-macao-sar-china'),
-    (1701, '🇲🇵', 'flag-northern-mariana-islands'),
-    (1702, '🇲🇶', 'flag-martinique'),
-    (1703, '🇲🇷', 'flag-mauritania'),
-    (1704, '🇲🇸', 'flag-montserrat'),
-    (1705, '🇲🇹', 'flag-malta'),
-    (1706, '🇲🇺', 'flag-mauritius'),
-    (1707, '🇲🇻', 'flag-maldives'),
-    (1708, '🇲🇼', 'flag-malawi'),
-    (1709, '🇲🇽', 'flag-mexico'),
-    (1710, '🇲🇾', 'flag-malaysia'),
-    (1711, '🇲🇿', 'flag-mozambique'),
-    (1712, '🇳🇦', 'flag-namibia'),
-    (1713, '🇳🇨', 'flag-new-caledonia'),
-    (1714, '🇳🇪', 'flag-niger'),
-    (1715, '🇳🇫', 'flag-norfolk-island'),
-    (1716, '🇳🇬', 'flag-nigeria'),
-    (1717, '🇳🇮', 'flag-nicaragua'),
-    (1718, '🇳🇱', 'flag-netherlands'),
-    (1719, '🇳🇴', 'flag-norway'),
-    (1720, '🇳🇵', 'flag-nepal'),
-    (1721, '🇳🇷', 'flag-nauru'),
-    (1722, '🇳🇺', 'flag-niue'),
-    (1723, '🇳🇿', 'flag-new-zealand'),
-    (1724, '🇴🇲', 'flag-oman'),
-    (1725, '🇵🇦', 'flag-panama'),
-    (1726, '🇵🇪', 'flag-peru'),
-    (1727, '🇵🇫', 'flag-french-polynesia'),
-    (1728, '🇵🇬', 'flag-papua-new-guinea'),
-    (1729, '🇵🇭', 'flag-philippines'),
-    (1730, '🇵🇰', 'flag-pakistan'),
-    (1731, '🇵🇱', 'flag-poland'),
-    (1732, '🇵🇳', 'flag-pitcairn-islands'),
-    (1733, '🇵🇷', 'flag-puerto-rico'),
-    (1734, '🇵🇸', 'flag-palestinian-territories'),
-    (1735, '🇵🇹', 'flag-portugal'),
-    (1736, '🇵🇼', 'flag-palau'),
-    (1737, '🇵🇾', 'flag-paraguay'),
-    (1738, '🇶🇦', 'flag-qatar'),
-    (1739, '🇷🇴', 'flag-romania'),
-    (1740, '🇷🇸', 'flag-serbia'),
-    (1741, '🇷🇺', 'flag-russia'),
-    (1742, '🇷🇼', 'flag-rwanda'),
-    (1743, '🇸🇦', 'flag-saudi-arabia'),
-    (1744, '🇸🇧', 'flag-solomon-islands'),
-    (1745, '🇸🇨', 'flag-seychelles'),
-    (1746, '🇸🇩', 'flag-sudan'),
-    (1747, '🇸🇪', 'flag-sweden'),
-    (1748, '🇸🇬', 'flag-singapore'),
-    (1749, '🇸🇮', 'flag-slovenia'),
-    (1750, '🇸🇯', 'flag-svalbard-jan-mayen'),
-    (1751, '🇸🇰', 'flag-slovakia'),
-    (1752, '🇸🇱', 'flag-sierra-leone'),
-    (1753, '🇸🇲', 'flag-san-marino'),
-    (1754, '🇸🇳', 'flag-senegal'),
-    (1755, '🇸🇴', 'flag-somalia'),
-    (1756, '🇸🇷', 'flag-suriname'),
-    (1757, '🇸🇸', 'flag-south-sudan'),
-    (1758, '🇸🇻', 'flag-el-salvador'),
-    (1759, '🇸🇽', 'flag-sint-maarten'),
-    (1760, '🇸🇾', 'flag-syria'),
-    (1761, '🇸🇿', 'flag-eswatini'),
-    (1762, '🇹🇦', 'flag-tristan-da-cunha'),
-    (1763, '🇹🇨', 'flag-turks-caicos-islands'),
-    (1764, '🇹🇩', 'flag-chad'),
-    (1765, '🇹🇫', 'flag-french-southern-territories'),
-    (1766, '🇹🇬', 'flag-togo'),
-    (1767, '🇹🇭', 'flag-thailand'),
-    (1768, '🇹🇯', 'flag-tajikistan'),
-    (1769, '🇹🇰', 'flag-tokelau'),
-    (1770, '🇹🇱', 'flag-timor-leste'),
-    (1771, '🇹🇲', 'flag-turkmenistan'),
-    (1772, '🇹🇳', 'flag-tunisia'),
-    (1773, '🇹🇴', 'flag-tonga'),
-    (1774, '🇹🇷', 'flag-turkey'),
-    (1775, '🇹🇹', 'flag-trinidad-tobago'),
-    (1776, '🇹🇻', 'flag-tuvalu'),
-    (1777, '🇹🇼', 'flag-taiwan'),
-    (1778, '🇹🇿', 'flag-tanzania'),
-    (1779, '🇺🇦', 'flag-ukraine'),
-    (1780, '🇺🇬', 'flag-uganda'),
-    (1782, '🇺🇳', 'flag-united-nations'),
-    (1783, '🇺🇸', 'flag-united-states'),
-    (1784, '🇺🇾', 'flag-uruguay'),
-    (1785, '🇺🇿', 'flag-uzbekistan'),
-    (1786, '🇻🇦', 'flag-vatican-city'),
-    (1787, '🇻🇪', 'flag-venezuela'),
-    (1788, '🇻🇬', 'flag-british-virgin-islands'),
-    (1790, '🇻🇳', 'flag-vietnam'),
-    (1791, '🇻🇺', 'flag-vanuatu'),
-    (1792, '🇼🇫', 'flag-wallis-futuna'),
-    (1793, '🇼🇸', 'flag-samoa'),
-    (1794, '🇽🇰', 'flag-kosovo'),
-    (1795, '🇾🇪', 'flag-yemen'),
-    (1796, '🇾🇹', 'flag-mayotte'),
-    (1797, '🇿🇦', 'flag-south-africa'),
-    (1798, '🇿🇲', 'flag-zambia'),
-    (1799, '🇿🇼', 'flag-zimbabwe'),
-    (1800, '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'flag-england'),
-    (1801, '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'flag-scotland'),
-    (1802, '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'flag-wales');
 
     -- --------------------------------------------------------
 
@@ -2506,9 +940,25 @@ if (isset($_POST['submit'])) {
       `forum_section` int UNSIGNED NOT NULL,
       `forum_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `forum_description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `forum_color` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `forum_icon` varchar(64) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
       `forum_order` int UNSIGNED NOT NULL DEFAULT '1',
       `forum_threads` int UNSIGNED NOT NULL DEFAULT '0',
       `forum_replies` int UNSIGNED NOT NULL DEFAULT '0'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `forums_likes`
+    --
+
+    CREATE TABLE `forums_likes` (
+      `id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `node_id` int UNSIGNED NOT NULL,
+      `node_type` enum('thread','reply') COLLATE utf8mb4_general_ci NOT NULL,
+      `time` datetime NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -2521,7 +971,9 @@ if (isset($_POST['submit'])) {
       `reply_id` int UNSIGNED NOT NULL,
       `thread_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
+      `reply_to_id` int UNSIGNED DEFAULT NULL,
       `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `likes` int UNSIGNED NOT NULL DEFAULT '0',
       `time` datetime NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
@@ -2539,8 +991,12 @@ if (isset($_POST['submit'])) {
       `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `replies` int UNSIGNED NOT NULL DEFAULT '0',
       `views` int UNSIGNED NOT NULL DEFAULT '0',
+      `likes` int UNSIGNED NOT NULL DEFAULT '0',
       `time` datetime NOT NULL,
-      `last_reply` datetime DEFAULT NULL
+      `last_reply` datetime DEFAULT NULL,
+      `last_reply_user_id` int UNSIGNED DEFAULT NULL,
+      `is_pinned` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `is_locked` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -2555,6 +1011,34 @@ if (isset($_POST['submit'])) {
       `user_two_id` int UNSIGNED NOT NULL,
       `status` tinyint(1) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `funding_categories`
+    --
+
+    CREATE TABLE `funding_categories` (
+      `category_id` int UNSIGNED NOT NULL,
+      `category_parent_id` int UNSIGNED NOT NULL,
+      `category_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `category_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `category_order` int UNSIGNED NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    --
+    -- Dumping data for table `funding_categories`
+    --
+
+    INSERT INTO `funding_categories` (`category_id`, `category_parent_id`, `category_name`, `category_description`, `category_order`) VALUES
+    (1, 0, 'Medical', '', 1),
+    (2, 0, 'Education', '', 2),
+    (3, 0, 'Community', '', 3),
+    (4, 0, 'Animals', '', 4),
+    (5, 0, 'Environment', '', 5),
+    (6, 0, 'Emergency', '', 6),
+    (7, 0, 'Creative', '', 7),
+    (8, 0, 'Other', '', 8);
 
     -- --------------------------------------------------------
 
@@ -2623,7 +1107,11 @@ if (isset($_POST['submit'])) {
     (16, 'TV Show', '', 16),
     (17, 'Thriller', '', 17),
     (18, 'War', '', 18),
-    (19, 'Others', '', 19);
+    (19, 'Others', '', 19),
+    (20, 'Multiplayer', 'Multiplayer games', 20),
+    (21, 'Racing', 'Racing games', 21),
+    (22, 'Shooter', 'Shooter games', 22),
+    (23, 'Puzzle', 'Puzzle games', 23);
 
     -- --------------------------------------------------------
 
@@ -2811,6 +1299,29 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `iyzico_payments`
+    --
+
+    CREATE TABLE `iyzico_payments` (
+      `payment_id` int UNSIGNED NOT NULL,
+      `payment_status` enum('pending','paid','failed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
+      `user_id` int UNSIGNED NOT NULL,
+      `handle` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `reference_id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `amount` float NOT NULL,
+      `total_amount` float NOT NULL,
+      `currency` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `promo_code` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `iyzico_conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `iyzico_token` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `iyzico_payment_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `created_at` datetime NOT NULL,
+      `updated_at` datetime DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `jobs_categories`
     --
 
@@ -2850,6 +1361,85 @@ if (isset($_POST['submit'])) {
     (21, 0, 'Sports &amp; Entertainment', '', 21),
     (22, 0, 'Transportation', '', 22),
     (23, 0, 'Other', '', 23);
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `live_ingresses`
+    --
+
+    CREATE TABLE `live_ingresses` (
+      `user_id` int UNSIGNED NOT NULL,
+      `ingress_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `ingress_url` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `stream_key` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `ingress_room` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `live_moderation_log`
+    --
+
+    CREATE TABLE `live_moderation_log` (
+      `log_id` int UNSIGNED NOT NULL,
+      `host_type` enum('user','page') COLLATE utf8mb4_general_ci NOT NULL,
+      `host_id` int UNSIGNED NOT NULL,
+      `post_id` int UNSIGNED NOT NULL,
+      `moderator_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `action` varchar(32) COLLATE utf8mb4_general_ci NOT NULL,
+      `details` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `live_moderation_settings`
+    --
+
+    CREATE TABLE `live_moderation_settings` (
+      `host_type` enum('user','page') COLLATE utf8mb4_general_ci NOT NULL,
+      `host_id` int UNSIGNED NOT NULL,
+      `slow_mode` smallint UNSIGNED NOT NULL DEFAULT '0',
+      `blocked_words` text COLLATE utf8mb4_general_ci,
+      `links_blocked` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `repeats_blocked` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `rules` text COLLATE utf8mb4_general_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `live_moderators`
+    --
+
+    CREATE TABLE `live_moderators` (
+      `host_type` enum('user','page') COLLATE utf8mb4_general_ci NOT NULL,
+      `host_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `live_restrictions`
+    --
+
+    CREATE TABLE `live_restrictions` (
+      `host_type` enum('user','page') COLLATE utf8mb4_general_ci NOT NULL,
+      `host_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `type` enum('timeout','mute','kick','ban') COLLATE utf8mb4_general_ci NOT NULL,
+      `post_id` int UNSIGNED NOT NULL,
+      `expires_at` datetime DEFAULT NULL,
+      `moderator_id` int UNSIGNED NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
@@ -2894,22 +1484,6 @@ if (isset($_POST['submit'])) {
       `points` float NOT NULL,
       `is_added` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `time` datetime NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
-
-    -- --------------------------------------------------------
-
-    --
-    -- Table structure for table `log_sessions`
-    --
-
-    CREATE TABLE `log_sessions` (
-      `session_id` int UNSIGNED NOT NULL,
-      `session_date` datetime NOT NULL,
-      `session_type` enum('W','A','I') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'W',
-      `session_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-      `session_user_agent` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-      `user_browser` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-      `user_os` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -3127,7 +1701,9 @@ if (isset($_POST['submit'])) {
     (15, 'Sport', '', 15),
     (16, 'TV Show', '', 16),
     (17, 'Thriller', '', 17),
-    (18, 'War', '', 18);
+    (18, 'War', '', 18),
+    (19, 'Science Fiction', 'Science Fiction movies', 19),
+    (20, 'Mystery', 'Mystery movies', 20);
 
     -- --------------------------------------------------------
 
@@ -3250,6 +1826,7 @@ if (isset($_POST['submit'])) {
       `custom_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `package_order` int UNSIGNED NOT NULL DEFAULT '1',
       `package_hidden` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `package_popular` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `verification_badge_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `package_permissions_group_id` int UNSIGNED NOT NULL DEFAULT '0',
       `allowed_blogs_categories` int NOT NULL DEFAULT '0',
@@ -3265,7 +1842,13 @@ if (isset($_POST['submit'])) {
       `boost_events_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `boost_events` int UNSIGNED NOT NULL,
       `paypal_billing_plan` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-      `stripe_billing_plan` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
+      `stripe_billing_plan` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `dating_unlimited_swipes_enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `dating_likes_list_enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `dating_rewind_enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `dating_incognito_enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `dating_super_likes` int UNSIGNED NOT NULL DEFAULT '0',
+      `dating_boosts` int UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -3305,12 +1888,15 @@ if (isset($_POST['submit'])) {
       `page_pinned_post` int UNSIGNED DEFAULT NULL,
       `page_verified` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `page_tips_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `page_messages_enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `page_boosted` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `page_boosted_by` int UNSIGNED DEFAULT NULL,
       `page_company` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `page_phone` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `page_website` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `page_location` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `page_latitude` decimal(10,7) DEFAULT NULL,
+      `page_longitude` decimal(10,7) DEFAULT NULL,
       `page_country` int UNSIGNED NOT NULL,
       `page_language` int UNSIGNED NOT NULL,
       `page_description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -3388,6 +1974,21 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `pages_conversations`
+    --
+
+    CREATE TABLE `pages_conversations` (
+      `id` int UNSIGNED NOT NULL,
+      `page_id` int UNSIGNED NOT NULL,
+      `conversation_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `seen` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
+      `typing` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `pages_invites`
     --
 
@@ -3440,9 +2041,11 @@ if (isset($_POST['submit'])) {
       `ai_images_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `stories_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `comments_permission` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `schedule_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `anonymous_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `collaborative_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `rich_text_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `colored_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `activity_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `polls_posts_permission` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
@@ -3481,16 +2084,38 @@ if (isset($_POST['submit'])) {
       `affiliates_per_user_10` float UNSIGNED NOT NULL DEFAULT '0',
       `affiliates_percentage_10` float UNSIGNED NOT NULL DEFAULT '0',
       `custom_points_system` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `points_per_currency` int UNSIGNED NOT NULL DEFAULT '100'
+      `points_per_currency` int UNSIGNED NOT NULL DEFAULT '100',
+      `dating_permission` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     --
     -- Dumping data for table `permissions_groups`
     --
 
-    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `ai_posts_permission`, `ai_blogs_permission`, `ai_images_permission`, `stories_permission`, `posts_permission`, `schedule_posts_permission`, `anonymous_posts_permission`, `collaborative_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `affiliates_per_user_6`, `affiliates_percentage_6`, `affiliates_per_user_7`, `affiliates_percentage_7`, `affiliates_per_user_8`, `affiliates_percentage_8`, `affiliates_per_user_9`, `affiliates_percentage_9`, `affiliates_per_user_10`, `affiliates_percentage_10`, `custom_points_system`, `points_per_currency`) VALUES
-    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100),
-    (2, 'Verified Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100);
+    INSERT INTO `permissions_groups` (`permissions_group_id`, `permissions_group_title`, `pages_permission`, `groups_permission`, `events_permission`, `reels_permission`, `watch_permission`, `blogs_permission`, `blogs_permission_read`, `market_permission`, `offers_permission`, `offers_permission_read`, `jobs_permission`, `courses_permission`, `forums_permission`, `movies_permission`, `games_permission`, `gifts_permission`, `ai_posts_permission`, `ai_blogs_permission`, `ai_images_permission`, `stories_permission`, `posts_permission`, `comments_permission`, `schedule_posts_permission`, `anonymous_posts_permission`, `collaborative_posts_permission`, `rich_text_posts_permission`, `colored_posts_permission`, `activity_posts_permission`, `polls_posts_permission`, `geolocation_posts_permission`, `gif_posts_permission`, `invitation_permission`, `audio_call_permission`, `video_call_permission`, `live_permission`, `videos_upload_permission`, `audios_upload_permission`, `files_upload_permission`, `ads_permission`, `funding_permission`, `monetization_permission`, `tips_permission`, `custom_affiliates_system`, `affiliates_per_user`, `affiliates_percentage`, `affiliates_per_user_2`, `affiliates_percentage_2`, `affiliates_per_user_3`, `affiliates_percentage_3`, `affiliates_per_user_4`, `affiliates_percentage_4`, `affiliates_per_user_5`, `affiliates_percentage_5`, `affiliates_per_user_6`, `affiliates_percentage_6`, `affiliates_per_user_7`, `affiliates_percentage_7`, `affiliates_per_user_8`, `affiliates_percentage_8`, `affiliates_per_user_9`, `affiliates_percentage_9`, `affiliates_per_user_10`, `affiliates_percentage_10`, `custom_points_system`, `points_per_currency`, `dating_permission`) VALUES
+    (1, 'Users Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100, '1'),
+    (2, 'Verified Permissions', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0', 100, '1');
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `plisio_payments`
+    --
+
+    CREATE TABLE `plisio_payments` (
+      `payment_id` int UNSIGNED NOT NULL,
+      `payment_status` enum('pending','paid','failed') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
+      `user_id` int UNSIGNED NOT NULL,
+      `handle` varchar(64) COLLATE utf8mb4_general_ci NOT NULL,
+      `reference_id` varchar(256) COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `amount` float NOT NULL,
+      `total_amount` float NOT NULL,
+      `currency` varchar(8) COLLATE utf8mb4_general_ci NOT NULL,
+      `plisio_hash` varchar(128) COLLATE utf8mb4_general_ci NOT NULL,
+      `plisio_txn_id` varchar(128) COLLATE utf8mb4_general_ci NOT NULL,
+      `created_at` datetime NOT NULL,
+      `updated_at` datetime DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
 
@@ -3533,6 +2158,8 @@ if (isset($_POST['submit'])) {
       `origin_id` int UNSIGNED DEFAULT NULL,
       `time` datetime NOT NULL,
       `location` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `location_latitude` decimal(10,7) DEFAULT NULL,
+      `location_longitude` decimal(10,7) DEFAULT NULL,
       `privacy` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `feeling_action` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -3568,7 +2195,8 @@ if (isset($_POST['submit'])) {
       `pre_approved` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `has_approved` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `post_latitude` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `post_longitude` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
+      `post_longitude` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `photo_layout` varchar(16) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'classic'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -3680,6 +2308,7 @@ if (isset($_POST['submit'])) {
       `user_type` enum('user','page') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `gif` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `voice_note` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `time` datetime NOT NULL,
       `reaction_like_count` int UNSIGNED NOT NULL DEFAULT '0',
@@ -3754,7 +2383,9 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `posts_files` (
       `file_id` int UNSIGNED NOT NULL,
       `post_id` int UNSIGNED NOT NULL,
-      `source` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+      `source` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `name` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `size` bigint UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -3770,7 +2401,8 @@ if (isset($_POST['submit'])) {
       `amount` float NOT NULL DEFAULT '0',
       `raised_amount` float NOT NULL DEFAULT '0',
       `total_donations` int NOT NULL DEFAULT '0',
-      `cover_image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+      `cover_image` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `category_id` int UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -3882,15 +2514,53 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `posts_live` (
       `live_id` int UNSIGNED NOT NULL,
       `post_id` int UNSIGNED NOT NULL,
+      `category_id` int UNSIGNED NOT NULL DEFAULT '0',
+      `live_title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `broadcast_type` enum('camera','rtmp') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'camera',
+      `live_provider` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'agora',
       `video_thumbnail` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `agora_uid` int NOT NULL,
       `agora_channel_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `agora_resource_id` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `agora_sid` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `agora_file` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `livekit_room` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `livekit_egress_id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `livekit_file` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
       `live_ended` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `live_recorded` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
+      `live_recorded` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `livekit_ingress_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `posts_live_categories`
+    --
+
+    CREATE TABLE `posts_live_categories` (
+      `category_id` int UNSIGNED NOT NULL,
+      `category_parent_id` int UNSIGNED NOT NULL,
+      `category_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `category_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `category_order` int UNSIGNED NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    --
+    -- Dumping data for table `posts_live_categories`
+    --
+
+    INSERT INTO `posts_live_categories` (`category_id`, `category_parent_id`, `category_name`, `category_description`, `category_order`) VALUES
+    (1, 0, 'Social &amp; Talk', 'Conversations, Q&amp;A, hanging out, discussions', 1),
+    (2, 0, 'Gaming', 'Gameplay, esports, game discussions', 2),
+    (3, 0, 'Music', 'Performances, DJ sets, singing, instruments', 3),
+    (4, 0, 'Sports', 'Matches, commentary, workouts, sports discussions', 4),
+    (5, 0, 'Entertainment', 'Shows, performances, reactions, events', 5),
+    (6, 0, 'Creative', 'Art, design, photography, crafts, making things', 6),
+    (7, 0, 'Learning', 'Tutorials, classes, coding, educational streams', 7),
+    (8, 0, 'Lifestyle', 'Cooking, travel, fitness, beauty, daily life', 8),
+    (9, 0, 'News &amp; Events', 'Conferences, announcements, public events', 9),
+    (10, 0, 'Other', 'Anything that doesn\'t fit elsewhere', 10);
 
     -- --------------------------------------------------------
 
@@ -3901,8 +2571,21 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `posts_live_users` (
       `id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
-      `post_id` int UNSIGNED NOT NULL
+      `post_id` int UNSIGNED NOT NULL,
+      `media_id` varchar(64) COLLATE utf8mb4_general_ci NOT NULL DEFAULT ''
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `posts_locations`
+    --
+
+    CREATE TABLE `posts_locations` (
+      `post_id` int UNSIGNED NOT NULL,
+      `post_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `location` point NOT NULL /*!80003 SRID 0 */
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
@@ -3992,7 +2675,8 @@ if (isset($_POST['submit'])) {
       `reaction_wow_count` int UNSIGNED NOT NULL DEFAULT '0',
       `reaction_sad_count` int UNSIGNED NOT NULL DEFAULT '0',
       `reaction_angry_count` int UNSIGNED NOT NULL DEFAULT '0',
-      `comments` int UNSIGNED NOT NULL DEFAULT '0'
+      `comments` int UNSIGNED NOT NULL DEFAULT '0',
+      `sort_order` int UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -4037,7 +2721,8 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `posts_polls` (
       `poll_id` int UNSIGNED NOT NULL,
       `post_id` int UNSIGNED NOT NULL,
-      `votes` int UNSIGNED NOT NULL DEFAULT '0'
+      `votes` int UNSIGNED NOT NULL DEFAULT '0',
+      `edit_locked` tinyint UNSIGNED NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -4125,6 +2810,18 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `posts_rich_text`
+    --
+
+    CREATE TABLE `posts_rich_text` (
+      `rich_text_id` int UNSIGNED NOT NULL,
+      `post_id` int UNSIGNED NOT NULL,
+      `text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `posts_saved`
     --
 
@@ -4133,6 +2830,18 @@ if (isset($_POST['submit'])) {
       `post_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
       `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `posts_search`
+    --
+
+    CREATE TABLE `posts_search` (
+      `post_id` int UNSIGNED NOT NULL,
+      `search_text` mediumtext COLLATE utf8mb4_general_ci NOT NULL,
+      `search_body` mediumtext COLLATE utf8mb4_general_ci NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
@@ -4154,6 +2863,8 @@ if (isset($_POST['submit'])) {
       `source_1440p` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `source_2160p` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `thumbnail` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `width` smallint UNSIGNED DEFAULT NULL,
+      `height` smallint UNSIGNED DEFAULT NULL,
       `views` int NOT NULL DEFAULT '0'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
@@ -4300,6 +3011,22 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `sitemaps`
+    --
+
+    CREATE TABLE `sitemaps` (
+      `sitemap_type` varchar(32) COLLATE utf8mb4_general_ci NOT NULL,
+      `sitemap_part` int UNSIGNED NOT NULL,
+      `urls` int UNSIGNED NOT NULL DEFAULT '0',
+      `last_id` int UNSIGNED NOT NULL DEFAULT '0',
+      `notified_id` int UNSIGNED NOT NULL DEFAULT '0',
+      `last_modified` datetime DEFAULT NULL,
+      `generated_at` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `sneak_peaks`
     --
 
@@ -4385,24 +3112,129 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `stories` (
       `story_id` int UNSIGNED NOT NULL,
       `user_id` int UNSIGNED NOT NULL,
-      `is_ads` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
-      `time` datetime NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+      `origin_id` int UNSIGNED DEFAULT NULL,
+      `type` enum('photo','video','text') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'photo',
+      `source` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `thumbnail` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `background` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `filter` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `drawing` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `layers` mediumtext COLLATE utf8mb4_general_ci,
+      `duration` smallint UNSIGNED NOT NULL DEFAULT '0',
+      `music_id` int UNSIGNED DEFAULT NULL,
+      `music_start` smallint UNSIGNED NOT NULL DEFAULT '0',
+      `privacy` enum('public','friends','close_friends') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
+      `is_ads` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `highlighted` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `views_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `reactions_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `replies_count` int UNSIGNED NOT NULL DEFAULT '0',
+      `poll_votes_1` int UNSIGNED NOT NULL DEFAULT '0',
+      `poll_votes_2` int UNSIGNED NOT NULL DEFAULT '0',
+      `time` datetime NOT NULL,
+      `expires_at` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
     --
-    -- Table structure for table `stories_media`
+    -- Table structure for table `stories_audience`
     --
 
-    CREATE TABLE `stories_media` (
-      `media_id` int UNSIGNED NOT NULL,
-      `story_id` int UNSIGNED NOT NULL,
-      `source` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-      `is_photo` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
-      `text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+    CREATE TABLE `stories_audience` (
+      `id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `target_id` int UNSIGNED NOT NULL,
+      `type` enum('close','hidden') COLLATE utf8mb4_general_ci NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_highlights`
+    --
+
+    CREATE TABLE `stories_highlights` (
+      `highlight_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `title` varchar(128) COLLATE utf8mb4_general_ci NOT NULL,
+      `cover_story_id` int UNSIGNED DEFAULT NULL,
       `time` datetime NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_highlights_items`
+    --
+
+    CREATE TABLE `stories_highlights_items` (
+      `id` int UNSIGNED NOT NULL,
+      `highlight_id` int UNSIGNED NOT NULL,
+      `story_id` int UNSIGNED NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_music`
+    --
+
+    CREATE TABLE `stories_music` (
+      `music_id` int UNSIGNED NOT NULL,
+      `provider` enum('library','itunes') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'library',
+      `provider_id` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `title` varchar(256) COLLATE utf8mb4_general_ci NOT NULL,
+      `artist` varchar(256) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `cover` varchar(512) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `source` varchar(512) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `url` varchar(512) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `uses` int UNSIGNED NOT NULL DEFAULT '0',
+      `enabled` enum('0','1') COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
+      `time` datetime NOT NULL,
+      `updated_at` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_polls_votes`
+    --
+
+    CREATE TABLE `stories_polls_votes` (
+      `id` int UNSIGNED NOT NULL,
+      `story_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `option` tinyint UNSIGNED NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_reactions`
+    --
+
+    CREATE TABLE `stories_reactions` (
+      `id` int UNSIGNED NOT NULL,
+      `story_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `reaction` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'like',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `stories_views`
+    --
+
+    CREATE TABLE `stories_views` (
+      `view_id` int UNSIGNED NOT NULL,
+      `story_id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
@@ -4460,6 +3292,7 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `system_countries` (
       `country_id` int UNSIGNED NOT NULL,
       `country_code` varchar(2) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `country_flag` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
       `country_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `phone_code` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `country_vat` float UNSIGNED DEFAULT NULL,
@@ -4472,252 +3305,252 @@ if (isset($_POST['submit'])) {
     -- Dumping data for table `system_countries`
     --
 
-    INSERT INTO `system_countries` (`country_id`, `country_code`, `country_name`, `phone_code`, `country_vat`, `default`, `enabled`, `country_order`) VALUES
-    (1, 'AF', 'Afghanistan', '+93', NULL, '0', '1', 1),
-    (2, 'AL', 'Albania', '+355', NULL, '0', '1', 2),
-    (3, 'DZ', 'Algeria', '+213', NULL, '0', '1', 3),
-    (4, 'DS', 'American Samoa', '+1684', NULL, '0', '1', 4),
-    (5, 'AD', 'Andorra', '+376', NULL, '0', '1', 5),
-    (6, 'AO', 'Angola', '+244', NULL, '0', '1', 6),
-    (7, 'AI', 'Anguilla', '+1264', NULL, '0', '1', 7),
-    (8, 'AQ', 'Antarctica', '+672', NULL, '0', '1', 8),
-    (9, 'AG', 'Antigua and Barbuda', '+1268', NULL, '0', '1', 9),
-    (10, 'AR', 'Argentina', '+54', NULL, '0', '1', 10),
-    (11, 'AM', 'Armenia', '+374', NULL, '0', '1', 11),
-    (12, 'AW', 'Aruba', '+297', NULL, '0', '1', 12),
-    (13, 'AU', 'Australia', '+61', NULL, '0', '1', 13),
-    (14, 'AT', 'Austria', '+43', NULL, '0', '1', 14),
-    (15, 'AZ', 'Azerbaijan', '+994', NULL, '0', '1', 15),
-    (16, 'BS', 'Bahamas', '+1242', NULL, '0', '1', 16),
-    (17, 'BH', 'Bahrain', '+973', NULL, '0', '1', 17),
-    (18, 'BD', 'Bangladesh', '+880', NULL, '0', '1', 18),
-    (19, 'BB', 'Barbados', '+1246', NULL, '0', '1', 19),
-    (20, 'BY', 'Belarus', '+375', NULL, '0', '1', 20),
-    (21, 'BE', 'Belgium', '+32', NULL, '0', '1', 21),
-    (22, 'BZ', 'Belize', '+501', NULL, '0', '1', 22),
-    (23, 'BJ', 'Benin', '+229', NULL, '0', '1', 23),
-    (24, 'BM', 'Bermuda', '+1441', NULL, '0', '1', 24),
-    (25, 'BT', 'Bhutan', '+975', NULL, '0', '1', 25),
-    (26, 'BO', 'Bolivia', '+591', NULL, '0', '1', 26),
-    (27, 'BA', 'Bosnia and Herzegovina', '+387', NULL, '0', '1', 27),
-    (28, 'BW', 'Botswana', '+267', NULL, '0', '1', 28),
-    (29, 'BV', 'Bouvet Island', '+55', NULL, '0', '1', 29),
-    (30, 'BR', 'Brazil', '+55', NULL, '0', '1', 30),
-    (31, 'IO', 'British Indian Ocean Territory', '+246', NULL, '0', '1', 31),
-    (32, 'BN', 'Brunei Darussalam', '+673', NULL, '0', '1', 32),
-    (33, 'BG', 'Bulgaria', '+359', NULL, '0', '1', 33),
-    (34, 'BF', 'Burkina Faso', '+226', NULL, '0', '1', 34),
-    (35, 'BI', 'Burundi', '+257', NULL, '0', '1', 35),
-    (36, 'KH', 'Cambodia', '+855', NULL, '0', '1', 36),
-    (37, 'CM', 'Cameroon', '+237', NULL, '0', '1', 37),
-    (38, 'CA', 'Canada', '+1', NULL, '0', '1', 38),
-    (39, 'CV', 'Cape Verde', '+238', NULL, '0', '1', 39),
-    (40, 'KY', 'Cayman Islands', '+ 345', NULL, '0', '1', 40),
-    (41, 'CF', 'Central African Republic', '+236', NULL, '0', '1', 41),
-    (42, 'TD', 'Chad', '+235', NULL, '0', '1', 42),
-    (43, 'CL', 'Chile', '+56', NULL, '0', '1', 43),
-    (44, 'CN', 'China', '+86', NULL, '0', '1', 44),
-    (45, 'CX', 'Christmas Island', '+61', NULL, '0', '1', 45),
-    (46, 'CC', 'Cocos (Keeling) Islands', '+61', NULL, '0', '1', 46),
-    (47, 'CO', 'Colombia', '+57', NULL, '0', '1', 47),
-    (48, 'KM', 'Comoros', '+269', NULL, '0', '1', 48),
-    (49, 'CG', 'Congo', '+242', NULL, '0', '1', 49),
-    (50, 'CK', 'Cook Islands', '+682', NULL, '0', '1', 50),
-    (51, 'CR', 'Costa Rica', '+506', NULL, '0', '1', 51),
-    (52, 'HR', 'Croatia (Hrvatska)', '+385', NULL, '0', '1', 52),
-    (53, 'CU', 'Cuba', '+53', NULL, '0', '1', 53),
-    (54, 'CY', 'Cyprus', '+357', NULL, '0', '1', 54),
-    (55, 'CZ', 'Czech Republic', '+420', NULL, '0', '1', 55),
-    (56, 'DK', 'Denmark', '+45', NULL, '0', '1', 56),
-    (57, 'DJ', 'Djibouti', '+253', NULL, '0', '1', 57),
-    (58, 'DM', 'Dominica', '+1767', NULL, '0', '1', 58),
-    (59, 'DO', 'Dominican Republic', '+1849', NULL, '0', '1', 59),
-    (60, 'TP', 'East Timor', NULL, NULL, '0', '1', 60),
-    (61, 'EC', 'Ecuador', '+593', NULL, '0', '1', 61),
-    (62, 'EG', 'Egypt', '+20', NULL, '0', '1', 62),
-    (63, 'SV', 'El Salvador', '+503', NULL, '0', '1', 63),
-    (64, 'GQ', 'Equatorial Guinea', '+240', NULL, '0', '1', 64),
-    (65, 'ER', 'Eritrea', '+291', NULL, '0', '1', 65),
-    (66, 'EE', 'Estonia', '+372', NULL, '0', '1', 66),
-    (67, 'ET', 'Ethiopia', '+251', NULL, '0', '1', 67),
-    (68, 'FK', 'Falkland Islands (Malvinas)', '+500', NULL, '0', '1', 68),
-    (69, 'FO', 'Faroe Islands', '+298', NULL, '0', '1', 69),
-    (70, 'FJ', 'Fiji', '+679', NULL, '0', '1', 70),
-    (71, 'FI', 'Finland', '+358', NULL, '0', '1', 71),
-    (72, 'FR', 'France', '+33', NULL, '0', '1', 72),
-    (73, 'FX', 'France, Metropolitan', NULL, NULL, '0', '1', 73),
-    (74, 'GF', 'French Guiana', '+594', NULL, '0', '1', 74),
-    (75, 'PF', 'French Polynesia', '+689', NULL, '0', '1', 75),
-    (76, 'TF', 'French Southern Territories', '+262', NULL, '0', '1', 76),
-    (77, 'GA', 'Gabon', '+241', NULL, '0', '1', 77),
-    (78, 'GM', 'Gambia', '+220', NULL, '0', '1', 78),
-    (79, 'GE', 'Georgia', '+995', NULL, '0', '1', 79),
-    (80, 'DE', 'Germany', '+49', NULL, '0', '1', 80),
-    (81, 'GH', 'Ghana', '+233', NULL, '0', '1', 81),
-    (82, 'GI', 'Gibraltar', '+350', NULL, '0', '1', 82),
-    (83, 'GK', 'Guernsey', '+44', NULL, '0', '1', 83),
-    (84, 'GR', 'Greece', '+30', NULL, '0', '1', 84),
-    (85, 'GL', 'Greenland', '+299', NULL, '0', '1', 85),
-    (86, 'GD', 'Grenada', '+1473', NULL, '0', '1', 86),
-    (87, 'GP', 'Guadeloupe', '+590', NULL, '0', '1', 87),
-    (88, 'GU', 'Guam', '+1671', NULL, '0', '1', 88),
-    (89, 'GT', 'Guatemala', '+502', NULL, '0', '1', 89),
-    (90, 'GN', 'Guinea', '+224', NULL, '0', '1', 90),
-    (91, 'GW', 'Guinea-Bissau', '+245', NULL, '0', '1', 91),
-    (92, 'GY', 'Guyana', '+595', NULL, '0', '1', 92),
-    (93, 'HT', 'Haiti', '+509', NULL, '0', '1', 93),
-    (94, 'HM', 'Heard and Mc Donald Islands', NULL, NULL, '0', '1', 94),
-    (95, 'HN', 'Honduras', '+504', NULL, '0', '1', 95),
-    (96, 'HK', 'Hong Kong', '+852', NULL, '0', '1', 96),
-    (97, 'HU', 'Hungary', '+36', NULL, '0', '1', 97),
-    (98, 'IS', 'Iceland', '+354', NULL, '0', '1', 98),
-    (99, 'IN', 'India', '+91', NULL, '0', '1', 99),
-    (100, 'IM', 'Isle of Man', '+44', NULL, '0', '1', 100),
-    (101, 'ID', 'Indonesia', '+62', NULL, '0', '1', 101),
-    (102, 'IR', 'Iran (Islamic Republic of)', '+98', NULL, '0', '1', 102),
-    (103, 'IQ', 'Iraq', '+964', NULL, '0', '1', 103),
-    (104, 'IE', 'Ireland', '+353', NULL, '0', '1', 104),
-    (105, 'IL', 'Israel', '+972', NULL, '0', '1', 105),
-    (106, 'IT', 'Italy', '+39', NULL, '0', '1', 106),
-    (107, 'CI', 'Ivory Coast', NULL, NULL, '0', '1', 107),
-    (108, 'JE', 'Jersey', '+44', NULL, '0', '1', 108),
-    (109, 'JM', 'Jamaica', '+1876', NULL, '0', '1', 109),
-    (110, 'JP', 'Japan', '+81', NULL, '0', '1', 110),
-    (111, 'JO', 'Jordan', '+962', NULL, '0', '1', 111),
-    (112, 'KZ', 'Kazakhstan', '+77', NULL, '0', '1', 112),
-    (113, 'KE', 'Kenya', '+254', NULL, '0', '1', 113),
-    (114, 'KI', 'Kiribati', '+686', NULL, '0', '1', 114),
-    (115, 'KP', 'Korea, Democratic People\'s Republic of', '+850', NULL, '0', '1', 115),
-    (116, 'KR', 'Korea, Republic of', '+82', NULL, '0', '1', 116),
-    (117, 'XK', 'Kosovo', '+381', NULL, '0', '1', 117),
-    (118, 'KW', 'Kuwait', '+965', NULL, '0', '1', 118),
-    (119, 'KG', 'Kyrgyzstan', '+996', NULL, '0', '1', 119),
-    (120, 'LA', 'Lao People\'s Democratic Republic', '+856', NULL, '0', '1', 120),
-    (121, 'LV', 'Latvia', '+371', NULL, '0', '1', 121),
-    (122, 'LB', 'Lebanon', '+961', NULL, '0', '1', 122),
-    (123, 'LS', 'Lesotho', '+266', NULL, '0', '1', 123),
-    (124, 'LR', 'Liberia', '+231', NULL, '0', '1', 124),
-    (125, 'LY', 'Libyan Arab Jamahiriya', '+218', NULL, '0', '1', 125),
-    (126, 'LI', 'Liechtenstein', '+423', NULL, '0', '1', 126),
-    (127, 'LT', 'Lithuania', '+370', NULL, '0', '1', 127),
-    (128, 'LU', 'Luxembourg', '+352', NULL, '0', '1', 128),
-    (129, 'MO', 'Macau', '+853', NULL, '0', '1', 129),
-    (130, 'MK', 'Macedonia', '+389', NULL, '0', '1', 130),
-    (131, 'MG', 'Madagascar', '+261', NULL, '0', '1', 131),
-    (132, 'MW', 'Malawi', '+265', NULL, '0', '1', 132),
-    (133, 'MY', 'Malaysia', '+60', NULL, '0', '1', 133),
-    (134, 'MV', 'Maldives', '+960', NULL, '0', '1', 134),
-    (135, 'ML', 'Mali', '+223', NULL, '0', '1', 135),
-    (136, 'MT', 'Malta', '+356', NULL, '0', '1', 136),
-    (137, 'MH', 'Marshall Islands', '+692', NULL, '0', '1', 137),
-    (138, 'MQ', 'Martinique', '+596', NULL, '0', '1', 138),
-    (139, 'MR', 'Mauritania', '+222', NULL, '0', '1', 139),
-    (140, 'MU', 'Mauritius', '+230', NULL, '0', '1', 140),
-    (141, 'TY', 'Mayotte', '+269', NULL, '0', '1', 141),
-    (142, 'MX', 'Mexico', '+52', NULL, '0', '1', 142),
-    (143, 'FM', 'Micronesia, Federated States of', '+691', NULL, '0', '1', 143),
-    (144, 'MD', 'Moldova, Republic of', '+373', NULL, '0', '1', 144),
-    (145, 'MC', 'Monaco', '+377', NULL, '0', '1', 145),
-    (146, 'MN', 'Mongolia', '+976', NULL, '0', '1', 146),
-    (147, 'ME', 'Montenegro', '+382', NULL, '0', '1', 147),
-    (148, 'MS', 'Montserrat', '+1664', NULL, '0', '1', 148),
-    (149, 'MA', 'Morocco', '+212', NULL, '0', '1', 149),
-    (150, 'MZ', 'Mozambique', '+258', NULL, '0', '1', 150),
-    (151, 'MM', 'Myanmar', '+95', NULL, '0', '1', 151),
-    (152, 'NA', 'Namibia', '+264', NULL, '0', '1', 152),
-    (153, 'NR', 'Nauru', '+674', NULL, '0', '1', 153),
-    (154, 'NP', 'Nepal', '+977', NULL, '0', '1', 154),
-    (155, 'NL', 'Netherlands', '+31', NULL, '0', '1', 155),
-    (156, 'AN', 'Netherlands Antilles', '+599', NULL, '0', '1', 156),
-    (157, 'NC', 'New Caledonia', '+687', NULL, '0', '1', 157),
-    (158, 'NZ', 'New Zealand', '+64', NULL, '0', '1', 158),
-    (159, 'NI', 'Nicaragua', '+505', NULL, '0', '1', 159),
-    (160, 'NE', 'Niger', '+227', NULL, '0', '1', 160),
-    (161, 'NG', 'Nigeria', '+234', NULL, '0', '1', 161),
-    (162, 'NU', 'Niue', '+683', NULL, '0', '1', 162),
-    (163, 'NF', 'Norfolk Island', '+672', NULL, '0', '1', 163),
-    (164, 'MP', 'Northern Mariana Islands', '+1670', NULL, '0', '1', 164),
-    (165, 'NO', 'Norway', '+47', NULL, '0', '1', 165),
-    (166, 'OM', 'Oman', '+968', NULL, '0', '1', 166),
-    (167, 'PK', 'Pakistan', '+92', NULL, '0', '1', 167),
-    (168, 'PW', 'Palau', '+680', NULL, '0', '1', 168),
-    (169, 'PS', 'Palestine', '+970', NULL, '0', '1', 169),
-    (170, 'PA', 'Panama', '+507', NULL, '0', '1', 170),
-    (171, 'PG', 'Papua New Guinea', '+675', NULL, '0', '1', 171),
-    (172, 'PY', 'Paraguay', '+595', NULL, '0', '1', 172),
-    (173, 'PE', 'Peru', '+51', NULL, '0', '1', 173),
-    (174, 'PH', 'Philippines', '+63', NULL, '0', '1', 174),
-    (175, 'PN', 'Pitcairn', '+872', NULL, '0', '1', 175),
-    (176, 'PL', 'Poland', '+48', NULL, '0', '1', 176),
-    (177, 'PT', 'Portugal', '+351', NULL, '0', '1', 177),
-    (178, 'PR', 'Puerto Rico', '+1939', NULL, '0', '1', 178),
-    (179, 'QA', 'Qatar', '+974', NULL, '0', '1', 179),
-    (180, 'RE', 'Reunion', '+262', NULL, '0', '1', 180),
-    (181, 'RO', 'Romania', '+40', NULL, '0', '1', 181),
-    (182, 'RU', 'Russian Federation', '+7', NULL, '0', '1', 182),
-    (183, 'RW', 'Rwanda', '+250', NULL, '0', '1', 183),
-    (184, 'KN', 'Saint Kitts and Nevis', '+1869', NULL, '0', '1', 184),
-    (185, 'LC', 'Saint Lucia', '+1758', NULL, '0', '1', 185),
-    (186, 'VC', 'Saint Vincent and the Grenadines', '+1784', NULL, '0', '1', 186),
-    (187, 'WS', 'Samoa', '+685', NULL, '0', '1', 187),
-    (188, 'SM', 'San Marino', '+378', NULL, '0', '1', 188),
-    (189, 'ST', 'Sao Tome and Principe', '+239', NULL, '0', '1', 189),
-    (190, 'SA', 'Saudi Arabia', '+966', NULL, '0', '1', 190),
-    (191, 'SN', 'Senegal', '+221', NULL, '0', '1', 191),
-    (192, 'RS', 'Serbia', '+381', NULL, '0', '1', 192),
-    (193, 'SC', 'Seychelles', '+248', NULL, '0', '1', 193),
-    (194, 'SL', 'Sierra Leone', '+232', NULL, '0', '1', 194),
-    (195, 'SG', 'Singapore', '+65', NULL, '0', '1', 195),
-    (196, 'SK', 'Slovakia', '+421', NULL, '0', '1', 196),
-    (197, 'SI', 'Slovenia', '+386', NULL, '0', '1', 197),
-    (198, 'SB', 'Solomon Islands', '+677', NULL, '0', '1', 198),
-    (199, 'SO', 'Somalia', '+252', NULL, '0', '1', 199),
-    (200, 'ZA', 'South Africa', '+27', NULL, '0', '1', 200),
-    (201, 'GS', 'South Georgia South Sandwich Islands', '+500', NULL, '0', '1', 201),
-    (202, 'ES', 'Spain', '+34', NULL, '0', '1', 202),
-    (203, 'LK', 'Sri Lanka', '+94', NULL, '0', '1', 203),
-    (204, 'SH', 'St. Helena', '+290', NULL, '0', '1', 204),
-    (205, 'PM', 'St. Pierre and Miquelon', '+508', NULL, '0', '1', 205),
-    (206, 'SD', 'Sudan', '+249', NULL, '0', '1', 206),
-    (207, 'SR', 'Suriname', '+597', NULL, '0', '1', 207),
-    (208, 'SJ', 'Svalbard and Jan Mayen Islands', '+47', NULL, '0', '1', 208),
-    (209, 'SZ', 'Swaziland', '+268', NULL, '0', '1', 209),
-    (210, 'SE', 'Sweden', '+46', NULL, '0', '1', 210),
-    (211, 'CH', 'Switzerland', '+41', NULL, '0', '1', 211),
-    (212, 'SY', 'Syrian Arab Republic', '+963', NULL, '0', '1', 212),
-    (213, 'TW', 'Taiwan', '+886', NULL, '0', '1', 213),
-    (214, 'TJ', 'Tajikistan', '+992', NULL, '0', '1', 214),
-    (215, 'TZ', 'Tanzania, United Republic of', '+255', NULL, '0', '1', 215),
-    (216, 'TH', 'Thailand', '+66', NULL, '0', '1', 216),
-    (217, 'TG', 'Togo', '+228', NULL, '0', '1', 217),
-    (218, 'TK', 'Tokelau', '+690', NULL, '0', '1', 218),
-    (219, 'TO', 'Tonga', '+676', NULL, '0', '1', 219),
-    (220, 'TT', 'Trinidad and Tobago', '+1868', NULL, '0', '1', 220),
-    (221, 'TN', 'Tunisia', '+216', NULL, '0', '1', 221),
-    (222, 'TR', 'Turkey', '+90', NULL, '0', '1', 222),
-    (223, 'TM', 'Turkmenistan', '+993', NULL, '0', '1', 223),
-    (224, 'TC', 'Turks and Caicos Islands', '+1649', NULL, '0', '1', 224),
-    (225, 'TV', 'Tuvalu', '+688', NULL, '0', '1', 225),
-    (226, 'UG', 'Uganda', '+256', NULL, '0', '1', 226),
-    (227, 'UA', 'Ukraine', '+380', NULL, '0', '1', 227),
-    (228, 'AE', 'United Arab Emirates', '+971', NULL, '0', '1', 228),
-    (229, 'GB', 'United Kingdom', '+44', NULL, '0', '1', 229),
-    (230, 'US', 'United States', '+1', NULL, '1', '1', 230),
-    (231, 'UM', 'United States minor outlying islands', '+1', NULL, '0', '1', 231),
-    (232, 'UY', 'Uruguay', '+598', NULL, '0', '1', 232),
-    (233, 'UZ', 'Uzbekistan', '+998', NULL, '0', '1', 233),
-    (234, 'VU', 'Vanuatu', '+678', NULL, '0', '1', 234),
-    (235, 'VA', 'Vatican City State', '+379', NULL, '0', '1', 235),
-    (236, 'VE', 'Venezuela', '+58', NULL, '0', '1', 236),
-    (237, 'VN', 'Vietnam', '+84', NULL, '0', '1', 237),
-    (238, 'VG', 'Virgin Islands (British)', '+1284', NULL, '0', '1', 238),
-    (239, 'VI', 'Virgin Islands (U.S.)', '+1340', NULL, '0', '1', 239),
-    (240, 'WF', 'Wallis and Futuna Islands', '+681', NULL, '0', '1', 240),
-    (241, 'EH', 'Western Sahara', '+212', NULL, '0', '1', 241),
-    (242, 'YE', 'Yemen', '+967', NULL, '0', '1', 242),
-    (243, 'ZR', 'Zaire', NULL, NULL, '0', '1', 243),
-    (244, 'ZM', 'Zambia', '+260', NULL, '0', '1', 244),
-    (245, 'ZW', 'Zimbabwe', '+263', NULL, '0', '1', 245);
+    INSERT INTO `system_countries` (`country_id`, `country_code`, `country_flag`, `country_name`, `phone_code`, `country_vat`, `default`, `enabled`, `country_order`) VALUES
+    (1, 'AF', '🇦🇫', 'Afghanistan', '+93', NULL, '0', '1', 1),
+    (2, 'AL', '🇦🇱', 'Albania', '+355', NULL, '0', '1', 2),
+    (3, 'DZ', '🇩🇿', 'Algeria', '+213', NULL, '0', '1', 3),
+    (4, 'DS', '🇦🇸', 'American Samoa', '+1684', NULL, '0', '1', 4),
+    (5, 'AD', '🇦🇩', 'Andorra', '+376', NULL, '0', '1', 5),
+    (6, 'AO', '🇦🇴', 'Angola', '+244', NULL, '0', '1', 6),
+    (7, 'AI', '🇦🇮', 'Anguilla', '+1264', NULL, '0', '1', 7),
+    (8, 'AQ', '🇦🇶', 'Antarctica', '+672', NULL, '0', '1', 8),
+    (9, 'AG', '🇦🇬', 'Antigua and Barbuda', '+1268', NULL, '0', '1', 9),
+    (10, 'AR', '🇦🇷', 'Argentina', '+54', NULL, '0', '1', 10),
+    (11, 'AM', '🇦🇲', 'Armenia', '+374', NULL, '0', '1', 11),
+    (12, 'AW', '🇦🇼', 'Aruba', '+297', NULL, '0', '1', 12),
+    (13, 'AU', '🇦🇺', 'Australia', '+61', NULL, '0', '1', 13),
+    (14, 'AT', '🇦🇹', 'Austria', '+43', NULL, '0', '1', 14),
+    (15, 'AZ', '🇦🇿', 'Azerbaijan', '+994', NULL, '0', '1', 15),
+    (16, 'BS', '🇧🇸', 'Bahamas', '+1242', NULL, '0', '1', 16),
+    (17, 'BH', '🇧🇭', 'Bahrain', '+973', NULL, '0', '1', 17),
+    (18, 'BD', '🇧🇩', 'Bangladesh', '+880', NULL, '0', '1', 18),
+    (19, 'BB', '🇧🇧', 'Barbados', '+1246', NULL, '0', '1', 19),
+    (20, 'BY', '🇧🇾', 'Belarus', '+375', NULL, '0', '1', 20),
+    (21, 'BE', '🇧🇪', 'Belgium', '+32', NULL, '0', '1', 21),
+    (22, 'BZ', '🇧🇿', 'Belize', '+501', NULL, '0', '1', 22),
+    (23, 'BJ', '🇧🇯', 'Benin', '+229', NULL, '0', '1', 23),
+    (24, 'BM', '🇧🇲', 'Bermuda', '+1441', NULL, '0', '1', 24),
+    (25, 'BT', '🇧🇹', 'Bhutan', '+975', NULL, '0', '1', 25),
+    (26, 'BO', '🇧🇴', 'Bolivia', '+591', NULL, '0', '1', 26),
+    (27, 'BA', '🇧🇦', 'Bosnia and Herzegovina', '+387', NULL, '0', '1', 27),
+    (28, 'BW', '🇧🇼', 'Botswana', '+267', NULL, '0', '1', 28),
+    (29, 'BV', '🇧🇻', 'Bouvet Island', '+55', NULL, '0', '1', 29),
+    (30, 'BR', '🇧🇷', 'Brazil', '+55', NULL, '0', '1', 30),
+    (31, 'IO', '🇮🇴', 'British Indian Ocean Territory', '+246', NULL, '0', '1', 31),
+    (32, 'BN', '🇧🇳', 'Brunei Darussalam', '+673', NULL, '0', '1', 32),
+    (33, 'BG', '🇧🇬', 'Bulgaria', '+359', NULL, '0', '1', 33),
+    (34, 'BF', '🇧🇫', 'Burkina Faso', '+226', NULL, '0', '1', 34),
+    (35, 'BI', '🇧🇮', 'Burundi', '+257', NULL, '0', '1', 35),
+    (36, 'KH', '🇰🇭', 'Cambodia', '+855', NULL, '0', '1', 36),
+    (37, 'CM', '🇨🇲', 'Cameroon', '+237', NULL, '0', '1', 37),
+    (38, 'CA', '🇨🇦', 'Canada', '+1', NULL, '0', '1', 38),
+    (39, 'CV', '🇨🇻', 'Cape Verde', '+238', NULL, '0', '1', 39),
+    (40, 'KY', '🇰🇾', 'Cayman Islands', '+ 345', NULL, '0', '1', 40),
+    (41, 'CF', '🇨🇫', 'Central African Republic', '+236', NULL, '0', '1', 41),
+    (42, 'TD', '🇹🇩', 'Chad', '+235', NULL, '0', '1', 42),
+    (43, 'CL', '🇨🇱', 'Chile', '+56', NULL, '0', '1', 43),
+    (44, 'CN', '🇨🇳', 'China', '+86', NULL, '0', '1', 44),
+    (45, 'CX', '🇨🇽', 'Christmas Island', '+61', NULL, '0', '1', 45),
+    (46, 'CC', '🇨🇨', 'Cocos (Keeling) Islands', '+61', NULL, '0', '1', 46),
+    (47, 'CO', '🇨🇴', 'Colombia', '+57', NULL, '0', '1', 47),
+    (48, 'KM', '🇰🇲', 'Comoros', '+269', NULL, '0', '1', 48),
+    (49, 'CG', '🇨🇬', 'Congo', '+242', NULL, '0', '1', 49),
+    (50, 'CK', '🇨🇰', 'Cook Islands', '+682', NULL, '0', '1', 50),
+    (51, 'CR', '🇨🇷', 'Costa Rica', '+506', NULL, '0', '1', 51),
+    (52, 'HR', '🇭🇷', 'Croatia (Hrvatska)', '+385', NULL, '0', '1', 52),
+    (53, 'CU', '🇨🇺', 'Cuba', '+53', NULL, '0', '1', 53),
+    (54, 'CY', '🇨🇾', 'Cyprus', '+357', NULL, '0', '1', 54),
+    (55, 'CZ', '🇨🇿', 'Czech Republic', '+420', NULL, '0', '1', 55),
+    (56, 'DK', '🇩🇰', 'Denmark', '+45', NULL, '0', '1', 56),
+    (57, 'DJ', '🇩🇯', 'Djibouti', '+253', NULL, '0', '1', 57),
+    (58, 'DM', '🇩🇲', 'Dominica', '+1767', NULL, '0', '1', 58),
+    (59, 'DO', '🇩🇴', 'Dominican Republic', '+1849', NULL, '0', '1', 59),
+    (60, 'TP', '🇹🇱', 'East Timor', NULL, NULL, '0', '1', 60),
+    (61, 'EC', '🇪🇨', 'Ecuador', '+593', NULL, '0', '1', 61),
+    (62, 'EG', '🇪🇬', 'Egypt', '+20', NULL, '0', '1', 62),
+    (63, 'SV', '🇸🇻', 'El Salvador', '+503', NULL, '0', '1', 63),
+    (64, 'GQ', '🇬🇶', 'Equatorial Guinea', '+240', NULL, '0', '1', 64),
+    (65, 'ER', '🇪🇷', 'Eritrea', '+291', NULL, '0', '1', 65),
+    (66, 'EE', '🇪🇪', 'Estonia', '+372', NULL, '0', '1', 66),
+    (67, 'ET', '🇪🇹', 'Ethiopia', '+251', NULL, '0', '1', 67),
+    (68, 'FK', '🇫🇰', 'Falkland Islands (Malvinas)', '+500', NULL, '0', '1', 68),
+    (69, 'FO', '🇫🇴', 'Faroe Islands', '+298', NULL, '0', '1', 69),
+    (70, 'FJ', '🇫🇯', 'Fiji', '+679', NULL, '0', '1', 70),
+    (71, 'FI', '🇫🇮', 'Finland', '+358', NULL, '0', '1', 71),
+    (72, 'FR', '🇫🇷', 'France', '+33', NULL, '0', '1', 72),
+    (73, 'FX', '🇫🇷', 'France, Metropolitan', NULL, NULL, '0', '1', 73),
+    (74, 'GF', '🇬🇫', 'French Guiana', '+594', NULL, '0', '1', 74),
+    (75, 'PF', '🇵🇫', 'French Polynesia', '+689', NULL, '0', '1', 75),
+    (76, 'TF', '🇹🇫', 'French Southern Territories', '+262', NULL, '0', '1', 76),
+    (77, 'GA', '🇬🇦', 'Gabon', '+241', NULL, '0', '1', 77),
+    (78, 'GM', '🇬🇲', 'Gambia', '+220', NULL, '0', '1', 78),
+    (79, 'GE', '🇬🇪', 'Georgia', '+995', NULL, '0', '1', 79),
+    (80, 'DE', '🇩🇪', 'Germany', '+49', NULL, '0', '1', 80),
+    (81, 'GH', '🇬🇭', 'Ghana', '+233', NULL, '0', '1', 81),
+    (82, 'GI', '🇬🇮', 'Gibraltar', '+350', NULL, '0', '1', 82),
+    (83, 'GK', '🇬🇬', 'Guernsey', '+44', NULL, '0', '1', 83),
+    (84, 'GR', '🇬🇷', 'Greece', '+30', NULL, '0', '1', 84),
+    (85, 'GL', '🇬🇱', 'Greenland', '+299', NULL, '0', '1', 85),
+    (86, 'GD', '🇬🇩', 'Grenada', '+1473', NULL, '0', '1', 86),
+    (87, 'GP', '🇬🇵', 'Guadeloupe', '+590', NULL, '0', '1', 87),
+    (88, 'GU', '🇬🇺', 'Guam', '+1671', NULL, '0', '1', 88),
+    (89, 'GT', '🇬🇹', 'Guatemala', '+502', NULL, '0', '1', 89),
+    (90, 'GN', '🇬🇳', 'Guinea', '+224', NULL, '0', '1', 90),
+    (91, 'GW', '🇬🇼', 'Guinea-Bissau', '+245', NULL, '0', '1', 91),
+    (92, 'GY', '🇬🇾', 'Guyana', '+595', NULL, '0', '1', 92),
+    (93, 'HT', '🇭🇹', 'Haiti', '+509', NULL, '0', '1', 93),
+    (94, 'HM', '🇭🇲', 'Heard and Mc Donald Islands', NULL, NULL, '0', '1', 94),
+    (95, 'HN', '🇭🇳', 'Honduras', '+504', NULL, '0', '1', 95),
+    (96, 'HK', '🇭🇰', 'Hong Kong', '+852', NULL, '0', '1', 96),
+    (97, 'HU', '🇭🇺', 'Hungary', '+36', NULL, '0', '1', 97),
+    (98, 'IS', '🇮🇸', 'Iceland', '+354', NULL, '0', '1', 98),
+    (99, 'IN', '🇮🇳', 'India', '+91', NULL, '0', '1', 99),
+    (100, 'IM', '🇮🇲', 'Isle of Man', '+44', NULL, '0', '1', 100),
+    (101, 'ID', '🇮🇩', 'Indonesia', '+62', NULL, '0', '1', 101),
+    (102, 'IR', '🇮🇷', 'Iran (Islamic Republic of)', '+98', NULL, '0', '1', 102),
+    (103, 'IQ', '🇮🇶', 'Iraq', '+964', NULL, '0', '1', 103),
+    (104, 'IE', '🇮🇪', 'Ireland', '+353', NULL, '0', '1', 104),
+    (105, 'IL', '🇮🇱', 'Israel', '+972', NULL, '0', '1', 105),
+    (106, 'IT', '🇮🇹', 'Italy', '+39', NULL, '0', '1', 106),
+    (107, 'CI', '🇨🇮', 'Ivory Coast', NULL, NULL, '0', '1', 107),
+    (108, 'JE', '🇯🇪', 'Jersey', '+44', NULL, '0', '1', 108),
+    (109, 'JM', '🇯🇲', 'Jamaica', '+1876', NULL, '0', '1', 109),
+    (110, 'JP', '🇯🇵', 'Japan', '+81', NULL, '0', '1', 110),
+    (111, 'JO', '🇯🇴', 'Jordan', '+962', NULL, '0', '1', 111),
+    (112, 'KZ', '🇰🇿', 'Kazakhstan', '+77', NULL, '0', '1', 112),
+    (113, 'KE', '🇰🇪', 'Kenya', '+254', NULL, '0', '1', 113),
+    (114, 'KI', '🇰🇮', 'Kiribati', '+686', NULL, '0', '1', 114),
+    (115, 'KP', '🇰🇵', 'Korea, Democratic People\'s Republic of', '+850', NULL, '0', '1', 115),
+    (116, 'KR', '🇰🇷', 'Korea, Republic of', '+82', NULL, '0', '1', 116),
+    (117, 'XK', '🇽🇰', 'Kosovo', '+381', NULL, '0', '1', 117),
+    (118, 'KW', '🇰🇼', 'Kuwait', '+965', NULL, '0', '1', 118),
+    (119, 'KG', '🇰🇬', 'Kyrgyzstan', '+996', NULL, '0', '1', 119),
+    (120, 'LA', '🇱🇦', 'Lao People\'s Democratic Republic', '+856', NULL, '0', '1', 120),
+    (121, 'LV', '🇱🇻', 'Latvia', '+371', NULL, '0', '1', 121),
+    (122, 'LB', '🇱🇧', 'Lebanon', '+961', NULL, '0', '1', 122),
+    (123, 'LS', '🇱🇸', 'Lesotho', '+266', NULL, '0', '1', 123),
+    (124, 'LR', '🇱🇷', 'Liberia', '+231', NULL, '0', '1', 124),
+    (125, 'LY', '🇱🇾', 'Libyan Arab Jamahiriya', '+218', NULL, '0', '1', 125),
+    (126, 'LI', '🇱🇮', 'Liechtenstein', '+423', NULL, '0', '1', 126),
+    (127, 'LT', '🇱🇹', 'Lithuania', '+370', NULL, '0', '1', 127),
+    (128, 'LU', '🇱🇺', 'Luxembourg', '+352', NULL, '0', '1', 128),
+    (129, 'MO', '🇲🇴', 'Macau', '+853', NULL, '0', '1', 129),
+    (130, 'MK', '🇲🇰', 'Macedonia', '+389', NULL, '0', '1', 130),
+    (131, 'MG', '🇲🇬', 'Madagascar', '+261', NULL, '0', '1', 131),
+    (132, 'MW', '🇲🇼', 'Malawi', '+265', NULL, '0', '1', 132),
+    (133, 'MY', '🇲🇾', 'Malaysia', '+60', NULL, '0', '1', 133),
+    (134, 'MV', '🇲🇻', 'Maldives', '+960', NULL, '0', '1', 134),
+    (135, 'ML', '🇲🇱', 'Mali', '+223', NULL, '0', '1', 135),
+    (136, 'MT', '🇲🇹', 'Malta', '+356', NULL, '0', '1', 136),
+    (137, 'MH', '🇲🇭', 'Marshall Islands', '+692', NULL, '0', '1', 137),
+    (138, 'MQ', '🇲🇶', 'Martinique', '+596', NULL, '0', '1', 138),
+    (139, 'MR', '🇲🇷', 'Mauritania', '+222', NULL, '0', '1', 139),
+    (140, 'MU', '🇲🇺', 'Mauritius', '+230', NULL, '0', '1', 140),
+    (141, 'TY', '🇾🇹', 'Mayotte', '+269', NULL, '0', '1', 141),
+    (142, 'MX', '🇲🇽', 'Mexico', '+52', NULL, '0', '1', 142),
+    (143, 'FM', '🇫🇲', 'Micronesia, Federated States of', '+691', NULL, '0', '1', 143),
+    (144, 'MD', '🇲🇩', 'Moldova, Republic of', '+373', NULL, '0', '1', 144),
+    (145, 'MC', '🇲🇨', 'Monaco', '+377', NULL, '0', '1', 145),
+    (146, 'MN', '🇲🇳', 'Mongolia', '+976', NULL, '0', '1', 146),
+    (147, 'ME', '🇲🇪', 'Montenegro', '+382', NULL, '0', '1', 147),
+    (148, 'MS', '🇲🇸', 'Montserrat', '+1664', NULL, '0', '1', 148),
+    (149, 'MA', '🇲🇦', 'Morocco', '+212', NULL, '0', '1', 149),
+    (150, 'MZ', '🇲🇿', 'Mozambique', '+258', NULL, '0', '1', 150),
+    (151, 'MM', '🇲🇲', 'Myanmar', '+95', NULL, '0', '1', 151),
+    (152, 'NA', '🇳🇦', 'Namibia', '+264', NULL, '0', '1', 152),
+    (153, 'NR', '🇳🇷', 'Nauru', '+674', NULL, '0', '1', 153),
+    (154, 'NP', '🇳🇵', 'Nepal', '+977', NULL, '0', '1', 154),
+    (155, 'NL', '🇳🇱', 'Netherlands', '+31', NULL, '0', '1', 155),
+    (156, 'AN', '', 'Netherlands Antilles', '+599', NULL, '0', '1', 156),
+    (157, 'NC', '🇳🇨', 'New Caledonia', '+687', NULL, '0', '1', 157),
+    (158, 'NZ', '🇳🇿', 'New Zealand', '+64', NULL, '0', '1', 158),
+    (159, 'NI', '🇳🇮', 'Nicaragua', '+505', NULL, '0', '1', 159),
+    (160, 'NE', '🇳🇪', 'Niger', '+227', NULL, '0', '1', 160),
+    (161, 'NG', '🇳🇬', 'Nigeria', '+234', NULL, '0', '1', 161),
+    (162, 'NU', '🇳🇺', 'Niue', '+683', NULL, '0', '1', 162),
+    (163, 'NF', '🇳🇫', 'Norfolk Island', '+672', NULL, '0', '1', 163),
+    (164, 'MP', '🇲🇵', 'Northern Mariana Islands', '+1670', NULL, '0', '1', 164),
+    (165, 'NO', '🇳🇴', 'Norway', '+47', NULL, '0', '1', 165),
+    (166, 'OM', '🇴🇲', 'Oman', '+968', NULL, '0', '1', 166),
+    (167, 'PK', '🇵🇰', 'Pakistan', '+92', NULL, '0', '1', 167),
+    (168, 'PW', '🇵🇼', 'Palau', '+680', NULL, '0', '1', 168),
+    (169, 'PS', '🇵🇸', 'Palestine', '+970', NULL, '0', '1', 169),
+    (170, 'PA', '🇵🇦', 'Panama', '+507', NULL, '0', '1', 170),
+    (171, 'PG', '🇵🇬', 'Papua New Guinea', '+675', NULL, '0', '1', 171),
+    (172, 'PY', '🇵🇾', 'Paraguay', '+595', NULL, '0', '1', 172),
+    (173, 'PE', '🇵🇪', 'Peru', '+51', NULL, '0', '1', 173),
+    (174, 'PH', '🇵🇭', 'Philippines', '+63', NULL, '0', '1', 174),
+    (175, 'PN', '🇵🇳', 'Pitcairn', '+872', NULL, '0', '1', 175),
+    (176, 'PL', '🇵🇱', 'Poland', '+48', NULL, '0', '1', 176),
+    (177, 'PT', '🇵🇹', 'Portugal', '+351', NULL, '0', '1', 177),
+    (178, 'PR', '🇵🇷', 'Puerto Rico', '+1939', NULL, '0', '1', 178),
+    (179, 'QA', '🇶🇦', 'Qatar', '+974', NULL, '0', '1', 179),
+    (180, 'RE', '🇷🇪', 'Reunion', '+262', NULL, '0', '1', 180),
+    (181, 'RO', '🇷🇴', 'Romania', '+40', NULL, '0', '1', 181),
+    (182, 'RU', '🇷🇺', 'Russian Federation', '+7', NULL, '0', '1', 182),
+    (183, 'RW', '🇷🇼', 'Rwanda', '+250', NULL, '0', '1', 183),
+    (184, 'KN', '🇰🇳', 'Saint Kitts and Nevis', '+1869', NULL, '0', '1', 184),
+    (185, 'LC', '🇱🇨', 'Saint Lucia', '+1758', NULL, '0', '1', 185),
+    (186, 'VC', '🇻🇨', 'Saint Vincent and the Grenadines', '+1784', NULL, '0', '1', 186),
+    (187, 'WS', '🇼🇸', 'Samoa', '+685', NULL, '0', '1', 187),
+    (188, 'SM', '🇸🇲', 'San Marino', '+378', NULL, '0', '1', 188),
+    (189, 'ST', '🇸🇹', 'Sao Tome and Principe', '+239', NULL, '0', '1', 189),
+    (190, 'SA', '🇸🇦', 'Saudi Arabia', '+966', NULL, '0', '1', 190),
+    (191, 'SN', '🇸🇳', 'Senegal', '+221', NULL, '0', '1', 191),
+    (192, 'RS', '🇷🇸', 'Serbia', '+381', NULL, '0', '1', 192),
+    (193, 'SC', '🇸🇨', 'Seychelles', '+248', NULL, '0', '1', 193),
+    (194, 'SL', '🇸🇱', 'Sierra Leone', '+232', NULL, '0', '1', 194),
+    (195, 'SG', '🇸🇬', 'Singapore', '+65', NULL, '0', '1', 195),
+    (196, 'SK', '🇸🇰', 'Slovakia', '+421', NULL, '0', '1', 196),
+    (197, 'SI', '🇸🇮', 'Slovenia', '+386', NULL, '0', '1', 197),
+    (198, 'SB', '🇸🇧', 'Solomon Islands', '+677', NULL, '0', '1', 198),
+    (199, 'SO', '🇸🇴', 'Somalia', '+252', NULL, '0', '1', 199),
+    (200, 'ZA', '🇿🇦', 'South Africa', '+27', NULL, '0', '1', 200),
+    (201, 'GS', '🇬🇸', 'South Georgia South Sandwich Islands', '+500', NULL, '0', '1', 201),
+    (202, 'ES', '🇪🇸', 'Spain', '+34', NULL, '0', '1', 202),
+    (203, 'LK', '🇱🇰', 'Sri Lanka', '+94', NULL, '0', '1', 203),
+    (204, 'SH', '🇸🇭', 'St. Helena', '+290', NULL, '0', '1', 204),
+    (205, 'PM', '🇵🇲', 'St. Pierre and Miquelon', '+508', NULL, '0', '1', 205),
+    (206, 'SD', '🇸🇩', 'Sudan', '+249', NULL, '0', '1', 206),
+    (207, 'SR', '🇸🇷', 'Suriname', '+597', NULL, '0', '1', 207),
+    (208, 'SJ', '🇸🇯', 'Svalbard and Jan Mayen Islands', '+47', NULL, '0', '1', 208),
+    (209, 'SZ', '🇸🇿', 'Swaziland', '+268', NULL, '0', '1', 209),
+    (210, 'SE', '🇸🇪', 'Sweden', '+46', NULL, '0', '1', 210),
+    (211, 'CH', '🇨🇭', 'Switzerland', '+41', NULL, '0', '1', 211),
+    (212, 'SY', '🇸🇾', 'Syrian Arab Republic', '+963', NULL, '0', '1', 212),
+    (213, 'TW', '🇹🇼', 'Taiwan', '+886', NULL, '0', '1', 213),
+    (214, 'TJ', '🇹🇯', 'Tajikistan', '+992', NULL, '0', '1', 214),
+    (215, 'TZ', '🇹🇿', 'Tanzania, United Republic of', '+255', NULL, '0', '1', 215),
+    (216, 'TH', '🇹🇭', 'Thailand', '+66', NULL, '0', '1', 216),
+    (217, 'TG', '🇹🇬', 'Togo', '+228', NULL, '0', '1', 217),
+    (218, 'TK', '🇹🇰', 'Tokelau', '+690', NULL, '0', '1', 218),
+    (219, 'TO', '🇹🇴', 'Tonga', '+676', NULL, '0', '1', 219),
+    (220, 'TT', '🇹🇹', 'Trinidad and Tobago', '+1868', NULL, '0', '1', 220),
+    (221, 'TN', '🇹🇳', 'Tunisia', '+216', NULL, '0', '1', 221),
+    (222, 'TR', '🇹🇷', 'Turkey', '+90', NULL, '0', '1', 222),
+    (223, 'TM', '🇹🇲', 'Turkmenistan', '+993', NULL, '0', '1', 223),
+    (224, 'TC', '🇹🇨', 'Turks and Caicos Islands', '+1649', NULL, '0', '1', 224),
+    (225, 'TV', '🇹🇻', 'Tuvalu', '+688', NULL, '0', '1', 225),
+    (226, 'UG', '🇺🇬', 'Uganda', '+256', NULL, '0', '1', 226),
+    (227, 'UA', '🇺🇦', 'Ukraine', '+380', NULL, '0', '1', 227),
+    (228, 'AE', '🇦🇪', 'United Arab Emirates', '+971', NULL, '0', '1', 228),
+    (229, 'GB', '🇬🇧', 'United Kingdom', '+44', NULL, '0', '1', 229),
+    (230, 'US', '🇺🇸', 'United States', '+1', NULL, '1', '1', 230),
+    (231, 'UM', '🇺🇲', 'United States minor outlying islands', '+1', NULL, '0', '1', 231),
+    (232, 'UY', '🇺🇾', 'Uruguay', '+598', NULL, '0', '1', 232),
+    (233, 'UZ', '🇺🇿', 'Uzbekistan', '+998', NULL, '0', '1', 233),
+    (234, 'VU', '🇻🇺', 'Vanuatu', '+678', NULL, '0', '1', 234),
+    (235, 'VA', '🇻🇦', 'Vatican City State', '+379', NULL, '0', '1', 235),
+    (236, 'VE', '🇻🇪', 'Venezuela', '+58', NULL, '0', '1', 236),
+    (237, 'VN', '🇻🇳', 'Vietnam', '+84', NULL, '0', '1', 237),
+    (238, 'VG', '🇻🇬', 'Virgin Islands (British)', '+1284', NULL, '0', '1', 238),
+    (239, 'VI', '🇻🇮', 'Virgin Islands (U.S.)', '+1340', NULL, '0', '1', 239),
+    (240, 'WF', '🇼🇫', 'Wallis and Futuna Islands', '+681', NULL, '0', '1', 240),
+    (241, 'EH', '🇪🇭', 'Western Sahara', '+212', NULL, '0', '1', 241),
+    (242, 'YE', '🇾🇪', 'Yemen', '+967', NULL, '0', '1', 242),
+    (243, 'ZR', '🇨🇩', 'Zaire', NULL, NULL, '0', '1', 243),
+    (244, 'ZM', '🇿🇲', 'Zambia', '+260', NULL, '0', '1', 244),
+    (245, 'ZW', '🇿🇼', 'Zimbabwe', '+263', NULL, '0', '1', 245);
 
     -- --------------------------------------------------------
 
@@ -4812,18 +3645,18 @@ if (isset($_POST['submit'])) {
 
     INSERT INTO `system_languages` (`language_id`, `code`, `title`, `flag`, `dir`, `default`, `enabled`, `language_order`) VALUES
     (1, 'en_us', 'English', 'flags/en_us.png', 'LTR', '1', '1', 1),
-    (2, 'ar_sa', 'Arabic', 'flags/ar_sa.png', 'RTL', '0', '1', 2),
-    (3, 'fr_fr', 'French', 'flags/fr_fr.png', 'LTR', '0', '1', 3),
-    (4, 'es_es', 'Spanish', 'flags/es_es.png', 'LTR', '0', '1', 4),
-    (5, 'pt_pt', 'Portuguese', 'flags/pt_pt.png', 'LTR', '0', '1', 5),
+    (2, 'ar_sa', 'العربية', 'flags/ar_sa.png', 'RTL', '0', '1', 2),
+    (3, 'fr_fr', 'Français', 'flags/fr_fr.png', 'LTR', '0', '1', 3),
+    (4, 'es_es', 'Español', 'flags/es_es.png', 'LTR', '0', '1', 4),
+    (5, 'pt_pt', 'Português', 'flags/pt_pt.png', 'LTR', '0', '1', 5),
     (6, 'de_de', 'Deutsch', 'flags/de_de.png', 'LTR', '0', '1', 6),
-    (7, 'tr_tr', 'Turkish', 'flags/tr_tr.png', 'LTR', '0', '1', 7),
-    (8, 'nl_nl', 'Dutch', 'flags/nl_nl.png', 'LTR', '0', '1', 8),
+    (7, 'tr_tr', 'Türkçe', 'flags/tr_tr.png', 'LTR', '0', '1', 7),
+    (8, 'nl_nl', 'Nederlands', 'flags/nl_nl.png', 'LTR', '0', '1', 8),
     (9, 'it_it', 'Italiano', 'flags/it_it.png', 'LTR', '0', '1', 9),
-    (10, 'ru_ru', 'Russian', 'flags/ru_ru.png', 'LTR', '0', '1', 10),
-    (11, 'ro_ro', 'Romaian', 'flags/ro_ro.png', 'LTR', '0', '1', 11),
-    (12, 'pt_br', 'Portuguese (Brazil)', 'flags/pt_br.png', 'LTR', '0', '1', 12),
-    (13, 'el_gr', 'Greek', 'flags/el_gr.png', 'LTR', '0', '1', 13);
+    (10, 'ru_ru', 'Русский', 'flags/ru_ru.png', 'LTR', '0', '1', 10),
+    (11, 'ro_ro', 'Română', 'flags/ro_ro.png', 'LTR', '0', '1', 11),
+    (12, 'pt_br', 'Português (Brasil)', 'flags/pt_br.png', 'LTR', '0', '1', 12),
+    (13, 'el_gr', 'Ελληνικά', 'flags/el_gr.png', 'LTR', '0', '1', 13);
 
     -- --------------------------------------------------------
 
@@ -4967,7 +3800,7 @@ if (isset($_POST['submit'])) {
     (128, 'audio_extensions', 'mp3, wav, ogg, m4a'),
     (129, 'file_enabled', '1'),
     (130, 'max_file_size', '102400'),
-    (131, 'file_extensions', 'txt, zip, json, docx'),
+    (131, 'file_extensions', 'txt, zip, json, docx, pdf'),
     (132, 's3_enabled', '0'),
     (133, 's3_bucket', ''),
     (134, 's3_region', ''),
@@ -4985,15 +3818,14 @@ if (isset($_POST['submit'])) {
     (146, 'ftp_password', ''),
     (147, 'ftp_path', ''),
     (148, 'ftp_endpoint', ''),
-    (149, 'session_hash', '5oTE5Zkcf-4YQgm-35mBb-2MlbE-2wKA6-22b50ae9fb7c'),
     (150, 'unusual_login_enabled', '0'),
     (151, 'brute_force_detection_enabled', '1'),
     (152, 'brute_force_bad_login_limit', '5'),
     (153, 'brute_force_lockout_time', '10'),
     (154, 'two_factor_enabled', '1'),
     (155, 'two_factor_type', 'google'),
-    (156, 'censored_words_enabled', '0'),
-    (157, 'censored_words', ''),
+    (156, 'censored_words_enabled', '1'),
+    (157, 'censored_words', '[{&quot;value&quot;:&quot;fuck&quot;},{&quot;value&quot;:&quot;fucking&quot;},{&quot;value&quot;:&quot;fucked&quot;},{&quot;value&quot;:&quot;fucker&quot;},{&quot;value&quot;:&quot;shit&quot;},{&quot;value&quot;:&quot;bitch&quot;},{&quot;value&quot;:&quot;bastard&quot;},{&quot;value&quot;:&quot;asshole&quot;},{&quot;value&quot;:&quot;dick&quot;},{&quot;value&quot;:&quot;cunt&quot;},{&quot;value&quot;:&quot;whore&quot;},{&quot;value&quot;:&quot;slut&quot;},{&quot;value&quot;:&quot;nigger&quot;},{&quot;value&quot;:&quot;nigga&quot;},{&quot;value&quot;:&quot;faggot&quot;},{&quot;value&quot;:&quot;retard&quot;}]'),
     (158, 'reCAPTCHA_enabled', '0'),
     (159, 'reCAPTCHA_site_key', ''),
     (160, 'reCAPTCHA_secret_key', ''),
@@ -5031,24 +3863,12 @@ if (isset($_POST['submit'])) {
     (192, 'min_results_even', '6'),
     (193, 'max_results_even', '12'),
     (194, 'analytics_code', ''),
-    (195, 'system_theme_night_on', '0'),
-    (196, 'system_theme_mode_select', '1'),
     (197, 'system_profile_background_enabled', '1'),
     (198, 'system_logo', ''),
-    (199, 'system_wallpaper_default', '1'),
-    (200, 'system_wallpaper', ''),
     (201, 'system_favicon_default', '1'),
     (202, 'system_favicon', ''),
     (203, 'system_ogimage_default', '1'),
     (204, 'system_ogimage', ''),
-    (205, 'css_customized', '0'),
-    (206, 'css_background', ''),
-    (207, 'css_link_color', ''),
-    (208, 'css_header', ''),
-    (209, 'css_header_search', ''),
-    (210, 'css_header_search_color', ''),
-    (211, 'css_btn_primary', ''),
-    (212, 'css_custome_css', '/* \r\n\r\nAdd here your custom css styles \r\nExample:\r\np { text-align: center; color: red; }\r\n\r\n*/'),
     (213, 'custome_js_header', '/* \r\nYou can add your JavaScript code here\r\n\r\nExample:\r\n\r\nvar x, y, z;\r\nx = 1;\r\ny = 2;\r\nz = x + y;\r\n*/'),
     (214, 'custome_js_footer', '/* \r\nYou can add your JavaScript code here\r\n\r\nExample:\r\n\r\nvar x, y, z;\r\nx = 1;\r\ny = 2;\r\nz = x + y;\r\n*/'),
     (215, 'forums_enabled', '0'),
@@ -5091,8 +3911,6 @@ if (isset($_POST['submit'])) {
     (252, 'sms_provider', 'twilio'),
     (253, 'bulksms_username', ''),
     (254, 'bulksms_password', ''),
-    (255, 'infobip_username', ''),
-    (256, 'infobip_password', ''),
     (257, 'watermark_enabled', '0'),
     (258, 'watermark_icon', ''),
     (259, 'watermark_position', 'bottom right'),
@@ -5183,7 +4001,7 @@ if (isset($_POST['submit'])) {
     (359, 'newsfeed_results', '12'),
     (365, 'ads_approval_enabled', '0'),
     (407, 'uploads_cdn_url', ''),
-    (592, 'affiliates_levels', '10'),
+    (592, 'affiliates_levels', '5'),
     (692, 'voice_notes_durtaion', '120'),
     (693, 'voice_notes_encoding', 'wav'),
     (702, 'pages_results', '12'),
@@ -5229,8 +4047,8 @@ if (isset($_POST['submit'])) {
     (1291, 'ffmpeg_enabled', '0'),
     (1292, 'ffmpeg_path', ''),
     (1293, 'ffmpeg_speed', 'medium'),
-    (1294, 'reserved_usernames_enabled', '0'),
-    (1295, 'reserved_usernames', ''),
+    (1294, 'reserved_usernames_enabled', '1'),
+    (1295, 'reserved_usernames', '[{&quot;value&quot;:&quot;activation&quot;},{&quot;value&quot;:&quot;admin&quot;},{&quot;value&quot;:&quot;admincp&quot;},{&quot;value&quot;:&quot;administrator&quot;},{&quot;value&quot;:&quot;admins&quot;},{&quot;value&quot;:&quot;ads&quot;},{&quot;value&quot;:&quot;api&quot;},{&quot;value&quot;:&quot;apis&quot;},{&quot;value&quot;:&quot;blog&quot;},{&quot;value&quot;:&quot;blogs&quot;},{&quot;value&quot;:&quot;boosted&quot;},{&quot;value&quot;:&quot;bootstrap&quot;},{&quot;value&quot;:&quot;category&quot;},{&quot;value&quot;:&quot;ccbill&quot;},{&quot;value&quot;:&quot;connect&quot;},{&quot;value&quot;:&quot;contact&quot;},{&quot;value&quot;:&quot;contacts&quot;},{&quot;value&quot;:&quot;content&quot;},{&quot;value&quot;:&quot;course&quot;},{&quot;value&quot;:&quot;courses&quot;},{&quot;value&quot;:&quot;cronjob&quot;},{&quot;value&quot;:&quot;dating&quot;},{&quot;value&quot;:&quot;developer&quot;},{&quot;value&quot;:&quot;developers&quot;},{&quot;value&quot;:&quot;directory&quot;},{&quot;value&quot;:&quot;discover&quot;},{&quot;value&quot;:&quot;docker&quot;},{&quot;value&quot;:&quot;embed&quot;},{&quot;value&quot;:&quot;event&quot;},{&quot;value&quot;:&quot;events&quot;},{&quot;value&quot;:&quot;files&quot;},{&quot;value&quot;:&quot;forum&quot;},{&quot;value&quot;:&quot;forums&quot;},{&quot;value&quot;:&quot;funding&quot;},{&quot;value&quot;:&quot;game&quot;},{&quot;value&quot;:&quot;games&quot;},{&quot;value&quot;:&quot;going&quot;},{&quot;value&quot;:&quot;group&quot;},{&quot;value&quot;:&quot;groups&quot;},{&quot;value&quot;:&quot;includes&quot;},{&quot;value&quot;:&quot;index&quot;},{&quot;value&quot;:&quot;install&quot;},{&quot;value&quot;:&quot;interested&quot;},{&quot;value&quot;:&quot;invited&quot;},{&quot;value&quot;:&quot;job&quot;},{&quot;value&quot;:&quot;jobs&quot;},{&quot;value&quot;:&quot;joined&quot;},{&quot;value&quot;:&quot;liked&quot;},{&quot;value&quot;:&quot;live&quot;},{&quot;value&quot;:&quot;login&quot;},{&quot;value&quot;:&quot;logout&quot;},{&quot;value&quot;:&quot;manage&quot;},{&quot;value&quot;:&quot;market&quot;},{&quot;value&quot;:&quot;memories&quot;},{&quot;value&quot;:&quot;merit&quot;},{&quot;value&quot;:&quot;merits&quot;},{&quot;value&quot;:&quot;message&quot;},{&quot;value&quot;:&quot;messages&quot;},{&quot;value&quot;:&quot;modcp&quot;},{&quot;value&quot;:&quot;moderator&quot;},{&quot;value&quot;:&quot;moderators&quot;},{&quot;value&quot;:&quot;modules&quot;},{&quot;value&quot;:&quot;movie&quot;},{&quot;value&quot;:&quot;movies&quot;},{&quot;value&quot;:&quot;notification&quot;},{&quot;value&quot;:&quot;notifications&quot;},{&quot;value&quot;:&quot;offer&quot;},{&quot;value&quot;:&quot;offers&quot;},{&quot;value&quot;:&quot;package&quot;},{&quot;value&quot;:&quot;packages&quot;},{&quot;value&quot;:&quot;page&quot;},{&quot;value&quot;:&quot;pages&quot;},{&quot;value&quot;:&quot;payment_status&quot;},{&quot;value&quot;:&quot;people&quot;},{&quot;value&quot;:&quot;photo&quot;},{&quot;value&quot;:&quot;photos&quot;},{&quot;value&quot;:&quot;popular&quot;},{&quot;value&quot;:&quot;post&quot;},{&quot;value&quot;:&quot;posts&quot;},{&quot;value&quot;:&quot;profile&quot;},{&quot;value&quot;:&quot;reel&quot;},{&quot;value&quot;:&quot;reels&quot;},{&quot;value&quot;:&quot;register&quot;},{&quot;value&quot;:&quot;reset&quot;},{&quot;value&quot;:&quot;revoke&quot;},{&quot;value&quot;:&quot;saved&quot;},{&quot;value&quot;:&quot;scheduled&quot;},{&quot;value&quot;:&quot;search&quot;},{&quot;value&quot;:&quot;setting&quot;},{&quot;value&quot;:&quot;settings&quot;},{&quot;value&quot;:&quot;share&quot;},{&quot;value&quot;:&quot;signin&quot;},{&quot;value&quot;:&quot;signout&quot;},{&quot;value&quot;:&quot;signup&quot;},{&quot;value&quot;:&quot;sockets&quot;},{&quot;value&quot;:&quot;started&quot;},{&quot;value&quot;:&quot;static&quot;},{&quot;value&quot;:&quot;support&quot;},{&quot;value&quot;:&quot;upgraded&quot;},{&quot;value&quot;:&quot;vendor&quot;},{&quot;value&quot;:&quot;wallet&quot;},{&quot;value&quot;:&quot;watch&quot;},{&quot;value&quot;:&quot;webhooks&quot;},{&quot;value&quot;:&quot;update&quot;}]'),
     (1310, 'getting_started_profile_image_required', '0'),
     (1311, 'getting_started_location_required', '0'),
     (1312, 'getting_started_education_required', '0'),
@@ -5250,7 +4068,7 @@ if (isset($_POST['submit'])) {
     (1844, 'monetization_payment_method', 'paypal,skrill'),
     (1855, 'watch_enabled', '1'),
     (1929, 'tips_enabled', '0'),
-    (1931, 'tips_min_amount', '10'),
+    (1931, 'tips_min_amount', '1'),
     (1932, 'tips_max_amount', '100'),
     (2047, 'allow_animated_images', '1'),
     (2059, 'system_description_pages', 'Discover pages'),
@@ -5269,13 +4087,6 @@ if (isset($_POST['submit'])) {
     (2244, 'moneypoolscash_merchant_password', ''),
     (2266, 'default_custom_user_group', '0'),
     (2285, 'verification_docs_required', '1'),
-    (2286, 'fluid_design', '0'),
-    (2446, 'css_header_icons', ''),
-    (2447, 'css_header_icons_night', ''),
-    (2448, 'css_main_icons', ''),
-    (2449, 'css_main_icons_night', ''),
-    (2450, 'css_action_icons', ''),
-    (2451, 'css_action_icons_night', ''),
     (2454, 'sngine_login_enabled', '0'),
     (2455, 'sngine_appid', ''),
     (2456, 'sngine_secret', ''),
@@ -5287,7 +4098,7 @@ if (isset($_POST['submit'])) {
     (2573, 'market_payment_method_custom', ''),
     (2574, 'market_min_withdrawal', '50'),
     (2575, 'market_money_transfer_enabled', '1'),
-    (2576, 'market_commission', '0'),
+    (2576, 'market_commission', '10'),
     (2577, 'sms_limit', '3'),
     (2596, 'switch_accounts_enabled', '1'),
     (2597, 'wallet_max_transfer', '5'),
@@ -5301,10 +4112,10 @@ if (isset($_POST['submit'])) {
     (2861, 'ffmpeg_360p_enabled', 'on'),
     (2862, 'ffmpeg_480p_enabled', 'on'),
     (2863, 'ffmpeg_720p_enabled', 'on'),
-    (2864, 'ffmpeg_1080p_enabled', ''),
+    (2864, 'ffmpeg_1080p_enabled', 'on'),
     (2865, 'ffmpeg_1440p_enabled', ''),
     (2866, 'ffmpeg_2160p_enabled', ''),
-    (2990, 'fluid_videos_enabled', '0'),
+    (2990, 'fluid_videos_enabled', '1'),
     (2991, 'pages_events_enabled', '1'),
     (2992, 'verification_for_monetization', '0'),
     (2993, 'verification_for_adult_content', '0'),
@@ -5337,7 +4148,6 @@ if (isset($_POST['submit'])) {
     (3169, 'events_reviews_replacement_enabled', '1'),
     (3310, 'posts_reviews_enabled', '1'),
     (3311, 'posts_reviews_replacement_enabled', '1'),
-    (3312, 'landing_page_template', 'elengine'),
     (3313, 'authorize_net_enabled', '0'),
     (3314, 'authorize_net_api_login_id', ''),
     (3315, 'authorize_net_transaction_key', ''),
@@ -5401,7 +4211,7 @@ if (isset($_POST['submit'])) {
     (4055, 'max_daily_upload_size', '0'),
     (4372, 'pages_pbid_enabled', '1'),
     (4374, 'activities_edit_limit', '15'),
-    (4375, 'stripe_payment_element_enabled', '0'),
+    (4375, 'stripe_payment_element_enabled', '1'),
     (4606, 'blogs_results', '12'),
     (4624, 'funding_results', '12'),
     (4719, 'verotel_enabled', '0'),
@@ -5445,7 +4255,7 @@ if (isset($_POST['submit'])) {
     (5095, 'mods_reach_permission', '1'),
     (5137, 'mods_pro_permission', '0'),
     (5138, 'ads_author_view_enabled', '1'),
-    (5156, 'audio_video_provider', 'twilio'),
+    (5156, 'audio_video_provider', 'agora'),
     (5157, 'livekit_api_key', ''),
     (5158, 'livekit_api_secret', ''),
     (5159, 'livekit_ws_url', ''),
@@ -5475,7 +4285,6 @@ if (isset($_POST['submit'])) {
     (6805, 'merits_notifications_recharge', '1'),
     (6806, 'merits_notifications_reminder', '1'),
     (6807, 'merits_notifications_recipient', '1'),
-    (6820, 'merits_widgets_newsfeed', '1'),
     (6821, 'merits_widgets_winners', '1'),
     (6822, 'merits_widgets_balance', '1'),
     (6823, 'merits_widgets_statistics', '1'),
@@ -5507,7 +4316,7 @@ if (isset($_POST['submit'])) {
     (7640, 'cronjob_undelivered_orders', '1'),
     (8259, 'system_api_key', ''),
     (8260, 'system_api_secret', ''),
-    (8272, 'system_jwt_key', 'e7016ea7687a0093f90150d49181d0c9'),
+    (8272, 'system_jwt_key', '4d459d1451454e53d20b7d67c7cd69af'),
     (8389, 'onesignal_messenger_notification_enabled', '0'),
     (8390, 'onesignal_messenger_app_id', ''),
     (8391, 'onesignal_messenger_api_key', ''),
@@ -5626,7 +4435,157 @@ if (isset($_POST['submit'])) {
     (15720, 'apple_key_content', ''),
     (15746, 'discord_login_enabled', '0'),
     (15747, 'discord_appid', ''),
-    (15748, 'discord_secret', '');
+    (15748, 'discord_secret', ''),
+    (16178, 'rich_text_posts_enabled', '1'),
+    (16297, 'video_embed_code_enabled', '1'),
+    (16400, 'incognito_mode_enabled', '1'),
+    (16401, 'panic_mode_enabled', ''),
+    (16999, 'affiliates_per_user_6', ''),
+    (17000, 'affiliates_percentage_6', ''),
+    (17001, 'affiliates_per_user_7', ''),
+    (17002, 'affiliates_percentage_7', ''),
+    (17003, 'affiliates_per_user_8', ''),
+    (17004, 'affiliates_percentage_8', ''),
+    (17005, 'affiliates_per_user_9', ''),
+    (17006, 'affiliates_percentage_9', ''),
+    (17007, 'affiliates_per_user_10', ''),
+    (17008, 'affiliates_percentage_10', ''),
+    (17769, 'themes_demo_enabled', '0'),
+    (17847, 'movies_results', '12'),
+    (17909, 'people_results', '12'),
+    (17934, 'posts_read_more_lines', '5'),
+    (17935, 'comments_read_more_lines', '3'),
+    (17966, 'chat_files_enabled', '1'),
+    (17967, 'chat_max_media', '10'),
+    (18038, 'blogs_rss_enabled', '1'),
+    (18088, 'posts_edit_limit_enabled', '0'),
+    (18089, 'posts_edit_limit', '24'),
+    (18090, 'pages_messages_enabled', '1'),
+    (18101, 'cronjob_post_views_cleanup', '1'),
+    (18107, 'posts_views_period', 'lifetime'),
+    (18108, 'posts_views_days', '1'),
+    (18109, 'posts_views_maintenance', 'idle'),
+    (18110, 'posts_views_schema_version', '1'),
+    (18111, 'posts_views_cleanup_time', ''),
+    (18112, 'posts_views_cleanup_result', ''),
+    (18113, 'posts_views_cleanup_error', ''),
+    (18132, 'ovh_enabled', '0'),
+    (18133, 'ovh_bucket', ''),
+    (18134, 'ovh_region', ''),
+    (18135, 'ovh_key', ''),
+    (18136, 'ovh_secret', ''),
+    (18218, 'ads_budget_priority_enabled', '1'),
+    (18225, 'iyzico_enabled', '0'),
+    (18226, 'iyzico_mode', 'sandbox'),
+    (18227, 'iyzico_api_key', ''),
+    (18228, 'iyzico_secret_key', ''),
+    (18311, 'live_provider', 'agora'),
+    (18312, 'livekit_live_api_key', ''),
+    (18313, 'livekit_live_api_secret', ''),
+    (18314, 'livekit_live_ws_url', ''),
+    (18315, 'agora_s3_endpoint', ''),
+    (18316, 'agora_s3_public_url', ''),
+    (18355, 'live_rtmp_enabled', '0'),
+    (18373, 'live_results', '12'),
+    (18374, 'system_description_live', 'Watch live streams and support your favorite creators'),
+    (18418, 'watch_results', '12'),
+    (18512, 'redis_enabled', '0'),
+    (18513, 'redis_host', '127.0.0.1'),
+    (18514, 'redis_port', '6379'),
+    (18515, 'redis_database', '0'),
+    (18516, 'redis_password', ''),
+    (18517, 'redis_prefix', ''),
+    (18518, 'redis_tls_enabled', '0'),
+    (18519, 'redis_widgets_enabled', '1'),
+    (18520, 'redis_relations_enabled', '1'),
+    (18521, 'redis_sessions_enabled', '1'),
+    (18522, 'redis_post_views_enabled', '1'),
+    (18536, 'blogs_search_content_enabled', '1'),
+    (18537, 'posts_search_ready', '0'),
+    (18538, 'posts_search_cursor', '0'),
+    (18687, 'download_videos_disabled', '0'),
+    (18728, 'cronjob_last_run', ''),
+    (18729, 'translation_provider', 'google'),
+    (18730, 'deepl_key', ''),
+    (18731, 'libretranslate_url', ''),
+    (18732, 'libretranslate_key', ''),
+    (18740, 'geolocation_provider', 'google'),
+    (18741, 'geolocation_osm_url', 'https://photon.komoot.io'),
+    (18826, 'ipinfo_enabled', '0'),
+    (18827, 'ipinfo_token', ''),
+    (18828, 'login_alerts_enabled', '0'),
+    (18829, 'sitemap_enabled', '1'),
+    (18830, 'sitemap_types', 'site,posts,blogs,products,jobs,offers,courses,funding,reels,users,pages,groups,events,forums,movies,games'),
+    (18831, 'sitemap_urls_per_file', '10000'),
+    (18832, 'sitemap_refresh', '60'),
+    (18833, 'sitemap_images_enabled', '1'),
+    (18834, 'sitemap_videos_enabled', '1'),
+    (18835, 'indexnow_enabled', '1'),
+    (18836, 'indexnow_key', ''),
+    (18837, 'robots_txt', 'User-agent: *\r\nDisallow: /content/backups\r\nDisallow: /content/languages\r\nDisallow: /includes/libs\r\nDisallow: /install\r\nDisallow: /admincp\r\nDisallow: /modcp'),
+    (18838, 'llms_enabled', '1'),
+    (18839, 'llms_notes', ''),
+    (18946, 'live_chat_rules', 'Please respect the host and other viewers. No harassment, spam, threats, or inappropriate content. Violations may result in removal from the chat.'),
+    (18947, 'live_moderation_enabled', '1'),
+    (18979, 'dating_enabled', '0'),
+    (18980, 'mods_dating_permission', '0'),
+    (18981, 'dating_min_age', '18'),
+    (18982, 'dating_verified_only', '0'),
+    (18983, 'dating_photos_approval', '0'),
+    (18984, 'dating_max_photos', '6'),
+    (18985, 'dating_free_swipes', '50'),
+    (18986, 'dating_free_likes_list', '0'),
+    (18987, 'dating_max_distance', '500'),
+    (18988, 'dating_results', '12'),
+    (18989, 'dating_ads_frequency', '8'),
+    (18990, 'dating_super_likes_pack', '5'),
+    (18991, 'dating_super_likes_price', '0'),
+    (18992, 'dating_boost_minutes', '30'),
+    (18993, 'dating_boost_price', '0'),
+    (18994, 'dating_priority_message_price', '0'),
+    (19010, 'module_names', ''),
+    (19027, 'dating_max_interests', '10'),
+    (19087, 'stories_music_enabled', '1'),
+    (19088, 'stories_music_itunes_enabled', '1'),
+    (19089, 'stories_music_library_enabled', '1'),
+    (19090, 'stories_music_itunes_country', 'US'),
+    (19091, 'mods_stories_permission', '0'),
+    (19092, 'stories_text_enabled', '1'),
+    (19093, 'stories_reactions_enabled', '1'),
+    (19094, 'stories_replies_enabled', '1'),
+    (19095, 'stories_polls_enabled', '1'),
+    (19096, 'stories_highlights_enabled', '1'),
+    (19097, 'stories_video_max_duration', '60'),
+    (19139, 'blogs_cover_required', '1'),
+    (19188, 'stories_design', 'cards'),
+    (19312, 'stories_archive_enabled', '1'),
+    (19350, 'verification_user_photo_enabled', '1'),
+    (19351, 'verification_user_photo_title', 'Your Photo'),
+    (19352, 'verification_user_passport_enabled', '1'),
+    (19353, 'verification_user_passport_title', 'Passport or National ID'),
+    (19354, 'verification_page_photo_enabled', '1'),
+    (19355, 'verification_page_photo_title', 'Company Incorporation File'),
+    (19356, 'verification_page_passport_enabled', '1'),
+    (19357, 'verification_page_passport_title', 'Company Tax File'),
+    (19359, 'forums_rss_enabled', '1'),
+    (19365, 'bunny_enabled', '0'),
+    (19366, 'bunny_zone', ''),
+    (19367, 'bunny_password', ''),
+    (19368, 'bunny_region', ''),
+    (19369, 'bunny_url', ''),
+    (19446, 'watermark_x', '95'),
+    (19447, 'watermark_y', '95'),
+    (19448, 'watermark_videos_x', '50'),
+    (19449, 'watermark_videos_y', '50'),
+    (19504, 'storj_enabled', '0'),
+    (19505, 'storj_bucket', ''),
+    (19506, 'storj_key', ''),
+    (19507, 'storj_secret', ''),
+    (19508, 'storj_endpoint', ''),
+    (19509, 'storj_url', ''),
+    (19667, 'infobip_base_url', ''),
+    (19668, 'infobip_api_key', ''),
+    (19669, 'infobip_sender', '');
 
     -- --------------------------------------------------------
 
@@ -5666,16 +4625,89 @@ if (isset($_POST['submit'])) {
     CREATE TABLE `system_themes` (
       `theme_id` int UNSIGNED NOT NULL,
       `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
       `default` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-      `enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
+      `enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `fluid_design` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `system_theme_night_on` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `system_theme_mode_select` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
+      `system_theme_icons` enum('tabler','svg') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'tabler',
+      `system_theme_fonts` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'google',
+      `system_wallpaper_default` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
+      `system_wallpaper` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_customized` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `css_background` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_link_color` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_header` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_header_search` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_header_search_color` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_btn_primary` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_header_icons` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_header_icons_night` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_main_icons` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_main_icons_night` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_action_icons` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_action_icons_night` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `css_custome_css` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `landing` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'default',
+      `bottom_bar` varchar(512) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `sidebar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+      `sidebar_more` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT ''
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     --
     -- Dumping data for table `system_themes`
     --
 
-    INSERT INTO `system_themes` (`theme_id`, `name`, `default`, `enabled`) VALUES
-    (1, 'default', '1', '1');
+    INSERT INTO `system_themes` (`theme_id`, `name`, `title`, `default`, `enabled`, `fluid_design`, `system_theme_night_on`, `system_theme_mode_select`, `system_theme_icons`, `system_theme_fonts`, `system_wallpaper_default`, `system_wallpaper`, `css_customized`, `css_background`, `css_link_color`, `css_header`, `css_header_search`, `css_header_search_color`, `css_btn_primary`, `css_header_icons`, `css_header_icons_night`, `css_main_icons`, `css_main_icons_night`, `css_action_icons`, `css_action_icons_night`, `css_custome_css`, `landing`, `bottom_bar`, `sidebar`, `sidebar_more`) VALUES
+    (1, 'nova', 'Nova', '1', '1', '0', '0', '1', 'svg', 'google', '1', '', '0', '', '', '', '', '', '', '', '', '', '', '', '', '', 'default', 'home,reels,add,watch,menu', 'saved,scheduled,memories,stories_archive,people,dating,pages,groups,events,reels,watch,live', 'wallet,ads,boosted,blogs,market,funding,offers,jobs,courses,forums,movies,games,merits,developers,directory');
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `system_theme_landings`
+    --
+
+    CREATE TABLE `system_theme_landings` (
+      `landing_id` int UNSIGNED NOT NULL,
+      `theme_id` int UNSIGNED NOT NULL,
+      `slug` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `is_default` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    --
+    -- Dumping data for table `system_theme_landings`
+    --
+
+    INSERT INTO `system_theme_landings` (`landing_id`, `theme_id`, `slug`, `title`, `is_default`) VALUES
+    (1, 1, 'default', 'Default', '1'),
+    (2, 1, 'aurora', 'Aurora', '0'),
+    (3, 1, 'summit', 'Summit', '0'),
+    (4, 1, 'studio', 'Studio', '0'),
+    (5, 1, 'orbit', 'Orbit', '0'),
+    (6, 1, 'liquid', 'Liquid', '0'),
+    (7, 1, 'terminal', 'Terminal', '0'),
+    (8, 1, 'retro', 'Retro', '0'),
+    (9, 1, 'minimal', 'Minimal', '0');
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `translations_cache`
+    --
+
+    CREATE TABLE `translations_cache` (
+      `translation_id` int UNSIGNED NOT NULL,
+      `node_type` enum('post','page','group','event','message','user') COLLATE utf8mb4_general_ci NOT NULL,
+      `node_id` int UNSIGNED NOT NULL,
+      `node_field` enum('text','title','description') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `target_lang` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `source_hash` char(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `source_lang` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `translated_text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+      `created_at` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
     -- --------------------------------------------------------
 
@@ -5770,6 +4802,7 @@ if (isset($_POST['submit'])) {
       `user_newsletter_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `user_tips_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1',
       `user_suggestions_hidden` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
+      `user_incognito_enabled` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0',
       `user_privacy_chat` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_poke` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
       `user_privacy_gifts` enum('me','friends','public') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'public',
@@ -5962,6 +4995,29 @@ if (isset($_POST['submit'])) {
     -- --------------------------------------------------------
 
     --
+    -- Table structure for table `users_locations`
+    --
+
+    CREATE TABLE `users_locations` (
+      `user_id` int UNSIGNED NOT NULL,
+      `location` point NOT NULL /*!80003 SRID 0 */
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `users_login_countries`
+    --
+
+    CREATE TABLE `users_login_countries` (
+      `user_id` int UNSIGNED NOT NULL,
+      `country_code` varchar(2) COLLATE utf8mb4_general_ci NOT NULL,
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
     -- Table structure for table `users_merits`
     --
 
@@ -6042,12 +5098,29 @@ if (isset($_POST['submit'])) {
       `session_type` enum('W','A','I') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'W',
       `user_id` int UNSIGNED NOT NULL,
       `user_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+      `user_ip_country` varchar(2) COLLATE utf8mb4_general_ci DEFAULT NULL,
+      `user_ip_isp` varchar(128) COLLATE utf8mb4_general_ci DEFAULT NULL,
       `user_browser` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `user_os` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
       `user_os_version` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `user_device_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
       `session_onesignal_user_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+    -- --------------------------------------------------------
+
+    --
+    -- Table structure for table `users_shortcuts`
+    --
+
+    CREATE TABLE `users_shortcuts` (
+      `id` int UNSIGNED NOT NULL,
+      `user_id` int UNSIGNED NOT NULL,
+      `node_id` int UNSIGNED NOT NULL,
+      `node_type` enum('page','group','event','game') COLLATE utf8mb4_general_ci NOT NULL,
+      `state` enum('pinned','auto','hidden') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'auto',
+      `time` datetime NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
     -- --------------------------------------------------------
 
@@ -6178,7 +5251,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `ads_campaigns`
       ADD PRIMARY KEY (`campaign_id`),
-      ADD KEY `campaign_user_id` (`campaign_user_id`);
+      ADD KEY `campaign_user_id` (`campaign_user_id`),
+      ADD KEY `active_approved_placement` (`campaign_is_active`,`campaign_is_approved`,`ads_placement`);
 
     --
     -- Indexes for table `ads_system`
@@ -6270,6 +5344,23 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `conversations_messages`
       ADD PRIMARY KEY (`message_id`),
       ADD KEY `conversation_id` (`conversation_id`),
+      ADD KEY `user_id` (`user_id`),
+      ADD KEY `page_id` (`page_id`),
+      ADD KEY `call_id` (`call_id`);
+
+    --
+    -- Indexes for table `conversations_messages_media`
+    --
+    ALTER TABLE `conversations_messages_media`
+      ADD PRIMARY KEY (`media_id`),
+      ADD KEY `message_id` (`message_id`);
+
+    --
+    -- Indexes for table `conversations_messages_paid`
+    --
+    ALTER TABLE `conversations_messages_paid`
+      ADD PRIMARY KEY (`id`),
+      ADD KEY `message_id` (`message_id`),
       ADD KEY `user_id` (`user_id`);
 
     --
@@ -6284,7 +5375,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `conversations_users`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `conversation_id_user_id` (`conversation_id`,`user_id`);
+      ADD UNIQUE KEY `conversation_id_user_id` (`conversation_id`,`user_id`),
+      ADD KEY `user_id_conversation_id` (`user_id`,`conversation_id`);
 
     --
     -- Indexes for table `courses_categories`
@@ -6306,6 +5398,71 @@ if (isset($_POST['submit'])) {
       ADD PRIMARY KEY (`value_id`),
       ADD UNIQUE KEY `field_id_node_id_node_type` (`field_id`,`node_id`,`node_type`),
       ADD KEY `value` (`value`(20));
+
+    --
+    -- Indexes for table `dating_interests`
+    --
+    ALTER TABLE `dating_interests`
+      ADD PRIMARY KEY (`interest_id`);
+
+    --
+    -- Indexes for table `dating_locations`
+    --
+    ALTER TABLE `dating_locations`
+      ADD PRIMARY KEY (`user_id`),
+      ADD SPATIAL KEY `location` (`location`);
+
+    --
+    -- Indexes for table `dating_matches`
+    --
+    ALTER TABLE `dating_matches`
+      ADD PRIMARY KEY (`match_id`),
+      ADD UNIQUE KEY `user_one_id_user_two_id` (`user_one_id`,`user_two_id`),
+      ADD KEY `user_one_id_status` (`user_one_id`,`status`,`match_id`),
+      ADD KEY `user_two_id_status` (`user_two_id`,`status`,`match_id`);
+
+    --
+    -- Indexes for table `dating_photos`
+    --
+    ALTER TABLE `dating_photos`
+      ADD PRIMARY KEY (`photo_id`),
+      ADD KEY `user_id_status_photo_order` (`user_id`,`status`,`photo_order`),
+      ADD KEY `status_photo_id` (`status`,`photo_id`);
+
+    --
+    -- Indexes for table `dating_profiles`
+    --
+    ALTER TABLE `dating_profiles`
+      ADD PRIMARY KEY (`user_id`),
+      ADD KEY `status_gender_user_id` (`status`,`gender`,`user_id`),
+      ADD KEY `status_gender_country_id` (`status`,`gender`,`country_id`,`user_id`),
+      ADD KEY `status_gender_city_key` (`status`,`gender`,`city_key`,`user_id`),
+      ADD KEY `status_boosted_until` (`status`,`boosted_until`),
+      ADD KEY `status_time` (`status`,`time`);
+
+    --
+    -- Indexes for table `dating_profiles_interests`
+    --
+    ALTER TABLE `dating_profiles_interests`
+      ADD PRIMARY KEY (`user_id`,`interest_id`),
+      ADD KEY `interest_id_user_id` (`interest_id`,`user_id`);
+
+    --
+    -- Indexes for table `dating_purchases`
+    --
+    ALTER TABLE `dating_purchases`
+      ADD PRIMARY KEY (`purchase_id`),
+      ADD KEY `user_id` (`user_id`,`purchase_id`),
+      ADD KEY `time` (`time`);
+
+    --
+    -- Indexes for table `dating_swipes`
+    --
+    ALTER TABLE `dating_swipes`
+      ADD PRIMARY KEY (`swipe_id`),
+      ADD UNIQUE KEY `user_id_target_id` (`user_id`,`target_id`),
+      ADD KEY `user_id_time` (`user_id`,`time`),
+      ADD KEY `target_id_pending_swipe_id` (`target_id`,`pending`,`swipe_id`);
 
     --
     -- Indexes for table `developers_apps`
@@ -6332,12 +5489,6 @@ if (isset($_POST['submit'])) {
       ADD UNIQUE KEY `app_id_user_id` (`app_id`,`user_id`) USING BTREE;
 
     --
-    -- Indexes for table `emojis`
-    --
-    ALTER TABLE `emojis`
-      ADD PRIMARY KEY (`emoji_id`);
-
-    --
     -- Indexes for table `events`
     --
     ALTER TABLE `events`
@@ -6348,7 +5499,10 @@ if (isset($_POST['submit'])) {
       ADD KEY `event_album_covers` (`event_album_covers`),
       ADD KEY `event_album_timeline` (`event_album_timeline`),
       ADD KEY `event_date` (`event_date`) USING BTREE,
-      ADD KEY `event_title_idx` (`event_title`) USING BTREE;
+      ADD KEY `event_title_idx` (`event_title`) USING BTREE,
+      ADD KEY `event_boosted` (`event_boosted`),
+      ADD KEY `event_end_date` (`event_end_date`),
+      ADD KEY `event_page_id` (`event_page_id`);
 
     --
     -- Indexes for table `events_categories`
@@ -6362,7 +5516,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `events_members`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `event_id_user_id` (`event_id`,`user_id`) USING BTREE;
+      ADD UNIQUE KEY `event_id_user_id` (`event_id`,`user_id`) USING BTREE,
+      ADD KEY `user_id_event_id` (`user_id`,`event_id`);
 
     --
     -- Indexes for table `followings`
@@ -6381,6 +5536,14 @@ if (isset($_POST['submit'])) {
       ADD KEY `forum_section` (`forum_section`);
 
     --
+    -- Indexes for table `forums_likes`
+    --
+    ALTER TABLE `forums_likes`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `user_id_node_id_node_type` (`user_id`,`node_id`,`node_type`),
+      ADD KEY `node_id_node_type` (`node_id`,`node_type`);
+
+    --
     -- Indexes for table `forums_replies`
     --
     ALTER TABLE `forums_replies`
@@ -6394,7 +5557,12 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `forums_threads`
       ADD PRIMARY KEY (`thread_id`),
       ADD KEY `forum_id` (`forum_id`),
-      ADD KEY `user_id` (`user_id`);
+      ADD KEY `user_id` (`user_id`),
+      ADD KEY `latest` (`is_pinned`,`last_reply`),
+      ADD KEY `forum_latest` (`forum_id`,`is_pinned`,`last_reply`),
+      ADD KEY `replies` (`replies`),
+      ADD KEY `forum_replies` (`forum_id`,`replies`),
+      ADD KEY `forum_last_reply` (`forum_id`,`last_reply`);
 
     --
     -- Indexes for table `friends`
@@ -6405,6 +5573,13 @@ if (isset($_POST['submit'])) {
       ADD KEY `user_one_id` (`user_one_id`) USING BTREE,
       ADD KEY `user_two_id` (`user_two_id`) USING BTREE,
       ADD KEY `status` (`status`) USING BTREE;
+
+    --
+    -- Indexes for table `funding_categories`
+    --
+    ALTER TABLE `funding_categories`
+      ADD PRIMARY KEY (`category_id`) USING BTREE,
+      ADD KEY `category_parent_id` (`category_parent_id`);
 
     --
     -- Indexes for table `funding_payments`
@@ -6453,14 +5628,16 @@ if (isset($_POST['submit'])) {
       ADD KEY `group_album_timeline` (`group_album_timeline`),
       ADD KEY `group_date` (`group_date`) USING BTREE,
       ADD KEY `group_title_idx` (`group_title`) USING BTREE,
-      ADD KEY `group_name_idx` (`group_name`) USING BTREE;
+      ADD KEY `group_name_idx` (`group_name`) USING BTREE,
+      ADD KEY `group_boosted` (`group_boosted`);
 
     --
     -- Indexes for table `groups_admins`
     --
     ALTER TABLE `groups_admins`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `group_id_user_id` (`group_id`,`user_id`);
+      ADD UNIQUE KEY `group_id_user_id` (`group_id`,`user_id`),
+      ADD KEY `user_id` (`user_id`);
 
     --
     -- Indexes for table `groups_categories`
@@ -6481,7 +5658,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `groups_members`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `group_id_user_id` (`group_id`,`user_id`);
+      ADD UNIQUE KEY `group_id_user_id` (`group_id`,`user_id`),
+      ADD KEY `user_id_group_id` (`user_id`,`group_id`);
 
     --
     -- Indexes for table `hashtags`
@@ -6509,11 +5687,51 @@ if (isset($_POST['submit'])) {
       ADD KEY `code` (`code`) USING BTREE;
 
     --
+    -- Indexes for table `iyzico_payments`
+    --
+    ALTER TABLE `iyzico_payments`
+      ADD PRIMARY KEY (`payment_id`),
+      ADD UNIQUE KEY `iyzico_conversation_id` (`iyzico_conversation_id`),
+      ADD KEY `iyzico_token` (`iyzico_token`(191)),
+      ADD KEY `user_id` (`user_id`);
+
+    --
     -- Indexes for table `jobs_categories`
     --
     ALTER TABLE `jobs_categories`
       ADD PRIMARY KEY (`category_id`) USING BTREE,
       ADD KEY `category_parent_id` (`category_parent_id`);
+
+    --
+    -- Indexes for table `live_ingresses`
+    --
+    ALTER TABLE `live_ingresses`
+      ADD PRIMARY KEY (`user_id`);
+
+    --
+    -- Indexes for table `live_moderation_log`
+    --
+    ALTER TABLE `live_moderation_log`
+      ADD PRIMARY KEY (`log_id`),
+      ADD KEY `host` (`host_type`,`host_id`,`log_id`);
+
+    --
+    -- Indexes for table `live_moderation_settings`
+    --
+    ALTER TABLE `live_moderation_settings`
+      ADD PRIMARY KEY (`host_type`,`host_id`);
+
+    --
+    -- Indexes for table `live_moderators`
+    --
+    ALTER TABLE `live_moderators`
+      ADD PRIMARY KEY (`host_type`,`host_id`,`user_id`);
+
+    --
+    -- Indexes for table `live_restrictions`
+    --
+    ALTER TABLE `live_restrictions`
+      ADD PRIMARY KEY (`host_type`,`host_id`,`user_id`);
 
     --
     -- Indexes for table `log_commissions`
@@ -6535,15 +5753,6 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `log_points`
       ADD PRIMARY KEY (`log_id`) USING BTREE,
       ADD KEY `user_id` (`user_id`);
-
-    --
-    -- Indexes for table `log_sessions`
-    --
-    ALTER TABLE `log_sessions`
-      ADD PRIMARY KEY (`session_id`),
-      ADD KEY `session_ip` (`session_ip`) USING BTREE,
-      ADD KEY `session_user_agent` (`session_user_agent`) USING BTREE,
-      ADD KEY `idx_session_ip_user_agent` (`session_ip`,`session_user_agent`);
 
     --
     -- Indexes for table `log_subscriptions`
@@ -6585,7 +5794,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `monetization_coupons_users`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `user_id_coupon_id` (`user_id`,`coupon_id`) USING BTREE;
+      ADD UNIQUE KEY `user_id_coupon_id` (`user_id`,`coupon_id`) USING BTREE,
+      ADD KEY `coupon_id` (`coupon_id`);
 
     --
     -- Indexes for table `monetization_payments`
@@ -6691,7 +5901,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `pages_admins`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `page_id_user_id` (`page_id`,`user_id`);
+      ADD UNIQUE KEY `page_id_user_id` (`page_id`,`user_id`),
+      ADD KEY `user_id` (`user_id`);
 
     --
     -- Indexes for table `pages_categories`
@@ -6699,6 +5910,14 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `pages_categories`
       ADD PRIMARY KEY (`category_id`),
       ADD KEY `category_parent_id` (`category_parent_id`);
+
+    --
+    -- Indexes for table `pages_conversations`
+    --
+    ALTER TABLE `pages_conversations`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `page_user` (`page_id`,`user_id`),
+      ADD UNIQUE KEY `conversation_id` (`conversation_id`);
 
     --
     -- Indexes for table `pages_invites`
@@ -6712,13 +5931,23 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `pages_likes`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `page_id_user_id` (`page_id`,`user_id`);
+      ADD UNIQUE KEY `page_id_user_id` (`page_id`,`user_id`),
+      ADD KEY `user_id_page_id` (`user_id`,`page_id`);
 
     --
     -- Indexes for table `permissions_groups`
     --
     ALTER TABLE `permissions_groups`
       ADD PRIMARY KEY (`permissions_group_id`);
+
+    --
+    -- Indexes for table `plisio_payments`
+    --
+    ALTER TABLE `plisio_payments`
+      ADD PRIMARY KEY (`payment_id`),
+      ADD UNIQUE KEY `plisio_txn_id` (`plisio_txn_id`),
+      ADD KEY `plisio_hash` (`plisio_hash`),
+      ADD KEY `user_id` (`user_id`);
 
     --
     -- Indexes for table `points_payments`
@@ -6740,7 +5969,10 @@ if (isset($_POST['submit'])) {
       ADD KEY `boosted_by` (`boosted_by`),
       ADD KEY `user_id` (`user_id`,`user_type`),
       ADD KEY `boosted` (`boosted`) USING BTREE,
-      ADD KEY `time` (`time`) USING BTREE;
+      ADD KEY `time` (`time`) USING BTREE,
+      ADD KEY `boosted_post_type` (`boosted`,`post_type`),
+      ADD KEY `user_id_user_type_time` (`user_id`,`user_type`,`time`),
+      ADD KEY `origin_id_user_id` (`origin_id`,`user_id`);
 
     --
     -- Indexes for table `posts_articles`
@@ -6879,7 +6111,16 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `posts_live`
       ADD PRIMARY KEY (`live_id`) USING BTREE,
-      ADD KEY `post_id` (`post_id`);
+      ADD KEY `post_id` (`post_id`),
+      ADD KEY `category_id` (`category_id`),
+      ADD KEY `live_ended` (`live_ended`);
+
+    --
+    -- Indexes for table `posts_live_categories`
+    --
+    ALTER TABLE `posts_live_categories`
+      ADD PRIMARY KEY (`category_id`),
+      ADD KEY `category_parent_id` (`category_parent_id`);
 
     --
     -- Indexes for table `posts_live_users`
@@ -6887,6 +6128,13 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `posts_live_users`
       ADD PRIMARY KEY (`id`) USING BTREE,
       ADD UNIQUE KEY `user_id_post_id` (`user_id`,`post_id`);
+
+    --
+    -- Indexes for table `posts_locations`
+    --
+    ALTER TABLE `posts_locations`
+      ADD PRIMARY KEY (`post_id`),
+      ADD SPATIAL KEY `location` (`location`);
 
     --
     -- Indexes for table `posts_media`
@@ -6924,7 +6172,8 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `posts_photos`
       ADD PRIMARY KEY (`photo_id`),
       ADD KEY `post_id` (`post_id`),
-      ADD KEY `album_id` (`album_id`);
+      ADD KEY `album_id` (`album_id`),
+      ADD KEY `post_photo_order` (`post_id`,`sort_order`,`photo_id`);
 
     --
     -- Indexes for table `posts_photos_albums`
@@ -6940,7 +6189,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `posts_photos_reactions`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `user_id_photo_id` (`user_id`,`photo_id`);
+      ADD UNIQUE KEY `user_id_photo_id` (`user_id`,`photo_id`),
+      ADD KEY `photo_id_user_id` (`photo_id`,`user_id`);
 
     --
     -- Indexes for table `posts_polls`
@@ -6961,7 +6211,8 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `posts_polls_options_users`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `user_id_poll_id` (`user_id`,`poll_id`);
+      ADD UNIQUE KEY `user_id_poll_id` (`user_id`,`poll_id`),
+      ADD KEY `option_id_user_id` (`option_id`,`user_id`);
 
     --
     -- Indexes for table `posts_products`
@@ -6986,11 +6237,27 @@ if (isset($_POST['submit'])) {
       ADD KEY `post_id` (`post_id`);
 
     --
+    -- Indexes for table `posts_rich_text`
+    --
+    ALTER TABLE `posts_rich_text`
+      ADD PRIMARY KEY (`rich_text_id`),
+      ADD KEY `post_id` (`post_id`);
+
+    --
     -- Indexes for table `posts_saved`
     --
     ALTER TABLE `posts_saved`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `post_id_user_id` (`post_id`,`user_id`);
+      ADD UNIQUE KEY `post_id_user_id` (`post_id`,`user_id`),
+      ADD KEY `user_id_time` (`user_id`,`time`);
+
+    --
+    -- Indexes for table `posts_search`
+    --
+    ALTER TABLE `posts_search`
+      ADD PRIMARY KEY (`post_id`);
+    ALTER TABLE `posts_search` ADD FULLTEXT KEY `ft_text` (`search_text`);
+    ALTER TABLE `posts_search` ADD FULLTEXT KEY `ft_all` (`search_text`,`search_body`);
 
     --
     -- Indexes for table `posts_videos`
@@ -7012,9 +6279,12 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `posts_views`
       ADD PRIMARY KEY (`view_id`),
+      ADD UNIQUE KEY `post_user` (`post_id`,`user_id`),
+      ADD UNIQUE KEY `post_guest` (`post_id`,`guest_ip`),
       ADD KEY `user_id` (`user_id`),
       ADD KEY `post_id` (`post_id`) USING BTREE,
-      ADD KEY `guest_ip` (`guest_ip`) USING BTREE;
+      ADD KEY `guest_ip` (`guest_ip`) USING BTREE,
+      ADD KEY `view_date_id` (`view_date`,`view_id`);
 
     --
     -- Indexes for table `reports`
@@ -7056,6 +6326,13 @@ if (isset($_POST['submit'])) {
       ADD KEY `product_post_id` (`product_post_id`) USING BTREE;
 
     --
+    -- Indexes for table `sitemaps`
+    --
+    ALTER TABLE `sitemaps`
+      ADD PRIMARY KEY (`sitemap_type`,`sitemap_part`),
+      ADD KEY `generated_at` (`generated_at`);
+
+    --
     -- Indexes for table `sneak_peaks`
     --
     ALTER TABLE `sneak_peaks`
@@ -7080,21 +6357,74 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `stories`
       ADD PRIMARY KEY (`story_id`),
-      ADD KEY `user_id` (`user_id`);
+      ADD KEY `user_id_expires_at` (`user_id`,`expires_at`),
+      ADD KEY `is_ads_expires_at` (`is_ads`,`expires_at`),
+      ADD KEY `expires_at` (`expires_at`),
+      ADD KEY `highlighted_expires_at` (`highlighted`,`expires_at`),
+      ADD KEY `origin_id` (`origin_id`);
 
     --
-    -- Indexes for table `stories_media`
+    -- Indexes for table `stories_audience`
     --
-    ALTER TABLE `stories_media`
-      ADD PRIMARY KEY (`media_id`),
+    ALTER TABLE `stories_audience`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `user_id_target_id_type` (`user_id`,`target_id`,`type`),
+      ADD KEY `target_id_type` (`target_id`,`type`);
+
+    --
+    -- Indexes for table `stories_highlights`
+    --
+    ALTER TABLE `stories_highlights`
+      ADD PRIMARY KEY (`highlight_id`),
+      ADD KEY `user_id` (`user_id`,`highlight_id`);
+
+    --
+    -- Indexes for table `stories_highlights_items`
+    --
+    ALTER TABLE `stories_highlights_items`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `highlight_id_story_id` (`highlight_id`,`story_id`),
       ADD KEY `story_id` (`story_id`);
+
+    --
+    -- Indexes for table `stories_music`
+    --
+    ALTER TABLE `stories_music`
+      ADD PRIMARY KEY (`music_id`),
+      ADD UNIQUE KEY `provider_provider_id` (`provider`,`provider_id`),
+      ADD KEY `enabled_uses` (`enabled`,`uses`);
+
+    --
+    -- Indexes for table `stories_polls_votes`
+    --
+    ALTER TABLE `stories_polls_votes`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `story_id_user_id` (`story_id`,`user_id`),
+      ADD KEY `user_id` (`user_id`,`story_id`);
+
+    --
+    -- Indexes for table `stories_reactions`
+    --
+    ALTER TABLE `stories_reactions`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `story_id_user_id` (`story_id`,`user_id`),
+      ADD KEY `user_id` (`user_id`,`story_id`);
+
+    --
+    -- Indexes for table `stories_views`
+    --
+    ALTER TABLE `stories_views`
+      ADD PRIMARY KEY (`view_id`),
+      ADD UNIQUE KEY `story_id_user_id` (`story_id`,`user_id`),
+      ADD KEY `user_id` (`user_id`,`story_id`);
 
     --
     -- Indexes for table `subscribers`
     --
     ALTER TABLE `subscribers`
       ADD PRIMARY KEY (`id`),
-      ADD UNIQUE KEY `user_id_node_id_node_type` (`user_id`,`node_id`,`node_type`) USING BTREE;
+      ADD UNIQUE KEY `user_id_node_id_node_type` (`user_id`,`node_id`,`node_type`) USING BTREE,
+      ADD KEY `node_id_node_type` (`node_id`,`node_type`);
 
     --
     -- Indexes for table `support_tickets`
@@ -7157,6 +6487,20 @@ if (isset($_POST['submit'])) {
     ALTER TABLE `system_themes`
       ADD PRIMARY KEY (`theme_id`),
       ADD UNIQUE KEY `name` (`name`);
+
+    --
+    -- Indexes for table `system_theme_landings`
+    --
+    ALTER TABLE `system_theme_landings`
+      ADD PRIMARY KEY (`landing_id`),
+      ADD UNIQUE KEY `theme_slug` (`theme_id`,`slug`);
+
+    --
+    -- Indexes for table `translations_cache`
+    --
+    ALTER TABLE `translations_cache`
+      ADD PRIMARY KEY (`translation_id`),
+      ADD UNIQUE KEY `node_lang` (`node_type`,`node_id`,`node_field`,`target_lang`);
 
     --
     -- Indexes for table `users`
@@ -7238,6 +6582,19 @@ if (isset($_POST['submit'])) {
       ADD UNIQUE KEY `user_id_email_phone` (`user_id`,`email_phone`) USING BTREE;
 
     --
+    -- Indexes for table `users_locations`
+    --
+    ALTER TABLE `users_locations`
+      ADD PRIMARY KEY (`user_id`),
+      ADD SPATIAL KEY `location` (`location`);
+
+    --
+    -- Indexes for table `users_login_countries`
+    --
+    ALTER TABLE `users_login_countries`
+      ADD PRIMARY KEY (`user_id`,`country_code`);
+
+    --
     -- Indexes for table `users_merits`
     --
     ALTER TABLE `users_merits`
@@ -7280,6 +6637,15 @@ if (isset($_POST['submit'])) {
       ADD UNIQUE KEY `session_token` (`session_token`),
       ADD KEY `user_ip` (`user_ip`),
       ADD KEY `user_id` (`user_id`);
+
+    --
+    -- Indexes for table `users_shortcuts`
+    --
+    ALTER TABLE `users_shortcuts`
+      ADD PRIMARY KEY (`id`),
+      ADD UNIQUE KEY `user_id_node_type_node_id` (`user_id`,`node_type`,`node_id`),
+      ADD KEY `user_id_state_time` (`user_id`,`state`,`time` DESC,`id` DESC),
+      ADD KEY `node_type_node_id` (`node_type`,`node_id`);
 
     --
     -- Indexes for table `users_sms`
@@ -7422,6 +6788,18 @@ if (isset($_POST['submit'])) {
       MODIFY `message_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `conversations_messages_media`
+    --
+    ALTER TABLE `conversations_messages_media`
+      MODIFY `media_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `conversations_messages_paid`
+    --
+    ALTER TABLE `conversations_messages_paid`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `conversations_messages_reactions`
     --
     ALTER TABLE `conversations_messages_reactions`
@@ -7452,6 +6830,36 @@ if (isset($_POST['submit'])) {
       MODIFY `value_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `dating_interests`
+    --
+    ALTER TABLE `dating_interests`
+      MODIFY `interest_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+    --
+    -- AUTO_INCREMENT for table `dating_matches`
+    --
+    ALTER TABLE `dating_matches`
+      MODIFY `match_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `dating_photos`
+    --
+    ALTER TABLE `dating_photos`
+      MODIFY `photo_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `dating_purchases`
+    --
+    ALTER TABLE `dating_purchases`
+      MODIFY `purchase_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `dating_swipes`
+    --
+    ALTER TABLE `dating_swipes`
+      MODIFY `swipe_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `developers_apps`
     --
     ALTER TABLE `developers_apps`
@@ -7468,12 +6876,6 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `developers_apps_users`
       MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
-
-    --
-    -- AUTO_INCREMENT for table `emojis`
-    --
-    ALTER TABLE `emojis`
-      MODIFY `emoji_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1803;
 
     --
     -- AUTO_INCREMENT for table `events`
@@ -7506,6 +6908,12 @@ if (isset($_POST['submit'])) {
       MODIFY `forum_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `forums_likes`
+    --
+    ALTER TABLE `forums_likes`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `forums_replies`
     --
     ALTER TABLE `forums_replies`
@@ -7524,6 +6932,12 @@ if (isset($_POST['submit'])) {
       MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `funding_categories`
+    --
+    ALTER TABLE `funding_categories`
+      MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+    --
     -- AUTO_INCREMENT for table `funding_payments`
     --
     ALTER TABLE `funding_payments`
@@ -7539,7 +6953,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `games_genres`
     --
     ALTER TABLE `games_genres`
-      MODIFY `genre_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+      MODIFY `genre_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
     --
     -- AUTO_INCREMENT for table `games_players`
@@ -7602,10 +7016,22 @@ if (isset($_POST['submit'])) {
       MODIFY `code_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `iyzico_payments`
+    --
+    ALTER TABLE `iyzico_payments`
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `jobs_categories`
     --
     ALTER TABLE `jobs_categories`
       MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+    --
+    -- AUTO_INCREMENT for table `live_moderation_log`
+    --
+    ALTER TABLE `live_moderation_log`
+      MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `log_commissions`
@@ -7624,12 +7050,6 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `log_points`
       MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
-
-    --
-    -- AUTO_INCREMENT for table `log_sessions`
-    --
-    ALTER TABLE `log_sessions`
-      MODIFY `session_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `log_subscriptions`
@@ -7689,7 +7109,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `movies_genres`
     --
     ALTER TABLE `movies_genres`
-      MODIFY `genre_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+      MODIFY `genre_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
     --
     -- AUTO_INCREMENT for table `movies_payments`
@@ -7752,6 +7172,12 @@ if (isset($_POST['submit'])) {
       MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
     --
+    -- AUTO_INCREMENT for table `pages_conversations`
+    --
+    ALTER TABLE `pages_conversations`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `pages_invites`
     --
     ALTER TABLE `pages_invites`
@@ -7768,6 +7194,12 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `permissions_groups`
       MODIFY `permissions_group_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+    --
+    -- AUTO_INCREMENT for table `plisio_payments`
+    --
+    ALTER TABLE `plisio_payments`
+      MODIFY `payment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `points_payments`
@@ -7890,6 +7322,12 @@ if (isset($_POST['submit'])) {
       MODIFY `live_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `posts_live_categories`
+    --
+    ALTER TABLE `posts_live_categories`
+      MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+    --
     -- AUTO_INCREMENT for table `posts_live_users`
     --
     ALTER TABLE `posts_live_users`
@@ -7974,6 +7412,12 @@ if (isset($_POST['submit'])) {
       MODIFY `reel_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `posts_rich_text`
+    --
+    ALTER TABLE `posts_rich_text`
+      MODIFY `rich_text_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `posts_saved`
     --
     ALTER TABLE `posts_saved`
@@ -8052,10 +7496,46 @@ if (isset($_POST['submit'])) {
       MODIFY `story_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
-    -- AUTO_INCREMENT for table `stories_media`
+    -- AUTO_INCREMENT for table `stories_audience`
     --
-    ALTER TABLE `stories_media`
-      MODIFY `media_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+    ALTER TABLE `stories_audience`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_highlights`
+    --
+    ALTER TABLE `stories_highlights`
+      MODIFY `highlight_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_highlights_items`
+    --
+    ALTER TABLE `stories_highlights_items`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_music`
+    --
+    ALTER TABLE `stories_music`
+      MODIFY `music_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_polls_votes`
+    --
+    ALTER TABLE `stories_polls_votes`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_reactions`
+    --
+    ALTER TABLE `stories_reactions`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
+    -- AUTO_INCREMENT for table `stories_views`
+    --
+    ALTER TABLE `stories_views`
+      MODIFY `view_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `subscribers`
@@ -8103,7 +7583,7 @@ if (isset($_POST['submit'])) {
     -- AUTO_INCREMENT for table `system_options`
     --
     ALTER TABLE `system_options`
-      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16946;
+      MODIFY `option_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20657;
 
     --
     -- AUTO_INCREMENT for table `system_reactions`
@@ -8116,6 +7596,18 @@ if (isset($_POST['submit'])) {
     --
     ALTER TABLE `system_themes`
       MODIFY `theme_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+    --
+    -- AUTO_INCREMENT for table `system_theme_landings`
+    --
+    ALTER TABLE `system_theme_landings`
+      MODIFY `landing_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+    --
+    -- AUTO_INCREMENT for table `translations_cache`
+    --
+    ALTER TABLE `translations_cache`
+      MODIFY `translation_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
     -- AUTO_INCREMENT for table `users`
@@ -8202,6 +7694,12 @@ if (isset($_POST['submit'])) {
       MODIFY `session_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
     --
+    -- AUTO_INCREMENT for table `users_shortcuts`
+    --
+    ALTER TABLE `users_shortcuts`
+      MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+    --
     -- AUTO_INCREMENT for table `users_sms`
     --
     ALTER TABLE `users_sms`
@@ -8255,30 +7753,37 @@ if (isset($_POST['submit'])) {
     /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
     ";
-  $db->multi_query($structure) or _error("Error", $db->error);
-
-
-  // flush multi_queries
+  stream_progress(34, 'Building database tables');
+  $db->multi_query($structure) or stream_fail(wizard_db_error($db, "The installation couldn't finish while building your database tables", 'install'));
+  /* flush multi-query results */
   do {
+    if ($db->errno) {
+      stream_fail(wizard_db_error($db, "The installation couldn't finish while building your database tables", 'install'));
+    }
   } while (mysqli_more_results($db) && mysqli_next_result($db));
+  if ($db->errno) {
+    stream_fail(wizard_db_error($db, "The installation couldn't finish while building your database tables", 'install'));
+  }
 
 
-  // generate system JWT key
+  // step 4: creating the admin account
+  stream_progress(50, 'Creating the admin account');
+  /* generate system JWT key */
   $system_jwt_key = generate_jwt_key();
-
-  // update system options
+  /* update system options */
   update_system_options([
     'system_email' => secure($_POST['admin_email']),
-    'session_hash' => secure($session_hash),
-    'system_jwt_key' => secure($system_jwt_key)
+    'system_jwt_key' => secure($system_jwt_key),
+    'indexnow_key' => secure(md5(uniqid('', true))),
+    'cronjob_hash' => secure(md5(uniqid('', true)))
   ], false);
+  /* add the admin account */
+  $db->query(sprintf("INSERT INTO users (user_group, user_email, user_name, user_firstname, user_password, user_gender, user_email_verified, user_activated, user_approved, user_verified, user_started, user_registered) VALUES ('1', %s, %s, %s, %s, '1', '1', '1', '1', '1', '1', %s)", secure($_POST['admin_email']), secure($_POST['admin_username']), secure($_POST['admin_username']), secure(_password_hash($_POST['admin_password'])), secure(gmdate('Y-m-d H:i:s')))) or stream_fail(wizard_db_error($db, "The installation couldn't finish while creating the admin account", 'install'));
 
-  // add the admin account
-  $db->query(sprintf("INSERT INTO users (user_group, user_email, user_name, user_firstname, user_password, user_gender, user_email_verified, user_activated, user_approved, user_verified, user_started, user_registered) VALUES ('1', %s, %s, %s, %s, '1', '1', '1', '1', '1', '1', %s)", secure($_POST['admin_email']), secure($_POST['admin_username']), secure($_POST['admin_username']), secure(_password_hash($_POST['admin_password'])), secure(gmdate('Y-m-d H:i:s')))) or _error("Error", $db->error);
 
-
-  // create config file
-  $config_string = '<?php  
+  // step 5: writing the configuration
+  stream_progress(67, 'Writing configuration');
+  $config_string = '<?php
     define("DB_NAME", \'' . $_POST["db_name"] . '\');
     define("DB_USER", \'' . $_POST["db_username"] . '\');
     define("DB_PASSWORD", \'' . $_POST["db_password"] . '\');
@@ -8288,15 +7793,27 @@ if (isset($_POST['submit'])) {
     define("URL_CHECK", true);
     define("DEBUGGING", false);
     define("DEFAULT_LOCALE", \'en_us\');
-    define("LICENCE_KEY", \'' . $licence_key . '\');
+    define("LICENCE_KEY", \'' . addslashes($licence_key) . '\');
     ?>';
   $config_file = 'includes/config.php';
-  $handle = fopen($config_file, 'w') or _error("Error", "Intsaller wizard cannot create the config file");
+  $handle = fopen($config_file, 'w') or stream_fail("Installer wizard cannot create the config file");
   fwrite($handle, $config_string);
   fclose($handle);
+  try {
+    licence_store_payload($licence);
+  } catch (Exception $e) {
+    stream_fail($e->getMessage());
+  }
+  licence_turn_off_premium_options();
 
 
-  // finished!
+  // step 6: finishing up
+  stream_progress(84, 'Finishing up');
+  if ($is_stream) {
+    stream_progress(100);
+    stream_send(['success' => true, 'redirect' => './']);
+    exit;
+  }
   header('Location: ./');
 }
 
@@ -8308,430 +7825,1468 @@ if (isset($_POST['submit'])) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title><?php echo SYS_NAME ?> &rsaquo; Installer (v<?php echo SYS_VER ?>)</title>
-  <link rel="shortcut icon" href="includes/assets/js/core/installer/favicon.png" />
-  <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" integrity="sha512-t4GWSVZO1eC8BM339Xd7Uphw5s17a86tIZIj8qRxhnKub6WoyhnrxeCIMeAqBPgdZGlCcG2PrZjMc+Wr78+5Xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="includes/assets/js/core/installer/wizard.css">
+  <link rel="icon" type="image/png" href="content/themes/nova/images/favicon.png">
+  <style>
+    :root {
+      --bg: #eef1f8;
+      --bg2: #e2e7f5;
+      --card: #ffffff;
+      --text: #1b2130;
+      --muted: #6b7488;
+      --line: #e7eaf2;
+      --field: #f6f7fb;
+      --accent: #5e72e4;
+      --accent-2: #825ee4;
+      --ok: #2dce89;
+      --err: #f5365c;
+      --shadow: 0 24px 60px -20px rgba(38, 47, 84, .35);
+      --radius: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e1220;
+        --bg2: #161c2f;
+        --card: #171d2e;
+        --text: #e8ebf5;
+        --muted: #9099b0;
+        --line: #262d42;
+        --field: #11172a;
+        --shadow: 0 24px 60px -20px rgba(0, 0, 0, .6);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100%;
+      padding: 40px 16px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: none;
+      height: 620px;
+      z-index: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.033' height='78' viewBox='0 0 45.033 78'%3E%3Cg fill='none' stroke='%235e72e4' stroke-opacity='0.14' stroke-width='1'%3E%3Cpath d='M22.517 -26L45.034 -13L45.034 13L22.517 26L0 13L0 -13Z'/%3E%3Cpath d='M0 13L22.517 26L22.517 52L0 65L-22.517 52L-22.517 26Z'/%3E%3Cpath d='M45.033 13L67.55 26L67.55 52L45.033 65L22.516 52L22.516 26Z'/%3E%3Cpath d='M22.517 52L45.034 65L45.034 91L22.517 104L0 91L0 65Z'/%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-position: top center;
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 28%, transparent 82%);
+      mask-image: linear-gradient(to bottom, #000 0%, #000 28%, transparent 82%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='45.033' height='78' viewBox='0 0 45.033 78'%3E%3Cg fill='none' stroke='%23a5b4fc' stroke-opacity='0.10' stroke-width='1'%3E%3Cpath d='M22.517 -26L45.034 -13L45.034 13L22.517 26L0 13L0 -13Z'/%3E%3Cpath d='M0 13L22.517 26L22.517 52L0 65L-22.517 52L-22.517 26Z'/%3E%3Cpath d='M45.033 13L67.55 26L67.55 52L45.033 65L22.516 52L22.516 26Z'/%3E%3Cpath d='M22.517 52L45.034 65L45.034 91L22.517 104L0 91L0 65Z'/%3E%3C/g%3E%3C/svg%3E");
+      }
+    }
+
+    .installer {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto 40px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hd {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hd img {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+    }
+
+    .hd h1 {
+      font-size: 19px;
+      margin: 0;
+      letter-spacing: -.2px;
+    }
+
+    .hd .ver {
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .stepper {
+      list-style: none;
+      display: flex;
+      margin: 0;
+      padding: 20px 28px 4px;
+      gap: 6px;
+    }
+
+    .stepper li {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .stepper li .dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--field);
+      border: 1px solid var(--line);
+      font-weight: 700;
+      font-size: 13px;
+      transition: .25s;
+      z-index: 1;
+    }
+
+    .stepper li::before {
+      content: "";
+      position: absolute;
+      top: 15px;
+      left: -50%;
+      width: 100%;
+      height: 2px;
+      background: var(--line);
+      z-index: 0;
+    }
+
+    .stepper li:first-child::before {
+      display: none;
+    }
+
+    .stepper li.active .dot,
+    .stepper li.done .dot {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 16px -6px var(--accent);
+    }
+
+    .stepper li.active {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stepper li.done::before,
+    .stepper li.active::before {
+      background: var(--accent);
+    }
+
+    .stepper li .lbl {
+      display: none;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    @media (min-width: 640px) {
+      .stepper li .lbl {
+        display: block;
+      }
+    }
+
+    form {
+      padding: 8px 28px 28px;
+    }
+
+    .alert {
+      display: none;
+      margin: 12px 0 4px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      background: rgba(245, 54, 92, .12);
+      color: var(--err);
+      border: 1px solid rgba(245, 54, 92, .25);
+    }
+
+    .alert.show {
+      display: block;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .notice {
+      display: none;
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .notice strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .notice p {
+      margin: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .notice.is-included {
+      background: rgba(45, 206, 137, .12);
+      color: var(--ok);
+      border: 1px solid rgba(45, 206, 137, .28);
+    }
+
+    .notice.is-core {
+      background: var(--field);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .notice.is-warning {
+      display: block;
+      background: rgba(251, 176, 59, .12);
+      color: var(--text);
+      border: 1px solid rgba(251, 176, 59, .35);
+    }
+
+    .notice.is-warning strong {
+      color: #c47b00;
+    }
+
+    .notice.is-warning p+p {
+      margin-top: 8px;
+    }
+
+    .panel .notice p {
+      margin: 0;
+      font-size: inherit;
+    }
+
+    .panel .notice.is-included p,
+    .panel .notice.is-included a,
+    .panel .notice.is-warning p {
+      color: inherit;
+    }
+
+    .panel {
+      display: none;
+      padding-top: 12px;
+      animation: fade .3s ease;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .panel h2 {
+      font-size: 17px;
+      margin: 4px 0 6px;
+      letter-spacing: -.2px;
+    }
+
+    .panel p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 14px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin: 20px 0 10px;
+      font-weight: 700;
+    }
+
+    .terms {
+      display: grid;
+      gap: 16px;
+    }
+
+    .terms .box {
+      background: var(--field);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .terms .box strong {
+      font-size: 13px;
+    }
+
+    .terms ul {
+      margin: 10px 0 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .terms li {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 7px 0;
+      line-height: 1.5;
+    }
+
+    .terms li .ic {
+      width: 16px;
+      height: 16px;
+      flex: none;
+      margin-top: 2px;
+    }
+
+    .terms li .ic-can {
+      color: var(--ok);
+    }
+
+    .terms li .ic-cannot {
+      color: var(--err);
+    }
+
+    .agree {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 14px;
+    }
+
+    .agree input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .grid .full {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 520px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--field);
+      color: var(--text);
+      font-size: 14px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, .18);
+    }
+
+    .field input.invalid {
+      border-color: var(--err);
+      box-shadow: 0 0 0 3px rgba(245, 54, 92, .15);
+    }
+
+    .req {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .req li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--field);
+    }
+
+    .req .info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .req .name {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .req .desc {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .req .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .req .status.pass {
+      color: var(--ok);
+    }
+
+    .req .status.fail {
+      color: var(--err);
+    }
+
+    .req .status svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .review {
+      display: grid;
+      gap: 10px;
+    }
+
+    .review .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 11px 14px;
+      background: var(--field);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13.5px;
+    }
+
+    .review .row span:first-child {
+      color: var(--muted);
+    }
+
+    .review .row span:last-child {
+      font-weight: 600;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 26px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .15s;
+      font-family: inherit;
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 22px -10px var(--accent);
+    }
+
+    .btn.primary:hover {
+      filter: brightness(1.06);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+
+    .btn.ghost:hover {
+      color: var(--text);
+      border-color: var(--muted);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .btn[hidden] {
+      display: none;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(14, 18, 32, .6);
+      backdrop-filter: blur(6px);
+    }
+
+    .overlay[hidden] {
+      display: none;
+    }
+
+    .progress-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 30px 28px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .progress-card h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+    }
+
+    .progress-card .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+
+    .bar {
+      position: relative;
+      height: 10px;
+      border-radius: 99px;
+      background: var(--field);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width .4s ease;
+    }
+
+    .bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 99px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    .bar.busy::after {
+      opacity: 1;
+      animation: shimmer 1.15s linear infinite;
+    }
+
+    @keyframes shimmer {
+      to {
+        transform: translateX(100%);
+      }
+    }
+
+    .pct {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 10px 0 20px;
+    }
+
+    .stages {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      text-align: left;
+      display: grid;
+      gap: 9px;
+    }
+
+    .stages li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      transition: color .2s;
+    }
+
+    .stages li .mk {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--line);
+      flex: none;
+      display: grid;
+      place-items: center;
+      transition: .2s;
+    }
+
+    .stages li .mk svg {
+      width: 11px;
+      height: 11px;
+      opacity: 0;
+    }
+
+    .stages li.active {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stages li.active .mk {
+      border-color: var(--accent);
+      border-top-color: transparent;
+      animation: sp .7s linear infinite;
+    }
+
+    .stages li.done {
+      color: var(--text);
+    }
+
+    .stages li.done .mk {
+      background: var(--ok);
+      border-color: var(--ok);
+    }
+
+    .stages li.done .mk svg {
+      opacity: 1;
+      color: #fff;
+    }
+
+    .spin {
+      width: 10px;
+      height: 10px;
+      border: 2px solid transparent;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: sp .6s linear infinite;
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #congrats-view {
+      text-align: center;
+      position: relative;
+    }
+
+    .congrats-badge {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      margin: 6px auto 18px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, var(--ok), #2ab8d8);
+      box-shadow: 0 12px 26px -10px var(--ok);
+      animation: pop .5s cubic-bezier(.2, 1.4, .4, 1) both;
+    }
+
+    .congrats-badge svg {
+      width: 38px;
+      height: 38px;
+    }
+
+    #congrats-view h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    #congrats-view .sub {
+      margin-bottom: 24px;
+    }
+
+    .congrats-btn {
+      width: 100%;
+      padding: 15px 22px;
+      font-size: 15px;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .confetti {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .confetti i {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 9px;
+      height: 15px;
+      opacity: 0;
+      border-radius: 1px;
+      will-change: transform, opacity;
+      animation: burst cubic-bezier(.2, .6, .3, 1) forwards;
+    }
+
+    @keyframes burst {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(.35);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) rotate(var(--rot)) scale(1);
+        opacity: 0;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <main class="my-5">
-    <div class="container">
-      <form id="wizard" method="post" class="position-relative">
-        <!-- Step 1 -->
-        <h3>
-          <div class="media">
-            <div class="bd-wizard-step-icon"><i class="fas fa-file-alt"></i></div>
-            <div class="media-body">
-              <div class="bd-wizard-step-title">License</div>
-              <div class="bd-wizard-step-subtitle">Step 1</div>
-            </div>
-          </div>
-        </h3>
-        <section>
-          <div class="content-wrapper">
-            <h3 class="section-heading">Welcome!</h3>
-            <p>
-              Welcome to <strong><?php echo SYS_NAME ?></strong> installation process! Just fill in the required
-              information and create your own social website or online community.
-            </p>
-            <h6 class="mt-4">
-              <strong>LICENSE AGREEMENT:</strong>
-            </h6>
-            <div>
-              <strong>You CAN:</strong>
-              <ol>
-                <li>Install on one (1) end-product (domain.com, sub.domain.com or domain.com/directory).
-                </li>
-                <li>Install on your localhost server for testing or development.</li>
-                <li>Edit the source code and design as you want to suit your business needs.</li>
-              </ol>
-            </div>
-            <div>
-              <strong>You CANNOT:</strong>
-              <ol>
-                <li>Run it on (2) or more end-prodcuts at same time with same license.</li>
-                <li>Resell, distribute, give away or trade by any means to any third party or individuals.
-                </li>
-              </ol>
-            </div>
-            <div class="form-check mt-5">
-              <input type="checkbox" class="form-check-input" id="license-checkbox">
-              <label class="form-check-label" for="license-checkbox">I agree with the Terms and
-                Conditions.</label>
-              <div class="invalid-feedback">
-                You must agree to continue.
-              </div>
-            </div>
-          </div>
-        </section>
-        <!-- Step 1 -->
-        <!-- Step 2 -->
-        <h3>
-          <div class="media">
-            <div class="bd-wizard-step-icon"><i class="fas fa-server"></i></div>
-            <div class="media-body">
-              <div class="bd-wizard-step-title">Requirements</div>
-              <div class="bd-wizard-step-subtitle">Step 2</div>
-            </div>
-          </div>
-        </h3>
-        <section>
-          <div class="content-wrapper">
-            <input type="hidden" id="requirements_errors" <?php if ($requirements_errors) { ?>value="true" <?php } else { ?>value="false" <?php } ?>>
-            <div id="requirements_alert" class="alert alert-danger" style="display: none;">
-              <strong>Sorry!</strong> You need to check the system requirements to continue, Back to your
-              hosting support for help.
-            </div>
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>PHP 8.4+</td>
-                  <td>Required PHP version 8.4 or more</td>
-                  <td>
-                    <?php if ($requirements_errors['PHP']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>MySQLi</td>
-                  <td>Required MySQLi PHP extension</td>
-                  <td>
-                    <?php if ($requirements_errors['mysqli']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>cURL</td>
-                  <td>Required cURL PHP extension</td>
-                  <td>
-                    <?php if ($requirements_errors['curl']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Mbstring</td>
-                  <td>Required Mbstring extension for UTF-8 strings</td>
-                  <td>
-                    <?php if ($requirements_errors['mbstring']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>GD Library</td>
-                  <td>Required GD Library to handle images</td>
-                  <td>
-                    <?php if ($requirements_errors['gd']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Fileinfo</td>
-                  <td>Required Fileinfo extension for file uploads</td>
-                  <td>
-                    <?php if ($requirements_errors['fileinfo']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>ZIP</td>
-                  <td>Required ZIP extension for taking backup</td>
-                  <td>
-                    <?php if ($requirements_errors['zip']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>allow_url_fopen</td>
-                  <td>Required allow_url_fopen</td>
-                  <td>
-                    <?php if ($requirements_errors['allow_url_fopen']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>.htaccess</td>
-                  <td>Required .htaccess file for links <small><strong>(Located in ./Script)</strong></small>
-                  </td>
-                  <td>
-                    <?php if ($requirements_errors['htaccess']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td>config.php</td>
-                  <td>Required <strong>includes</strong> folder to be writable for the installation</td>
-                  <td>
-                    <?php if ($requirements_errors['config']) { ?>
-                      <font color="red"><i class="fas fa-times-circle"></i> Not Installed</font>
-                    <?php } else { ?>
-                      <font color="green"><i class="fas fa-check-circle"></i> Installed</font>
-                    <?php } ?>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <!-- Step 2 -->
-        <!-- Step 3 -->
-        <h3>
-          <div class="media">
-            <div class="bd-wizard-step-icon"><i class="fas fa-cubes"></i></div>
-            <div class="media-body">
-              <div class="bd-wizard-step-title">Installation</div>
-              <div class="bd-wizard-step-subtitle">Step 3</div>
-            </div>
-          </div>
-        </h3>
-        <section>
-          <div class="content-wrapper">
-            <h4 class="section-heading">License Details</h4>
-            <div class="row mb-4">
-              <div class="form-group col-12">
-                <label for="purchase_code">Your Purchase Code</label>
-                <input type="text" name="purchase_code" id="purchase_code" class="form-control" placeholder="xxx-xx-xxxx">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-            </div>
-            <h4 class="section-heading mt-4">Database Details</h4>
-            <div class="row mb-4">
-              <div class="form-group col-12">
-                <label for="db_name">Database Name</label>
-                <input type="text" name="db_name" id="db_name" class="form-control">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-            </div>
-            <div class="row mb-4">
-              <div class="form-group col-md-6">
-                <label for="db_username">Database Username</label>
-                <input type="text" name="db_username" id="db_username" class="form-control">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-              <div class="form-group col-md-6">
-                <label for="db_password">Database Password</label>
-                <input type="text" name="db_password" id="db_password" class="form-control">
-              </div>
-            </div>
-            <div class="row mb-4">
-              <div class="form-group col-md-6">
-                <label for="db_host">Database Host</label>
-                <input type="text" name="db_host" id="db_host" class="form-control" value="localhost">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-              <div class="form-group col-md-6">
-                <label for="db_port">Database Port</label>
-                <input type="text" name="db_port" id="db_port" class="form-control" value="3306">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-            </div>
-            <h4 class="section-heading mt-4">Admin Details</h4>
-            <div class="row mb-4">
-              <div class="form-group col-12">
-                <label for="admin_email">Admin Email</label>
-                <input type="text" name="admin_email" id="admin_email" class="form-control">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-            </div>
-            <div class="row mb-4">
-              <div class="form-group col-md-6">
-                <label for="admin_username">Admin Username</label>
-                <input type="text" name="admin_username" id="admin_username" class="form-control">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-              <div class="form-group col-md-6">
-                <label for="admin_password">Admin Password</label>
-                <input type="text" name="admin_password" id="admin_password" class="form-control">
-                <div class="invalid-feedback">
-                  This field can't be empty
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <!-- Step 3 -->
-        <!-- Step 4 -->
-        <h3>
-          <div class="media">
-            <div class="bd-wizard-step-icon"><i class="fas fa-flag-checkered"></i></div>
-            <div class="media-body">
-              <div class="bd-wizard-step-title">Finish</div>
-              <div class="bd-wizard-step-subtitle">Step 4</div>
-            </div>
-          </div>
-        </h3>
-        <section>
-          <div class="content-wrapper">
-            <h4 class="section-heading mb-5">Review Your Details</h4>
-            <h6 class="fw-bold">License Details</h6>
-            <p class="mb-4">
-              <strong>Purchase Code:</strong> <span id="entered_purchase_code"></span>
-            </p>
-            <h6 class="fw-bold">Database Details</h6>
-            <p class="mb-4">
-              <strong>Name:</strong> <span id="entered_db_name"></span> <br>
-              <strong>Username:</strong> <span id="entered_db_username"></span> <br>
-              <strong>Password:</strong> <span id="entered_db_password"></span> <br>
-              <strong>Host:</strong> <span id="entered_db_host"></span> <br>
-              <strong>Port:</strong> <span id="entered_db_port"></span>
-            </p>
-            <h6 class="fw-bold">Admin Details</h6>
-            <p class="mb-4">
-              <strong>Email:</strong> <span id="entered_admin_email"></span> <br>
-              <strong>Username:</strong> <span id="entered_admin_username"></span> <br>
-              <strong>Password:</strong> <span id="entered_admin_password"></span>
-            </p>
-          </div>
-        </section>
-        <!-- Step 4 -->
-        <!-- Submit -->
-        <div style="display: none;">
-          <button class="btn btn-primary" name="submit" type="submit" id="wizard-submittion">Submit</button>
-        </div>
-        <!-- Submit -->
-        <!-- Loader -->
-        <div id="loader" style="display: none;">
-          <div class="wizard-loader">
-            Installing<span class="spinner-grow spinner-grow-sm ml-3"></span>
-          </div>
-        </div>
-        <!-- Loader -->
-      </form>
+  <div class="installer">
+    <div class="hd">
+      <img src="content/themes/nova/images/favicon.png" alt="">
+      <div>
+        <h1><?php echo SYS_NAME ?> Installer</h1>
+        <div class="ver">Version <?php echo SYS_VER ?></div>
+      </div>
     </div>
-  </main>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.min.js" integrity="sha512-3dZ9wIrMMij8rOH7X3kLfXAzwtcHpuYpEgQg1OA4QAob1e81H8ntUQmQm3pBudqIoySO5j0tHN4ENzA6+n2r4w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="includes/assets/js/core/installer/jquery.steps.min.js"></script>
-  <script type="text/javascript">
-    // handle wizard
-    var wizard = $("#wizard");
-    wizard.steps({
-      headerTag: "h3",
-      bodyTag: "section",
-      transitionEffect: "none",
-      titleTemplate: '#title#',
-      onStepChanging: function(event, currentIndex, newIndex) {
-        /* allow previous action even if the current form is not valid! */
-        if (currentIndex > newIndex) {
-          return true;
-        }
-        /* check license agreement */
-        if (currentIndex == 0) {
-          if (!wizard.find("#license-checkbox").is(':checked')) {
-            wizard.find("#license-checkbox").addClass("is-invalid");
+
+    <ol class="stepper" id="stepper">
+      <li class="active" data-step="0"><span class="dot">1</span><span class="lbl">Welcome</span></li>
+      <li data-step="1"><span class="dot">2</span><span class="lbl">Requirements</span></li>
+      <li data-step="2"><span class="dot">3</span><span class="lbl">License</span></li>
+      <li data-step="3"><span class="dot">4</span><span class="lbl">Configuration</span></li>
+      <li data-step="4"><span class="dot">5</span><span class="lbl">Finish</span></li>
+    </ol>
+
+    <form id="wizard" method="post" novalidate data-requirements-ok="<?php echo $requirements_ok ? 'true' : 'false' ?>">
+      <div class="alert" id="alert"></div>
+
+      <!-- Step 1: Welcome -->
+      <section class="panel active" data-step="0">
+        <h2>Welcome</h2>
+        <p>Welcome to the <strong><?php echo SYS_NAME ?></strong> installation. Just fill in the required information and launch your own social network.</p>
+        <div class="terms">
+          <div class="box">
+            <strong>You CAN</strong>
+            <ul>
+              <li><svg class="ic ic-can" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>Install on one (1) end-product (domain.com, sub.domain.com or domain.com/directory).</li>
+              <li><svg class="ic ic-can" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>Install on your localhost for testing or development.</li>
+              <li><svg class="ic ic-can" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>Edit the source code and design to suit your business needs.</li>
+            </ul>
+          </div>
+          <div class="box">
+            <strong>You CANNOT</strong>
+            <ul>
+              <li><svg class="ic ic-cannot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>Run it on two (2) or more end-products at the same time with the same license.</li>
+              <li><svg class="ic ic-cannot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>Resell, distribute, give away or trade by any means to any third party.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="notice show is-warning" role="note">
+          <strong>Important License Notice</strong>
+          <p>Sngine is copyrighted software and is sold exclusively under Zamblek’s license terms. Zamblek.com is the sole official provider of Sngine updates, support, and license issuance.</p>
+          <p>License files are cryptographically signed per customer. Editing, replacing, or otherwise tampering with license files is a violation of these terms and may result in immediate suspension of your license and/or your Zamblek account, including loss of access to your licenses, product downloads, and future updates.</p>
+        </div>
+        <label class="agree">
+          <input type="checkbox" id="license-checkbox">
+          <span>I agree with the Terms and Conditions.</span>
+        </label>
+      </section>
+
+      <!-- Step 2: Requirements -->
+      <section class="panel" data-step="1">
+        <h2>System Requirements</h2>
+        <p>All items below must pass before you can continue. Contact your host if anything is missing.</p>
+        <ul class="req">
+          <?php foreach ($requirements_matrix as $key => $req) {
+            $failed = isset($requirements_errors[$key]); ?>
+            <li>
+              <div class="info">
+                <div class="name"><?php echo $req[0] ?></div>
+                <div class="desc"><?php echo $req[1] ?></div>
+              </div>
+              <?php if ($failed) { ?>
+                <span class="status fail">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg> Missing
+                </span>
+              <?php } else { ?>
+                <span class="status pass">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg> Ready
+                </span>
+              <?php } ?>
+            </li>
+          <?php } ?>
+        </ul>
+      </section>
+
+      <!-- Step 3: License -->
+      <section class="panel" data-step="2">
+        <h2>License</h2>
+        <p>Enter your license key to continue. You can get it from <a href="https://zamblek.com/purchases" target="_blank" rel="noopener">zamblek.com/purchases</a>, or use your Envato purchase code.</p>
+        <div class="grid">
+          <div class="field full">
+            <label for="purchase_code">License Key</label>
+            <input type="text" name="purchase_code" id="purchase_code" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+            <div class="hint">Zamblek license key or Envato purchase code</div>
+          </div>
+        </div>
+        <div class="notice" id="licence-notice">
+          <strong id="licence-notice-title"></strong>
+          <p id="licence-notice-body"></p>
+        </div>
+      </section>
+
+      <!-- Step 4: Configuration -->
+      <section class="panel" data-step="3">
+        <h2>Database &amp; Administrator</h2>
+        <p>Enter your database and administrator details.</p>
+
+        <div class="section-title">Database</div>
+        <div class="grid">
+          <div class="field full">
+            <label for="db_name">Database Name</label>
+            <input type="text" name="db_name" id="db_name">
+          </div>
+          <div class="field">
+            <label for="db_username">Database Username</label>
+            <input type="text" name="db_username" id="db_username">
+          </div>
+          <div class="field">
+            <label for="db_password">Database Password</label>
+            <input type="text" name="db_password" id="db_password" data-optional="1">
+          </div>
+          <div class="field">
+            <label for="db_host">Database Host</label>
+            <input type="text" name="db_host" id="db_host" value="localhost">
+          </div>
+          <div class="field">
+            <label for="db_port">Database Port</label>
+            <input type="text" name="db_port" id="db_port" value="3306">
+          </div>
+        </div>
+
+        <div class="section-title">Administrator</div>
+        <div class="grid">
+          <div class="field full">
+            <label for="admin_email">Admin Email</label>
+            <input type="text" name="admin_email" id="admin_email">
+          </div>
+          <div class="field">
+            <label for="admin_username">Admin Username</label>
+            <input type="text" name="admin_username" id="admin_username">
+          </div>
+          <div class="field">
+            <label for="admin_password">Admin Password</label>
+            <input type="password" name="admin_password" id="admin_password">
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 5: Review -->
+      <section class="panel" data-step="4">
+        <h2>Review &amp; Install</h2>
+        <p>Confirm your details, then start the installation.</p>
+        <div class="review">
+          <div class="row"><span>License Key</span><span id="r_purchase_code">&mdash;</span></div>
+          <div class="row"><span>Database Name</span><span id="r_db_name">&mdash;</span></div>
+          <div class="row"><span>Database Username</span><span id="r_db_username">&mdash;</span></div>
+          <div class="row"><span>Database Host</span><span id="r_db_host">&mdash;</span></div>
+          <div class="row"><span>Database Port</span><span id="r_db_port">&mdash;</span></div>
+          <div class="row"><span>Admin Email</span><span id="r_admin_email">&mdash;</span></div>
+          <div class="row"><span>Admin Username</span><span id="r_admin_username">&mdash;</span></div>
+        </div>
+      </section>
+
+      <div class="foot">
+        <button type="button" class="btn ghost" id="btn-back" hidden>Back</button>
+        <div style="flex:1"></div>
+        <button type="button" class="btn primary" id="btn-next">Next</button>
+        <button type="submit" class="btn primary" id="btn-install" name="submit" value="1" hidden>Install</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Progress overlay -->
+  <div class="overlay" id="overlay" hidden>
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <div class="progress-card">
+      <div id="progress-view">
+        <h2>Installing <?php echo SYS_NAME ?></h2>
+        <div class="sub">This can take a moment. Please don't close this window.</div>
+        <div class="bar"><span id="bar-fill"></span></div>
+        <div class="pct" id="pct">0%</div>
+        <ul class="stages" id="stages">
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Verifying purchase code
+          </li>
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Connecting to the database
+          </li>
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Building database tables
+          </li>
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Creating the admin account
+          </li>
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Writing configuration
+          </li>
+          <li data-stage>
+            <span class="mk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+            Finishing up
+          </li>
+        </ul>
+      </div>
+
+      <!-- Congratulations -->
+      <div id="congrats-view" hidden>
+        <div class="congrats-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>You're all set! 🎉</h2>
+        <div class="sub"><strong><?php echo SYS_NAME ?></strong> has been installed successfully.<br>Redirecting to your new site in <span id="countdown">5</span>s&hellip;</div>
+        <button type="button" class="btn primary congrats-btn" id="btn-start">Let's Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // initialize variables
+      var form = document.getElementById('wizard');
+      var panels = Array.prototype.slice.call(form.querySelectorAll('.panel'));
+      var steps = Array.prototype.slice.call(document.querySelectorAll('#stepper li'));
+      var alertBox = document.getElementById('alert');
+      var btnBack = document.getElementById('btn-back');
+      var btnNext = document.getElementById('btn-next');
+      var btnInstall = document.getElementById('btn-install');
+      var current = 0;
+      var last = panels.length - 1;
+      var requirementsOk = form.getAttribute('data-requirements-ok') === 'true';
+      var licenceVerified = false;
+      var licenceVerifiedCode = '';
+      var licenceNotice = document.getElementById('licence-notice');
+      var licenceNoticeTitle = document.getElementById('licence-notice-title');
+      var licenceNoticeBody = document.getElementById('licence-notice-body');
+      var STEP_LICENSE = 2;
+      var STEP_DATABASE = 3;
+
+
+      // helper functions
+      /* show alert */
+      function showAlert(msg) {
+        alertBox.textContent = msg;
+        alertBox.classList.add('show');
+      }
+      /* clear alert */
+      function clearAlert() {
+        alertBox.classList.remove('show');
+      }
+      /* render steps */
+      function render() {
+        panels.forEach(function(p, i) {
+          p.classList.toggle('active', i === current);
+        });
+        steps.forEach(function(s, i) {
+          s.classList.toggle('active', i === current);
+          s.classList.toggle('done', i < current);
+        });
+        btnBack.hidden = current === 0;
+        btnNext.hidden = current === last;
+        btnInstall.hidden = current !== last;
+        btnNext.textContent = (current === STEP_LICENSE && !licenceVerified) ? 'Verify License' : 'Next';
+        clearAlert();
+      }
+      /* validate form */
+      function validate(step) {
+        clearAlert();
+        if (step === 0) {
+          if (!document.getElementById('license-checkbox').checked) {
+            showAlert('You must agree to the Terms and Conditions to continue.');
             return false;
           }
         }
-        /* check requirements errors */
-        if (currentIndex == 1) {
-          if ($('#requirements_errors').val() == "true") {
-            $('#requirements_alert').slideDown()
+        if (step === 1) {
+          if (!requirementsOk) {
+            showAlert('Some requirements are missing. Please fix them before continuing.');
             return false;
           }
         }
-        /* check details */
-        if (currentIndex == 2) {
-          var errors = 0;
-          $('input[type="text"]').each(function() {
-            if ($(this).attr("name") !== "db_password" && $(this).val() == "") {
-              $(this).addClass("is-invalid");
-              errors++;
-            }
+        if (step === STEP_LICENSE) {
+          var code = document.getElementById('purchase_code').value.trim();
+          if (!code) {
+            document.getElementById('purchase_code').classList.add('invalid');
+            showAlert('Please enter a valid purchase code');
+            return false;
+          }
+          document.getElementById('purchase_code').classList.remove('invalid');
+        }
+        if (step === STEP_DATABASE) {
+          var ok = true;
+          panels[STEP_DATABASE].querySelectorAll('input').forEach(function(inp) {
+            if (inp.dataset.optional) return;
+            if (!inp.value.trim()) {
+              inp.classList.add('invalid');
+              ok = false;
+            } else inp.classList.remove('invalid');
           });
-          if (errors >= 1) {
+          if (!ok) {
+            showAlert('Please fill in all required fields.');
             return false;
           }
+          fillReview();
         }
         return true;
-      },
-      onFinished: function(event, currentIndex) {
-        $("#loader").slideDown();
-        $("#wizard-submittion").trigger('click');
-        return true;
-      },
-      labels: {
-        finish: "Install",
       }
-    });
-
-    // handle checkbox
-    $('#license-checkbox').on('change', function() {
-      if ($(this).is(':checked')) {
-        $(this).removeClass("is-invalid");
-      } else {
-        $(this).addClass("is-invalid");
+      /* fill review */
+      function fillReview() {
+        ['purchase_code', 'db_name', 'db_username', 'db_host', 'db_port', 'admin_email', 'admin_username'].forEach(function(id) {
+          var el = document.getElementById(id);
+          var out = document.getElementById('r_' + id);
+          if (el && out) out.textContent = el.value.trim() || '—';
+        });
       }
-    });
 
-    // handle inputs
-    $('input[type="text"]').on('change', function() {
-      if ($(this).attr("name") !== "db_password") {
-        if ($(this).val() == "") {
-          $(this).addClass("is-invalid");
+
+      function resetLicenceNotice() {
+        licenceVerified = false;
+        licenceVerifiedCode = '';
+        licenceNotice.classList.remove('show', 'is-included', 'is-core');
+        licenceNoticeTitle.textContent = '';
+        licenceNoticeBody.innerHTML = '';
+        if (current === STEP_LICENSE) btnNext.textContent = 'Verify License';
+      }
+
+      function showLicenceNotice(included) {
+        licenceNotice.classList.remove('is-included', 'is-core');
+        if (included) {
+          licenceNotice.classList.add('is-included');
+          licenceNoticeTitle.textContent = 'Payments & Monetization are included';
+          licenceNoticeBody.innerHTML = 'Monetization will be part of your installation. You can enable payments and monetization features after setup. For more information, visit <a href="https://zamblek.com/pricing" target="_blank" rel="noopener">zamblek.com/pricing</a>.';
         } else {
-          $(this).removeClass("is-invalid");
+          licenceNotice.classList.add('is-core');
+          licenceNoticeTitle.textContent = 'Payments & Monetization are not included';
+          licenceNoticeBody.innerHTML = 'This license is a core-only install. Payments and monetization features will stay unavailable unless you upgrade. For more information, visit <a href="https://zamblek.com/pricing" target="_blank" rel="noopener">zamblek.com/pricing</a>.';
+        }
+        licenceNotice.classList.add('show');
+      }
+
+      function verifyLicenceThenNext() {
+        if (!validate(STEP_LICENSE)) return;
+        var code = document.getElementById('purchase_code').value.trim();
+        if (licenceVerified && code === licenceVerifiedCode) {
+          current++;
+          render();
+          return;
+        }
+        btnNext.disabled = true;
+        btnNext.textContent = 'Verifying...';
+        var data = new FormData();
+        data.append('verify_licence', '1');
+        data.append('purchase_code', code);
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: data
+          })
+          .then(function(res) {
+            return res.json().catch(function() {
+              return null;
+            });
+          })
+          .then(function(msg) {
+            btnNext.disabled = false;
+            if (!msg || !msg.success) {
+              resetLicenceNotice();
+              showAlert((msg && msg.message) ? msg.message : 'License verification failed. Please try again.');
+              btnNext.textContent = 'Verify License';
+              return;
+            }
+            licenceVerified = true;
+            licenceVerifiedCode = code;
+            showLicenceNotice(!!msg.monetization);
+            btnNext.textContent = 'Next';
+            clearAlert();
+          })
+          .catch(function() {
+            btnNext.disabled = false;
+            resetLicenceNotice();
+            btnNext.textContent = 'Verify License';
+            showAlert('A network error occurred. Please check your connection and try again.');
+          });
+      }
+
+
+      // event listeners
+      /* next button */
+      btnNext.addEventListener('click', function() {
+        if (current === STEP_LICENSE) {
+          verifyLicenceThenNext();
+          return;
+        }
+        if (!validate(current)) return;
+        if (current < last) {
+          current++;
+          render();
+        }
+      });
+      /* back button */
+      btnBack.addEventListener('click', function() {
+        if (current > 0) {
+          current--;
+          render();
+        }
+      });
+      /* input change */
+      form.querySelectorAll('input').forEach(function(inp) {
+        inp.addEventListener('input', function() {
+          inp.classList.remove('invalid');
+          if (inp.id === 'purchase_code' && licenceVerified && inp.value.trim() !== licenceVerifiedCode) {
+            resetLicenceNotice();
+          }
+        });
+      });
+
+
+      // handle progress
+      /* initialize progress */
+      var overlay = document.getElementById('overlay');
+      var barFill = document.getElementById('bar-fill');
+      var bar = barFill.parentNode;
+      var pctEl = document.getElementById('pct');
+      var stageEls = Array.prototype.slice.call(document.querySelectorAll('#stages li'));
+      /* set progress */
+      function setProgress(pct) {
+        barFill.style.width = pct + '%';
+        pctEl.textContent = Math.round(pct) + '%';
+        var idx = Math.min(stageEls.length - 1, Math.floor((pct / 100) * stageEls.length));
+        stageEls.forEach(function(li, i) {
+          li.classList.toggle('done', i < idx);
+          li.classList.toggle('active', pct < 100 && i === idx);
+        });
+      }
+      /* mark all stages done */
+      function markAllDone() {
+        bar.classList.remove('busy');
+        setProgress(100);
+        stageEls.forEach(function(li) {
+          li.classList.remove('active');
+          li.classList.add('done');
+        });
+      }
+      /* fail UI */
+      function failUI(message) {
+        bar.classList.remove('busy');
+        overlay.hidden = true;
+        btnInstall.disabled = false;
+        var licenseFail = /license|purchase code|domain does not match/i.test(message || '');
+        current = licenseFail ? STEP_LICENSE : STEP_DATABASE;
+        render();
+        showAlert(message);
+      }
+      /* launch confetti */
+      function launchConfetti() {
+        var box = document.getElementById('confetti');
+        box.innerHTML = '';
+        var colors = ['#5e72e4', '#825ee4', '#2dce89', '#fb6340', '#ffd600', '#11cdef', '#f5365c'];
+        var reach = 300; /* keep the burst around the popup, not the whole page */
+        for (var i = 0; i < 120; i++) {
+          var p = document.createElement('i');
+          var angle = Math.random() * Math.PI * 2;
+          var dist = 40 + Math.random() * reach;
+          var sc = 0.6 + Math.random() * 0.9;
+          p.style.setProperty('--tx', (Math.cos(angle) * dist).toFixed(0) + 'px');
+          p.style.setProperty('--ty', (Math.sin(angle) * dist).toFixed(0) + 'px');
+          p.style.setProperty('--rot', (Math.random() * 900 - 450).toFixed(0) + 'deg');
+          p.style.background = colors[i % colors.length];
+          p.style.width = (7 * sc).toFixed(1) + 'px';
+          p.style.height = (13 * sc).toFixed(1) + 'px';
+          p.style.animationDuration = (2.4 + Math.random() * 1.6) + 's';
+          p.style.animationDelay = (Math.random() * 0.1) + 's';
+          if (i % 3 === 0) p.style.borderRadius = '50%';
+          box.appendChild(p);
         }
       }
-    });
-    $(document).ready(function() {
-      $('input[type="text"]').each(function() {
-        $('#entered_' + $(this).attr("id")).text($(this).val());
+      /* show congratulations */
+      function showCongrats(url) {
+        document.getElementById('progress-view').hidden = true;
+        document.getElementById('congrats-view').hidden = false;
+        launchConfetti();
+        var go = function() {
+          window.location.href = url;
+        };
+        document.getElementById('btn-start').addEventListener('click', go);
+        var remaining = 5;
+        var cd = document.getElementById('countdown');
+        var ticker = setInterval(function() {
+          remaining--;
+          if (cd) cd.textContent = remaining;
+          if (remaining <= 0) {
+            clearInterval(ticker);
+            go();
+          }
+        }, 1000);
+      }
+
+
+      // handle submit
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!licenceVerified) {
+          current = STEP_LICENSE;
+          render();
+          showAlert('Please verify your license to continue.');
+          return;
+        }
+        if (!validate(STEP_DATABASE)) {
+          current = STEP_DATABASE;
+          render();
+          return;
+        }
+        btnInstall.disabled = true;
+        overlay.hidden = false;
+        bar.classList.add('busy');
+        setProgress(0);
+        var data = new FormData(form);
+        data.append('submit', '1');
+        var finalized = false;
+        var rawText = '';
+        var httpError = '';
+        /* handle event */
+        function handleEvent(msg) {
+          if (!msg) return;
+          if (typeof msg.progress === 'number') setProgress(msg.progress);
+          if (msg.success === true) {
+            finalized = true;
+            markAllDone();
+            setTimeout(function() {
+              showCongrats(msg.redirect || './');
+            }, 600);
+          } else if (msg.success === false) {
+            finalized = true;
+            failUI(msg.message || 'The installation could not be completed.');
+          }
+        }
+        /* handle line */
+        function handleLine(line) {
+          rawText += line + '\n';
+          line = line.trim();
+          if (!line) return;
+          var msg = parseJSON(line);
+          if (!msg && line.indexOf('{') !== -1) {
+            msg = parseJSON(line.slice(line.indexOf('{'), line.lastIndexOf('}') + 1));
+          }
+          if (msg) handleEvent(msg);
+        }
+        /* safe JSON.parse */
+        function parseJSON(str) {
+          try {
+            return JSON.parse(str);
+          } catch (err) {
+            return null;
+          }
+        }
+        /* get server message */
+        function serverMessage(fallback) {
+          var text = rawText;
+          var m = text.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (m) {
+            try {
+              return JSON.parse('"' + m[1] + '"');
+            } catch (e) {
+              return m[1];
+            }
+          }
+          var clean = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (clean) return clean.length > 500 ? clean.slice(0, 500) + '…' : clean;
+          return fallback;
+        }
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: data
+          })
+          .then(function(res) {
+            if (!res.ok) {
+              httpError = 'The server responded with an error (HTTP ' + res.status + ' ' + res.statusText + ').';
+            }
+            if (!res.body || !res.body.getReader) {
+              return res.text().then(function(text) {
+                text.split('\n').forEach(handleLine);
+              });
+            }
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buf = '';
+            return (function pump() {
+              return reader.read().then(function(r) {
+                if (r.done) {
+                  if (buf) handleLine(buf);
+                  return;
+                }
+                buf += decoder.decode(r.value, {
+                  stream: true
+                });
+                var lines = buf.split('\n');
+                buf = lines.pop();
+                lines.forEach(handleLine);
+                return pump();
+              });
+            })();
+          })
+          .then(function() {
+            if (!finalized) failUI(serverMessage(httpError || 'The installation ended unexpectedly. Please try again.'));
+          })
+          .catch(function() {
+            if (!finalized) failUI(serverMessage('A network error occurred. Please check your connection and try again.'));
+          });
       });
-    });
-    $('input[type="text"]').on('change', function() {
-      $('#entered_' + $(this).attr("id")).text($(this).val());
-    });
+      render();
+    })();
   </script>
 </body>
 

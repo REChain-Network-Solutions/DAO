@@ -33,22 +33,22 @@ class ConfigurationContext extends InstanceContext
      * Initialize the ConfigurationContext
      *
      * @param Version $version Version that contains the resource
-     * @param string $sid
+     * @param string $id
      */
     public function __construct(
         Version $version,
-        $sid
+        $id
     ) {
         $apiV1Version = new ApiV1Version($version->getDomain(), $version->version);
         parent::__construct($apiV1Version);
 
         // Path Solution
         $this->solution = [
-        'sid' =>
-            $sid,
+        'id' =>
+            $id,
         ];
 
-        $this->uri = '/ControlPlane/Configurations/' . \rawurlencode($sid)
+        $this->uri = '/ControlPlane/Configurations/' . \rawurlencode($id)
         .'';
     }
 
@@ -84,7 +84,7 @@ class ConfigurationContext extends InstanceContext
         return new CreateConfiguration202ResponseInstance(
             $this->version,
             $response->getContent(),
-            $this->solution['sid']
+            $this->solution['id']
         );
     }
 
@@ -103,7 +103,7 @@ class ConfigurationContext extends InstanceContext
         $resource = new CreateConfiguration202ResponseInstance(
                         $this->version,
                         $response->getContent(),
-                        $this->solution['sid']
+                        $this->solution['id']
                     );
         return new ResourceMetadata(
             $resource,
@@ -140,7 +140,7 @@ class ConfigurationContext extends InstanceContext
         return new ListConfiguration200ResponseConfigurationsInstance(
             $this->version,
             $response->getContent(),
-            $this->solution['sid']
+            $this->solution['id']
         );
         
     }
@@ -158,7 +158,72 @@ class ConfigurationContext extends InstanceContext
         $resource = new ListConfiguration200ResponseConfigurationsInstance(
                         $this->version,
                         $response->getContent(),
-                        $this->solution['sid']
+                        $this->solution['id']
+                    );
+        
+        return new ResourceMetadata(
+            $resource,
+            $response->getStatusCode(),
+            $response->getHeaders()
+        );
+    }
+
+
+    /**
+     * Helper function for Patch
+     *
+     
+     * @param ?PatchConfigurationRequest $patchConfigurationRequest The partial configuration update.
+     * @param array|Options $options Optional Arguments
+     * @return Response Patchd Response
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    private function _patch(?PatchConfigurationRequest $patchConfigurationRequest = null, array $options = []): Response
+    {
+        
+        $options = new Values($options);
+
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' , 'Idempotency-Key' => $options['idempotencyKey']]);
+        $data = $patchConfigurationRequest ? $patchConfigurationRequest->toArray() : [];
+        return $this->version->handleRequest('PATCH', $this->uri, [], $data, $headers, "patch");
+    }
+
+    /**
+     * Patch the CreateConfiguration202ResponseInstance
+     *
+     
+     * @param ?PatchConfigurationRequest $patchConfigurationRequest The partial configuration update.
+     * @param array|Options $options Optional Arguments
+     * @return CreateConfiguration202ResponseInstance Patchd CreateConfiguration202ResponseInstance
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function patch(?PatchConfigurationRequest $patchConfigurationRequest = null, array $options = []): CreateConfiguration202ResponseInstance
+    {
+        $response = $this->_patch($patchConfigurationRequest, $options);
+        return new CreateConfiguration202ResponseInstance(
+            $this->version,
+            $response->getContent(),
+            $this->solution['id']
+        );
+        
+    }
+
+    /**
+     * Patch the CreateConfiguration202ResponseInstance with Metadata
+     *
+     
+     * @param ?PatchConfigurationRequest $patchConfigurationRequest The partial configuration update.
+     * @param array|Options $options Optional Arguments
+     * @return ResourceMetadata The Patchd Resource with Metadata
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function patchWithMetadata(?PatchConfigurationRequest $patchConfigurationRequest = null, array $options = []): ResourceMetadata
+    {
+        $response = $this->_patch($patchConfigurationRequest, $options);
+        $resource = new CreateConfiguration202ResponseInstance(
+                        $this->version,
+                        $response->getContent(),
+                        $this->solution['id']
                     );
         
         return new ResourceMetadata(
@@ -203,7 +268,7 @@ class ConfigurationContext extends InstanceContext
         return new CreateConfiguration202ResponseInstance(
             $this->version,
             $response->getContent(),
-            $this->solution['sid']
+            $this->solution['id']
         );
         
     }
@@ -223,7 +288,7 @@ class ConfigurationContext extends InstanceContext
         $resource = new CreateConfiguration202ResponseInstance(
                         $this->version,
                         $response->getContent(),
-                        $this->solution['sid']
+                        $this->solution['id']
                     );
         
         return new ResourceMetadata(

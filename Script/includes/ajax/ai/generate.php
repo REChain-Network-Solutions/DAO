@@ -33,7 +33,7 @@ try {
     case 'post':
       // check ai posts permission
       if (!$user->_data['can_generate_ai_posts']) {
-        if (!$user->check_module_package_permission("ai_posts_permission")) {
+        if ($user->check_module_package_permission("ai_posts_permission")) {
           return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
         } else {
           modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -53,7 +53,7 @@ try {
     case 'blog':
       // check ai blogs permission
       if (!$user->_data['can_generate_ai_blogs']) {
-        if (!$user->check_module_package_permission("ai_blogs_permission")) {
+        if ($user->check_module_package_permission("ai_blogs_permission")) {
           return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
         } else {
           modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -74,7 +74,7 @@ try {
     case 'image':
       // check ai images permission
       if (!$user->_data['can_generate_ai_images']) {
-        if (!$user->check_module_package_permission("ai_images_permission")) {
+        if ($user->check_module_package_permission("ai_images_permission")) {
           return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
         } else {
           modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));

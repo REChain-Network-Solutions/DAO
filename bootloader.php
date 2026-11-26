@@ -14,14 +14,8 @@ try {
   // user logged in
   if ($user->_logged_in) {
     // get user data
-    /* get friend requests */
-    $user->_data['friend_requests'] = $user->get_friend_requests();
     /* get search log */
     $user->_data['search_log'] = $user->get_search_log();
-    /* get conversations */
-    $user->_data['conversations'] = $user->get_conversations()['data'];
-    /* get notifications */
-    $user->_data['notifications'] = $user->get_notifications();
     /* get online & offline friends */
     $detect = new Detection\MobileDetect();
     $smarty->assign('detect', $detect);
@@ -32,7 +26,7 @@ try {
       $smarty->assign('sidebar_friends', $sidebar_friends);
     }
     /* check if user subscribed */
-    if ($system['packages_enabled']) {
+    if ($system['packages_enabled'] && method_exists($user, 'check_user_package')) {
       $user->check_user_package();
     }
 

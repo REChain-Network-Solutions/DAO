@@ -47,41 +47,6 @@ trait LoggerTrait
 
 
   /**
-   * log_commission
-   * 
-   * @return void
-   */
-  public function log_session()
-  {
-    global $db, $date;
-    /* log the session */
-    $session_type = 'W';
-    if (isset($_SERVER['HTTP_USER_AGENT'])) {
-      $user_agent = $_SERVER['HTTP_USER_AGENT'];
-      if (strpos($user_agent, 'Android') !== false) {
-        $session_type = 'A';
-      }
-      if (strpos($user_agent, 'iPhone') !== false || strpos($user_agent, 'iPad') !== false) {
-        $session_type = 'I';
-      }
-    }
-    $user_ip = get_user_ip();
-    $user_browser = get_user_browser();
-    $user_os = get_user_os();
-    /* check if session cookie exists */
-    if (!isset($_COOKIE[$this->_cookie_user_session])) {
-      /* check if session already exists using IP and user_agent */
-      $get_session = $db->query(sprintf("SELECT COUNT(*) AS count FROM log_sessions WHERE session_ip = %s AND session_user_agent = %s", secure($user_ip), secure($user_agent)));
-      if ($get_session->fetch_assoc()['count'] == 0) {
-        $db->query(sprintf("INSERT INTO log_sessions (session_date, session_type, session_ip, session_user_agent, user_browser, user_os) VALUES (%s, %s, %s, %s, %s, %s)", secure($date), secure($session_type), secure($user_ip), secure($user_agent), secure($user_browser), secure($user_os)));
-      }
-      /* set session cookie */
-      set_cookie($this->_cookie_user_session, md5($user_ip . $user_agent));
-    }
-  }
-
-
-  /**
    * log_subscriptions
    * 
    * @param integer $subscriber_id

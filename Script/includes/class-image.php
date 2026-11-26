@@ -39,28 +39,46 @@ class Image
       }
       $imagick = new Imagick($file);
       $imagick->setImageFormat('jpg');
-      $temp_file = tempnam(sys_get_temp_dir(), 'heic') . '.jpg';
+      $temp_name = tempnam(sys_get_temp_dir(), 'heic');
+      $temp_file = $temp_name . '.jpg';
       $imagick->writeImage($temp_file);
+      unlink($temp_name);
       $file = $temp_file;
       $is_temp_file = true;
     }
     /* if the file is a remote URL, download it first (to bypass allow_url_fopen) */
     if (filter_var($file, FILTER_VALIDATE_URL)) {
+      $scheme = strtolower((string) parse_url($file, PHP_URL_SCHEME));
+      if (!in_array($scheme, ['http', 'https'], true)) {
+        throw new Exception(__("The file type is not a valid image"));
+      }
+      $host = (string) parse_url($file, PHP_URL_HOST);
+      $ip = $host ? gethostbyname($host) : '';
+      if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+        throw new Exception(__("The file type is not a valid image"));
+      }
       $tmpFile = tempnam(sys_get_temp_dir(), 'img_');
       $ch = curl_init($file);
       $fp = fopen($tmpFile, 'wb');
       curl_setopt($ch, CURLOPT_FILE, $fp);
-      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+      curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+      curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
       curl_setopt($ch, CURLOPT_TIMEOUT, 10);
       curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0');
       curl_exec($ch);
-      curl_close($ch);
       fclose($fp);
       $file = $tmpFile;
       $is_temp_file = true;
     }
     $img_info = @getimagesize($file);
     if (!$img_info) {
+      if ($is_temp_file && file_exists($file)) {
+        unlink($file);
+      }
+      throw new Exception(__("The file type is not a valid image"));
+    }
+    if (((int) $img_info[0] * (int) $img_info[1]) > 50000000) {
       if ($is_temp_file && file_exists($file)) {
         unlink($file);
       }
@@ -172,7 +190,7 @@ class Image
    */
   public function crop($width, $height, $x, $y)
   {
-    $new_image = imagecreatetruecolor($width, $height);
+    $new_image = $this->createCanvas($width, $height);
     imagecopy($new_image, $this->_img, 0, 0, $x, $y, $width, $height);
     $this->_img = $new_image;
   }
@@ -188,9 +206,29 @@ class Image
   {
     $width = (int) round($width);
     $height = (int) round($height);
-    $new_image = imagecreatetruecolor($width, $height);
+    $new_image = $this->createCanvas($width, $height);
     imagecopyresampled($new_image, $this->_img, 0, 0, 0, 0, $width, $height, $this->getWidth(), $this->getHeight());
     $this->_img = $new_image;
+  }
+
+
+  /**
+   * createCanvas
+   * 
+   * @param integer $width
+   * @param integer $height
+   * @return GdImage
+   */
+  private function createCanvas($width, $height)
+  {
+    $canvas = imagecreatetruecolor((int) $width, (int) $height);
+    /* keep transparency */
+    if (in_array($this->_img_type, ['image/png', 'image/gif', 'image/webp'])) {
+      imagealphablending($canvas, false);
+      imagesavealpha($canvas, true);
+      imagefill($canvas, 0, 0, imagecolorallocatealpha($canvas, 0, 0, 0, 127));
+    }
+    return $canvas;
   }
 
 

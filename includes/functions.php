@@ -2,10 +2,25 @@
 
 /**
  * functions
- *
+ * 
  * @package Sngine
  * @author Zamblek
  */
+
+
+/* ------------------------------- */
+/* Includes */
+/* ------------------------------- */
+
+require(__DIR__ . '/functions-cache.php');
+require(__DIR__ . '/functions-storage.php');
+require(__DIR__ . '/functions-ffmpeg.php');
+require(__DIR__ . '/functions-images.php');
+require(__DIR__ . '/functions-sockets.php');
+require(__DIR__ . '/functions-system.php');
+require(__DIR__ . '/functions-errors.php');
+require(__DIR__ . '/functions-messaging.php');
+require(__DIR__ . '/functions-design.php');
 
 
 /* ------------------------------- */
@@ -14,7 +29,7 @@
 
 /**
  * check_system_requirements
- *
+ * 
  * @return array
  */
 function check_system_requirements()
@@ -34,6 +49,10 @@ function check_system_requirements()
   /* check if curl enabled */
   if (!extension_loaded('curl') || !function_exists('curl_init')) {
     $errors['curl'] = true;
+  }
+  /* check if openssl enabled */
+  if (!extension_loaded('openssl') || !function_exists('openssl_verify')) {
+    $errors['openssl'] = true;
   }
   /* check if mbstring enabled */
   if (!extension_loaded('mbstring')) {
@@ -69,44 +88,1094 @@ function check_system_requirements()
 
 
 /**
- * get_licence_key
- *
- * @param string $code
- * @return string
+ * LicenceVerifyException
+ * 
+ * A refusal from the licence API, carrying its error code (e.g. license_invalid).
  */
-function get_licence_key($code)
+if (!class_exists('LicenceVerifyException')) {
+  class LicenceVerifyException extends Exception
+  {
+    public $licence_error_code = '';
+  }
+}
+
+
+/**
+ * get_licence_key
+ * 
+ * @param string $code
+ * @param string $context
+ * @param string|null $version
+ * @return array
+ */
+function get_licence_key($code, $context = 'install', $version = null)
 {
-  $url = 'https://zamblek.com/licenses/sngine/verify.php';
-  $data = "code=" . $code . "&domain=" . $_SERVER['HTTP_HOST'];
+  $url = 'https://zamblek.com/api/v1/licenses/verify';
+  $request = [
+    'product' => 'sngine',
+    'code' => $code,
+    'domain' => $_SERVER['HTTP_HOST'] ?? '',
+    'context' => $context,
+  ];
+  if ($version !== null && $version !== '') {
+    $request['version'] = (string) $version;
+  }
+  $payload = json_encode($request);
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
   curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    'Accept: application/json',
+  ]);
   curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0');
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+  curl_setopt($ch, CURLOPT_TIMEOUT, 10);
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
   curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
   $response = curl_exec($ch);
   $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
+  $curlError = curl_error($ch);
+  if ($curlError || $httpCode == 503) {
+    $hint = $curlError ? ' (' . $curlError . ')' : '';
+    throw new Exception("License verification is temporarily unavailable. Please try again." . $hint);
   }
   $responseJson = json_decode($response, true);
-  if (!empty($responseJson['error'])) {
-    throw new Exception($responseJson['error']['message'] . ' Error Code #' . $responseJson['error']['code']);
+  if (!is_array($responseJson)) {
+    throw new Exception("License verification failed. Please try again.");
   }
-  return $responseJson['licence_key'];
+  if (!empty($responseJson['valid'])) {
+    licence_validate_payload($responseJson);
+    return $responseJson;
+  }
+  if (!empty($responseJson['error']['message'])) {
+    $message = $responseJson['error']['message'];
+    if (!empty($responseJson['error']['code'])) {
+      $message .= ' Error Code #' . $responseJson['error']['code'];
+    }
+    $exception = new LicenceVerifyException($message);
+    $exception->licence_error_code = (string) ($responseJson['error']['code'] ?? '');
+    throw $exception;
+  }
+  if (!empty($responseJson['message'])) {
+    throw new Exception($responseJson['message']);
+  }
+  throw new Exception("License verification failed. Please try again.");
+}
+
+
+/**
+ * licence_normalize_domain
+ * 
+ * @param string $domain
+ * @return string
+ */
+function licence_normalize_domain($domain)
+{
+  $domain = strtolower(trim((string) $domain));
+  $domain = preg_replace('#^https?://#', '', $domain);
+  $domain = explode('/', $domain)[0];
+  $domain = explode(':', $domain)[0];
+  if (str_starts_with($domain, 'www.')) {
+    $domain = substr($domain, 4);
+  }
+  return $domain;
+}
+
+
+/**
+ * licence_ksort_recursive
+ * 
+ * @param array $data
+ * @return array
+ */
+function licence_ksort_recursive($data)
+{
+  if (!is_array($data)) {
+    return $data;
+  }
+  ksort($data);
+  foreach ($data as $key => $value) {
+    if (is_array($value)) {
+      $data[$key] = licence_ksort_recursive($value);
+    }
+  }
+  return $data;
+}
+
+
+/**
+ * licence_canonical_json
+ * 
+ * @param array $payload
+ * @return string|false
+ */
+function licence_canonical_json($payload)
+{
+  $claims = [
+    'product' => $payload['product'] ?? null,
+    'domain' => $payload['domain'] ?? null,
+    'license_type' => $payload['license_type'] ?? null,
+    'entitlements' => $payload['entitlements'] ?? null,
+    'issued_at' => $payload['issued_at'] ?? null,
+    'expires_at' => $payload['expires_at'] ?? null,
+  ];
+  return json_encode(licence_ksort_recursive($claims), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
+
+/**
+ * licence_public_key
+ * 
+ * @return \OpenSSLAsymmetricKey
+ */
+function licence_public_key()
+{
+  static $key = null;
+  if ($key !== null) {
+    return $key;
+  }
+  $pem = __DIR__ . '/public.pem';
+  if (!is_file($pem)) {
+    throw new Exception("License verification failed.");
+  }
+  $key = openssl_pkey_get_public(file_get_contents($pem));
+  if ($key === false) {
+    throw new Exception("License verification failed.");
+  }
+  return $key;
+}
+
+
+/**
+ * licence_validate_integrity
+ * 
+ * @param array $payload
+ * @return void
+ */
+function licence_validate_integrity($payload)
+{
+  if (!is_array($payload) || empty($payload['signature'])) {
+    throw new Exception("License verification failed.");
+  }
+  $canonical = licence_canonical_json($payload);
+  $signature = base64_decode($payload['signature'], true);
+  if ($canonical === false || $signature === false) {
+    throw new Exception("License verification failed.");
+  }
+  $verified = openssl_verify($canonical, $signature, licence_public_key(), OPENSSL_ALGO_SHA256);
+  if ($verified !== 1) {
+    throw new Exception("License verification failed.");
+  }
+  if (($payload['product'] ?? '') !== 'sngine') {
+    throw new Exception("License verification failed.");
+  }
+}
+
+
+/**
+ * licence_validate_payload
+ * 
+ * @param array $payload
+ * @param string|null $host
+ * @return void
+ */
+function licence_validate_payload($payload, $host = null)
+{
+  licence_validate_integrity($payload);
+  $expiresAt = strtotime($payload['expires_at'] ?? '');
+  if ($expiresAt === false || $expiresAt <= time()) {
+    throw new Exception("License verification expired. Please try again.");
+  }
+  $host = $host ?? ($_SERVER['HTTP_HOST'] ?? '');
+  if ($host === '' && defined('SYS_URL')) {
+    $host = SYS_URL;
+  }
+  $current = licence_normalize_domain($host);
+  $signed = licence_normalize_domain($payload['domain'] ?? '');
+  if ($current === '' || $signed === '' || $current !== $signed) {
+    throw new Exception("License domain does not match this site.");
+  }
+}
+
+
+/**
+ * licence_store_payload
+ * 
+ * @param array $payload
+ * @return void
+ */
+function licence_store_payload($payload)
+{
+  licence_validate_payload($payload);
+  $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  if ($json === false) {
+    throw new Exception("Unable to save the license file");
+  }
+  $contents = '<?php' . "\n\n" . '/**' . "\n" . ' * Auto-generated licence payload. Do not edit.' . "\n" . ' */' . "\n\n" . 'if (!defined(\'ABSPATH\')) {' . "\n" . '  return false;' . "\n" . '}' . "\n\n" . 'return json_decode(' . var_export($json, true) . ', true);' . "\n";
+  $file = __DIR__ . '/sys_verif.php';
+  if (file_put_contents($file, $contents) === false) {
+    throw new Exception("Unable to save the license file");
+  }
+  if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate($file, true);
+  }
+  /* a licence without monetization (cancelled monthly plan, expired subscription, Regular) loses the module */
+  if (empty($payload['entitlements']['monetization']) && licence_module_present()) {
+    licence_remove_monetization_module();
+  }
+}
+
+
+/**
+ * licence_write_config
+ *
+ * @param string $licence_key
+ * @return void
+ */
+function licence_write_config($licence_key)
+{
+  $file = __DIR__ . '/config.php';
+  if (!is_file($file) || !is_writable($file)) {
+    throw new Exception("Unable to write the config file");
+  }
+  $contents = file_get_contents($file);
+  if ($contents === false) {
+    throw new Exception("Unable to write the config file");
+  }
+  $define = 'define("LICENCE_KEY", ' . var_export((string) $licence_key, true) . ')';
+  $pattern = '/define\(\s*([\'"])LICENCE_KEY\1\s*,\s*(([\'"]).*?(?<!\\\\)\3|[^)]*)\s*\)/s';
+  if (preg_match($pattern, $contents)) {
+    $contents = preg_replace_callback($pattern, function () use ($define) {
+      return $define;
+    }, $contents, 1);
+  } elseif (preg_match('/\?>\s*$/', $contents)) {
+    $contents = preg_replace_callback('/\?>\s*$/', function () use ($define) {
+      return $define . ";\n?>\n";
+    }, $contents, 1);
+  } else {
+    $contents = rtrim($contents) . "\n" . $define . ";\n";
+  }
+  if (file_put_contents($file, $contents, LOCK_EX) === false) {
+    throw new Exception("Unable to write the config file");
+  }
+  if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate($file, true);
+  }
+}
+
+
+/**
+ * licence_load_payload
+ * 
+ * @param boolean $strict
+ * @param boolean $reset
+ * @return array|false
+ */
+function licence_load_payload($strict = false, $reset = false)
+{
+  static $payload = false;
+  static $integrity_error = null;
+  static $loaded = false;
+  if ($reset) {
+    $payload = false;
+    $integrity_error = null;
+    $loaded = false;
+    return false;
+  }
+  if (!$loaded) {
+    $loaded = true;
+    $file = __DIR__ . '/sys_verif.php';
+    if (!is_file($file)) {
+      $integrity_error = new Exception("License verification failed.");
+    } else {
+      $data = include $file;
+      try {
+        licence_validate_integrity($data);
+        try {
+          licence_validate_payload($data);
+          $payload = $data;
+        } catch (Exception $e) {
+          /* expiry or domain — entitlements off, file is authentic */
+        }
+      } catch (Exception $e) {
+        $integrity_error = $e;
+      }
+    }
+  }
+  if ($strict && $integrity_error) {
+    throw $integrity_error;
+  }
+  return $payload;
+}
+
+
+/**
+ * licence_reset_payload_cache
+ * 
+ * @return void
+ */
+function licence_reset_payload_cache()
+{
+  licence_load_payload(false, true);
+}
+
+
+/**
+ * licence_refresh_if_needed
+ * 
+ * @return void
+ */
+function licence_refresh_if_needed()
+{
+  if (!defined('LICENCE_KEY') || LICENCE_KEY === '') {
+    return;
+  }
+  $file = __DIR__ . '/sys_verif.php';
+  if (!is_file($file)) {
+    return;
+  }
+  $cooldown = __DIR__ . '/sys_verif.refresh';
+  if (is_file($cooldown) && filemtime($cooldown) > time() - 3600) {
+    return;
+  }
+  $data = include $file;
+  if (!is_array($data)) {
+    return;
+  }
+  try {
+    licence_validate_integrity($data);
+  } catch (Exception $e) {
+    return;
+  }
+  $expiresAt = strtotime($data['expires_at'] ?? '');
+  if ($expiresAt === false || $expiresAt > time() + 86400) {
+    return;
+  }
+  @touch($cooldown);
+  try {
+    $fresh = get_licence_key(LICENCE_KEY, 'admin');
+    licence_store_payload($fresh);
+    licence_reset_payload_cache();
+    @unlink($cooldown);
+  } catch (LicenceVerifyException $e) {
+    /* a definitive refusal after the stored payload lapsed removes the module; outages never do */
+    if ($expiresAt <= time() && in_array($e->licence_error_code, licence_revoking_error_codes(), true) && licence_module_present()) {
+      licence_remove_monetization_module();
+    }
+  } catch (Exception $e) {
+    /* keep cooldown; entitlements follow the existing expiry path */
+  }
+}
+
+
+/**
+ * licence_revoking_error_codes
+ * 
+ * Licence API refusals that mean the licence no longer covers monetization.
+ * 
+ * @return array
+ */
+function licence_revoking_error_codes()
+{
+  return ['license_invalid', 'license_canceled', 'license_wrong_item', 'account_suspended', '505'];
+}
+
+
+/**
+ * licence_has_entitlement
+ * 
+ * @param string $name
+ * @return boolean
+ */
+function licence_has_entitlement($name)
+{
+  $payload = licence_load_payload();
+  if (!$payload) {
+    return false;
+  }
+  return !empty($payload['entitlements'][$name]);
+}
+
+
+/**
+ * licence_module_installed
+ * 
+ * @return boolean
+ */
+function licence_module_installed()
+{
+  static $installed = null;
+  if ($installed === null) {
+    /* development checkout keeps the source */
+    $current = is_dir(ABSPATH . '.dev') || (defined('MONETIZATION_VER') && MONETIZATION_VER === SYS_VER);
+    $installed = $current && !licence_module_missing_files();
+  }
+  return $installed;
+}
+
+
+/**
+ * licence_module_present
+ *
+ * @return boolean
+ */
+function licence_module_present()
+{
+  return count(licence_module_missing_files()) < count(licence_module_paths());
+}
+
+
+/**
+ * licence_module_missing_files
+ *
+ * @return array
+ */
+function licence_module_missing_files()
+{
+  $missing = [];
+  foreach (licence_module_paths() as $rel) {
+    if (!is_file(ABSPATH . $rel)) {
+      $missing[] = $rel;
+    }
+  }
+  return $missing;
+}
+
+
+/**
+ * licence_zip_entry_allowed
+ * 
+ * @param string $name
+ * @return boolean
+ */
+function licence_zip_entry_allowed($name)
+{
+  $name = str_replace('\\', '/', (string) $name);
+  if ($name === '' || str_contains($name, '..')) {
+    return false;
+  }
+  if (str_starts_with($name, '/') || preg_match('#^[a-zA-Z]:/#', $name)) {
+    return false;
+  }
+  $normalized = strtolower($name);
+  if ($normalized === 'includes/config.php' || $normalized === 'includes/sys_verif.php') {
+    return false;
+  }
+  $root = rtrim(str_replace('\\', '/', ABSPATH), '/');
+  $dest = $root . '/' . $name;
+  if ($dest !== $root && !str_starts_with($dest, $root . '/')) {
+    return false;
+  }
+  return true;
+}
+
+
+/**
+ * licence_clear_compiled_templates
+ * 
+ * @return void
+ */
+function licence_clear_compiled_templates()
+{
+  foreach ((array) glob(ABSPATH . 'content/themes/*/templates_compiled', GLOB_ONLYDIR) as $dir) {
+    if (!is_dir($dir)) {
+      continue;
+    }
+    $items = new RecursiveIteratorIterator(
+      new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+      RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($items as $item) {
+      if ($item->isDir()) {
+        @rmdir($item->getPathname());
+      } else {
+        @unlink($item->getPathname());
+      }
+    }
+  }
+}
+
+
+/**
+ * licence_api_error_message
+ * 
+ * @param array $responseJson
+ * @return string
+ */
+function licence_api_error_message($responseJson)
+{
+  if (!empty($responseJson['error']['message'])) {
+    $message = $responseJson['error']['message'];
+    if (!empty($responseJson['error']['code'])) {
+      $message .= ' Error Code #' . $responseJson['error']['code'];
+    }
+    return $message;
+  }
+  if (!empty($responseJson['message'])) {
+    return $responseJson['message'];
+  }
+  return __("License verification failed. Please try again.");
+}
+
+
+/**
+ * licence_is_zip_file
+ * 
+ * @param string $path
+ * @return boolean
+ */
+function licence_is_zip_file($path)
+{
+  $fh = @fopen($path, 'rb');
+  if ($fh === false) {
+    return false;
+  }
+  $magic = fread($fh, 4);
+  fclose($fh);
+  return is_string($magic) && str_starts_with($magic, 'PK');
+}
+
+
+/**
+ * licence_curl_to_file
+ * 
+ * @param string $url
+ * @param string $dest
+ * @param string|null $postBody
+ * @return array{0:int,1:string}
+ */
+function licence_curl_to_file($url, $dest, $postBody = null)
+{
+  $fp = fopen($dest, 'w+b');
+  if ($fp === false) {
+    throw new Exception(__("Unable to write the module zip. Make sure content/backups is writable."));
+  }
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_FILE, $fp);
+  curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+  curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+  curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+  curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0');
+  if ($postBody !== null) {
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postBody);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+      'Content-Type: application/json',
+      'Accept: application/zip, application/json',
+    ]);
+  }
+  $ok = curl_exec($ch);
+  $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+  $curlError = curl_error($ch);
+  fclose($fp);
+  if (!$ok || $curlError || $httpCode == 503) {
+    @unlink($dest);
+    $hint = $curlError ? ' (' . $curlError . ')' : '';
+    throw new Exception("License verification is temporarily unavailable. Please try again." . $hint);
+  }
+  return [$httpCode, $contentType];
+}
+
+
+/**
+ * licence_download_module
+ * 
+ * @param string $module
+ * @param string|null $licence_key
+ * @return string
+ */
+function licence_download_module($module = 'monetization', $licence_key = null)
+{
+  if ($licence_key === null) {
+    $licence_key = defined('LICENCE_KEY') ? LICENCE_KEY : '';
+  }
+  if ($licence_key === '') {
+    throw new Exception(__("No license key found."));
+  }
+  $backups = ABSPATH . 'content/backups';
+  if (!is_dir($backups) && !@mkdir($backups, 0777, true) && !is_dir($backups)) {
+    throw new Exception(__("Unable to write the module zip. Make sure content/backups is writable."));
+  }
+  $url = 'https://zamblek.com/api/v1/licenses/modules/download';
+  $tmp = $backups . '/sngine-monetization-download-' . time() . '.zip';
+  $body = json_encode([
+    'product' => 'sngine',
+    'code' => $licence_key,
+    'domain' => $_SERVER['HTTP_HOST'] ?? '',
+    'module' => $module,
+  ]);
+  [$httpCode] = licence_curl_to_file($url, $tmp, $body);
+  if (licence_is_zip_file($tmp) && $httpCode >= 200 && $httpCode < 300) {
+    return $tmp;
+  }
+  $raw = @file_get_contents($tmp);
+  @unlink($tmp);
+  $json = json_decode((string) $raw, true);
+  if (is_array($json) && !empty($json['url']) && is_string($json['url'])) {
+    $tmp = $backups . '/sngine-monetization-download-' . time() . '.zip';
+    [$httpCode] = licence_curl_to_file($json['url'], $tmp, null);
+    if (licence_is_zip_file($tmp) && $httpCode >= 200 && $httpCode < 300) {
+      return $tmp;
+    }
+    @unlink($tmp);
+    throw new Exception(__("License verification failed. Please try again."));
+  }
+  if (is_array($json)) {
+    throw new Exception(licence_api_error_message($json));
+  }
+  throw new Exception(__("License verification failed. Please try again."));
+}
+
+
+/**
+ * licence_install_module_zip
+ * 
+ * @param string $zip_path
+ * @return array
+ */
+function licence_install_module_zip($zip_path)
+{
+  $backups = ABSPATH . 'content/backups';
+  if (!is_dir($backups) && !@mkdir($backups, 0777, true) && !is_dir($backups)) {
+    throw new Exception(__("Unable to write the module zip. Make sure content/backups is writable."));
+  }
+  $zip_name = 'sngine-monetization-v' . SYS_VER . '.zip';
+  $keep = $backups . '/' . $zip_name;
+  $keep_rel = 'content/backups/' . $zip_name;
+  if (!class_exists('ZipArchive')) {
+    if (!is_file($zip_path)) {
+      throw new Exception(__("Unable to open the module zip."));
+    }
+    if (realpath($zip_path) !== realpath($keep)) {
+      if (!@rename($zip_path, $keep) && !@copy($zip_path, $keep)) {
+        throw new Exception(__("Unable to write the module zip. Make sure content/backups is writable."));
+      }
+      if (is_file($zip_path) && realpath($zip_path) !== realpath($keep)) {
+        @unlink($zip_path);
+      }
+    }
+    return [
+      'extracted' => false,
+      'path' => $keep_rel,
+      'message' => sprintf(__("PHP ZipArchive is not available. Unzip %s over the site root, then reload this page."), $keep_rel),
+    ];
+  }
+  $zip = new ZipArchive();
+  if ($zip->open($zip_path) !== true) {
+    throw new Exception(__("Unable to open the module zip."));
+  }
+  $extracted = 0;
+  for ($i = 0; $i < $zip->numFiles; $i++) {
+    $name = $zip->getNameIndex($i);
+    if ($name === false) {
+      continue;
+    }
+    $name = str_replace('\\', '/', $name);
+    if (str_ends_with($name, '/')) {
+      continue;
+    }
+    if (!licence_zip_entry_allowed($name)) {
+      continue;
+    }
+    $dest = ABSPATH . ltrim($name, '/');
+    $dir = dirname($dest);
+    if (!is_dir($dir) && !@mkdir($dir, 0777, true) && !is_dir($dir)) {
+      $zip->close();
+      throw new Exception(__("Unable to extract the module files."));
+    }
+    $contents = $zip->getFromIndex($i);
+    if ($contents === false || file_put_contents($dest, $contents) === false) {
+      $zip->close();
+      throw new Exception(__("Unable to extract the module files."));
+    }
+    if (function_exists('opcache_invalidate')) {
+      @opcache_invalidate($dest, true);
+    }
+    $extracted++;
+  }
+  $zip->close();
+  @unlink($zip_path);
+  licence_clear_compiled_templates();
+  return [
+    'extracted' => true,
+    'count' => $extracted,
+    'message' => __("Payments and monetization files are installed."),
+  ];
+}
+
+
+/**
+ * licence_admin_lock
+ * 
+ * @return array
+ */
+function licence_admin_lock()
+{
+  global $system, $control_panel;
+  $panel = (!empty($control_panel['url'])) ? $control_panel['url'] : 'admincp';
+  $url = $system['system_url'] . '/' . $panel . '/license';
+  if (licence_has_entitlement('monetization')) {
+    return [
+      'type' => 'success',
+      'title' => __("You can enable this feature with your current license."),
+      'text' => __("All you need to do is visit the License page to verify that the required files are installed."),
+      'url' => $url,
+    ];
+  }
+  return [
+    'type' => 'error',
+    'title' => __("Sorry, you can't enable this feature with your current license."),
+    'text' => __("You can check your license status from the License page."),
+    'url' => $url,
+  ];
+}
+
+
+/**
+ * licence_throw_admin_lock
+ * 
+ * @return void
+ */
+function licence_throw_admin_lock()
+{
+  $lock = licence_admin_lock();
+  throw new Exception($lock['title'] . ' ' . $lock['text'] . ' <a href="' . htmlentities($lock['url'], ENT_QUOTES, 'UTF-8') . '">' . __("License page") . '</a>');
+}
+
+
+/**
+ * licence_premium_option_names
+ * 
+ * @return array
+ */
+function licence_premium_option_names()
+{
+  return [
+    'ai_text_credit_enabled',
+    'ai_image_credit_enabled',
+    'paypal_enabled',
+    'paypal_payouts_enabled',
+    'creditcard_enabled',
+    'alipay_enabled',
+    'cashapp_enabled',
+    'blik_enabled',
+    'eps_enabled',
+    'ideal_enabled',
+    'bancontact_enabled',
+    'przelewy24_enabled',
+    'oxxo_enabled',
+    'stripe_payment_element_enabled',
+    'paystack_enabled',
+    'iyzico_enabled',
+    '2checkout_enabled',
+    'authorize_net_enabled',
+    'razorpay_enabled',
+    'cashfree_enabled',
+    'shift4_enabled',
+    'myfatoorah_enabled',
+    'epayco_enabled',
+    'flutterwave_enabled',
+    'verotel_enabled',
+    'mercadopago_enabled',
+    'plisio_enabled',
+    'coinpayments_enabled',
+    'coinbase_enabled',
+    'ccbill_enabled',
+    'bank_transfers_enabled',
+    'ads_enabled',
+    'wallet_enabled',
+    'packages_enabled',
+    'affiliates_money_transfer_enabled',
+    'points_money_transfer_enabled',
+    'paid_blogs_enabled',
+    'paid_products_enabled',
+    'paid_funding_enabled',
+    'paid_offers_enabled',
+    'paid_jobs_enabled',
+    'paid_courses_enabled',
+    'market_shopping_cart_enabled',
+    'market_digital_products_enabled',
+    'market_wallet_payment_enabled',
+    'market_cod_payment_enabled',
+    'market_money_withdraw_enabled',
+    'market_money_transfer_enabled',
+    'funding_enabled',
+    'monetization_enabled',
+    'tips_enabled',
+  ];
+}
+
+
+/**
+ * licence_turn_off_premium_options
+ * 
+ * @return void
+ */
+function licence_turn_off_premium_options()
+{
+  $premium_off = [];
+  foreach (licence_premium_option_names() as $option_name) {
+    $premium_off[$option_name] = secure('0');
+  }
+  update_system_options($premium_off, false);
+}
+
+
+/**
+ * licence_module_paths
+ * 
+ * The Payments & Monetization module files, removed when the licence no longer
+ * includes monetization. The list between the markers is regenerated from
+ * .dev/deployment/monetization_files.json by zamblek.sh; do not edit it by hand.
+ * 
+ * @return array
+ */
+function licence_module_paths()
+{
+  return [
+    /* monetization-paths:start */
+    'content/themes/nova/templates/_js_templates.payments.tpl',
+    'content/themes/nova/templates/admin.ads.users.tpl',
+    'content/themes/nova/templates/admin.bank.tpl',
+    'content/themes/nova/templates/admin.coinpayments.tpl',
+    'content/themes/nova/templates/admin.earnings.tpl',
+    'content/themes/nova/templates/admin.funding.tpl',
+    'content/themes/nova/templates/admin.monetization.tpl',
+    'content/themes/nova/templates/admin.paid_modules.tpl',
+    'content/themes/nova/templates/admin.pro.tpl',
+    'content/themes/nova/templates/admin.settings.ai.credit.tpl',
+    'content/themes/nova/templates/admin.settings.payments.tpl',
+    'content/themes/nova/templates/admin.tips.tpl',
+    'content/themes/nova/templates/admin.wallet.tpl',
+    'content/themes/nova/js/admin-earnings.js',
+    'includes/ajax/admin/ads_campaigns.php',
+    'includes/ajax/admin/funding.php',
+    'includes/ajax/admin/monetization.php',
+    'includes/ajax/admin/paid_modules.php',
+    'includes/ajax/admin/payments.php',
+    'includes/ajax/admin/pro.php',
+    'includes/ajax/admin/tips.php',
+    'includes/ajax/admin/wallet.php',
+    'includes/ajax/monetization/controller.php',
+    'includes/ajax/payments/2checkout.php',
+    'includes/ajax/payments/authorize.php',
+    'includes/ajax/payments/bank.php',
+    'includes/ajax/payments/cash_on_delivery.php',
+    'includes/ajax/payments/cashfree.php',
+    'includes/ajax/payments/ccbill.php',
+    'includes/ajax/payments/ccbill_status_check.php',
+    'includes/ajax/payments/coinbase.php',
+    'includes/ajax/payments/coinpayments.php',
+    'includes/ajax/payments/coupon.php',
+    'includes/ajax/payments/flutterwave.php',
+    'includes/ajax/payments/mercadopago.php',
+    'includes/ajax/payments/myfatoorah.php',
+    'includes/ajax/payments/paypal.php',
+    'includes/ajax/payments/paystack.php',
+    'includes/ajax/payments/plisio.php',
+    'includes/ajax/payments/iyzico.php',
+    'includes/ajax/payments/razorpay.php',
+    'includes/ajax/payments/shift4.php',
+    'includes/ajax/payments/stripe.php',
+    'includes/ajax/payments/trial.php',
+    'includes/ajax/payments/verotel.php',
+    'includes/ajax/payments/wallet.php',
+    'includes/assets/js/core/payments.js',
+    'includes/functions-payments.php',
+    'includes/traits/campaigns.php',
+    'includes/traits/funding.php',
+    'includes/traits/monetization.php',
+    'includes/traits/packages.php',
+    'includes/traits/payments.php',
+    'includes/traits/wallet.php',
+    'sockets/node/libs/traits/monetization.js',
+    'sockets/node/libs/traits/wallet.js',
+    'webhooks/cashfree.php',
+    'webhooks/ccbill.php',
+    'webhooks/coinbase.php',
+    'webhooks/coinpayments.php',
+    'webhooks/epayco.php',
+    'webhooks/flutterwave.php',
+    'webhooks/mercadopago.php',
+    'webhooks/mercadopago_callbak.php',
+    'webhooks/myfatoorah.php',
+    'webhooks/paypal.php',
+    'webhooks/paypal_subscriptions.php',
+    'webhooks/paystack.php',
+    'webhooks/plisio.php',
+    'webhooks/iyzico.php',
+    'webhooks/stripe.php',
+    'webhooks/stripe_subscriptions.php',
+    'webhooks/verotel.php',
+    /* monetization-paths:end */
+  ];
+}
+
+
+/**
+ * licence_remove_monetization_module
+ * 
+ * Deletes the Payments & Monetization files listed in licence_module_paths()
+ * and switches the premium options off. Balances and history stay in the database, so
+ * re-enabling the module with a qualifying licence restores everything.
+ * A development checkout (one with a .dev folder) is never touched: it holds the source.
+ * 
+ * @return boolean
+ */
+function licence_remove_monetization_module()
+{
+  if (is_dir(ABSPATH . '.dev')) {
+    return false;
+  }
+  $files = licence_module_paths();
+  $root = rtrim(str_replace('\\', '/', ABSPATH), '/');
+  foreach ($files as $rel) {
+    if (!is_string($rel) || !licence_zip_entry_allowed($rel)) {
+      continue;
+    }
+    $path = ABSPATH . ltrim($rel, '/');
+    if (!is_file($path)) {
+      continue;
+    }
+    @unlink($path);
+    if (function_exists('opcache_invalidate')) {
+      @opcache_invalidate($path, true);
+    }
+    /* prune folders the module created, stopping at the first one that still has files */
+    $dir = dirname(str_replace('\\', '/', $path));
+    while ($dir !== $root && str_starts_with($dir, $root . '/') && @rmdir($dir)) {
+      $dir = dirname($dir);
+    }
+  }
+  licence_clear_compiled_templates();
+  if (function_exists('update_system_options') && isset($GLOBALS['db'])) {
+    try {
+      licence_turn_off_premium_options();
+    } catch (Exception $e) {
+      /* the in-memory flags still lock the features */
+    }
+  }
+  return true;
+}
+
+
+/**
+ * licence_disable_premium_flags
+ * 
+ * @param array $system
+ * @return void
+ */
+function licence_disable_premium_flags(&$system)
+{
+  if (licence_has_entitlement('monetization')) {
+    return;
+  }
+  foreach (licence_premium_option_names() as $name) {
+    $system[$name] = '0';
+  }
+}
+
+
+/**
+ * licence_mask_key
+ * 
+ * @param string $key
+ * @return string
+ */
+function licence_mask_key($key)
+{
+  $key = (string) $key;
+  $len = strlen($key);
+  if ($len === 0) {
+    return '';
+  }
+  if ($len <= 4) {
+    return str_repeat('•', $len);
+  }
+  return str_repeat('•', $len - 4) . substr($key, -4);
+}
+
+
+/**
+ * licence_relative_days
+ * 
+ * @param int|null $days
+ * @return string
+ */
+function licence_relative_days($days)
+{
+  if ($days === null) {
+    return '';
+  }
+  $days = (int) $days;
+  if ($days === 0) {
+    return __("Today");
+  }
+  $abs = abs($days);
+  if ($abs < 60) {
+    $unit = ($abs === 1) ? __("day") : __("days");
+    if ($days > 0) {
+      return __("in") . ' ' . $abs . ' ' . $unit;
+    }
+    return $abs . ' ' . $unit . ' ' . __("ago");
+  }
+  $months = max(1, (int) round($abs / 30));
+  $unit = ($months === 1) ? __("month") : __("months");
+  if ($days > 0) {
+    return __("in") . ' ' . $months . ' ' . $unit;
+  }
+  return $months . ' ' . $unit . ' ' . __("ago");
+}
+
+
+/**
+ * licence_billing_cycle
+ * 
+ * @param array $payload
+ * @return string|null
+ */
+function licence_billing_cycle($payload)
+{
+  if (!is_array($payload)) {
+    return null;
+  }
+  $explicit = strtolower(trim((string) (
+    $payload['billing_cycle']
+    ?? $payload['billing_interval']
+    ?? $payload['interval']
+    ?? ''
+  )));
+  if (in_array($explicit, ['month', 'monthly'], true)) {
+    return 'month';
+  }
+  if (in_array($explicit, ['year', 'yearly', 'annual', 'annually'], true)) {
+    return 'year';
+  }
+  $issued = !empty($payload['issued_at']) ? strtotime($payload['issued_at']) : false;
+  $support = !empty($payload['support_expires_at']) ? strtotime($payload['support_expires_at']) : false;
+  if (!$issued || !$support || $support <= $issued) {
+    return null;
+  }
+  $days = ($support - $issued) / 86400;
+  if ($days <= 45) {
+    return 'month';
+  }
+  if ($days >= 180) {
+    return 'year';
+  }
+  return null;
 }
 
 
 /**
  * valid_api_request
- *
+ * 
  * @return boolean
  */
 function valid_api_request()
@@ -129,7 +1198,7 @@ function valid_api_request()
 
 /**
  * generate_api_key
- *
+ * 
  * @return string
  */
 function generate_api_key()
@@ -140,7 +1209,7 @@ function generate_api_key()
 
 /**
  * generate_api_secret
- *
+ * 
  * @return string
  */
 function generate_api_secret()
@@ -151,7 +1220,7 @@ function generate_api_secret()
 
 /**
  * generate_jwt_key
- *
+ * 
  * @return string
  */
 function generate_jwt_key()
@@ -162,7 +1231,7 @@ function generate_jwt_key()
 
 /**
  * redirect
- *
+ * 
  * @param string $url
  * @return void
  */
@@ -179,7 +1248,7 @@ function redirect($url = '')
 
 /**
  * reload
- *
+ * 
  * @return void
  */
 function reload()
@@ -191,7 +1260,7 @@ function reload()
 
 /**
  * secure_system_values
- *
+ * 
  * @return array
  */
 function secure_system_values()
@@ -211,6 +1280,8 @@ function secure_system_values()
     'system_uploads',
     'videos_enabled',
     'chat_videos_enabled',
+    'chat_files_enabled',
+    'chat_max_media',
     'voice_notes_chat_enabled',
     'voice_notes_durtaion',
     'contact_enabled',
@@ -246,13 +1317,15 @@ function secure_system_values()
     'reactions',
     'reactions_enabled'
   ];
-  return array_intersect_key($system, array_flip($allowed_values));
+  $values = array_intersect_key($system, array_flip($allowed_values));
+  $values['module_names'] = module_names_values($system['module_names'] ?? '');
+  return $values;
 }
 
 
 /**
  * secure_user_values
- *
+ * 
  * @param object $user
  * @return array
  */
@@ -268,13 +1341,21 @@ function secure_user_values($user)
     'session_token',
     'active_session_token',
   ];
-  return array_diff_key($user->_data, array_flip($disallowed_values));
+  $values = array_diff_key($user->_data, array_flip($disallowed_values));
+  if ($user->_logged_in) {
+    $values['friends_ids'] = $user->friends_ids();
+    $values['followings_ids'] = $user->followings_ids();
+    $values['friend_requests_ids'] = $user->friend_requests_ids();
+    $values['friend_requests_sent_ids'] = $user->friend_requests_sent_ids();
+    $values['connected_accounts'] = $user->connected_accounts();
+  }
+  return $values;
 }
 
 
 /**
  * api_test
- *
+ * 
  * @return string
  */
 function api_test()
@@ -300,7 +1381,6 @@ function api_test()
   ]);
   $response = curl_exec($ch);
   $error = curl_error($ch);
-  curl_close($ch);
   if ($response === false) {
     return json_encode([
       'success' => false,
@@ -313,446 +1393,468 @@ function api_test()
 
 
 /* ------------------------------- */
-/* System */
+/* Batched Results */
 /* ------------------------------- */
 
 /**
- * get_system_protocol
- *
- * @return string
+ * PrefetchedResult
  */
-function get_system_protocol()
+class PrefetchedResult
 {
-  $is_secure = false;
-  if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on') {
-    $is_secure = true;
-  } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || !empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] == 'on') {
-    $is_secure = true;
+  public $num_rows = 0;
+  private $rows = [];
+
+  public function __construct($rows)
+  {
+    $this->rows = array_values($rows);
+    $this->num_rows = count($this->rows);
   }
-  return $is_secure ? 'https' : 'http';
-}
 
+  public function fetch_assoc(): ?array
+  {
+    return array_shift($this->rows);
+  }
 
-/**
- * get_system_url
- *
- * @return string
- */
-function get_system_url()
-{
-  $protocol = get_system_protocol();
-  $system_url =  $protocol . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
-  return rtrim($system_url, '/');
-}
-
-
-/**
- * check_system_url
- *
- * @return void
- */
-function check_system_url()
-{
-  $protocol = get_system_protocol();
-  $parsed_url = parse_url(SYS_URL);
-  if (($parsed_url['scheme'] != $protocol) || ($parsed_url['host'] != $_SERVER['HTTP_HOST'])) {
-    header('Location: ' . SYS_URL);
+  public function fetch_all($mode = MYSQLI_ASSOC): array
+  {
+    $rows = $this->rows;
+    $this->rows = [];
+    return $rows;
   }
 }
 
 
-/**
- * init_system_session
- *
- * @return void
- */
-function init_system_session()
-{
-  ini_set('session.cookie_httponly', 1);
-  if (get_system_protocol() == "https") {
-    ini_set('session.cookie_secure', 1);
-    /* Sign in with Apple (and similar) returns via cross-site POST; Lax session cookies are not sent on that POST, so Hybridauth loses OAuth state. */
-    if (PHP_VERSION_ID >= 70300) {
-      session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'None',
-      ]);
-    }
-  }
-  session_start();
-  /* set session secret */
-  if (!isset($_SESSION['secret'])) {
-    $_SESSION['secret'] = get_hash_token();
-  }
-}
 
+/* ------------------------------- */
+/* Sampling */
+/* ------------------------------- */
 
 /**
- * init_security_headers
- *
- * @return void
- */
-function init_security_headers()
-{
-  header('X-Frame-Options: SAMEORIGIN');
-  header('X-XSS-Protection: 1; mode=block');
-  header('X-Content-Type-Options: nosniff');
-  header('Referrer-Policy: no-referrer');
-  header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
-}
-
-
-/**
- * init_system_datetime
- *
- * @return string
- */
-function init_system_datetime()
-{
-  date_default_timezone_set('UTC');
-  $minutes_to_add = 0;
-  $DateTime = new DateTime();
-  $DateTime->add(new DateInterval('PT' . $minutes_to_add . 'M'));
-  return $DateTime->format('Y-m-d H:i:s');
-}
-
-
-/**
- * init_db_connection
- *
- * @param string $db_host
- * @param string $db_user
- * @param string $db_password
- * @param string $db_name
- * @param string $db_port
- *
- * @return object
- */
-function init_db_connection($db_host = null, $db_user = null, $db_password = null, $db_name = null, $db_port = null)
-{
-  $db_host = (isset($db_host)) ? $db_host : DB_HOST;
-  $db_user = (isset($db_user)) ? $db_user : DB_USER;
-  $db_password = (isset($db_password)) ? $db_password : DB_PASSWORD;
-  $db_name = (isset($db_name)) ? $db_name : DB_NAME;
-  $db_port = (isset($db_port)) ? $db_port : DB_PORT;
-  $db = new mysqli($db_host, $db_user, $db_password, $db_name, $db_port);
-  if (mysqli_connect_error()) {
-    throw new Exception("DB_ERROR");
-  }
-  /* set db charset */
-  $db->set_charset('utf8mb4');
-  /* set db time to UTC */
-  $db->query("SET time_zone = '+0:00'");
-  return $db;
-}
-
-
-/**
- * init_system
- *
+ * sample_ids
+ * 
+ * @param string $table
+ * @param string $id_column
+ * @param string $scope_sql
+ * @param integer $wanted
+ * @param array $options
  * @return array
  */
-function init_system()
-{
-  global $db, $gettextLoader, $gettextTranslator;
-
-  /* init system */
-  $system = [];
-
-  /* get system options */
-  $get_system_options = $db->query("SELECT * FROM system_options");
-  while ($system_option = $get_system_options->fetch_assoc()) {
-    $system[$system_option['option_name']] = $system_option['option_value'];
-  }
-
-  /* check system JWT */
-  if (!$system['system_jwt_key']) {
-    $system['system_jwt_key'] = generate_jwt_key();
-    /* update */
-    update_system_options([
-      'system_jwt_key' => secure($system['system_jwt_key']),
-    ]);
-  }
-
-  /* set system version */
-  $system['system_version'] = SYS_VER;
-
-  /* set system URL */
-  $system['system_url'] = SYS_URL;
-
-  /* set system debugging */
-  $system['DEBUGGING'] = DEBUGGING;
-
-  /* set system_date_format */
-  $system['system_date_format'] = explode(' ', $system['system_datetime_format'], 2)[0];
-
-  /* set system uploads */
-  if ($system['uploads_cdn_url']) {
-    $system['system_uploads'] = $system['uploads_cdn_url'];
-  } else {
-    if ($system['s3_enabled']) {
-      $endpoint = "https://s3." . $system['s3_region'] . ".amazonaws.com/" . $system['s3_bucket'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['google_cloud_enabled']) {
-      $endpoint = "https://storage.googleapis.com/" . $system['google_cloud_bucket'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['digitalocean_enabled']) {
-      $endpoint = "https://" . $system['digitalocean_space_name'] . "." . $system['digitalocean_space_region'] . ".digitaloceanspaces.com";
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['wasabi_enabled']) {
-      $endpoint = "https://s3." . $system['wasabi_region'] . ".wasabisys.com/" . $system['wasabi_bucket'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['backblaze_enabled']) {
-      $endpoint = "https://s3." . $system['backblaze_region'] . ".backblazeb2.com/" . $system['backblaze_bucket'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['yandex_cloud_enabled']) {
-      $endpoint = "https://storage.yandexcloud.net/" . $system['yandex_cloud_bucket'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['cloudflare_r2_enabled']) {
-      $endpoint = $system['cloudflare_r2_custom_domain'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['pushr_enabled']) {
-      $endpoint = $system['pushr_hostname'];
-      $system['system_uploads'] = $endpoint . "/uploads";
-    } elseif ($system['ftp_enabled']) {
-      $system['system_uploads'] = $system['ftp_endpoint'];
-    } else {
-      $system['system_uploads'] = $system['system_url'] . '/' . $system['uploads_directory'];
-    }
-  }
-
-  /* set agora uploads */
-  if ($system['live_enabled'] && $system['save_live_enabled']) {
-    $system['system_agora_uploads'] = "https://s3." . $system['agora_s3_region'] . ".amazonaws.com/" . $system['agora_s3_bucket'];
-  }
-
-  /* set uploads accpeted extensions */
-  $system['accpeted_video_extensions'] = set_extensions_string($system['video_extensions']);
-  $system['accpeted_audio_extensions'] = set_extensions_string($system['audio_extensions']);
-  $system['accpeted_file_extensions'] = set_extensions_string($system['file_extensions']);
-
-  /* get system themes */
-  $get_system_themes = $db->query("SELECT * FROM system_themes");
-  while ($theme = $get_system_themes->fetch_assoc()) {
-    if ($theme['default']) {
-      $system['theme'] = $theme['name'];
-    }
-    if ($theme['enabled']) {
-      $system['themes'][$theme['name']] = $theme;
-    }
-  }
-
-  /* set system theme */
-  if (isset($_GET['theme'])) {
-    if (array_key_exists($_GET['theme'], $system['themes'])) {
-      if (file_exists(ABSPATH . 'content/themes/' . $_GET['theme'])) {
-        $system['theme'] = $_GET['theme'];
-        /* set theme cookie */
-        set_cookie('s_theme', $_GET['theme']);
-      }
-    }
-  } elseif (isset($_COOKIE['s_theme'])) {
-    if (array_key_exists($_COOKIE['s_theme'], $system['themes'])) {
-      if (file_exists(ABSPATH . 'content/themes/' . $_COOKIE['s_theme'])) {
-        $system['theme'] = $_COOKIE['s_theme'];
-      } else {
-        /* unset theme cookie */
-        unset_cookie('s_theme');
-      }
-    }
-  } else {
-    if (!isset($system['theme'])) {
-      $system['theme'] = "default";
-    }
-  }
-
-  /* set system theme (day|night) mode */
-  $system['theme_mode_night'] = $system['system_theme_night_on'];
-  if ($system['system_theme_mode_select']) {
-    if (isset($_COOKIE['s_night_mode'])) {
-      /* get cookei for web app */
-      $system['theme_mode_night'] = ($_COOKIE['s_night_mode']) ? 1 : 0;
-    }
-  }
-
-  /* get system languages */
-  $get_system_languages = $db->query("SELECT * FROM system_languages WHERE enabled = '1' ORDER BY language_order");
-  while ($language = $get_system_languages->fetch_assoc()) {
-    $language['flag'] = get_picture($language['flag'], 'flag', $system);
-    if ($language['default']) {
-      $system['default_language'] = $language;
-    }
-    $system['languages'][$language['code']] = $language;
-  }
-
-  /* set system langauge */
-  $system['current_language'] = DEFAULT_LOCALE;
-  $user_language = get_user_language_country()['language'];
-  if (isset($_GET['lang'])) {
-    /* get GET for web app */
-    if (array_key_exists($_GET['lang'], $system['languages'])) {
-      $system['language'] = $system['languages'][$_GET['lang']];
-      if ($system['language']['code'] != DEFAULT_LOCALE) {
-        $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $system['language']['code'] . '/LC_MESSAGES/messages.po');
-      }
-      $system['current_language'] = $system['language']['code'];
-      /* set language cookie */
-      set_cookie('s_lang', $_GET['lang']);
-    }
-  } elseif (isset($_COOKIE['s_lang'])) {
-    /* get cookie for web app */
-    if (array_key_exists($_COOKIE['s_lang'], $system['languages'])) {
-      $system['language'] = $system['languages'][$_COOKIE['s_lang']];
-      if ($system['language']['code'] != DEFAULT_LOCALE) {
-        $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $system['language']['code'] . '/LC_MESSAGES/messages.po');
-      }
-      $system['current_language'] = $system['language']['code'];
-    }
-  } elseif (isset(_getallheaders()["x-lang"])) {
-    /* get header for web app */
-    if (array_key_exists(_getallheaders()["x-lang"], $system['languages'])) {
-      $system['language'] = $system['languages'][_getallheaders()["x-lang"]];
-      if ($system['language']['code'] != DEFAULT_LOCALE) {
-        $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $system['language']['code'] . '/LC_MESSAGES/messages.po');
-      }
-      $system['current_language'] = $system['language']['code'];
-    }
-  } elseif ($system['auto_language_detection'] && $user_language && array_key_exists($user_language, $system['languages'])) {
-    /* get user language */
-    $system['language'] = $system['languages'][$user_language];
-    if ($system['language']['code'] != DEFAULT_LOCALE) {
-      $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $system['language']['code'] . '/LC_MESSAGES/messages.po');
-    }
-    $system['current_language'] = $system['language']['code'];
-  } else {
-    if (isset($system['default_language'])) {
-      $system['language'] = $system['default_language'];
-      if ($system['default_language']['code'] != DEFAULT_LOCALE) {
-        $gettextTranslator = $gettextLoader->loadFile(ABSPATH . 'content/languages/locale/' . $system['default_language']['code'] . '/LC_MESSAGES/messages.po');
-      }
-      $system['current_language'] = $system['default_language']['code'];
-    }
-  }
-
-  /* get system currency */
-  $get_currency = $db->query("SELECT * FROM system_currencies WHERE system_currencies.default = '1'");
-  $currency = $get_currency->fetch_assoc();
-  $system['system_currency'] = $currency['code'];
-  $system['system_currency_id'] = $currency['currency_id'];
-  $system['system_currency_symbol'] = $currency['symbol'];
-  $system['system_currency_dir'] = $currency['dir'];
-
-  /* get system withdrawal method array */
-  $system['wallet_payment_method_array'] = explode(",", $system['wallet_payment_method']);
-  $system['affiliate_payment_method_array'] = explode(",", $system['affiliate_payment_method']);
-  $system['points_payment_method_array'] = explode(",", $system['points_payment_method']);
-  $system['market_payment_method_array'] = explode(",", $system['market_payment_method']);
-  $system['funding_payment_method_array'] = explode(",", $system['funding_payment_method']);
-  $system['monetization_payment_method_array'] = explode(",", $system['monetization_payment_method']);
-
-  /* get system reactions */
-  $reactions = [];
-  $reactions_enabled = [];
-  $get_reactions = $db->query("SELECT * FROM system_reactions ORDER BY reaction_order ASC");
-  if ($get_reactions->num_rows > 0) {
-    while ($reaction = $get_reactions->fetch_assoc()) {
-      $reaction['image_url'] = $system['system_uploads'] . '/' . $reaction['image'];
-      $reactions[$reaction['reaction']] = $reaction;
-      if ($reaction['enabled']) {
-        $reactions_enabled[$reaction['reaction']] = $reaction;
-      }
-    }
-  }
-  $system['reactions'] = $reactions;
-  $system['reactions_enabled'] = $reactions_enabled;
-
-  /* check if viewer IP banned */
-  $check_banned_ip = $db->query(sprintf("SELECT COUNT(*) as count FROM blacklist WHERE node_type = 'ip' AND node_value = %s", secure(get_user_ip())));
-  $system['viewer_ip_banned'] = ($check_banned_ip->fetch_assoc()['count'] > 0) ? true : false;
-
-  /* return */
-  return $system;
-}
-
-
-/**
- * init_smarty
- *
- * @return object
- */
-function init_smarty()
-{
-  global $system;
-  $smarty = new Smarty\Smarty;
-  $smarty->setTemplateDir(ABSPATH . 'content/themes/' . $system['theme'] . '/templates');
-  $smarty->setCompileDir(ABSPATH . 'content/themes/' . $system['theme'] . '/templates_compiled');
-  $smarty->registerPlugin("modifier", "ucfirst", "ucfirst");
-  $smarty->registerPlugin('modifier', '__', '__');
-  $smarty->registerPlugin('modifier', 'print_money', 'print_money');
-  $smarty->registerPlugin('modifier', 'is_empty', 'is_empty');
-  $smarty->registerPlugin('modifier', 'array_reverse', 'array_reverse');
-  $smarty->registerPlugin('modifier', 'htmlentities', 'htmlentities');
-  $smarty->registerPlugin('modifier', 'get_vimeo_id', 'get_vimeo_id');
-  $smarty->registerPlugin('modifier', 'get_youtube_id', 'get_youtube_id');
-  $smarty->registerPlugin('modifier', 'minimize_css', 'minimize_css');
-  $smarty->registerPlugin('modifier', 'html_entity_decode', 'html_entity_decode');
-  $smarty->registerPlugin('modifier', 'get_extension', 'get_extension');
-  $smarty->registerPlugin('modifier', 'strtoupper', 'strtoupper');
-  $smarty->registerPlugin('modifier', 'htmlspecialchars', 'htmlspecialchars');
-  $smarty->registerPlugin('modifier', 'count', 'count');
-  $smarty->registerPlugin('modifier', 'explode', 'explode');
-  $smarty->registerPlugin('modifier', 'date', 'date');
-  $smarty->registerPlugin('modifier', 'number_format', 'number_format');
-  $smarty->registerPlugin('modifier', 'strtolower', 'strtolower');
-  $smarty->registerPlugin('modifier', 'get_payment_vat_value', 'get_payment_vat_value');
-  $smarty->registerPlugin('modifier', 'get_payment_total_value', 'get_payment_total_value');
-  $smarty->registerPlugin('modifier', 'get_payment_fees_value', 'get_payment_fees_value');
-  $smarty->registerPlugin('modifier', 'get_payment_vat_percentage', 'get_payment_vat_percentage');
-  $smarty->registerPlugin('modifier', 'implode', 'implode');
-  $smarty->registerPlugin('modifier', 'trim', 'trim');
-  $smarty->registerPlugin('modifier', 'filemtime', 'filemtime');
-  $smarty->registerPlugin('modifier', 'floor', 'floor');
-  return $smarty;
-}
-
-
-/**
- * get_system_session_hash
- *
- * @param string $hash
- * @return array
- */
-function get_system_session_hash($hash)
-{
-  $hash_tokens = explode('-', $hash);
-  if (count($hash_tokens) != 6) {
-    return false;
-  }
-  $position = array_rand($hash_tokens);
-  $token = $hash_tokens[$position];
-  return ['token' => $token, 'position' => $position + 1];
-}
-
-
-/**
- * update_system_options
- *
- * @param array $args
- * @param boolean $error_thrown
- * @return void
- */
-function update_system_options($args = [], $error_thrown = true)
+function sample_ids($table, $id_column, $scope_sql, $wanted, $options = [])
 {
   global $db;
-  $query_values = "";
-  foreach ($args as $key => $value) {
-    $query_values .= sprintf(" ('%s', %s),", $key, $value);
+  $wanted = max(1, (int) $wanted);
+  $pool = (int) ($options['pool'] ?? min(200, max(20, 4 * $wanted)));
+  $pivots = max(1, min(3, (int) ($options['pivots'] ?? 1)));
+  $window = (int) ceil($pool / $pivots);
+  $exclude = array_fill_keys(array_map('intval', $options['exclude'] ?? []), true);
+  $filter = $options['filter'] ?? null;
+  $from = sprintf("FROM `%s` WHERE %s", $table, $scope_sql);
+  $picked = [];
+  $seen = [];
+  /* the shared pool first, then the database for what it can't fill */
+  if (!empty($options['shared'])) {
+    $shared = widget_pool_ids($options['shared'], $wanted * 3, function () use ($table, $id_column, $scope_sql) {
+      return sample_ids($table, $id_column, $scope_sql, 1000, ['pool' => 1000]);
+    });
+    if ($shared !== null) {
+      $candidates = [];
+      foreach ($shared['ids'] as $id) {
+        $seen[$id] = true;
+        if (!isset($exclude[$id])) {
+          $candidates[] = $id;
+        }
+      }
+      if ($candidates && $filter) {
+        $candidates = array_values(array_intersect($candidates, array_map('intval', $filter($candidates))));
+      }
+      shuffle($candidates);
+      $picked = array_slice($candidates, 0, $wanted);
+      if (count($picked) >= $wanted || $shared['complete']) {
+        return $picked;
+      }
+    }
   }
-  $query_values = substr($query_values, 0, -1);
-  $db->query("INSERT INTO system_options (option_name, option_value) VALUES " . $query_values . " ON DUPLICATE KEY UPDATE option_name = VALUES(option_name), option_value = VALUES(option_value)") or ($error_thrown) ? _error('SQL_ERROR_THROWEN') : _error("Error", $db->error);
+  /* the scope's id range */
+  $range = $db->query(sprintf("SELECT MIN(%s) AS min_id, MAX(%s) AS max_id %s", $id_column, $id_column, $from))->fetch_assoc();
+  if (!$range || $range['max_id'] === null) {
+    return $picked;
+  }
+  /* a scope whose id span fits in the pool is read whole in one window */
+  if ((int) $range['max_id'] - (int) $range['min_id'] < $pool) {
+    $pivots = 1;
+    $window = $pool;
+  }
+  for ($round = 0; $round < 2 && count($picked) < $wanted; $round++) {
+    /* one window per pivot, plus the start of the scope to wrap around */
+    $selects = [];
+    for ($i = 0; $i < $pivots; $i++) {
+      $pivot = random_int((int) $range['min_id'], (int) $range['max_id']);
+      $selects[] = sprintf("(SELECT %s AS id, %s AS part %s AND %s >= %s ORDER BY %s ASC LIMIT %s)", $id_column, $i * 2, $from, $id_column, $pivot, $id_column, $window);
+      $selects[] = sprintf("(SELECT %s AS id, %s AS part %s AND %s < %s ORDER BY %s ASC LIMIT %s)", $id_column, $i * 2 + 1, $from, $id_column, $pivot, $id_column, $window);
+    }
+    $parts = [];
+    $get_ids = $db->query(implode(" UNION ALL ", $selects));
+    while ($row = $get_ids->fetch_assoc()) {
+      $parts[$row['part']][] = (int) $row['id'];
+    }
+    $candidates = [];
+    $read_all = false;
+    for ($i = 0; $i < $pivots; $i++) {
+      $forward = $parts[$i * 2] ?? [];
+      $wrapped = $parts[$i * 2 + 1] ?? [];
+      /* a short window continues from the start of the scope */
+      $ids = array_merge($forward, array_slice($wrapped, 0, $window - count($forward)));
+      if (count($forward) + count($wrapped) < $window) {
+        $read_all = true;
+      }
+      foreach ($ids as $id) {
+        if (!isset($seen[$id]) && !isset($exclude[$id])) {
+          $seen[$id] = true;
+          $candidates[] = $id;
+        }
+      }
+    }
+    if ($candidates && $filter) {
+      $candidates = array_values(array_intersect($candidates, array_map('intval', $filter($candidates))));
+    }
+    shuffle($candidates);
+    $picked = array_merge($picked, array_slice($candidates, 0, $wanted - count($picked)));
+    /* the whole scope was read, another round finds nothing new */
+    if ($read_all) {
+      break;
+    }
+  }
+  return $picked;
+}
+
+
+/**
+ * rows_by_ids
+ * 
+ * @param array $rows
+ * @param string $id_column
+ * @param array $ids
+ * @return array
+ */
+function rows_by_ids($rows, $id_column, $ids)
+{
+  $rows = array_column($rows, null, $id_column);
+  $ordered = [];
+  foreach ($ids as $id) {
+    if (isset($rows[$id])) {
+      $ordered[] = $rows[$id];
+    }
+  }
+  return $ordered;
+}
+
+
+
+/* ------------------------------- */
+/* Pagination */
+/* ------------------------------- */
+
+/**
+ * cursor_encode
+ * 
+ * @param array $values
+ * @return string
+ */
+function cursor_encode($values)
+{
+  return implode('|', $values);
+}
+
+
+/**
+ * cursor_decode
+ * 
+ * @param mixed $cursor
+ * @param array $types
+ * @return array|null
+ */
+function cursor_decode($cursor, $types)
+{
+  if (!is_string($cursor) || $cursor === '') {
+    return null;
+  }
+  $values = explode('|', $cursor);
+  if (count($values) != count($types)) {
+    return null;
+  }
+  foreach ($types as $index => $type) {
+    $pattern = ($type == 'datetime') ? '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/' : '/^\d{1,19}$/';
+    if (!preg_match($pattern, $values[$index])) {
+      return null;
+    }
+  }
+  return $values;
+}
+
+
+/**
+ * cursor_where
+ * 
+ * @param array $columns
+ * @param array $values
+ * @param boolean $descending
+ * @return string
+ */
+function cursor_where($columns, $values, $descending = true)
+{
+  $operator = ($descending) ? "<" : ">";
+  $conditions = [];
+  $equals = "";
+  foreach ($columns as $index => $column) {
+    $value = (ctype_digit($values[$index])) ? secure($values[$index], 'int') : secure($values[$index]);
+    $conditions[] = "(" . $equals . $column . " " . $operator . " " . $value . ")";
+    $equals .= $column . " = " . $value . " AND ";
+  }
+  return "(" . implode(" OR ", $conditions) . ")";
+}
+
+
+/**
+ * sql_top_level
+ * 
+ * @param string $sql
+ * @param string $keyword
+ * @param boolean $last
+ * @return integer|false
+ */
+function sql_top_level($sql, $keyword, $last = false)
+{
+  $found = false;
+  $depth = 0;
+  $quote = null;
+  $length = strlen($sql);
+  $keyword_length = strlen($keyword);
+  for ($i = 0; $i < $length; $i++) {
+    $char = $sql[$i];
+    if ($quote !== null) {
+      if ($char == "\\") {
+        $i++;
+      } elseif ($char == $quote) {
+        $quote = null;
+      }
+      continue;
+    }
+    if ($char == "'" || $char == '"' || $char == '`') {
+      $quote = $char;
+    } elseif ($char == '(') {
+      $depth++;
+    } elseif ($char == ')') {
+      $depth--;
+    } elseif ($depth == 0 && strncasecmp(substr($sql, $i, $keyword_length), $keyword, $keyword_length) === 0) {
+      if (!$last) {
+        return $i;
+      }
+      $found = $i;
+    }
+  }
+  return $found;
+}
+
+
+/**
+ * paged_query
+ * 
+ * @param string $sql
+ * @param string $key
+ * @param string $limit_query
+ * @return mysqli_result|PrefetchedResult
+ */
+function paged_query($sql, $key, $limit_query)
+{
+  global $db;
+  $sql = " " . preg_replace('/\s+/', ' ', trim($sql)) . " ";
+  $from_position = sql_top_level($sql, " FROM ");
+  /* grouped or combined queries are read as they are */
+  if ($from_position === false || sql_top_level($sql, " GROUP BY ") !== false || sql_top_level($sql, " HAVING ") !== false || sql_top_level($sql, " UNION ") !== false) {
+    return $db->query($sql . $limit_query);
+  }
+  $select = substr($sql, 0, $from_position);
+  $from = substr($sql, $from_position);
+  $order_position = sql_top_level($from, " ORDER BY ", true);
+  $order = ($order_position !== false) ? substr($from, $order_position) : " ORDER BY " . $key . " ASC ";
+  $body = ($order_position !== false) ? substr($from, 0, $order_position) : $from;
+  /* the keys of the page */
+  $keys = array_column($db->query("SELECT " . $key . " AS page_key" . $body . $order . $limit_query)->fetch_all(MYSQLI_ASSOC), 'page_key');
+  if (!$keys) {
+    return new PrefetchedResult([]);
+  }
+  /* the rows of the page */
+  $keys_statement = $key . " IN (" . implode(',', array_map('intval', $keys)) . ")";
+  $where_position = sql_top_level($body, " WHERE ");
+  $body = ($where_position !== false) ? substr($body, 0, $where_position) . " WHERE (" . substr($body, $where_position + 7) . ") AND " . $keys_statement : $body . " WHERE " . $keys_statement;
+  return $db->query($select . $body . $order);
+}
+
+
+/**
+ * cursor_result
+ * 
+ * @param mysqli_result $result
+ * @return array
+ */
+function cursor_result($result)
+{
+  $rows = $result->fetch_all(MYSQLI_ASSOC);
+  $cursor = ($rows) ? (string) end($rows)['cursor'] : null;
+  foreach ($rows as &$row) {
+    unset($row['cursor']);
+  }
+  return [new PrefetchedResult($rows), $cursor];
+}
+
+
+
+/* ------------------------------- */
+/* Location */
+/* ------------------------------- */
+
+/**
+ * valid_location
+ * 
+ * @param mixed $latitude
+ * @param mixed $longitude
+ * @return boolean
+ */
+function valid_location($latitude, $longitude)
+{
+  if (!is_numeric($latitude) || !is_numeric($longitude)) {
+    return false;
+  }
+  $latitude = (float) $latitude;
+  $longitude = (float) $longitude;
+  return $latitude >= -90 && $latitude <= 90 && $longitude >= -180 && $longitude <= 180 && !($latitude == 0 && $longitude == 0);
+}
+
+
+/**
+ * location_point
+ * 
+ * @param float $latitude
+ * @param float $longitude
+ * @return string
+ */
+function location_point($latitude, $longitude)
+{
+  return sprintf("POINT(%.7F, %.7F)", (float) $longitude, (float) $latitude);
+}
+
+
+/**
+ * location_distance
+ * 
+ * @param float $latitude1
+ * @param float $longitude1
+ * @param float $latitude2
+ * @param float $longitude2
+ * @return float
+ */
+function location_distance($latitude1, $longitude1, $latitude2, $longitude2)
+{
+  $latitude_delta = deg2rad($latitude2 - $latitude1);
+  $longitude_delta = deg2rad($longitude2 - $longitude1);
+  $angle = pow(sin($latitude_delta / 2), 2) + cos(deg2rad($latitude1)) * cos(deg2rad($latitude2)) * pow(sin($longitude_delta / 2), 2);
+  return 6371 * 2 * asin(min(1, sqrt($angle)));
+}
+
+
+/**
+ * location_boxes
+ * 
+ * @param float $latitude
+ * @param float $longitude
+ * @param float $radius_km
+ * @return array
+ */
+function location_boxes($latitude, $longitude, $radius_km)
+{
+  $angle = $radius_km / 6371;
+  $min_latitude = $latitude - rad2deg($angle);
+  $max_latitude = $latitude + rad2deg($angle);
+  /* the circle covers a pole: every longitude */
+  if ($angle >= M_PI || $min_latitude <= -90 || $max_latitude >= 90) {
+    return [[-180, max(-90, $min_latitude), 180, min(90, $max_latitude)]];
+  }
+  $longitude_delta = rad2deg(asin(min(1, sin($angle) / cos(deg2rad($latitude)))));
+  $min_longitude = $longitude - $longitude_delta;
+  $max_longitude = $longitude + $longitude_delta;
+  if ($min_longitude < -180) {
+    return [[$min_longitude + 360, $min_latitude, 180, $max_latitude], [-180, $min_latitude, $max_longitude, $max_latitude]];
+  }
+  if ($max_longitude > 180) {
+    return [[$min_longitude, $min_latitude, 180, $max_latitude], [-180, $min_latitude, $max_longitude - 360, $max_latitude]];
+  }
+  return [[$min_longitude, $min_latitude, $max_longitude, $max_latitude]];
+}
+
+
+/**
+ * nearby_ids
+ * 
+ * @param string $table
+ * @param string $id_column
+ * @param float $latitude
+ * @param float $longitude
+ * @param float $max_km
+ * @param integer $needed
+ * @param array $options
+ * @return array
+ */
+function nearby_ids($table, $id_column, $latitude, $longitude, $max_km, $needed, $options = [])
+{
+  global $db;
+  if (!valid_location($latitude, $longitude) || $max_km <= 0) {
+    return [];
+  }
+  $latitude = (float) $latitude;
+  $longitude = (float) $longitude;
+  $cap = (int) ($options['cap'] ?? 2000);
+  $exclude = array_fill_keys(array_map('intval', $options['exclude'] ?? []), true);
+  $filter = $options['filter'] ?? null;
+  $type_statement = (isset($options['post_type'])) ? sprintf(" AND post_type = %s", secure($options['post_type'])) : "";
+  $rings = array_values(array_filter([2, 10, 50, 250, 1000, 5000, 20000], fn($ring) => $ring < $max_km));
+  $rings[] = min($max_km, 20016);
+  $eligible = [];
+  $nearest = [];
+  foreach ($rings as $ring) {
+    /* one bounded read per box */
+    $selects = [];
+    foreach (location_boxes($latitude, $longitude, $ring) as $part => $box) {
+      $selects[] = sprintf("(SELECT %1\$s AS id, %9\$d AS part, ST_Distance_Sphere(location, %2\$s, 6371000) AS distance FROM `%3\$s` WHERE MBRIntersects(ST_GeomFromText('POLYGON((%4\$.7F %5\$.7F, %6\$.7F %5\$.7F, %6\$.7F %7\$.7F, %4\$.7F %7\$.7F, %4\$.7F %5\$.7F))'), location)" . $type_statement . " LIMIT %8\$d)", $id_column, location_point($latitude, $longitude), $table, $box[0], $box[1], $box[2], $box[3], $cap + 1, $part);
+    }
+    $rows = $db->query(implode(" UNION ALL ", $selects))->fetch_all(MYSQLI_ASSOC);
+    $overflow = max(array_count_values(array_column($rows, 'part')) ?: [0]) > $cap;
+    /* inside the circle, not excluded, eligible */
+    $found = [];
+    foreach ($rows as $row) {
+      $distance = $row['distance'] / 1000;
+      if ($distance <= $ring && !isset($exclude[(int) $row['id']])) {
+        $found[(int) $row['id']] = $distance;
+      }
+    }
+    $unchecked = array_keys(array_diff_key($found, $eligible));
+    if ($unchecked) {
+      $kept = ($filter) ? array_fill_keys(array_map('intval', $filter($unchecked)), true) : array_fill_keys($unchecked, true);
+      foreach ($unchecked as $id) {
+        $eligible[$id] = isset($kept[$id]);
+      }
+    }
+    $found = array_filter($found, fn($id) => $eligible[$id], ARRAY_FILTER_USE_KEY);
+    uksort($found, fn($a, $b) => ($found[$a] <=> $found[$b]) ?: ($a <=> $b));
+    if ($overflow) {
+      /* the last complete box is exact, this one only tops it up */
+      return $nearest + array_diff_key($found, $nearest);
+    }
+    $nearest = $found;
+    if (count($nearest) >= $needed) {
+      break;
+    }
+  }
+  return $nearest;
 }
 
 
@@ -763,7 +1865,7 @@ function update_system_options($args = [], $error_thrown = true)
 
 /**
  * secure
- *
+ * 
  * @param string $value
  * @param string $type
  * @param boolean $quoted
@@ -807,7 +1909,7 @@ function secure($value, $type = "", $quoted = true)
 
 /**
  * _password_hash
- *
+ * 
  * @param string $password
  * @return string
  */
@@ -819,7 +1921,7 @@ function _password_hash($password)
 
 /**
  * get_hash_key
- *
+ * 
  * @param integer $length
  * @param boolean $only_numbers
  * @return string
@@ -838,7 +1940,7 @@ function get_hash_key($length = 8, $only_numbers = false)
 
 /**
  * get_hash_token
- *
+ * 
  * @return string
  */
 function get_hash_token()
@@ -849,7 +1951,7 @@ function get_hash_token()
 
 /**
  * get_hash_number
- *
+ * 
  * @return string
  */
 function get_hash_number()
@@ -860,7 +1962,7 @@ function get_hash_number()
 
 /**
  * extarct_hash_token
- *
+ * 
  * @param string $file_name
  * @return string
  */
@@ -883,11 +1985,11 @@ function extarct_hash_token($file_name)
 /* ------------------------------- */
 
 /**
- * setcookie
- *
+ * set_cookie
+ * 
  * @param string $cookie_name
  * @param string $cookie_value
- * @param integer $is_expired
+ * @param boolean $is_expired
  * @param boolean $is_httponly
  * @return void
  */
@@ -912,7 +2014,7 @@ function set_cookie($cookie_name, $cookie_value, $is_expired = false, $is_httpon
 
 /**
  * unset_cookie
- *
+ * 
  * @param string $cookie_name
  * @return void
  */
@@ -938,20 +2040,23 @@ function unset_cookie($cookie_name)
 
 /**
  * is_ajax
- *
- * @return void
+ * 
+ * @param boolean $redirect
+ * @return boolean
  */
-function is_ajax()
+function is_ajax($redirect = true)
 {
-  if (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || ($_SERVER['HTTP_X_REQUESTED_WITH'] != 'XMLHttpRequest')) {
+  $is_ajax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+  if ($redirect && !$is_ajax) {
     redirect();
   }
+  return $is_ajax;
 }
 
 
 /**
  * is_empty
- *
+ * 
  * @param string $value
  * @return boolean
  */
@@ -966,7 +2071,7 @@ function is_empty($value)
 
 /**
  * valid_email
- *
+ * 
  * @param string $email
  * @return boolean
  */
@@ -982,7 +2087,7 @@ function valid_email($email)
 
 /**
  * valid_url
- *
+ * 
  * @param string $url
  * @return boolean
  */
@@ -997,8 +2102,20 @@ function valid_url($url)
 
 
 /**
+ * valid_gif_url
+ * 
+ * @param string $url
+ * @return boolean
+ */
+function valid_gif_url($url)
+{
+  return is_string($url) && strlen($url) <= 512 && preg_match('~^https://[a-z0-9.-]+\.giphy\.com/[^\s<>"\x27]+$~i', $url);
+}
+
+
+/**
  * valid_username
- *
+ * 
  * @param string $username
  * @return boolean
  */
@@ -1014,7 +2131,7 @@ function valid_username($username)
 
 /**
  * valid_name
- *
+ * 
  * @param string $name
  * @return boolean
  */
@@ -1030,7 +2147,7 @@ function valid_name($name)
 
 /**
  * valid_extension
- *
+ * 
  * @param string $extension
  * @param string $allowed_extensions
  * @return boolean
@@ -1050,7 +2167,7 @@ function valid_extension($extension, $allowed_extensions)
 
 /**
  * set_extensions_string
- *
+ * 
  * @param string $extensions
  * @return string
  */
@@ -1073,7 +2190,7 @@ function set_extensions_string($extensions)
 
 /**
  * set_datetime
- *
+ * 
  * @param string $date
  * @return string
  */
@@ -1086,19 +2203,6 @@ function set_datetime($date)
 }
 
 
-/**
- * get_datetime
- *
- * @param string $date
- * @return string
- */
-function get_datetime($date)
-{
-  global $system;
-  return date($system['system_datetime_format'], strtotime($date));
-}
-
-
 
 /* ------------------------------- */
 /* JSON */
@@ -1106,9 +2210,9 @@ function get_datetime($date)
 
 /**
  * return_json
- *
+ * 
  * @param array $response
- * @return json
+ * @return void
  */
 function return_json($response = [])
 {
@@ -1119,7 +2223,7 @@ function return_json($response = [])
 
 /**
  * return_json_async
- *
+ * 
  * @param array $response
  * @return void
  */
@@ -1145,704 +2249,80 @@ function return_json_async($response = [])
 
 
 /* ------------------------------- */
-/* Error */
+/* Stream */
 /* ------------------------------- */
 
 /**
- * _error
- *
+ * stream_start
+ * 
  * @return void
  */
-function _error()
+function stream_start()
 {
-  $args = func_get_args();
-  if (count($args) > 1 && !in_array($args[0], ['BANNED_USER', 'PERMISSION'])) {
-    $title = $args[0];
-    $message = $args[1];
-  } else {
-    switch ($args[0]) {
-      case 'DB_ERROR':
-        $title = "Database Error";
-        $message = "<div class='text-start'><h1>" . "Error establishing a database connection" . "</h1>
-                            <p>" . "This either means that the username and password information in your config.php file is incorrect or we can't contact the database server at localhost. This could mean your host's database server is down." . "</p>
-                            <ul>
-                                <li>" . "Are you sure you have the correct username and password?" . "</li>
-                                <li>" . "Are you sure that you have typed the correct hostname?" . "</li>
-                                <li>" . "Are you sure that the database server is running?" . "</li>
-                            </ul>
-                            <p>" . "If you're unsure what these terms mean you should probably contact your host. If you still need help you can always visit the" . " <a href='https://zamblek.com/support'>" . "Sngine Support" . ".</a></p>
-                            </div>";
-        break;
-
-      case 'SQL_ERROR':
-        $title = __("Database Error");
-        $message = __("An error occurred while writing to database. Please try again later");
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          $message .= "<br><br><small>This error function was called from line $line in file $file</small>";
-        }
-        break;
-
-      case 'SQL_ERROR_THROWEN':
-        $message = __("An error occurred while writing to database. Please try again later");
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          $message .= "<br><br><small>This error function was called from line $line in file $file</small>";
-        }
-        throw new SQLException($message);
-        break;
-
-      case 'PERMISSION':
-        global $smarty;
-        $title = __("Permission Needed");
-        $message = ($args[1]) ? $args[1] : __("You do not have the permission to view this content");
-        if (isset($smarty)) {
-          $smarty->assign('message', $message);
-          page_header($title);
-          page_footer('permission');
-          exit;
-        }
-        break;
-
-      case 'CHAT_PERMISSION':
-        global $smarty;
-        $title = __("Permission Needed");
-        $message = ($args[1]) ? $args[1] : __("Your privacy settings do not allow you to chat with this user, Go to your privacy settings to change this");
-        if (isset($smarty)) {
-          $smarty->assign('message', $message);
-          page_header($title);
-          page_footer('permission');
-          exit;
-        }
-        break;
-
-      case 'BANNED':
-        global $smarty;
-        $title = __("Banned");
-        $message = __("You do not have the permission to view this content");
-        if (isset($smarty)) {
-          $smarty->assign('message', $message);
-          page_header($title);
-          page_footer('banned');
-          exit;
-        }
-        break;
-
-      case 'BANNED_USER':
-        global $smarty;
-        $title = __("Banned Account");
-        $message = $args[1];
-        if (isset($smarty)) {
-          $smarty->assign('message', $message);
-          page_header($title);
-          page_footer('banned');
-          exit;
-        }
-        break;
-
-      case 'ACTIVATION':
-        global $smarty;
-        if (isset($smarty)) {
-          page_header(__("Activation Required"));
-          page_footer('activation');
-          exit;
-        }
-        break;
-
-      case 'APPROVAL':
-        global $smarty;
-        if (isset($smarty)) {
-          page_header(__("Admin Approval Required"));
-          page_footer('approval');
-          exit;
-        }
-        break;
-
-      case '400':
-        header('HTTP/1.0 400 Bad Request');
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          exit("This error function was called from line $line in file $file");
-        }
-        exit;
-        break;
-
-      case '401':
-        header('HTTP/1.0 401 Unauthorized');
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          exit("This error function was called from line $line in file $file");
-        }
-        exit;
-        break;
-
-      case '403':
-        header('HTTP/1.0 403 Access Denied');
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          exit("This error function was called from line $line in file $file");
-        }
-        exit;
-        break;
-
-      case '404':
-        global $smarty;
-        header('HTTP/1.0 404 Not Found');
-        $title = __("404 Not Found");
-        $message = __("Sorry but the page you are looking for does not exist, have been removed. name changed or is temporarily unavailable");
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          $message .= "<br><br><small>This error function was called from line $line in file $file</small>";
-        }
-        if (isset($smarty)) {
-          $smarty->assign('message', $message);
-          page_header($title);
-          page_footer('404');
-          exit;
-        }
-        break;
-
-      default:
-        $title = __("Error");
-        $message = __("There is some thing went wrong");
-        if (DEBUGGING) {
-          $backtrace = debug_backtrace();
-          $line = $backtrace[0]['line'];
-          $file = $backtrace[0]['file'];
-          $message .= "<br><br>" . "<small>This error function was called from line $line in file $file</small>";
-        }
-        break;
-    }
+  global $is_stream;
+  if (!$is_stream) {
+    return;
   }
-  echo '<!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>' . $title . '</title>
-                <style type="text/css">
-                    html {
-                        background: #f1f1f1;
-                    }
-                    body {
-                        color: #555;
-                        font-family: "Open Sans", Arial,sans-serif;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    .error-title {
-                        background: #ce3426;
-                        color: #fff;
-                        text-align: center;
-                        font-size: 34px;
-                        font-weight: 100;
-                        line-height: 50px;
-                        padding: 60px 0;
-                    }
-                    .error-message {
-                        margin: 1em auto;
-                        padding: 1em 2em;
-                        max-width: 600px;
-                        font-size: 1em;
-                        line-height: 1.8em;
-                        text-align: center;
-                    }
-                    .error-message .code,
-                    .error-message p {
-                        margin-top: 0;
-                        margin-bottom: 1.3em;
-                    }
-                    .error-message .code {
-                        font-family: Consolas, Monaco, monospace;
-                        background: rgba(0, 0, 0, 0.7);
-                        padding: 10px;
-                        color: rgba(255, 255, 255, 0.7);
-                        word-break: break-all;
-                        border-radius: 2px;
-                    }
-                    h1 {
-                        font-size: 1.2em;
-                    }
-
-                    ul li {
-                        margin-bottom: 1em;
-                        font-size: 0.9em;
-                    }
-                    a {
-                        color: #ce3426;
-                        text-decoration: none;
-                    }
-                    a:hover {
-                        text-decoration: underline;
-                    }
-                    .button {
-                        background: #f7f7f7;
-                        border: 1px solid #cccccc;
-                        color: #555;
-                        display: inline-block;
-                        text-decoration: none;
-                        margin: 0;
-                        padding: 5px 10px;
-                        cursor: pointer;
-                        -webkit-border-radius: 3px;
-                        -webkit-appearance: none;
-                        border-radius: 3px;
-                        white-space: nowrap;
-                        -webkit-box-sizing: border-box;
-                        -moz-box-sizing:    border-box;
-                        box-sizing:         border-box;
-
-                        -webkit-box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(0,0,0,.08);
-                        box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(0,0,0,.08);
-                        vertical-align: top;
-                    }
-
-                    .button.button-large {
-                        height: 29px;
-                        line-height: 28px;
-                        padding: 0 12px;
-                    }
-
-                    .button:hover,
-                    .button:focus {
-                        background: #fafafa;
-                        border-color: #999;
-                        color: #222;
-                        text-decoration: none;
-                    }
-
-                    .button:focus  {
-                        -webkit-box-shadow: 1px 1px 1px rgba(0,0,0,.2);
-                        box-shadow: 1px 1px 1px rgba(0,0,0,.2);
-                    }
-
-                    .button:active {
-                        background: #eee;
-                        border-color: #999;
-                        color: #333;
-                        -webkit-box-shadow: inset 0 2px 5px -3px rgba( 0, 0, 0, 0.5 );
-                        box-shadow: inset 0 2px 5px -3px rgba( 0, 0, 0, 0.5 );
-                    }
-                    .text-start {
-                        text-align: left;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="error-title">' . $title . '</div>
-                <div class="error-message">' . $message . '</div>
-            </body>
-            </html>';
-  exit;
-}
-
-
-
-/* ------------------------------- */
-/* Email */
-/* ------------------------------- */
-
-/**
- * _email
- *
- * @param string $email
- * @param string $subject
- * @param string $body_html
- * @param string $body_plain
- * @param boolean $is_html
- * @param boolean $only_smtp
- * @return boolean
- */
-function _email($email, $subject, $body_html, $body_plain, $is_html = true, $only_smtp = false)
-{
-  global $system;
-  /* set header */
-  $header  = "MIME-Version: 1.0\r\n";
-  $header .= "Mailer: " . html_entity_decode(__($system['system_title']), ENT_QUOTES) . "\r\n";
-  if ($system['system_email']) {
-    $header = "From: " . $system['system_email'] . "\r\n";
-    $header .= "Reply-To: " . $system['system_email'] . "\r\n";
+  @ini_set('zlib.output_compression', '0');
+  @ini_set('implicit_flush', '1');
+  while (ob_get_level() > 0) {
+    ob_end_flush();
   }
-  if ($is_html) {
-    $header .= "Content-Type: text/html; charset=\"utf-8\"\r\n";
-  } else {
-    $header .= "Content-Type: text/plain; charset=\"utf-8\"\r\n";
-  }
-  /* send email */
-  if ($system['email_smtp_enabled']) {
-    /* SMTP */
-    $mail = new PHPMailer\PHPMailer\PHPMailer;
-    $mail->CharSet = "UTF-8";
-    $mail->isSMTP();
-    $mail->XMailer = $system['system_title'];
-    $mail->Host = $system['email_smtp_server'];
-    $mail->SMTPAuth = ($system['email_smtp_authentication']) ? true : false;
-    $mail->Username = $system['email_smtp_username'];
-    $mail->Password = html_entity_decode($system['email_smtp_password']);
-    $mail->SMTPSecure = ($system['email_smtp_ssl']) ? 'ssl' : 'tls';
-    $mail->Port = $system['email_smtp_port'];
-    $setfrom = (is_empty($system['email_smtp_setfrom'])) ? $system['email_smtp_username'] : $system['email_smtp_setfrom'];
-    $mail->setFrom($setfrom, html_entity_decode(__($system['system_title']), ENT_QUOTES));
-    $mail->addAddress($email);
-    $mail->Subject = $subject;
-    if ($is_html) {
-      $mail->isHTML(true);
-      $mail->Body = $body_html;
-      $mail->AltBody = $body_plain;
-    } else {
-      $mail->Body = $body_plain;
-    }
-    if (!$mail->send()) {
-      if ($only_smtp) {
-        return false;
-      }
-      /* send using mail() */
-      if (!mail($email, $subject, $body_html, $header)) {
-        return false;
-      }
-    }
-  } else {
-    if ($only_smtp) {
-      return false;
-    }
-    /* send using mail() */
-    if (!mail($email, $subject, $body_html, $header)) {
-      return false;
-    }
-  }
-  return true;
+  ob_implicit_flush(1);
+  header('Content-Type: application/x-ndjson');
+  header('Cache-Control: no-cache');
+  header('X-Accel-Buffering: no'); /* disable nginx proxy buffering */
 }
 
 
 /**
- * email_smtp_test
- *
+ * stream_send
+ * 
+ * @param array $data
  * @return void
  */
-function email_smtp_test()
+function stream_send($data)
 {
-  global $system;
-  /* prepare test email */
-  $subject = __("Test SMTP Connection on") . " " . html_entity_decode(__($system['system_title']), ENT_QUOTES);
-  $body = get_email_template("test_email", $subject);
-  /* send email */
-  if (!_email($system['system_email'], $subject, $body['html'], $body['plain'], true, true)) {
-    throw new Exception(__("Test email could not be sent. Please check your settings"));
+  global $is_stream;
+  if (!$is_stream) {
+    return;
   }
+  echo json_encode($data) . "\n";
+  flush();
 }
 
 
 /**
- * get_email_template
- *
- * @param string $template_name
- * @param string $template_subject
- * @param array $template_variables
- * @return array
+ * stream_progress
+ * 
+ * @param int $progress
+ * @param string|null $label
+ * @return void
  */
-function get_email_template($template_name, $template_subject, $template_variables = [])
+function stream_progress($progress, $label = null)
 {
-  global $system, $smarty;
-  $smarty->assign('system', $system);
-  $smarty->assign("template_subject", $template_subject);
-  if ($template_variables) {
-    foreach ($template_variables as $key => $value) {
-      $smarty->assign($key, $value);
-    }
+  $data = ['progress' => $progress];
+  if ($label !== null) {
+    $data['label'] = $label;
   }
-  $body['html'] = $smarty->fetch("emails/" . $template_name . ".html");
-  $body['plain'] = $smarty->fetch("emails/" . $template_name . ".txt");
-  return $body;
+  stream_send($data);
 }
 
 
-
-/* ------------------------------- */
-/* SMS */
-/* ------------------------------- */
-
 /**
- * sms_send
- *
- * @param string $phone
+ * stream_fail
+ * 
  * @param string $message
- * @return boolean
- */
-function sms_send($phone, $message)
-{
-  global $system, $db, $date;
-  /* check if this phone sent more than 3 SMS within 1 hour */
-  $check_log = $db->query(sprintf("SELECT * FROM users_sms WHERE phone = %s AND insert_date > DATE_SUB(NOW(), INTERVAL 1 HOUR)", secure($phone)));
-  if ($check_log->num_rows > $system['sms_limit']) {
-    throw new Exception(__("You have reached the maximum number of SMS allowed per hour"));
-    return false;
-  }
-  switch ($system['sms_provider']) {
-    case 'twilio':
-      $client = new Twilio\Rest\Client($system['twilio_sid'], $system['twilio_token']);
-      $message = $client->account->messages->create(
-        $phone,
-        [
-          'from' => $system['twilio_phone'],
-          'body' => $message
-        ]
-      );
-      if (!$message->sid) {
-        return false;
-      }
-      break;
-
-    case 'bulksms':
-      $username = $system['bulksms_username'];
-      $password = $system['bulksms_password'];
-      $headers = [
-        'Content-Type:application/json',
-        'Authorization:Basic ' . base64_encode("$username:$password")
-      ];
-      $request_body = [
-        [
-          'to' => $phone,
-          'body' => $message
-        ]
-      ];
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-      curl_setopt($ch, CURLOPT_URL, "https://api.bulksms.com/v1/messages?auto-unicode=true&longMessageMaxParts=30");
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-      curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        return false;
-      }
-      curl_close($ch);
-      if ($httpCode != 201) {
-        return false;
-      }
-      break;
-
-    case 'infobip':
-      $headers = [
-        "Content-Type:application/json",
-        "Accept:application/json"
-      ];
-      $request_body = [
-        "from" => $system['system_title'],
-        "to" => $phone,
-        "text" => $message
-      ];
-      $userpwd = $system['infobip_username'] . ':' . $system['infobip_password'];
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, "https://api.infobip.com/sms/1/text/single");
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-      curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-      curl_setopt($ch, CURLOPT_USERPWD, html_entity_decode($userpwd));
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-      curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        return false;
-      }
-      curl_close($ch);
-      if (!($httpCode >= 200 && $httpCode < 300)) {
-        return false;
-      }
-      break;
-
-    case 'msg91':
-      $request_body = [
-        'template_id' => $system['msg91_template_id'],
-        'short_url' => '0',
-        'recipients' => [
-          [
-            'mobiles' => $phone,
-            'VAR1' => $message
-          ]
-        ]
-      ];
-      $ch = curl_init();
-      curl_setopt_array($ch, [
-        CURLOPT_URL => "https://control.msg91.com/api/v5/flow",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => "",
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => "POST",
-        CURLOPT_POSTFIELDS => json_encode($request_body),
-        CURLOPT_HTTPHEADER => [
-          "accept: application/json",
-          "authkey: " . $system['msg91_authkey'],
-          "content-type: application/json"
-        ]
-      ]);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        return false;
-      }
-      curl_close($ch);
-      if (!($httpCode >= 200 && $httpCode < 300)) {
-        return false;
-      }
-      break;
-  }
-  /* insert this to SMS log */
-  $db->query(sprintf("INSERT INTO users_sms (phone, insert_date) VALUES (%s, %s)", secure($phone), secure($date)));
-  return true;
-}
-
-
-/**
- * sms_test
- *
  * @return void
  */
-function sms_test()
+function stream_fail($message)
 {
-  global $system;
-  if (is_empty($system['system_phone'])) {
-    throw new Exception(__("You need to enter Test Phone Number"));
+  global $is_stream;
+  if ($is_stream) {
+    stream_send(['success' => false, 'message' => trim(strip_tags($message))]);
+    exit;
   }
-  switch ($system['sms_provider']) {
-    case 'twilio':
-      $client = new Twilio\Rest\Client($system['twilio_sid'], $system['twilio_token']);
-      $message = $client->account->messages->create(
-        $system['system_phone'],
-        [
-          'from' => $system['twilio_phone'],
-          'body' => __("Test SMS from") . " " . __($system['system_title'])
-        ]
-      );
-      if (!$message->sid) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      break;
-
-    case 'bulksms':
-      $username = $system['bulksms_username'];
-      $password = $system['bulksms_password'];
-      $headers = [
-        'Content-Type:application/json',
-        'Authorization:Basic ' . base64_encode("$username:$password")
-      ];
-      $request_body = [
-        [
-          'to' => $system['system_phone'],
-          'body' => __("Test SMS from") . " " . __($system['system_title'])
-        ]
-      ];
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-      curl_setopt($ch, CURLOPT_URL, "https://api.bulksms.com/v1/messages?auto-unicode=true&longMessageMaxParts=30");
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-      curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      curl_close($ch);
-      if ($httpCode != 201) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      break;
-
-    case 'infobip':
-      $headers = [
-        "Content-Type:application/json",
-        "Accept:application/json"
-      ];
-      $request_body = [
-        "from" => $system['system_title'],
-        "to" => $system['system_phone'],
-        "text" => __("Test SMS from") . " " . __($system['system_title'])
-      ];
-      $userpwd = $system['infobip_username'] . ':' . $system['infobip_password'];
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, "https://api.infobip.com/sms/1/text/single");
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-      curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-      curl_setopt($ch, CURLOPT_USERPWD, html_entity_decode($userpwd));
-      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-      curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      curl_close($ch);
-      if (!($httpCode >= 200 && $httpCode < 300)) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      break;
-
-    case 'msg91':
-      $request_body = [
-        'template_id' => $system['msg91_template_id'],
-        'short_url' => '0',
-        'recipients' => [
-          [
-            'mobiles' => $system['system_phone'],
-            'VAR1' => __("Test SMS from") . " " . __($system['system_title'])
-          ]
-        ]
-      ];
-      $ch = curl_init();
-      curl_setopt_array($ch, [
-        CURLOPT_URL => "https://control.msg91.com/api/v5/flow",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => "",
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => "POST",
-        CURLOPT_POSTFIELDS => json_encode($request_body),
-        CURLOPT_HTTPHEADER => [
-          "accept: application/json",
-          "authkey: " . $system['msg91_authkey'],
-          "content-type: application/json"
-        ]
-      ]);
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      if (curl_errno($ch)) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      curl_close($ch);
-      if (!($httpCode >= 200 && $httpCode < 300)) {
-        throw new Exception(__("Test SMS could not be sent. Please check your settings"));
-      }
-      break;
-  }
+  _error('Error', $message);
 }
 
 
@@ -1853,9 +2333,9 @@ function sms_test()
 
 /**
  * onesignal_notification
- *
+ * 
  * @param string $send_to
- * @param string $notification
+ * @param mixed $notification
  * @param string $type
  * @return boolean
  */
@@ -1922,7 +2402,6 @@ function onesignal_notification($send_to, $notification, $type = 'web')
   if (curl_errno($ch)) {
     return false;
   }
-  curl_close($ch);
   if (!($httpCode >= 200 && $httpCode < 300)) {
     return false;
   }
@@ -1937,7 +2416,7 @@ function onesignal_notification($send_to, $notification, $type = 'web')
 
 /**
  * google_vision_test
- *
+ * 
  * @return void
  */
 function google_vision_test()
@@ -1973,9 +2452,8 @@ function google_vision_test()
     $response  = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     if (curl_errno($ch)) {
-      throw new Exception("Error Processing Request");
+      throw new Exception(__("Error Processing Request"));
     }
-    curl_close($ch);
     $responseJson = json_decode($response);
     if ($responseJson->error) {
       throw new Exception($responseJson->error->message);
@@ -1998,7 +2476,7 @@ function google_vision_test()
 
 /**
  * google_vision_check
- *
+ * 
  * @param string $image_source
  * @return boolean
  */
@@ -2036,7 +2514,6 @@ function google_vision_check($image_source)
     if (curl_errno($ch)) {
       return false;
     }
-    curl_close($ch);
     $responseJson = json_decode($response);
     if ($responseJson->error) {
       return false;
@@ -2062,7 +2539,7 @@ function google_vision_check($image_source)
 
 /**
  * check_hcaptcha
- *
+ * 
  * @param string $token
  * @return boolean
  */
@@ -2103,8 +2580,8 @@ function check_hcaptcha($token)
 /* ------------------------------- */
 
 /**
- * cf_turnstile_response
- *
+ * check_cf_turnstile
+ * 
  * @param string $cf_turnstile_response
  * @return boolean
  */
@@ -2131,7 +2608,6 @@ function check_cf_turnstile($cf_turnstile_response)
   if (curl_errno($ch)) {
     return false;
   }
-  curl_close($ch);
   $response = json_decode($response, true);
   if ($httpCode != 200 || !$response['success']) {
     return false;
@@ -2149,5302 +2625,12 @@ function check_cf_turnstile($cf_turnstile_response)
 
 
 /* ------------------------------- */
-/* Upload */
-/* ------------------------------- */
-
-/**
- * upload_file
- *
- * @param boolean $from_web
- * @return string|array
- */
-function upload_file($from_web = false)
-{
-  global $system, $db, $user, $date;
-  // set execution time (unlimited)
-  set_time_limit(0);
-
-  // valid inputs
-  /* check if there is upload error */
-  if (!isset($_FILES["file"]) || $_FILES["file"]["error"] != UPLOAD_ERR_OK) {
-    throw new Exception(__("Something wrong with upload! Is 'upload_max_filesize' set correctly?"));
-  }
-  /* check file name not empty */
-  if (!isset($_POST['name'])) {
-    throw new ValidationException(__("Invalid file name"));
-  }
-  $file_name = $_POST['name'];
-  /* check if guid not empty */
-  if (!isset($_POST['guid'])) {
-    throw new ValidationException(__("Invalid file guid"));
-  }
-  $file_guid = $_POST['guid'];
-
-  // get chunked upload data
-  $chunkIndex = isset($_POST['chunkIndex']) ? (int)$_POST['chunkIndex'] : 0;
-  $totalChunks = isset($_POST['totalChunks']) ? (int)$_POST['totalChunks'] : 1;
-
-  // check secret
-  if ($from_web && $_SESSION['secret'] != $_POST['secret']) {
-    /* check server post_max_size */
-    if (isset($_SERVER['CONTENT_LENGTH'])) {
-      $post_max_size = ini_get('post_max_size');
-      $post_max_size = trim($post_max_size);
-      $last = strtolower($post_max_size[strlen($post_max_size) - 1]);
-      switch ($last) {
-        case 'g':
-          $post_max_size *= 1024;
-        case 'm':
-          $post_max_size *= 1024;
-        case 'k':
-          $post_max_size *= 1024;
-      }
-      if ($_SERVER['CONTENT_LENGTH'] > $post_max_size) {
-        throw new ValidationException(__("The file size is so big") . ", " . __("The 'post_max_size' size is:") . " " . ($post_max_size / 1024 / 1024) . __("MB"));
-      }
-    }
-    /* check server upload_max_filesize */
-    if (isset($_SERVER['CONTENT_LENGTH'])) {
-      $upload_max_filesize = ini_get('upload_max_filesize');
-      $upload_max_filesize = trim($upload_max_filesize);
-      $last = strtolower($upload_max_filesize[strlen($upload_max_filesize) - 1]);
-      switch ($last) {
-        case 'g':
-          $upload_max_filesize *= 1024;
-        case 'm':
-          $upload_max_filesize *= 1024;
-        case 'k':
-          $upload_max_filesize *= 1024;
-      }
-      if ($_SERVER['CONTENT_LENGTH'] > $upload_max_filesize) {
-        throw new ValidationException(__("The file size is so big") . ", " . __("The 'upload_max_filesize' size is:") . " " . ($upload_max_filesize / 1024 / 1024) . __("MB"));
-      }
-    }
-    /* check server memory_limit */
-    if (isset($_SERVER['CONTENT_LENGTH'])) {
-      $memory_limit = ini_get('memory_limit');
-      $memory_limit = trim($memory_limit);
-      $last = strtolower($memory_limit[strlen($memory_limit) - 1]);
-      switch ($last) {
-        case 'g':
-          $memory_limit *= 1024;
-        case 'm':
-          $memory_limit *= 1024;
-        case 'k':
-          $memory_limit *= 1024;
-      }
-      if ($_SERVER['CONTENT_LENGTH'] > $memory_limit) {
-        throw new ValidationException(__("The file size is so big") . ", " . __("The 'memory_limit is:") . " " . ($memory_limit / 1024 / 1024) . __("MB"));
-      }
-    }
-    /* none of the above */
-    throw new BadRequestException(__("Invalid secret"));
-  }
-
-  // check if user exceeds the max upload limit per day
-  if (!($user->_is_admin || $user->_is_moderator) && $system['max_daily_upload_size'] && $system['max_daily_upload_size'] != "0") {
-    $max_daily_upload_size = $system['max_daily_upload_size'] * 1024;
-    /* get the user total upload size from users_uploads */
-    $get_total_upload_size = $db->query(sprintf("SELECT SUM(file_size) AS total_upload_size FROM users_uploads WHERE user_id = %s AND DATE(insert_date) = CURDATE();", secure($user->_data['user_id'])));
-    $user_upload_size = $get_total_upload_size->fetch_assoc()['total_upload_size'];
-    if ($user_upload_size >= $max_daily_upload_size) {
-      throw new ValidationException(__("You have reached the maximum upload limit which is") . " " . round($system['max_daily_upload_size'] / 1024, 2) . "MB" . ", " . __("And you uploaded") . " " . round($user_upload_size / 1024 / 1024, 2) . "MB");
-    }
-  }
-
-  // check type & handle & multiple
-  if (!isset($_POST["type"])) {
-    throw new BadRequestException(__("Invalid type"));
-  }
-  if (!isset($_POST["handle"])) {
-    throw new BadRequestException(__("Invalid handle"));
-  }
-  if (!isset($_POST["multiple"])) {
-    throw new BadRequestException(__("Invalid multiple"));
-  }
-
-  // prepare temporary directory for chunked uploads
-  $temp_directory = ABSPATH . $system['uploads_directory'] . '/temp/';
-  if (!file_exists($temp_directory)) {
-    @mkdir($temp_directory, 0777, true);
-  }
-
-  // check if multiple files are uploaded
-  if ($_POST["multiple"] == "true") {
-    $finished_files = isset($_POST['finished_files']) ? json_decode($_POST['finished_files'], true) : [];
-  }
-
-  switch ($_POST["type"]) {
-    case 'photos':
-      // check photos upload permission
-      if (!$user->_is_admin && $_POST['handle'] == 'publisher' && !$system['photos_enabled']) {
-        throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
-      }
-      if (!$user->_is_admin && $_POST['handle'] == 'comment' && !$system['comments_photos_enabled']) {
-        throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
-      }
-      if (!$user->_is_admin && $_POST['handle'] == 'chat' && !$system['chat_photos_enabled']) {
-        throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
-      }
-      if (!$user->_is_admin && $_POST['handle'] == 'tinymce' && !$system['tinymce_photos_enabled']) {
-        throw new AuthorizationException(__("Uploading photos feature has been disabled by the admin"));
-      }
-
-      // get allowed file size
-      if ($_POST['handle'] == 'picture-user' || $_POST['handle'] == 'picture-page' || $_POST['handle'] == 'picture-group') {
-        $max_allowed_size = $system['max_avatar_size'] * 1024;
-      } elseif ($_POST['handle'] == 'cover-user' || $_POST['handle'] == 'cover-page' || $_POST['handle'] == 'cover-group') {
-        $max_allowed_size = $system['max_cover_size'] * 1024;
-      } else {
-        $max_allowed_size = $system['max_photo_size'] * 1024;
-      }
-
-      // prepare uploads directory
-      $folder = 'photos';
-      $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-      if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $directory)) {
-        @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $directory, 0777, true);
-      }
-
-      // check file extesnion
-      $extension = get_extension($file_name);
-
-      // save each chunk to a temporary file
-      $temp_file = $temp_directory . $file_guid . '_' . $file_name .  ".part-" . $chunkIndex;
-      if (!@move_uploaded_file($_FILES['file']['tmp_name'], $temp_file)) {
-        throw new Exception(__("Sorry, could not upload the file chunk"));
-      }
-
-      // if this is the last chunk, reassemble the file
-      if ($chunkIndex + 1 === $totalChunks) {
-
-        // prepare final file name & path
-        $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-        $final_file_name = $directory . $prefix . '.' . $extension;
-        $final_file_path = ABSPATH . $system['uploads_directory'] . '/' . $final_file_name;
-
-        // reassemble the chunks into the final file
-        reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path);
-
-        // check file size
-        $final_file_size = filesize($final_file_path);
-        if (!$user->_is_admin && !$user->_is_moderator) {
-          if ($final_file_size > $max_allowed_size) {
-            throw new ValidationException(__("The file size is so big") . ", " . __("The allowed file size is:") . " " . ($max_allowed_size / 1024 / 1024) . __("MB"));
-          }
-        }
-
-        // init image
-        require_once(ABSPATH . 'includes/class-image.php');
-        $image = new Image($final_file_path);
-
-        // check if animated webp allowed
-        if (!$system['allow_animated_images']) {
-          if ($image->_img_type == "image/gif" || ($image->isWebpAnimated($final_file_path) && in_array($_POST['handle'], ['cover-user', 'picture-user', 'cover-page', 'picture-page', 'cover-group', 'picture-group', 'cover-event']))) {
-            throw new ValidationException(__("Sorry, You can't upload animated webp images"));
-          }
-        }
-
-        // check image resolution
-        if (in_array($_POST['handle'], ['picture-user', 'picture-page', 'picture-group'])) {
-          if ($image->getWidth() < 150 || $image->getHeight() < 150) {
-            unlink($final_file_path);
-            throw new ValidationException(__("Please choose an image that's at least 150 pixels wide and at least 150 pixels tall"));
-          }
-        } elseif (in_array($_POST['handle'], ['cover-user', 'cover-page', 'cover-group'])) {
-          if ($system['limit_cover_photo']) {
-            if ($image->getWidth() < 1296 || $image->getHeight() < 360) {
-              unlink($final_file_path);
-              throw new ValidationException(__("Please choose an image that's at least 1296 pixels wide and at least 360 pixels tall"));
-            }
-          }
-        }
-
-        // adult images detection
-        $image_blured = 0;
-        if ($system['adult_images_enabled']) {
-          if ($_POST['handle'] != "x-image" && google_vision_check($final_file_path)) {
-            if ($system['adult_images_action'] == "delete") {
-              throw new ValidationException(__("Sorry, can not upload the file for adult content"));
-            } else {
-              $image_blured = 1;
-            }
-          }
-        }
-
-        // blur images (exclude gif & webp)
-        $image_source_blured = 0;
-        if ($_POST['blur'] == "true") {
-          if (!in_array($image->_img_type, ["image/gif", "image/webp"])) {
-            /* watermark & blur */
-            watermark_image($final_file_path, $image->_img_type);
-            blur_image($final_file_path, $image->_img_type);
-            $image_source_blured = 1;
-          }
-        }
-
-        // watermark images (exclude gif & webp)
-        $image_watermarked = false;
-        if ($system['watermark_enabled']) {
-          if (!in_array($image->_img_type, ["image/gif", "image/webp"]) && in_array($_POST['handle'], ['publisher', 'publisher-mini'])) {
-            watermark_image($final_file_path, $image->_img_type);
-            $image_watermarked = true;
-          }
-        }
-
-        // save the new image (exclude gif & webp)
-        if (!in_array($image->_img_type, ["image/gif", "image/webp"])) {
-          if ($image_source_blured || $image_watermarked) {
-            $image = new Image($final_file_path);
-          }
-          $image->save($final_file_path, $system['uploads_quality']);
-        }
-
-        // upload to
-        if ($system['s3_enabled']) {
-          /* Amazon S3 */
-          aws_s3_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['google_cloud_enabled']) {
-          /* Google Cloud */
-          google_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['digitalocean_enabled']) {
-          /* DigitalOcean */
-          digitalocean_space_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['wasabi_enabled']) {
-          /* Wasabi */
-          wasabi_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['backblaze_enabled']) {
-          /* Backblaze */
-          backblaze_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['yandex_cloud_enabled']) {
-          /* Yandex Cloud */
-          yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['cloudflare_r2_enabled']) {
-          /* Cloudflare R2 */
-          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['pushr_enabled']) {
-          /* Pushr */
-          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['ftp_enabled']) {
-          /* FTP */
-          ftp_upload($final_file_path, $final_file_name);
-        }
-
-        // add the file to the users uploads
-        add_user_uploads($final_file_name, $final_file_size);
-
-        // add the file to the pending uploads
-        if (!in_array($_POST['handle'], ['cover-user', 'picture-user', 'cover-page', 'picture-page', 'cover-group', 'picture-group', 'cover-event'])) {
-          add_pending_uploads($final_file_name, $final_file_size, $_POST['handle']);
-        }
-
-        // check the handle
-        switch ($_POST['handle']) {
-          case 'cover-user':
-            /* check for cover album */
-            if (!$user->_data['user_album_covers']) {
-              /* create new cover album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, title, privacy) VALUES (%s, 'user', 'Cover Photos', 'public')", secure($user->_data['user_id'], 'int')));
-              $user->_data['user_album_covers'] = $db->insert_id;
-              /* update user cover album id */
-              $db->query(sprintf("UPDATE users SET user_album_covers = %s WHERE user_id = %s", secure($user->_data['user_album_covers'], 'int'), secure($user->_data['user_id'], 'int')));
-            }
-            /* insert updated cover photo post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, time, privacy) VALUES (%s, 'user', 'profile_cover', %s, 'public')", secure($user->_data['user_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new cover photo to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($user->_data['user_album_covers'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* update user cover */
-            $db->query(sprintf("UPDATE users SET user_cover = %s, user_cover_id = %s WHERE user_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($user->_data['user_id'], 'int')));
-            break;
-
-          case 'picture-user':
-            /* check for profile pictures album */
-            if (!$user->_data['user_album_pictures']) {
-              /* create new profile pictures album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, title, privacy) VALUES (%s, 'user', 'Profile Pictures', 'public')", secure($user->_data['user_id'], 'int')));
-              $user->_data['user_album_pictures'] = $db->insert_id;
-              /* update user profile picture album id */
-              $db->query(sprintf("UPDATE users SET user_album_pictures = %s WHERE user_id = %s", secure($user->_data['user_album_pictures'], 'int'), secure($user->_data['user_id'], 'int')));
-            }
-            /* insert updated profile picture post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, time, privacy) VALUES (%s, 'user', 'profile_picture', %s, 'public')", secure($user->_data['user_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new profile picture to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($user->_data['user_album_pictures'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* delete old cropped picture from uploads folder */
-            delete_uploads_file($user->_data['user_picture_raw']);
-            /* update user profile picture */
-            $db->query(sprintf("UPDATE users SET user_picture = %s, user_picture_id = %s WHERE user_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($user->_data['user_id'], 'int')));
-            break;
-
-          case 'cover-page':
-            /* check if page id is set */
-            if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check the page */
-            $get_page = $db->query(sprintf("SELECT * FROM pages WHERE page_id = %s", secure($_POST['id'], 'int')));
-            if ($get_page->num_rows == 0) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            $page = $get_page->fetch_assoc();
-            /* check if the user is the page admin */
-            if (!$user->check_page_adminship($user->_data['user_id'], $page['page_id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check for cover album */
-            if (!$page['page_album_covers']) {
-              /* create new cover album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, title, privacy) VALUES (%s, 'page', 'Cover Photos', 'public')", secure($page['page_id'], 'int')));
-              $page['page_album_covers'] = $db->insert_id;
-              /* update page cover album id */
-              $db->query(sprintf("UPDATE pages SET page_album_covers = %s WHERE page_id = %s", secure($page['page_album_covers'], 'int'), secure($page['page_id'], 'int')));
-            }
-            /* insert updated cover photo post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, time, privacy) VALUES (%s, 'page', 'page_cover', %s, 'public')", secure($page['page_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new cover photo to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($page['page_album_covers'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* update page cover */
-            $db->query(sprintf("UPDATE pages SET page_cover = %s, page_cover_id = %s WHERE page_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($page['page_id'], 'int')));
-            break;
-
-          case 'picture-page':
-            /* check if page id is set */
-            if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check the page */
-            $get_page = $db->query(sprintf("SELECT * FROM pages WHERE page_id = %s", secure($_POST['id'], 'int')));
-            if ($get_page->num_rows == 0) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            $page = $get_page->fetch_assoc();
-            /* check if the user is the page admin */
-            if (!$user->check_page_adminship($user->_data['user_id'], $page['page_id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check for page pictures album */
-            if (!$page['page_album_pictures']) {
-              /* create new page pictures album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, title, privacy) VALUES (%s, 'page', 'Profile Pictures', 'public')", secure($page['page_id'], 'int')));
-              $page['page_album_pictures'] = $db->insert_id;
-              /* update page profile picture album id */
-              $db->query(sprintf("UPDATE pages SET page_album_pictures = %s WHERE page_id = %s", secure($page['page_album_pictures'], 'int'), secure($page['page_id'], 'int')));
-            }
-            /* insert updated page picture post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, time, privacy) VALUES (%s, 'page', 'page_picture', %s, 'public')", secure($page['page_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new page picture to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($page['page_album_pictures'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* delete old cropped picture from uploads folder */
-            delete_uploads_file($page['page_picture']);
-            /* update page picture */
-            $db->query(sprintf("UPDATE pages SET page_picture = %s, page_picture_id = %s WHERE page_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($page['page_id'], 'int')));
-            break;
-
-          case 'cover-group':
-            /* check if group id is set */
-            if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check the group */
-            $get_group = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($_POST['id'], 'int')));
-            if ($get_group->num_rows == 0) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            $group = $get_group->fetch_assoc();
-            /* check if the user is the group admin */
-            if (!$user->check_group_adminship($user->_data['user_id'], $group['group_id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check for group covers album */
-            if (!$group['group_album_covers']) {
-              /* create new group covers album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, in_group, group_id, title, privacy) VALUES (%s, 'user', '1', %s, 'Cover Photos', 'public')", secure($user->_data['user_id'], 'int'), secure($group['group_id'], 'int')));
-              $group['group_album_covers'] = $db->insert_id;
-              /* update group cover album id */
-              $db->query(sprintf("UPDATE `groups` SET group_album_covers = %s WHERE group_id = %s", secure($group['group_album_covers'], 'int'), secure($group['group_id'], 'int')));
-            }
-            /* insert updated group cover post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, in_group, group_id, time, privacy) VALUES (%s, 'user', 'group_cover', '1', %s, %s, 'custom')", secure($user->_data['user_id'], 'int'), secure($group['group_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new group cover to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($group['group_album_covers'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* update group cover */
-            $db->query(sprintf("UPDATE `groups` SET group_cover = %s, group_cover_id = %s WHERE group_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($group['group_id'], 'int')));
-            break;
-
-          case 'picture-group':
-            /* check if group id is set */
-            if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check the group */
-            $get_group = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($_POST['id'], 'int')));
-            if ($get_group->num_rows == 0) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            $group = $get_group->fetch_assoc();
-            /* check if the user is the group admin */
-            if (!$user->check_group_adminship($user->_data['user_id'], $group['group_id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check for group pictures album */
-            if (!$group['group_album_pictures']) {
-              /* create new group pictures album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, in_group, group_id, title, privacy) VALUES (%s, 'user', '1', %s, 'Profile Pictures', 'public')", secure($user->_data['user_id'], 'int'), secure($group['group_id'], 'int')));
-              $group['group_album_pictures'] = $db->insert_id;
-              /* update group profile picture album id */
-              $db->query(sprintf("UPDATE `groups` SET group_album_pictures = %s WHERE group_id = %s", secure($group['group_album_pictures'], 'int'), secure($group['group_id'], 'int')));
-            }
-            /* insert updated group picture post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, in_group, group_id, time, privacy) VALUES (%s, 'user', 'group_picture', '1', %s, %s, 'custom')", secure($user->_data['user_id'], 'int'), secure($group['group_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new group picture to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($group['group_album_pictures'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* delete old cropped picture from uploads folder */
-            delete_uploads_file($group['group_picture']);
-            /* update group picture */
-            $db->query(sprintf("UPDATE `groups` SET group_picture = %s, group_picture_id = %s WHERE group_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($group['group_id'], 'int')));
-            break;
-
-          case 'cover-event':
-            /* check if event id is set */
-            if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check the event */
-            $get_event = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s", secure($_POST['id'], 'int')));
-            if ($get_event->num_rows == 0) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            $event = $get_event->fetch_assoc();
-            /* check if the user is the event admin */
-            if (!$user->check_event_adminship($user->_data['user_id'], $event['event_id'])) {
-              /* delete the uploaded image & return error 403 */
-              unlink($final_file_path);
-              _error(403);
-            }
-            /* check for event covers album */
-            if (!$event['event_album_covers']) {
-              /* create new event covers album */
-              $db->query(sprintf("INSERT INTO posts_photos_albums (user_id, user_type, in_event, event_id, title, privacy) VALUES (%s, 'user', '1', %s, 'Cover Photos', 'public')", secure($user->_data['user_id'], 'int'), secure($event['event_id'], 'int')));
-              $event['event_album_covers'] = $db->insert_id;
-              /* update event cover album id */
-              $db->query(sprintf("UPDATE `events` SET event_album_covers = %s WHERE event_id = %s", secure($event['event_album_covers'], 'int'), secure($event['event_id'], 'int')));
-            }
-            /* prepare author */
-            $author_type = ($event['event_page_id']) ? 'page' : 'user';
-            $author_id = ($event['event_page_id']) ? $event['event_page_id'] : $user->_data['user_id'];
-            /* insert updated event cover post */
-            $db->query(sprintf("INSERT INTO posts (user_id, user_type, post_type, in_event, event_id, time, privacy) VALUES (%s, %s, 'event_cover', '1', %s, %s, 'custom')", secure($author_id, 'int'), secure($author_type), secure($event['event_id'], 'int'), secure($date)));
-            $post_id = $db->insert_id;
-            /* insert new event cover to album */
-            $db->query(sprintf("INSERT INTO posts_photos (post_id, album_id, source, blur) VALUES (%s, %s, %s, %s)", secure($post_id, 'int'), secure($event['event_album_covers'], 'int'), secure($final_file_name), secure($image_blured)));
-            $photo_id = $db->insert_id;
-            /* update event cover */
-            $db->query(sprintf("UPDATE `events` SET event_cover = %s, event_cover_id = %s WHERE event_id = %s", secure($final_file_name), secure($photo_id, 'int'), secure($event['event_id'], 'int')));
-            break;
-        }
-
-        // return the file name & exit
-        if ($_POST["multiple"] == "true") {
-          $finished_files[] = ["source" => $final_file_name, "blur" => $image_blured];
-          if ($_POST["totalFiles"] == $_POST["fileIndex"] + 1) {
-            return $finished_files;
-          } else {
-            return_json(['status' => 'ok', 'finished_files' => $finished_files]);
-          }
-        } else {
-          return $final_file_name;
-        }
-      }
-
-      // If not all chunks are uploaded yet, return a status
-      return_json(['status' => 'ok']);
-      break;
-
-    case 'video':
-      // check videos upload permission
-      if (!$user->_data['can_upload_videos']) {
-        throw new AuthorizationException(__("You don't have the permission to do this"));
-      }
-
-      // get allowed file size
-      $max_allowed_size = $system['max_video_size'] * 1024;
-
-      // prepare uploads directory
-      $folder = 'videos';
-      $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-      if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $directory)) {
-        @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $directory, 0777, true);
-      }
-
-      // check file extesnion
-      $extension = get_extension($file_name);
-      if (!valid_extension($extension, $system['video_extensions'])) {
-        throw new BadRequestException(__("The file type is not valid or not supported"));
-      }
-
-      // save each chunk to a temporary file
-      $temp_file = $temp_directory . $file_guid . '_' . $file_name .  ".part-" . $chunkIndex;
-      if (!@move_uploaded_file($_FILES['file']['tmp_name'], $temp_file)) {
-        throw new Exception(__("Sorry, could not upload the file chunk"));
-      }
-
-      // if this is the last chunk, reassemble the file
-      if ($chunkIndex + 1 === $totalChunks) {
-
-        // prepare final file name & path
-        $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-        $final_file_name = $directory . $prefix . '.' . $extension;
-        $final_file_path = ABSPATH . $system['uploads_directory'] . '/' . $final_file_name;
-
-        // reassemble the chunks into the final file
-        reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path);
-
-        // check file size
-        $final_file_size = filesize($final_file_path);
-        if (!$user->_is_admin && !$user->_is_moderator) {
-          if ($final_file_size > $max_allowed_size) {
-            throw new ValidationException(__("The file size is so big") . ", " . __("The allowed file size is:") . " " . ($max_allowed_size / 1024 / 1024) . __("MB"));
-          }
-        }
-
-        // upload to
-        if ($system['s3_enabled']) {
-          /* Amazon S3 */
-          aws_s3_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['google_cloud_enabled']) {
-          /* Google Cloud */
-          google_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['digitalocean_enabled']) {
-          /* DigitalOcean */
-          digitalocean_space_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['wasabi_enabled']) {
-          /* Wasabi */
-          wasabi_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['backblaze_enabled']) {
-          /* Backblaze */
-          backblaze_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['yandex_cloud_enabled']) {
-          /* Yandex Cloud */
-          yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['cloudflare_r2_enabled']) {
-          /* Cloudflare R2 */
-          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['pushr_enabled']) {
-          /* Pushr */
-          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['ftp_enabled']) {
-          /* FTP */
-          ftp_upload($final_file_path, $final_file_name);
-        }
-
-        // add the file to the users uploads
-        add_user_uploads($final_file_name, $final_file_size);
-
-        // add the file to the pending uploads
-        add_pending_uploads($final_file_name, $final_file_size, $handle);
-
-        // return the file new name & exit
-        if ($_POST["multiple"] == "true") {
-          $finished_files[] = $final_file_name;
-          if ($_POST["totalFiles"] == $_POST["fileIndex"] + 1) {
-            return $finished_files;
-          } else {
-            return_json(['status' => 'ok', 'finished_files' => $finished_files]);
-          }
-        } else {
-          return $final_file_name;
-        }
-      }
-
-      // If not all chunks are uploaded yet, return a status
-      return_json(['status' => 'ok']);
-      break;
-
-    case 'reel':
-      // check reels upload permission
-      if (!$user->_data['can_add_reels']) {
-        throw new AuthorizationException(__("You don't have the permission to do this"));
-      }
-
-      // get allowed file size
-      $max_allowed_size = $system['max_video_size'] * 1024;
-
-      // prepare uploads directory
-      $folder = 'videos';
-      $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-      if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $directory)) {
-        @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $directory, 0777, true);
-      }
-
-      // check file extesnion
-      $extension = get_extension($file_name);
-      if (!valid_extension($extension, $system['video_extensions'])) {
-        throw new BadRequestException(__("The file type is not valid or not supported"));
-      }
-
-      // save each chunk to a temporary file
-      $temp_file = $temp_directory . $file_guid . '_' . $file_name .  ".part-" . $chunkIndex;
-      if (!@move_uploaded_file($_FILES['file']['tmp_name'], $temp_file)) {
-        throw new Exception(__("Sorry, could not upload the file chunk"));
-      }
-
-      // if this is the last chunk, reassemble the file
-      if ($chunkIndex + 1 === $totalChunks) {
-
-        // prepare final file name & path
-        $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-        $final_file_name = $directory . $prefix . '.' . $extension;
-        $final_file_path = ABSPATH . $system['uploads_directory'] . '/' . $final_file_name;
-
-        // reassemble the chunks into the final file
-        reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path);
-
-        // check file size
-        $final_file_size = filesize($final_file_path);
-        if (!$user->_is_admin && !$user->_is_moderator) {
-          if ($final_file_size > $max_allowed_size) {
-            throw new ValidationException(__("The file size is so big") . ", " . __("The allowed file size is:") . " " . ($max_allowed_size / 1024 / 1024) . __("MB"));
-          }
-        }
-
-        // upload to
-        if ($system['s3_enabled']) {
-          /* Amazon S3 */
-          aws_s3_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['google_cloud_enabled']) {
-          /* Google Cloud */
-          google_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['digitalocean_enabled']) {
-          /* DigitalOcean */
-          digitalocean_space_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['wasabi_enabled']) {
-          /* Wasabi */
-          wasabi_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['backblaze_enabled']) {
-          /* Backblaze */
-          backblaze_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['yandex_cloud_enabled']) {
-          /* Yandex Cloud */
-          yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['cloudflare_r2_enabled']) {
-          /* Cloudflare R2 */
-          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['pushr_enabled']) {
-          /* Pushr */
-          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['ftp_enabled']) {
-          /* FTP */
-          ftp_upload($final_file_path, $final_file_name);
-        }
-
-        // add the file to the users uploads
-        add_user_uploads($final_file_name, $final_file_size);
-
-        // add the file to the pending uploads
-        add_pending_uploads($final_file_name, $final_file_size, $handle);
-
-        // return the file new name & exit
-        if ($_POST["multiple"] == "true") {
-          $finished_files[] = $final_file_name;
-          if ($_POST["totalFiles"] == $_POST["fileIndex"] + 1) {
-            return $finished_files;
-          } else {
-            return_json(['status' => 'ok', 'finished_files' => $finished_files]);
-          }
-        } else {
-          return $final_file_name;
-        }
-      }
-
-      // If not all chunks are uploaded yet, return a status
-      return_json(['status' => 'ok']);
-      break;
-
-    case 'audio':
-      // check audios upload permission
-      if (!$user->_data['can_upload_audios']) {
-        throw new AuthorizationException(__("You don't have the permission to do this"));
-      }
-
-      // get allowed file size
-      $max_allowed_size = $system['max_audio_size'] * 1024;
-
-      // prepare uploads directory
-      $folder = 'sounds';
-      $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-      if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $directory)) {
-        @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $directory, 0777, true);
-      }
-
-      // check file extesnion
-      $extension = get_extension($file_name);
-      if (!valid_extension($extension, $system['audio_extensions'])) {
-        throw new BadRequestException(__("The file type is not valid or not supported XX"));
-      }
-
-      // save each chunk to a temporary file
-      $temp_file = $temp_directory . $file_guid . '_' . $file_name .  ".part-" . $chunkIndex;
-      if (!@move_uploaded_file($_FILES['file']['tmp_name'], $temp_file)) {
-        throw new Exception(__("Sorry, could not upload the file chunk"));
-      }
-
-      // if this is the last chunk, reassemble the file
-      if ($chunkIndex + 1 === $totalChunks) {
-
-        // prepare final file name & path
-        $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-        $final_file_name = $directory . $prefix . '.' . $extension;
-        $final_file_path = ABSPATH . $system['uploads_directory'] . '/' . $final_file_name;
-
-        // reassemble the chunks into the final file
-        reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path);
-
-        // check file size
-        $final_file_size = filesize($final_file_path);
-        if (!$user->_is_admin && !$user->_is_moderator) {
-          if ($final_file_size > $max_allowed_size) {
-            throw new ValidationException(__("The file size is so big") . ", " . __("The allowed file size is:") . " " . ($max_allowed_size / 1024 / 1024) . __("MB"));
-          }
-        }
-
-        // upload to
-        if ($system['s3_enabled']) {
-          /* Amazon S3 */
-          aws_s3_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['google_cloud_enabled']) {
-          /* Google Cloud */
-          google_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['digitalocean_enabled']) {
-          /* DigitalOcean */
-          digitalocean_space_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['wasabi_enabled']) {
-          /* Wasabi */
-          wasabi_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['backblaze_enabled']) {
-          /* Backblaze */
-          backblaze_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['yandex_cloud_enabled']) {
-          /* Yandex Cloud */
-          yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['cloudflare_r2_enabled']) {
-          /* Cloudflare R2 */
-          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['pushr_enabled']) {
-          /* Pushr */
-          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['ftp_enabled']) {
-          /* FTP */
-          ftp_upload($final_file_path, $final_file_name);
-        }
-
-        // add the file to the users uploads
-        add_user_uploads($final_file_name, $final_file_size);
-
-        // add the file to the pending uploads
-        add_pending_uploads($final_file_name, $final_file_size, $handle);
-
-        // return the file new name & exit
-        if ($_POST["multiple"] == "true") {
-          $finished_files[] = $final_file_name;
-          if ($_POST["totalFiles"] == $_POST["fileIndex"] + 1) {
-            return $finished_files;
-          } else {
-            return_json(['status' => 'ok', 'finished_files' => $finished_files]);
-          }
-        } else {
-          return $final_file_name;
-        }
-      }
-
-      // If not all chunks are uploaded yet, return a status
-      return_json(['status' => 'ok']);
-      break;
-
-    case 'file':
-      // check files upload permission
-      if ($_POST['handle'] != "x-file" && !$user->_data['can_upload_files']) {
-        modal("ERROR", __("Not Allowed"), __("You don't have the permission to do this"));
-      }
-
-      // get allowed file size
-      $max_allowed_size = $system['max_file_size'] * 1024;
-
-      // prepare uploads directory
-      $folder = 'files';
-      $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-      if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $directory)) {
-        @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $directory, 0777, true);
-      }
-
-      // check file extesnion
-      $extension = get_extension($file_name);
-      if (!valid_extension($extension, $system['file_extensions'])) {
-        throw new BadRequestException(__("The file type is not valid or not supported"));
-      }
-
-      // save each chunk to a temporary file
-      $temp_file = $temp_directory . $file_guid . '_' . $file_name .  ".part-" . $chunkIndex;
-      if (!@move_uploaded_file($_FILES['file']['tmp_name'], $temp_file)) {
-        throw new Exception(__("Sorry, could not upload the file chunk"));
-      }
-
-      // if this is the last chunk, reassemble the file
-      if ($chunkIndex + 1 === $totalChunks) {
-
-        // prepare final file name & path
-        $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-        $final_file_name = $directory . $prefix . '.' . $extension;
-        $final_file_path = ABSPATH . $system['uploads_directory'] . '/' . $final_file_name;
-
-        // reassemble the chunks into the final file
-        reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path);
-
-        // check file size
-        $final_file_size = filesize($final_file_path);
-        if (!$user->_is_admin && !$user->_is_moderator) {
-          if ($final_file_size > $max_allowed_size) {
-            throw new ValidationException(__("The file size is so big") . ", " . __("The allowed file size is:") . " " . ($max_allowed_size / 1024 / 1024) . __("MB"));
-          }
-        }
-
-        // upload to
-        if ($system['s3_enabled']) {
-          /* Amazon S3 */
-          aws_s3_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['google_cloud_enabled']) {
-          /* Google Cloud */
-          google_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['digitalocean_enabled']) {
-          /* DigitalOcean */
-          digitalocean_space_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['wasabi_enabled']) {
-          /* Wasabi */
-          wasabi_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['backblaze_enabled']) {
-          /* Backblaze */
-          backblaze_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['yandex_cloud_enabled']) {
-          /* Yandex Cloud */
-          yandex_cloud_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['cloudflare_r2_enabled']) {
-          /* Cloudflare R2 */
-          cloudflare_r2_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['pushr_enabled']) {
-          /* Pushr */
-          pushr_upload($final_file_path, $final_file_name, mime_content_type($final_file_path));
-        } elseif ($system['ftp_enabled']) {
-          /* FTP */
-          ftp_upload($final_file_path, $final_file_name);
-        }
-
-        // add the file to the users uploads
-        add_user_uploads($final_file_name, $final_file_size);
-
-        // add the file to the pending uploads
-        add_pending_uploads($final_file_name, $final_file_size, $handle);
-
-        // return the file new name & exit
-        if ($_POST["multiple"] == "true") {
-          $finished_files[] = $final_file_name;
-          if ($_POST["totalFiles"] == $_POST["fileIndex"] + 1) {
-            return $finished_files;
-          } else {
-            return_json(['status' => 'ok', 'finished_files' => $finished_files]);
-          }
-        } else {
-          return $final_file_name;
-        }
-      }
-
-      // If not all chunks are uploaded yet, return a status
-      return_json(['status' => 'ok']);
-      break;
-
-    default:
-      _error(403);
-      break;
-  }
-}
-
-
-/**
- * delete_avatar_cover_image
- *
- * @param string $handle
- * @param int $id
- * @return void
- */
-function delete_avatar_cover_image($handle, $id = null)
-{
-  global $db, $user, $system;
-  switch ($_POST['handle']) {
-    case 'cover-user':
-      /* update user cover */
-      $db->query(sprintf("UPDATE users SET user_cover = null, user_cover_id = null, user_cover_position = null WHERE user_id = %s", secure($user->_data['user_id'], 'int')));
-      /* delete cover image from uploads folder */
-      delete_uploads_file($user->_data['user_cover']);
-      break;
-
-    case 'picture-user':
-      /* update user picture */
-      $db->query(sprintf("UPDATE users SET user_picture = null, user_picture_id = null WHERE user_id = %s", secure($user->_data['user_id'], 'int')));
-      /* delete picture image from uploads folder */
-      delete_uploads_file($user->_data['user_picture_raw']);
-      /* return */
-      return get_picture('', $user->_data['user_gender']);
-      break;
-
-    case 'cover-page':
-      /* check if page id is set */
-      if (!isset($id) || !is_numeric($id)) {
-        throw new BadRequestException(__("Invalid ID"));
-      }
-      /* check the page */
-      $get_page = $db->query(sprintf("SELECT * FROM pages WHERE page_id = %s", secure($id, 'int')));
-      if ($get_page->num_rows == 0) {
-        throw new NoDataException(__("Page not found"));
-      }
-      $page = $get_page->fetch_assoc();
-      /* check if the user is the page admin */
-      if (!$user->check_page_adminship($user->_data['user_id'], $page['page_id'])) {
-        throw new AuthorizationException(__("You don't have the right permission to do this"));
-      }
-      /* update page cover */
-      $db->query(sprintf("UPDATE pages SET page_cover = null, page_cover_id = null, page_cover_position = null WHERE page_id = %s", secure($id, 'int')));
-      /* delete cover image from uploads folder */
-      delete_uploads_file($page['page_cover']);
-      break;
-
-    case 'picture-page':
-      /* check if page id is set */
-      if (!isset($id) || !is_numeric($id)) {
-        throw new BadRequestException(__("Invalid ID"));
-      }
-      /* check the page */
-      $get_page = $db->query(sprintf("SELECT * FROM pages WHERE page_id = %s", secure($id, 'int')));
-      if ($get_page->num_rows == 0) {
-        throw new NoDataException(__("Page not found"));
-      }
-      $page = $get_page->fetch_assoc();
-      /* check if the user is the page admin */
-      if (!$user->check_page_adminship($user->_data['user_id'], $page['page_id'])) {
-        throw new AuthorizationException(__("You don't have the right permission to do this"));
-      }
-      /* update page picture */
-      $db->query(sprintf("UPDATE pages SET page_picture = null, page_picture_id = null WHERE page_id = %s", secure($id, 'int')));
-      /* delete picture image from uploads folder */
-      delete_uploads_file($page['page_picture']);
-      /* return */
-      return get_picture('', 'page');
-      break;
-
-    case 'cover-group':
-      /* check if group id is set */
-      if (!isset($id) || !is_numeric($id)) {
-        throw new BadRequestException(__("Invalid ID"));
-      }
-      /* check the group */
-      $get_group = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($id, 'int')));
-      if ($get_group->num_rows == 0) {
-        throw new NoDataException(__("Group not found"));
-      }
-      $group = $get_group->fetch_assoc();
-      /* check if the user is the group admin */
-      if (!$user->check_group_adminship($user->_data['user_id'], $group['group_id'])) {
-        throw new AuthorizationException(__("You don't have the right permission to do this"));
-      }
-      /* update group cover */
-      $db->query(sprintf("UPDATE `groups` SET group_cover = null, group_cover_id = null, group_cover_position = null WHERE group_id = %s", secure($id, 'int')));
-      /* delete cover image from uploads folder */
-      delete_uploads_file($group['group_cover']);
-      break;
-
-    case 'picture-group':
-      /* check if group id is set */
-      if (!isset($id) || !is_numeric($id)) {
-        throw new BadRequestException(__("Invalid ID"));
-      }
-      /* check the group */
-      $get_group = $db->query(sprintf("SELECT * FROM `groups` WHERE group_id = %s", secure($id, 'int')));
-      if ($get_group->num_rows == 0) {
-        throw new NoDataException(__("Group not found"));
-      }
-      $group = $get_group->fetch_assoc();
-      /* check if the user is the group admin */
-      if (!$user->check_group_adminship($user->_data['user_id'], $group['group_id'])) {
-        throw new AuthorizationException(__("You don't have the right permission to do this"));
-      }
-      /* update group picture */
-      $db->query(sprintf("UPDATE `groups` SET group_picture = null, group_picture_id = null WHERE group_id = %s", secure($id, 'int')));
-      /* delete picture image from uploads folder */
-      delete_uploads_file($group['group_picture']);
-      /* return */
-      return get_picture('', 'group');
-      break;
-
-    case 'cover-event':
-      /* check if event id is set */
-      if (!isset($id) || !is_numeric($id)) {
-        throw new BadRequestException(__("Invalid ID"));
-      }
-      /* check the event */
-      $get_event = $db->query(sprintf("SELECT * FROM `events` WHERE event_id = %s", secure($id, 'int')));
-      if ($get_event->num_rows == 0) {
-        throw new NoDataException(__("Event not found"));
-      }
-      $event = $get_event->fetch_assoc();
-      /* check if the user is the event admin */
-      if (!$user->check_event_adminship($user->_data['user_id'], $event['event_id'])) {
-        throw new AuthorizationException(__("You don't have the right permission to do this"));
-      }
-      /* update event cover */
-      $db->query(sprintf("UPDATE `events` SET event_cover = null, event_cover_id = null, event_cover_position = null WHERE event_id = %s", secure($id, 'int')));
-      /* delete cover image from uploads folder */
-      delete_uploads_file($event['event_cover']);
-      break;
-
-    default:
-      throw new BadRequestException(__("Invalid request"));
-      break;
-  }
-}
-
-
-/**
- * add_user_uploads
- *
- * @param string $file_name
- * @param int $file_size
- * @return void
- */
-function add_user_uploads($file_name, $file_size)
-{
-  global $db, $user, $date;
-  $db->query(sprintf("INSERT INTO users_uploads (user_id, file_name, file_size, insert_date) VALUES (%s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($file_name), secure($file_size), secure($date)));
-}
-
-
-/**
- * add_pending_uploads
- *
- * @param string $file_name
- * @param int $file_size
- * @param string $handle
- * @return void
- */
-function add_pending_uploads($file_name, $file_size, $handle)
-{
-  global $db, $user, $date;
-  $db->query(sprintf("INSERT INTO users_uploads_pending (user_id, file_name, file_size, handle, insert_date) VALUES (%s, %s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($file_name), secure($file_size), secure($handle), secure($date)));
-}
-
-
-/**
- * remove_pending_uploads
- *
- * @param array $files
- * @param int $user_id
- * @return void
- */
-function remove_pending_uploads($files = [], $user_id = null)
-{
-  global $db, $user;
-  $user_id = ($user_id) ? $user_id : $user->_data['user_id'];
-  foreach ($files as $file_name) {
-    if (empty($file_name)) continue;
-    $db->query(sprintf("DELETE FROM users_uploads_pending WHERE user_id = %s AND file_name = %s", secure($user_id, 'int'), secure($file_name)));
-  }
-}
-
-
-/**
- * clear_pending_uploads
- *
- * @return void
- */
-function clear_pending_uploads()
-{
-  global $db;
-  $pending_uploads = $db->query("SELECT * FROM users_uploads_pending");
-  while ($pending_upload = $pending_uploads->fetch_assoc()) {
-    delete_uploads_file($pending_upload['file_name'], true, $pending_upload['user_id']);
-  }
-}
-
-
-/**
- * extract_uploaded_images_from_text
- *
- * @param string $text
- * @return array
- */
-function extract_uploaded_images_from_text($text)
-{
-  global $system;
-  $images = [];
-  preg_replace_callback('/<img[^>]+src="([^"]+)"[^>]*>/', function ($matches) use (&$images, $system) {
-    $src = $matches[1];
-    if (strpos($src, $system['system_uploads']) === 0) {
-      $relative_path = substr($src, strlen($system['system_uploads']));
-      $relative_path = ltrim($relative_path, '/');
-      $images[] = $relative_path;
-    }
-    return '';
-  }, $text);
-  return $images;
-}
-
-
-/* ------------------------------- */
-/* Cloud Storage */
-/* ------------------------------- */
-
-/**
- * aws_s3_test
- *
- * @param string $s3_bucket
- * @param string $s3_region
- * @param string $s3_key
- * @param string $s3_secret
- *
- * @return void
- */
-function aws_s3_test($s3_bucket, $s3_region, $s3_key, $s3_secret)
-{
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'    => 'latest',
-      'region'      => $s3_region,
-      'credentials' => [
-        'key'    => $s3_key,
-        'secret' => $s3_secret,
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($s3_bucket)) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * aws_s3_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function aws_s3_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'region'      => $system['s3_region'],
-    'credentials' => [
-      'key'     => $system['s3_key'],
-      'secret'  => $system['s3_secret'],
-    ]
-  ]);
-  $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['s3_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['s3_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * google_cloud_test
- *
- * @return void
- */
-function google_cloud_test()
-{
-  global $system;
-  try {
-    $storage = new Google\Cloud\Storage\StorageClient([
-      'keyFile' => json_decode(html_entity_decode($system['google_cloud_file'], ENT_QUOTES), true),
-    ]);
-    $bucket = $storage->bucket($system['google_cloud_bucket']);
-    if (!$bucket->exists()) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * google_cloud_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function google_cloud_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $storage = new Google\Cloud\Storage\StorageClient([
-    'keyFile' => json_decode(html_entity_decode($system['google_cloud_file'], ENT_QUOTES), true),
-  ]);
-  $bucket = $storage->bucket($system['google_cloud_bucket']);
-  $fileContent = file_get_contents($file_source);
-  $Key = 'uploads/' . $file_name;
-  $storageObject = $bucket->upload($fileContent, ['name' => $Key]);
-  /* remove local file */
-  gc_collect_cycles();
-  if (!empty($storageObject)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * digitalocean_space_test
- *
- * @return void
- */
-function digitalocean_space_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://' . $system['digitalocean_space_region'] . '.digitaloceanspaces.com',
-      'region'      => $system['digitalocean_space_region'],
-      'credentials' => [
-        'key'     => $system['digitalocean_key'],
-        'secret'  => $system['digitalocean_secret'],
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['digitalocean_space_name'])) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * digitalocean_space_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function digitalocean_space_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'endpoint'    => 'https://' . $system['digitalocean_space_region'] . '.digitaloceanspaces.com',
-    'region'      => $system['digitalocean_space_region'],
-    'credentials' => [
-      'key'     => $system['digitalocean_key'],
-      'secret'  => $system['digitalocean_secret'],
-    ]
-  ]);
-  $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['digitalocean_space_name'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['digitalocean_space_name'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * wasabi_test
- *
- * @return void
- */
-function wasabi_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.' . $system['wasabi_region'] . '.wasabisys.com',
-      'region'      => $system['wasabi_region'],
-      'credentials' => [
-        'key'     => $system['wasabi_key'],
-        'secret'  => $system['wasabi_secret'],
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['wasabi_bucket'])) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * wasabi_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function wasabi_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'endpoint'    => 'https://s3.' . $system['wasabi_region'] . '.wasabisys.com',
-    'region'      => $system['wasabi_region'],
-    'credentials' => [
-      'key'     => $system['wasabi_key'],
-      'secret'  => $system['wasabi_secret'],
-    ]
-  ]);
-  $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['wasabi_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['wasabi_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * backblaze_test
- *
- * @return void
- */
-function backblaze_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.' . $system['backblaze_region'] . '.backblazeb2.com',
-      'region'      => $system['backblaze_region'],
-      'credentials' => [
-        'key'     => $system['backblaze_key'],
-        'secret'  => $system['backblaze_secret'],
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['backblaze_bucket'])) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * backblaze_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function backblaze_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'endpoint'    => 'https://s3.' . $system['backblaze_region'] . '.backblazeb2.com',
-    'region'      => $system['backblaze_region'],
-    'credentials' => [
-      'key'     => $system['backblaze_key'],
-      'secret'  => $system['backblaze_secret'],
-    ]
-  ]);
-  $middleware = \Aws\Middleware::mapRequest(function (\Psr\Http\Message\RequestInterface $request) {
-    foreach ($request->getHeaders() as $name => $values) {
-      if (stripos($name, 'x-amz-checksum') === 0) {
-        $request = $request->withoutHeader($name);
-      }
-    }
-    return $request;
-  });
-  $s3Client->getHandlerList()->appendBuild($middleware, 'strip_checksum_headers');
-  $Key = 'uploads/' . $file_name;
-  $result = $s3Client->putObject([
-    'Bucket' => $system['backblaze_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['backblaze_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * yandex_cloud_test
- *
- * @return void
- */
-function yandex_cloud_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory(array(
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.yandexcloud.net/',
-      'region'      => $system['yandex_cloud_region'],
-      'credentials' => array(
-        'key'     => $system['yandex_cloud_key'],
-        'secret'  => $system['yandex_cloud_secret'],
-      )
-    ));
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['yandex_cloud_bucket'], $Key)) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * yandex_cloud_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function yandex_cloud_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory(array(
-    'version'     => 'latest',
-    'endpoint'    => 'https://s3.yandexcloud.net/',
-    'region'      => $system['yandex_cloud_region'],
-    'credentials' => array(
-      'key'     => $system['yandex_cloud_key'],
-      'secret'  => $system['yandex_cloud_secret'],
-    )
-  ));
-  $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['yandex_cloud_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['yandex_cloud_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * cloudflare_r2_test
- *
- * @return void
- */
-function cloudflare_r2_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => $system['cloudflare_r2_endpoint'],
-      'region' => 'auto',
-      'credentials' => [
-        'key'     => $system['cloudflare_r2_key'],
-        'secret'  => $system['cloudflare_r2_secret'],
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['cloudflare_r2_bucket'])) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * cloudflare_r2_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-function cloudflare_r2_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'endpoint'    => $system['cloudflare_r2_endpoint'],
-    'region' => 'auto',
-    'use_path_style_endpoint' => true,
-    'use_aws_shared_config_files' => false,
-    'credentials' => [
-      'key'     => $system['cloudflare_r2_key'],
-      'secret'  => $system['cloudflare_r2_secret'],
-    ],
-  ]);
-  $Key = 'uploads/' . $file_name;
-  $params = [
-    'ContentDisposition' => 'inline',
-  ];
-  if ($content_type !== '') {
-    $params['ContentType'] = $content_type;
-  }
-  $uploader = new Aws\S3\MultipartUploader($s3Client, $file_source, [
-    'bucket' => $system['cloudflare_r2_bucket'],
-    'key'    => $Key,
-    'params' => $params,
-  ]);
-  $uploader->upload();
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['cloudflare_r2_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * pushr_test
- *
- * @return void
- */
-function pushr_test()
-{
-  global $system;
-  try {
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => $system['pushr_endpoint'],
-      'region' => 'auto',
-      'credentials' => [
-        'key'     => $system['pushr_key'],
-        'secret'  => $system['pushr_secret'],
-      ]
-    ]);
-    $buckets = $s3Client->listBuckets();
-    if (empty($buckets)) {
-      throw new Exception(__("There is no buckets in your account"));
-    }
-    if (!$s3Client->doesBucketExist($system['pushr_bucket'])) {
-      throw new Exception(__("There is no bucket with this name in your account"));
-    }
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * pushr_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @param string $content_type
- * @return void
- */
-
-function pushr_upload($file_source, $file_name, $content_type = "")
-{
-  global $system;
-  $s3Client = Aws\S3\S3Client::factory([
-    'version'     => 'latest',
-    'endpoint'    => $system['pushr_endpoint'],
-    'region' => 'auto',
-    'credentials' => [
-      'key'     => $system['pushr_key'],
-      'secret'  => $system['pushr_secret'],
-    ]
-  ]);
-  $Key = 'uploads/' . $file_name;
-  $s3Client->putObject([
-    'Bucket' => $system['pushr_bucket'],
-    'Key'    => $Key,
-    'Body'   => fopen($file_source, 'r+'),
-    'ContentDisposition' => 'inline',
-    'ContentType' => $content_type,
-    'ACL'    => 'public-read',
-  ]);
-  /* remove local file */
-  gc_collect_cycles();
-  if ($s3Client->doesObjectExist($system['pushr_bucket'], $Key)) {
-    unlink($file_source);
-  }
-}
-
-
-/**
- * ftp_test
- *
- * @return void
- */
-function ftp_test()
-{
-  global $system;
-  try {
-    $ftp = new \FtpClient\FtpClient();
-    $ftp->connect($system['ftp_hostname'], false, $system['ftp_port']);
-    $ftp->login($system['ftp_username'], $system['ftp_password']);
-  } catch (Exception $e) {
-    if (DEBUGGING) {
-      throw new Exception($e->getMessage());
-    } else {
-      throw new Exception(__("Connection Failed, Please check your settings"));
-    }
-  }
-}
-
-
-/**
- * ftp_upload
- *
- * @param string $file_source
- * @param string $file_name
- * @return void
- */
-function ftp_upload($file_source, $file_name)
-{
-  global $system;
-  $ftp = new \FtpClient\FtpClient();
-  $ftp->connect($system['ftp_hostname'], false, $system['ftp_port']);
-  $ftp->login($system['ftp_username'], $system['ftp_password']);
-  if (!empty($system['ftp_path']) && $system['ftp_path'] != "./") {
-    $ftp->chdir($system['ftp_path']);
-  }
-  $file_path = substr($file_name, 0, strrpos($file_name, '/'));
-  $ftp_path_info = explode('/', $file_path);
-  $ftp_path = '';
-  if (!$ftp->isDir($file_path)) {
-    foreach ($ftp_path_info as $key => $value) {
-      if (!empty($ftp_path)) {
-        $ftp_path .= '/' . $value . '/';
-      } else {
-        $ftp_path .= $value . '/';
-      }
-      if (!$ftp->isDir($ftp_path)) {
-        $mkdir = $ftp->mkdir($ftp_path);
-      }
-    }
-  }
-  $ftp->chdir($file_path);
-  $ftp->pasv(true);
-  if ($ftp->putFromPath($file_source, $file_name)) {
-    unlink($file_source);
-  }
-  $ftp->close();
-}
-
-
-/**
- * delete_uploads_file
- *
- * @param string $file_name
- * @param bool $bypass_db_check
- * @param int $user_id
- * @return void
- */
-function delete_uploads_file($file_name, $bypass_db_check = true, $user_id = null)
-{
-  global $system, $db, $user;
-  $user_id = ($user_id) ? $user_id : $user->_data['user_id'];
-  if (!$file_name) {
-    return;
-  }
-  /* delete from pending uploads */
-  remove_pending_uploads([$file_name], $user_id);
-  /* delete from database */
-  if (!$bypass_db_check) {
-    $check_upload = $db->query(sprintf("SELECT COUNT(*) AS count FROM users_uploads WHERE file_name = %s", secure($file_name)));
-    if ($check_upload->fetch_assoc()['count'] > 0) {
-      $db->query(sprintf("DELETE FROM users_uploads WHERE file_name = %s", secure($file_name)));
-    }
-  }
-  /* delete from server */
-  if ($system['s3_enabled']) {
-    /* Amazon S3 */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'    => 'latest',
-      'region'      => $system['s3_region'],
-      'credentials' => [
-        'key'    => $system['s3_key'],
-        'secret' => $system['s3_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['s3_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['s3_bucket'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['google_cloud_enabled']) {
-    /* Google Cloud */
-    $storage = new Google\Cloud\Storage\StorageClient([
-      'keyFile' => json_decode(html_entity_decode($system['google_cloud_file'], ENT_QUOTES), true),
-    ]);
-    $bucket = $storage->bucket($system['google_cloud_bucket']);
-    $Key = 'uploads/' . $file_name;
-    $object = $bucket->object($Key);
-    if ($object->exists()) {
-      $object->delete();
-    }
-  } elseif ($system['digitalocean_enabled']) {
-    /* DigitalOcean */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://' . $system['digitalocean_space_region'] . '.digitaloceanspaces.com',
-      'region'      => $system['digitalocean_space_region'],
-      'credentials' => [
-        'key'     => $system['digitalocean_key'],
-        'secret'  => $system['digitalocean_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['digitalocean_space_name'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['digitalocean_space_name'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['wasabi_enabled']) {
-    /* Wasabi */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.' . $system['wasabi_region'] . '.wasabisys.com',
-      'region'      => $system['wasabi_region'],
-      'credentials' => [
-        'key'     => $system['wasabi_key'],
-        'secret'  => $system['wasabi_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['wasabi_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['wasabi_bucket'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['backblaze_enabled']) {
-    /* Backblaze */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.' . $system['backblaze_region'] . '.backblazeb2.com',
-      'region'      => $system['backblaze_region'],
-      'credentials' => [
-        'key'     => $system['backblaze_key'],
-        'secret'  => $system['backblaze_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['backblaze_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['backblaze_bucket'],
-        'Key'    => $Key,
-        'DeleteMarker' => 'true'
-      ]);
-    }
-  } elseif ($system['yandex_cloud_enabled']) {
-    /* Yandex Cloud */
-    $s3Client = Aws\S3\S3Client::factory(array(
-      'version'     => 'latest',
-      'endpoint'    => 'https://s3.yandexcloud.net/',
-      'region'      => $system['yandex_cloud_region'],
-      'credentials' => array(
-        'key'     => $system['yandex_cloud_key'],
-        'secret'  => $system['yandex_cloud_secret'],
-      )
-    ));
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['yandex_cloud_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['yandex_cloud_bucket'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['cloudflare_r2_enabled']) {
-    /* Cloudflare R2 */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => $system['cloudflare_r2_endpoint'],
-      'region' => 'auto',
-      'credentials' => [
-        'key'     => $system['cloudflare_r2_key'],
-        'secret'  => $system['cloudflare_r2_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['cloudflare_r2_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['cloudflare_r2_bucket'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['pushr_enabled']) {
-    /* Pushr */
-    $s3Client = Aws\S3\S3Client::factory([
-      'version'     => 'latest',
-      'endpoint'    => $system['pushr_endpoint'],
-      'region' => 'auto',
-      'credentials' => [
-        'key'     => $system['pushr_key'],
-        'secret'  => $system['pushr_secret'],
-      ]
-    ]);
-    $Key = 'uploads/' . $file_name;
-    if ($s3Client->doesObjectExist($system['pushr_bucket'], $Key)) {
-      $s3Client->deleteObject([
-        'Bucket' => $system['pushr_bucket'],
-        'Key'    => $Key,
-      ]);
-    }
-  } elseif ($system['ftp_enabled']) {
-    /* FTP */
-    $ftp = new \FtpClient\FtpClient();
-    $ftp->connect($system['ftp_hostname'], false, $system['ftp_port']);
-    $ftp->login($system['ftp_username'], $system['ftp_password']);
-    if (!empty($system['ftp_path']) && $system['ftp_path'] != "./") {
-      $ftp->chdir($system['ftp_path']);
-    }
-    $file_path = substr($file_name, 0, strrpos($file_name, '/'));
-    $file_name = substr($file_name, strrpos($file_name, '/') + 1);
-    if (!$ftp->isDir($file_path)) {
-      return;
-    }
-    $ftp->chdir($file_path);
-    $ftp->pasv(true);
-    $ftp->remove($file_name);
-    $ftp->close();
-  } else {
-    /* local server */
-    $realpath = realpath(ABSPATH . $system['uploads_directory'] . '/' . $file_name);
-    if (is_file($realpath) && file_exists($realpath)) {
-      unlink($realpath);
-    }
-  }
-}
-
-
-/**
- * save_file_to_cloud
- *
- * @param string $path
- * @param string $file_name
- * @return void
- */
-
-function save_file_to_cloud($path, $file_name)
-{
-  global $system;
-  /* Cloud Storage */
-  if ($system['s3_enabled']) {
-    /* Amazon S3 */
-    aws_s3_upload($path, $file_name);
-  } elseif ($system['google_cloud_enabled']) {
-    /* Google Cloud */
-    google_cloud_upload($path, $file_name);
-  } elseif ($system['digitalocean_enabled']) {
-    /* DigitalOcean */
-    digitalocean_space_upload($path, $file_name);
-  } elseif ($system['wasabi_enabled']) {
-    /* Wasabi */
-    wasabi_upload($path, $file_name);
-  } elseif ($system['backblaze_enabled']) {
-    /* Backblaze */
-    backblaze_upload($path, $file_name);
-  } elseif ($system['yandex_cloud_enabled']) {
-    /* Yandex Cloud */
-    yandex_cloud_upload($path, $file_name);
-  } elseif ($system['cloudflare_r2_enabled']) {
-    /* Cloudflare R2 */
-    cloudflare_r2_upload($path, $file_name);
-  } elseif ($system['pushr_enabled']) {
-    /* Pushr */
-    pushr_upload($path, $file_name);
-  } elseif ($system['ftp_enabled']) {
-    /* FTP */
-    ftp_upload($path, $file_name);
-  }
-}
-
-
-
-/* ------------------------------- */
-/* FFMPEG */
-/* ------------------------------- */
-
-/**
- * ffmpeg_test
- *
- * @return string
- */
-
-function ffmpeg_test()
-{
-  global $system;
-  /* check ffmpeg settings */
-  if (!function_exists('shell_exec')) {
-    throw new Exception(__("shell_exec function must be enabled for FFMPEG"));
-  }
-  if (!$system['ffmpeg_enabled']) {
-    throw new Exception(__("FFMPEG must be enable before testing"));
-  }
-  if ($system['ffmpeg_path'] == "") {
-    throw new Exception(__("FFMPEG path must be defined before testing"));
-  }
-  /* prepare */
-  $input_video = ABSPATH . "includes/assets/videos/ffmpeg_test.mp4";
-  $output_video = ABSPATH . "includes/assets/videos/ffmpeg_test_240.mp4";
-  @unlink($output_video);
-  $shell_response = shell_exec($system['ffmpeg_path'] . " -y -i $input_video -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=426:-2 -crf 26 $output_video 2>&1");
-  if (!file_exists($output_video)) {
-    throw new Exception(__("FFMPEG Error") . ": " . $shell_response);
-  }
-  return $shell_response;
-}
-
-/**
- * ffmpeg_convert
- *
- * @param integer $post_id
- * @param integer $post_author_id
- * @param string $video_name
- * @param string $thumbnail
- * @return void
- */
-
-function ffmpeg_convert($post_id, $post_author_id, $video_name, $thumbnail = '', $post_type = 'video')
-{
-  global $system, $db, $user;
-  /* check ffmpeg settings */
-  if (!function_exists('shell_exec')) {
-    throw new Exception(__("shell_exec function must be enabled for FFMPEG"));
-  }
-  if (!$system['ffmpeg_enabled']) {
-    throw new Exception(__("FFMPEG must be enable before testing"));
-  }
-  if ($system['ffmpeg_path'] == "") {
-    throw new Exception(__("FFMPEG path must be defined before testing"));
-  }
-  /* prepare posts table name */
-  $posts_table = ($post_type == 'reel') ? 'posts_reels' : 'posts_videos';
-  /* prepare uploads folder as staging */
-  $photos_folder = 'photos';
-  $photos_directory = $photos_folder . '/' . date('Y') . '/' . date('m') . '/';
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $photos_folder)) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $photos_folder, 0777, true);
-  }
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $photos_folder . '/' . date('Y'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $photos_folder . '/' . date('Y'), 0777, true);
-  }
-  if (!file_exists($system['uploads_directory'] . '/' . $photos_folder . '/' . date('Y') . '/' . date('m'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $photos_folder . '/' . date('Y') . '/' . date('m'), 0777, true);
-  }
-  $videos_folder = 'videos';
-  $videos_directory = $videos_folder . '/' . date('Y') . '/' . date('m') . '/';
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $videos_folder)) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $videos_folder, 0777, true);
-  }
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $videos_folder . '/' . date('Y'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $videos_folder . '/' . date('Y'), 0777, true);
-  }
-  if (!file_exists($system['uploads_directory'] . '/' . $videos_folder . '/' . date('Y') . '/' . date('m'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $videos_folder . '/' . date('Y') . '/' . date('m'), 0777, true);
-  }
-  /* save original video */
-  $original_video_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_name;
-  $delete_fetched_file = false;
-  if (!file_exists($original_video_local_path)) {
-    $delete_fetched_file = true;
-    $remote_file = fopen($system['system_uploads'] . '/' . $video_name, 'rb');
-    $local_file = fopen($original_video_local_path, 'wb');
-    if ($remote_file && $local_file) {
-      while (!feof($remote_file)) {
-        fwrite($local_file, fread($remote_file, 8192));
-      }
-      fclose($remote_file);
-      fclose($local_file);
-    } else {
-      /* update post & return */
-      $db->query(sprintf("UPDATE posts SET processing = '0' WHERE post_id = %s", secure($post_id, 'int')));
-      return;
-    }
-  }
-  /* set ffprobe_path */
-  $system['ffprobe_path'] = substr_replace($system['ffmpeg_path'], 'ffprobe', strrpos($system['ffmpeg_path'], 'ffmpeg'), strlen('ffmpeg'));
-  /* get original video resolution */
-  $resolution = 0;
-  $resolution = shell_exec($system['ffprobe_path'] . " -v error -select_streams v:0 -show_entries stream=width -of csv=s=x:p=0 " . $original_video_local_path);
-  /* get original video duration */
-  $duration = 1;
-  $duration = shell_exec($system['ffprobe_path'] . " -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . $original_video_local_path);
-  /* generate new video thumbnail */
-  if (!$thumbnail) {
-    $thumbnail_prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-    $thumbnail_name = $photos_directory . $thumbnail_prefix . '.jpeg';
-    $thumbnail_path = ABSPATH . $system['uploads_directory'] . '/' . $thumbnail_name;
-    $extraction_time = ($duration > 1) ? ($duration / 2) : 1;
-    if (!file_exists($thumbnail_path)) {
-      shell_exec($system['ffmpeg_path'] . " -ss \"$extraction_time\" -i $original_video_local_path -vframes 1 -f mjpeg $thumbnail_path 2<&1");
-      /* save the new video thumbnail to cloud */
-      save_file_to_cloud($thumbnail_path, $thumbnail_name);
-      /* update video thumbnail */
-      $db->query(sprintf("UPDATE $posts_table SET thumbnail = %s WHERE post_id = %s", secure($thumbnail_name), secure($post_id, 'int')));
-    }
-  }
-  /* get original hash */
-  $original_hash = extarct_hash_token($video_name);
-  /* set video prefix */
-  $video_prefix = $system['uploads_prefix'] . '_' . $original_hash;
-  /* check watermark videos enabled */
-  $watermark_cmd = "";
-  if ($system['watermark_videos_enabled']) {
-    /* get water mark settings */
-    $watermark_videos_icon = ABSPATH . $system['uploads_directory'] . '/' . $system['watermark_videos_icon'];
-    /* check if the watermark icon exists */
-    if (!file_exists($watermark_videos_icon)) {
-      /* fetch the watermark icon */
-      $remote_watermark_icon = fopen($system['system_uploads'] . '/' . $system['watermark_videos_icon'], 'rb');
-      $local_watermark_icon = fopen($watermark_videos_icon, 'wb');
-      if ($remote_watermark_icon && $local_watermark_icon) {
-        while (!feof($remote_watermark_icon)) {
-          fwrite($local_watermark_icon, fread($remote_watermark_icon, 8192));
-        }
-        fclose($remote_watermark_icon);
-        fclose($local_watermark_icon);
-      }
-    }
-    switch ($system['watermark_videos_position']) {
-      case 'top_left':
-        $watermark_videos_position = sprintf("%s:%s", $system['watermark_videos_xoffset'], $system['watermark_videos_yoffset']);
-        break;
-
-      case 'top_right':
-        $watermark_videos_position = sprintf("main_w-overlay_w-%s:%s", $system['watermark_videos_xoffset'], $system['watermark_videos_yoffset']);
-        break;
-
-      case 'bottom_left':
-        $watermark_videos_position = sprintf("%s:main_h-overlay_h-%s", $system['watermark_videos_xoffset'], $system['watermark_videos_yoffset']);
-        break;
-
-      case 'bottom_right':
-        $watermark_videos_position = sprintf("main_w-overlay_w-%s:main_h-overlay_h-%s", $system['watermark_videos_xoffset'], $system['watermark_videos_yoffset']);
-        break;
-
-      case 'center':
-        $watermark_videos_position = sprintf("(main_w-overlay_w)/2:(main_h-overlay_h)/2");
-        break;
-    }
-    $watermark_cmd = sprintf("-i %s -i %s -filter_complex \"[1:v]scale=iw:ih [watermark]; [watermark]format=argb,colorchannelmixer=aa=%s [watermark]; [0:v][watermark] overlay=%s\" -c:a copy", $watermark_videos_icon, $original_video_local_path, $system['watermark_videos_opacity'], $watermark_videos_position);
-  }
-  /* convert video to 240p */
-  $video_240p_name = $videos_directory . $video_prefix . '_240p.mp4';
-  $video_240_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_240p_name;
-  if ($system['ffmpeg_240p_enabled'] && !file_exists($video_240_local_path) && $resolution >= 426) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=426:-2 -crf 26 $video_240_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_240p_marked_name = $videos_directory . $video_prefix . '_marked_240p.mp4';
-      $video_240_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_240p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_240_local_path $watermark_cmd $video_240_marked_local_path 2<&1");
-      if (file_exists($video_240_marked_local_path)) {
-        /* remove local file */
-        unlink($video_240_local_path);
-        $video_240p_name = $video_240p_marked_name;
-        $video_240_local_path = $video_240_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_240_local_path, $video_240p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_240p = %s WHERE post_id = %s", secure($video_240p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 360p */
-  $video_360p_name = $videos_directory . $video_prefix . '_360p.mp4';
-  $video_360_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_360p_name;
-  if ($system['ffmpeg_360p_enabled'] && !file_exists($video_360_local_path) && $resolution >= 640) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=640:-2 -crf 26 $video_360_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_360p_marked_name = $videos_directory . $video_prefix . '_marked_360p.mp4';
-      $video_360_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_360p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_360_local_path $watermark_cmd $video_360_marked_local_path 2<&1");
-      if (file_exists($video_360_marked_local_path)) {
-        /* remove local file */
-        unlink($video_360_local_path);
-        $video_360p_name = $video_360p_marked_name;
-        $video_360_local_path = $video_360_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_360_local_path, $video_360p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_360p = %s WHERE post_id = %s", secure($video_360p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 480p */
-  $video_480p_name = $videos_directory . $video_prefix . '_480p.mp4';
-  $video_480_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_480p_name;
-  if ($system['ffmpeg_480p_enabled'] && !file_exists($video_480_local_path) && $resolution >= 854) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=854:-2 -crf 26 $video_480_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_480p_marked_name = $videos_directory . $video_prefix . '_marked_480p.mp4';
-      $video_480_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_480p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_480_local_path $watermark_cmd $video_480_marked_local_path 2<&1");
-      if (file_exists($video_480_marked_local_path)) {
-        /* remove local file */
-        unlink($video_480_local_path);
-        $video_480p_name = $video_480p_marked_name;
-        $video_480_local_path = $video_480_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_480_local_path, $video_480p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_480p = %s WHERE post_id = %s", secure($video_480p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 720p */
-  $video_720p_name = $videos_directory . $video_prefix . '_720p.mp4';
-  $video_720_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_720p_name;
-  if ($system['ffmpeg_720p_enabled'] && !file_exists($video_720_local_path) && $resolution >= 1280) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=1280:-2 -crf 26 $video_720_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_720p_marked_name = $videos_directory . $video_prefix . '_marked_720p.mp4';
-      $video_720_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_720p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_720_local_path $watermark_cmd $video_720_marked_local_path 2<&1");
-      if (file_exists($video_720_marked_local_path)) {
-        /* remove local file */
-        unlink($video_720_local_path);
-        $video_720p_name = $video_720p_marked_name;
-        $video_720_local_path = $video_720_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_720_local_path, $video_720p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_720p = %s WHERE post_id = %s", secure($video_720p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 1080p */
-  $video_1080p_name = $videos_directory . $video_prefix . '_1080p.mp4';
-  $video_1080_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_1080p_name;
-  if ($system['ffmpeg_1080p_enabled'] && !file_exists($video_1080_local_path) && $resolution >= 1920) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=1920:-2 -crf 26 $video_1080_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_1080p_marked_name = $videos_directory . $video_prefix . '_marked_1080p.mp4';
-      $video_1080_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_1080p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_1080_local_path $watermark_cmd $video_1080_marked_local_path 2<&1");
-      if (file_exists($video_1080_marked_local_path)) {
-        /* remove local file */
-        unlink($video_1080_local_path);
-        $video_1080p_name = $video_1080p_marked_name;
-        $video_1080_local_path = $video_1080_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_1080_local_path, $video_1080p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_1080p = %s WHERE post_id = %s", secure($video_1080p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 1440p */
-  $video_1440p_name = $videos_directory . $video_prefix . '_1440p.mp4';
-  $video_1440_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_1440p_name;
-  if ($system['ffmpeg_1440p_enabled'] && !file_exists($video_1440_local_path) && $resolution >= 2560) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=2560:-2 -crf 26 $video_1440_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_1440p_marked_name = $videos_directory . $video_prefix . '_marked_1440p.mp4';
-      $video_1440_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_1440p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_1440_local_path $watermark_cmd $video_1440_marked_local_path 2<&1");
-      if (file_exists($video_1440_marked_local_path)) {
-        /* remove local file */
-        unlink($video_1440_local_path);
-        $video_1440p_name = $video_1440p_marked_name;
-        $video_1440_local_path = $video_1440_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_1440_local_path, $video_1440p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_1440p = %s WHERE post_id = %s", secure($video_1440p_name), secure($post_id, 'int')));
-  }
-  /* convert video to 2160p */
-  $video_2160p_name = $videos_directory . $video_prefix . '_2160p.mp4';
-  $video_2160_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_2160p_name;
-  if ($system['ffmpeg_2160p_enabled'] && !file_exists($video_2160_local_path) && $resolution >= 3840) {
-    shell_exec($system['ffmpeg_path'] . " -y -i $original_video_local_path -vcodec libx264 -preset " . $system['ffmpeg_speed'] . " -filter:v scale=3840:-2 -crf 26 $video_2160_local_path 2<&1");
-    if ($watermark_cmd) {
-      $video_2160p_marked_name = $videos_directory . $video_prefix . '_marked_2160p.mp4';
-      $video_2160_marked_local_path = ABSPATH . $system['uploads_directory'] . '/' . $video_2160p_marked_name;
-      shell_exec($system['ffmpeg_path'] . " -y -i $video_2160_local_path $watermark_cmd $video_2160_marked_local_path 2<&1");
-      if (file_exists($video_2160_marked_local_path)) {
-        /* remove local file */
-        unlink($video_2160_local_path);
-        $video_2160p_name = $video_2160p_marked_name;
-        $video_2160_local_path = $video_2160_marked_local_path;
-      }
-    }
-    /* save the new video to cloud */
-    save_file_to_cloud($video_2160_local_path, $video_2160p_name);
-    /* update video */
-    $db->query(sprintf("UPDATE $posts_table SET source_2160p = %s WHERE post_id = %s", secure($video_2160p_name), secure($post_id, 'int')));
-  }
-  /* remove fetched file (if any) */
-  if ($delete_fetched_file) {
-    unlink($original_video_local_path);
-  }
-  /* update post */
-  $db->query(sprintf("UPDATE posts SET processing = '0' WHERE post_id = %s", secure($post_id, 'int')));
-  /* notify post author */
-  $user->post_notification(['to_user_id' => $post_author_id, 'action' => 'video_converted', 'node_type' => 'post', 'node_url' => $post_id]);
-}
-
-
-
-/* ------------------------------- */
-/* Payments */
-/* ------------------------------- */
-
-/**
- * get_payment_vat_percentage
- *
- * @return int
- */
-function get_payment_vat_percentage()
-{
-  global $system, $user;
-  $payment_vat_percentage = $system['payment_vat_percentage'];
-  if ($system['payment_country_vat_enabled']) {
-    $user_country = $user->get_country($user->_data['user_country']);
-    if ($user_country && $user_country['country_vat']) {
-      $payment_vat_percentage = $user_country['country_vat'];
-    }
-  }
-  return $payment_vat_percentage;
-}
-
-
-/**
- * get_payment_vat_value
- *
- * @param float $amount
- * @param boolean $printed
- * @return float
- */
-function get_payment_vat_value($amount, $printed = false)
-{
-  global $system;
-  $vat = 0;
-  if ($system['payment_vat_enabled']) {
-    $payment_vat_percentage = get_payment_vat_percentage();
-    $vat = ($amount * $payment_vat_percentage) / 100;
-  }
-  return ($printed) ? html_entity_decode(print_money($vat), ENT_QUOTES) : $vat;
-}
-
-
-/**
- * get_payment_fees_value
- *
- * @param float $amount
- * @param boolean $printed
- * @return float
- */
-function get_payment_fees_value($amount, $printed = false)
-{
-  global $system;
-  $fees = 0;
-  if ($system['payment_fees_enabled']) {
-    $fees = ($amount * $system['payment_fees_percentage']) / 100;
-  }
-  return ($printed) ? html_entity_decode(print_money($fees), ENT_QUOTES) : $fees;
-}
-
-
-/**
- * get_payment_total_value
- *
- * @param float $amount
- * @return float
- */
-function get_payment_total_value($amount, $printed = false)
-{
-  $total = $amount + get_payment_vat_value($amount) + get_payment_fees_value($amount);
-  $total = "" . round($total, 2);
-  return ($printed) ? html_entity_decode(print_money($total), ENT_QUOTES) : $total;
-}
-
-
-
-/* ------------------------------- */
-/* PayOuts */
-/* ------------------------------- */
-
-/**
- * process_automatic_withdrawal
- *
- * @param string $method
- * @param integer $amount
- * @param string $email
- * @return void
- */
-function process_automatic_withdrawal($method, $amount, $email)
-{
-  global $system;
-  switch ($method) {
-    case 'paypal':
-      if ($system['paypal_payouts_enabled']) {
-        paypal_payout($amount, $email);
-      }
-      break;
-  }
-}
-
-
-
-/* ------------------------------- */
-/* PayPal */
-/* ------------------------------- */
-
-/**
- * paypal_access_token
- *
- * @return string
- */
-function paypal_access_token()
-{
-  global $system;
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/oauth2/token');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_USERPWD, $system['paypal_id'] . ":" . $system['paypal_secret']);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, "grant_type=client_credentials");
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 200) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  return $response->access_token;
-}
-
-
-/**
- * paypal_payment_link
- *
- * @param string $handle
- * @param float $price
- * @param integer $id
- * @param boolean $bypass_subscription
- * @return string
- */
-function paypal_payment_link($handle, $price, $id = null, $bypass_subscription = false)
-{
-  global $system, $user;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      /* get package */
-      $package = $user->get_package($id);
-      if ($package['paypal_billing_plan']) {
-        return paypal_subscription_link($handle, $id, $package['paypal_billing_plan']);
-      }
-      $product = __($system['system_title']) . " " . __('Package') . " " . __($package['name']);
-      $description = __('Pay For') . " " . __($system['system_title']) . " " . __('Package') . " " . __($package['name']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=packages&package_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      /* get monetization plan */
-      $monetization_plan = $user->get_monetization_plan($id, true);
-      if (!$monetization_plan) {
-        throw new Exception(__("The monetization plan you're trying to subscribe to is not found"));
-      }
-      if (!$bypass_subscription && $monetization_plan['paypal_billing_plan']) {
-        return paypal_subscription_link($handle, $id, $monetization_plan['paypal_billing_plan']);
-      }
-      $product = __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
-      $description = __('Pay For') . " " . __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    case 'wallet':
-      $product = __($system['system_title']) . " " . __('Wallet');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=wallet";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $product = __($system['system_title']) . " " . __('Funding Donation');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=donate&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $product = __($system['system_title']) . " " . __('Paid Post');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=paid_post&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    case 'movies':
-      $product = __($system['system_title']) . " " . __('Movies');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=movies&movie_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    case 'marketplace':
-      $product = __($system['system_title']) . " " . __('Marketplace');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=marketplace&orders_collection_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* create a payment */
-  $request_body = [
-    'intent' => 'sale',
-    'payer' => [
-      'payment_method' => 'paypal',
-    ],
-    'redirect_urls' => [
-      'return_url' => $URL['success'],
-      'cancel_url' => $URL['cancel'],
-    ],
-    'transactions' => [
-      [
-        'item_list' => [
-          'items' => [
-            [
-              'name' => $product,
-              'sku' => 'item',
-              'price' => $total,
-              'currency' => $system['system_currency'],
-              'quantity' => 1,
-            ],
-          ],
-        ],
-        'amount' => [
-          'currency' => $system['system_currency'],
-          'total' => $total,
-        ],
-        'description' => $description,
-      ],
-    ],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/payments/payment');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if (!($httpCode >= 200 && $httpCode < 300)) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  return $response->links[1]->href;
-}
-
-
-/**
- * paypal_payment_check
- *
- * @param string $payment_id
- * @param string $payer_id
- * @return string
- */
-function paypal_payment_check($payment_id, $payer_id)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* check payment */
-  $request_body = [
-    'payer_id' => $payer_id,
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/payments/payment/' . $payment_id . '/execute');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if (!($httpCode >= 200 && $httpCode < 300)) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  return $response;
-}
-
-
-/**
- * paypal_subscription_link
- *
- * @param string $handle
- * @param integer $id
- * @param string $billing_plan_id
- * 
- * @return string
- */
-function paypal_subscription_link($handle, $id, $billing_plan_id)
-{
-  global $system, $user;
-  /* prepare handle */
-  switch ($handle) {
-    case 'packages':
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=packages&package_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      $URL['success'] = $system['system_url'] . "/webhooks/paypal.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/paypal.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* create a subscription */
-  $request_body = [
-    'plan_id' => $billing_plan_id,
-    'subscriber' => [
-      'name' => [
-        'given_name' => $user->_data['user_firstname'],
-        'surname' => $user->_data['user_lastname'],
-      ],
-      'email_address' => $user->_data['user_email'],
-    ],
-    'application_context' => [
-      'brand_name' => $system['system_title'],
-      'locale' => $system['system_locale'],
-      'shipping_preference' => 'NO_SHIPPING',
-      'user_action' => 'SUBSCRIBE_NOW',
-      'payment_method' => [
-        'payer_selected' => 'PAYPAL',
-        'payee_preferred' => 'IMMEDIATE_PAYMENT_REQUIRED',
-      ],
-      'return_url' => $URL['success'],
-      'cancel_url' => $URL['cancel'],
-    ],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/subscriptions');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if (!($httpCode >= 200 && $httpCode < 300)) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  return $response->links[0]->href;
-}
-
-
-/**
- * paypal_subscription_check
- *
- * @param string $subscription_id
- * 
- * @return boolean
- */
-function paypal_subscription_check($subscription_id)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* check subscription */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/subscriptions/' . $subscription_id);
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if (!($httpCode >= 200 && $httpCode < 300)) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  if ($response->status == 'ACTIVE') {
-    return true;
-  }
-  return false;
-}
-
-
-/**
- * paypal_create_billing_plan
- *
- * @param string $name
- * @param string $description
- * @param string $frequency
- * @param string $interval
- * @param string $amount
- * @return string
- */
-function paypal_create_billing_plan($name, $description, $frequency, $interval, $amount)
-{
-  global $system;
-  /* prepare total price */
-  $total = get_payment_total_value($amount);
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* create a product for the plan */
-  $request_body = [
-    'name' => $name,
-    'description' => ($description) ? $description : $name,
-    'home_url' => $system['system_url'],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/catalogs/products');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 201) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  $product_id = $response->id;
-  /* create a plan */
-  $request_body = [
-    'product_id' => $product_id,
-    'name' => $name,
-    'description' => ($description) ? $description : $name,
-    'status' => 'ACTIVE',
-    'billing_cycles' => [
-      [
-        'frequency' => [
-          'interval_unit' => strtoupper($interval),
-          'interval_count' => $frequency,
-        ],
-        'tenure_type' => 'REGULAR',
-        'sequence' => 1,
-        'total_cycles' => 0,
-        'pricing_scheme' => [
-          'fixed_price' => [
-            'value' => $total,
-            'currency_code' => $system['system_currency'],
-          ],
-        ],
-      ],
-    ],
-    'payment_preferences' => [
-      'auto_bill_outstanding' => true,
-      'setup_fee' => [
-        'value' => '0',
-        'currency_code' => $system['system_currency'],
-      ],
-      'setup_fee_failure_action' => 'CONTINUE',
-      'payment_failure_threshold' => 3,
-    ],
-    'taxes' => [
-      'percentage' => '0',
-      'inclusive' => false,
-    ],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/plans');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 201) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  $plan_id = $response->id;
-  return $plan_id;
-}
-
-
-/**
- * paypal_edit_billing_plan
- *
- * @param string $billing_plan_id
- * @param string $name
- * @param string $description
- * @return void
- */
-function paypal_edit_billing_plan($billing_plan_id, $name, $description)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* get plan details */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/plans/' . $billing_plan_id);
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 200) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  $product_id = $response->product_id;
-  /* update plan */
-  $request_body = [
-    [
-      "op" => "replace",
-      "path" => "/name",
-      "value" => $name
-    ],
-    [
-      "op" => "replace",
-      "path" => "/description",
-      "value" => ($description) ? $description : $name
-    ]
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/plans/' . $billing_plan_id);
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 204) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-}
-
-
-/**
- * paypal_deactivate_billing_plan
- *
- * @param string $billing_plan_id
- * @return void
- */
-function paypal_deactivate_billing_plan($billing_plan_id)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* deactivate plan */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/plans/' . $billing_plan_id . '/deactivate');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 204) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-}
-
-
-/**
- * paypal_replace_billing_plan
- *
- * @param string $billing_plan_id
- * @param string $name
- * @param string $description
- * @param string $frequency
- * @param string $interval
- * @param string $amount
- * 
- * @return string
- */
-function paypal_replace_billing_plan($billing_plan_id, $name, $description, $frequency, $interval, $amount)
-{
-  /* deactivate old plan */
-  paypal_deactivate_billing_plan($billing_plan_id);
-  /* create new plan */
-  $new_plan_id = paypal_create_billing_plan($name, $description, $frequency, $interval, $amount);
-  return $new_plan_id;
-}
-
-
-/**
- * paypal_verify_webhook_signature
- *
- * @param string $headers
- * @param string $body
- * 
- * @return boolean
- */
-function paypal_verify_webhook_signature($headers, $body)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* verify webhook signature */
-  $request_body = [
-    "auth_algo" => $headers['paypal-auth-algo'],
-    "cert_url" => $headers['paypal-cert-url'],
-    "transmission_id" => $headers['paypal-transmission-id'],
-    "transmission_sig" => $headers['paypal-transmission-sig'],
-    "transmission_time" => $headers['paypal-transmission-time'],
-    "webhook_id" => $system['paypal_webhook'],
-    "webhook_event" => $body
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/notifications/verify-webhook-signature');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $response = json_decode($response, true);
-  if (!($httpCode >= 200 && $httpCode < 300)) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  if ($response['verification_status'] == 'SUCCESS') {
-    return true;
-  }
-  return false;
-}
-
-
-/**
- * paypal_cancel_subscription
- *
- * @param string $subscription_id
- * 
- * @return void
- */
-function paypal_cancel_subscription($subscription_id)
-{
-  global $system;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* cancel subscription */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/billing/subscriptions/' . $subscription_id . '/cancel');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 204) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-  }
-}
-
-
-function paypal_payout($amount, $email)
-{
-  global $system;
-  /* prepare total price */
-  $total = $amount;
-  /* get access token */
-  $access_token = paypal_access_token();
-  /* prepare API url */
-  $paypal_api_url = ($system['paypal_mode'] == "sandbox") ? "https://api-m.sandbox.paypal.com" : "https://api.paypal.com";
-  /* create a payout */
-  $request_body = [
-    'sender_batch_header' => [
-      'sender_batch_id' => uniqid(),
-      'recipient_type' => 'EMAIL',
-      'email_subject' => 'You have money!',
-      'email_message' => 'You received a payment. Thanks for using our service!'
-    ],
-    'items' => [
-      [
-        'recipient_type' => 'EMAIL',
-        'amount' => [
-          'value' => $total,
-          'currency' => $system['system_currency'],
-        ],
-        'sender_item_id' => uniqid(),
-        'recipient_wallet' => 'PAYPAL',
-        'receiver' => $email,
-      ],
-    ],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $paypal_api_url . '/v1/payments/payouts');
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . $access_token]);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $response = json_decode($response);
-  if ($httpCode != 201) {
-    $error = "Error Processing Request";
-    if (DEBUGGING) {
-      if ($response->error_description) {
-        $error = $response->error_description;
-      } elseif ($response->message) {
-        $error = $response->message;
-      } else {
-        $backtrace = debug_backtrace();
-        $line = $backtrace[0]['line'];
-        $file = $backtrace[0]['file'];
-        $error = "This error function was called from line $line in file $file";
-      }
-    }
-    throw new Exception($error);
-  }
-  return $response;
-}
-
-
-
-/* ------------------------------- */
-/* Stripe */
-/* ------------------------------- */
-
-/**
- * stripe_payment_session
- *
- * @param string $method
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @param boolean $bypass_subscription
- * @return string
- */
-function stripe_payment_session($method, $handle, $price, $id = null, $bypass_subscription = false)
-{
-  global $system, $user;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      /* get package */
-      $package = $user->get_package($id);
-      if ($package['stripe_billing_plan']) {
-        return stripe_subscription_session($method, $handle, $id, $package['stripe_billing_plan']);
-      }
-      $product = __($system['system_title']) . " " . __('Package') . " " . __($package['name']);
-      $description = __('Pay For') . " " . __($system['system_title']) . " " . __('Package') . " " . __($package['name']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=packages&package_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      /* get monetization plan */
-      $monetization_plan = $user->get_monetization_plan($id, true);
-      if (!$monetization_plan) {
-        throw new Exception(__("The monetization plan you're trying to subscribe to is not found"));
-      }
-      if (!$bypass_subscription && $monetization_plan['stripe_billing_plan']) {
-        return stripe_subscription_session($method, $handle, $id, $monetization_plan['stripe_billing_plan']);
-      }
-      $product = __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
-      $description = __('Pay For') . " " . __($system['system_title']) . " " . __('Monetization Plan') . " " . __($monetization_plan['name']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    case 'wallet':
-      $product = __($system['system_title']) . " " . __('Wallet');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=wallet";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $product = __($system['system_title']) . " " . __('Funding Donation');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=donate&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $product = __($system['system_title']) . " " . __('Paid Post');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=paid_post&post_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    case 'movies':
-      $product = __($system['system_title']) . " " . __('Movies');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=movies&movie_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    case 'marketplace':
-      $product = __($system['system_title']) . " " . __('Marketplace');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=marketplace&orders_collection_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  $method = ($method == 'credit') ? 'card' : $method;
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  if ($system['stripe_payment_element_enabled']) {
-    $stripe = new \Stripe\StripeClient($secret_key);
-    /* create a PaymentIntent with amount and currency */
-    $paymentIntent = $stripe->paymentIntents->create([
-      'amount' => ($system['system_currency'] == 'JPY') ? $total : $total * 100,
-      'currency' => $system['system_currency'],
-    ]);
-    /* return clientSecret */
-    return ['client_secret' => $paymentIntent->client_secret, 'success_url' => $URL['success']];
-  } else {
-    \Stripe\Stripe::setApiKey($secret_key);
-    $product = \Stripe\Product::create([
-      'name' => $product,
-      'type' => 'service',
-    ]);
-    $session = \Stripe\Checkout\Session::create([
-      'payment_method_types' => [$method],
-      'line_items' => [[
-        'price_data' => [
-          'product' => $product->id,
-          'unit_amount' => ($system['system_currency'] == 'JPY') ? $total : $total * 100,
-          'currency' => $system['system_currency'],
-        ],
-        'quantity' => 1,
-      ]],
-      'mode' => 'payment',
-      'success_url' => $URL['success'],
-      'cancel_url' => $URL['cancel'],
-    ]);
-    $_SESSION['stripe_session'] = $session;
-    return $session;
-  }
-}
-
-
-/**
- * stripe_subscription_session
- *
- * @param string $method
- * @param string $handle
- * @param string $id
- * @param integer $billing_plan_id
- * @return string
- */
-function stripe_subscription_session($method, $handle, $id, $billing_plan_id)
-{
-  global $system, $user;
-  /* prepare method */
-  $method = ($method == 'credit') ? 'card' : $method;
-  /* prepare handle */
-  switch ($handle) {
-    case 'packages':
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=packages&package_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      $URL['success'] = $system['system_url'] . "/webhooks/stripe.php?status=success&handle=subscribe&plan_id=$id";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/stripe.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  if ($system['stripe_payment_element_enabled']) {
-    $stripe = new \Stripe\StripeClient($secret_key);
-    $customer = $stripe->customers->create([
-      'email' => $user->_data['user_email'],
-    ]);
-    $subscription = $stripe->subscriptions->create([
-      'customer' => $customer->id,
-      'items' => [
-        ['price' => $billing_plan_id],
-      ],
-      'payment_behavior' => 'default_incomplete',
-      'expand' => ['latest_invoice.payment_intent'],
-    ]);
-    return [
-      'client_secret' => $subscription->latest_invoice->payment_intent->client_secret,
-      'subscription_id' => $subscription->id,
-      'success_url' => $URL['success'],
-      'cancel_url' => $URL['cancel']
-    ];
-  } else {
-    \Stripe\Stripe::setApiKey($secret_key);
-    $session = \Stripe\Checkout\Session::create([
-      'payment_method_types' => [$method],
-      'line_items' => [[
-        'price' => $billing_plan_id,
-        'quantity' => 1,
-      ]],
-      'mode' => 'subscription',
-      'success_url' => $URL['success'],
-      'cancel_url' => $URL['cancel'],
-    ]);
-    $_SESSION['stripe_session'] = $session;
-    return $session;
-  }
-}
-
-
-/**
- * stripe_payment_check
- *
- * @return boolean
- */
-function stripe_payment_check()
-{
-  global $system;
-  if ($_GET['payment_intent']) {
-    $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-    \Stripe\Stripe::setApiKey($secret_key);
-    $payment_intent = \Stripe\PaymentIntent::retrieve($_GET['payment_intent']);
-    if ($payment_intent->status == "succeeded") {
-      if (isset($payment_intent->invoice)) {
-        $invoice = \Stripe\Invoice::retrieve($payment_intent->invoice);
-        if (isset($invoice->subscription)) {
-          $payment_intent->mode = 'subscription';
-          $payment_intent->subscription = $invoice->subscription;
-        } else {
-          $payment_intent->mode = 'one-time';
-        }
-      } else {
-        $payment_intent->mode = 'one-time';
-      }
-      return $payment_intent;
-    }
-  }
-  if ($_SESSION['stripe_session']) {
-    $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-    \Stripe\Stripe::setApiKey($secret_key);
-    $session = \Stripe\Checkout\Session::retrieve($_SESSION['stripe_session']['id']);
-    unset($_SESSION['stripe_session']);
-    if ($session->payment_status == "paid") {
-      return $session;
-    }
-  }
-  return false;
-}
-
-
-/**
- * stripe_create_billing_plan
- *
- * @param string $name
- * @param string $description
- * @param string $frequency
- * @param string $interval
- * @param string $amount
- * @return string
- */
-function stripe_create_billing_plan($name, $description, $frequency, $interval, $amount)
-{
-  global $system;
-  /* prepare total price */
-  $total = get_payment_total_value($amount);
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  \Stripe\Stripe::setApiKey($secret_key);
-  $product = \Stripe\Product::create([
-    'name' => $name,
-    'description' => ($description) ? $description : $name,
-    'type' => 'service',
-  ]);
-  $plan = \Stripe\Plan::create([
-    'product' => $product->id,
-    'nickname' => ($description) ? $description : $name,
-    'interval' => $interval,
-    'interval_count' => $frequency,
-    'currency' => $system['system_currency'],
-    'amount' => ($system['system_currency'] == 'JPY') ? $total : $total * 100,
-  ]);
-  return $plan->id;
-}
-
-
-/**
- * stripe_edit_billing_plan
- *
- * @param string $billing_plan_id
- * @param string $description
- * @return void
- */
-function stripe_edit_billing_plan($billing_plan_id, $description)
-{
-  global $system;
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  \Stripe\Stripe::setApiKey($secret_key);
-  $plan = \Stripe\Plan::update(
-    $billing_plan_id,
-    [
-      'nickname' => $description,
-    ]
-  );
-}
-
-
-/**
- * stripe_deactivate_billing_plan
- *
- * @param string $billing_plan_id
- * @return void
- */
-function stripe_deactivate_billing_plan($billing_plan_id)
-{
-  global $system;
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  \Stripe\Stripe::setApiKey($secret_key);
-  $plan = \Stripe\Plan::update(
-    $billing_plan_id,
-    [
-      'active' => false,
-    ]
-  );
-}
-
-
-/**
- * stripe_replace_billing_plan
- *
- * @param string $billing_plan_id
- * @param string $name
- * @param string $description
- * @param string $frequency
- * @param string $interval
- * @param string $amount
- * 
- * @return string
- */
-function stripe_replace_billing_plan($billing_plan_id, $name, $description, $frequency, $interval, $amount)
-{
-  /* deactivate old plan */
-  stripe_deactivate_billing_plan($billing_plan_id);
-  /* create new plan */
-  $new_plan_id = stripe_create_billing_plan($name, $description, $frequency, $interval, $amount);
-  return $new_plan_id;
-}
-
-
-/**
- * stripe_cancel_subscription
- *
- * @param string $subscription_id
- * 
- * @return void
- */
-function stripe_cancel_subscription($subscription_id)
-{
-  global $system;
-  /* Stripe */
-  $secret_key = ($system['stripe_mode'] == "live") ? $system['stripe_live_secret'] : $system['stripe_test_secret'];
-  \Stripe\Stripe::setApiKey($secret_key);
-  /* retrieve the subscription */
-  $subscription = \Stripe\Subscription::retrieve($subscription_id);
-  /* cancel the subscription */
-  $subscription->cancel();
-}
-
-
-
-/* ------------------------------- */
-/* 2CheckOut */
-/* ------------------------------- */
-
-/**
- * twocheckout_check
- *
- * @param string $price
- * @return boolean
- */
-function twocheckout_check($price)
-{
-  global $system;
-  $total = get_payment_total_value($price);
-  Twocheckout::privateKey($system['2checkout_private_key']);
-  Twocheckout::sellerId($system['2checkout_merchant_code']);
-  if ($system['2checkout_mode'] == 'sandbox') {
-    Twocheckout::verifySSL(false);
-  }
-  $twocheckout_config = [
-    "merchantOrderId" => get_hash_token(),
-    "token" => $_POST['token'],
-    "currency" => $system['system_currency'],
-    "total" => $total,
-    "billingAddr" => [
-      "name" => $_POST['billing_name'],
-      "addrLine1" => $_POST['billing_address'],
-      "city" => $_POST['billing_city'],
-      "state" => $_POST['billing_state'],
-      "zipCode" => $_POST['billing_zip_code'],
-      "country" => $_POST['billing_country'],
-      "email" => $_POST['billing_email'],
-      "phoneNumber" => $_POST['billing_phone']
-    ]
-  ];
-  if ($system['2checkout_mode'] == 'sandbox') {
-    $twocheckout_config['demo'] = true;
-  }
-  $charge = Twocheckout_Charge::auth($twocheckout_config);
-  if ($charge['response']['responseCode'] == 'APPROVED') {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Authorize.net */
-/* ------------------------------- */
-
-/**
- * authorize_net_check
- *
- * @param string $price
- * @return boolean
- */
-function authorize_net_check($price)
-{
-  global $system;
-  $total = get_payment_total_value($price);
-  /* set up authentication */
-  $merchantAuthentication = new net\authorize\api\contract\v1\MerchantAuthenticationType();
-  $merchantAuthentication->setName($system['authorize_net_api_login_id']);
-  $merchantAuthentication->setTransactionKey($system['authorize_net_transaction_key']);
-  /* set the transaction's refId */
-  $refId = 'ref' . time();
-  /* set up payment data */
-  $creditCard = new net\authorize\api\contract\v1\CreditCardType();
-  $creditCard->setCardNumber($_POST['card_number']);
-  $creditCard->setExpirationDate($_POST['card_exp_year'] . '-' . $_POST['card_exp_month']);
-  $creditCard->setCardCode($_POST['card_cvv']);
-  /* add the payment data to a paymentType object */
-  $payment = new net\authorize\api\contract\v1\PaymentType();
-  $payment->setCreditCard($creditCard);
-  /* set up billing address */
-  $billTo = new net\authorize\api\contract\v1\CustomerAddressType();
-  $billTo->setFirstName($_POST['billing_name']);
-  $billTo->setAddress($_POST['billing_address']);
-  $billTo->setCity($_POST['billing_city']);
-  $billTo->setState($_POST['billing_state']);
-  $billTo->setCountry($_POST['billing_country']);
-  $billTo->setZip($_POST['billing_zip_code']);
-  $billTo->setPhoneNumber($_POST['billing_phone']);
-  $billTo->setEmail($_POST['billing_email']);
-  /* set up transaction request */
-  $request = new net\authorize\api\contract\v1\CreateTransactionRequest();
-  $request->setMerchantAuthentication($merchantAuthentication);
-  $request->setTransactionRequest(
-    (new net\authorize\api\contract\v1\TransactionRequestType())
-      ->setTransactionType("authCaptureTransaction")
-      ->setAmount($total)
-      ->setPayment($payment)
-      ->setBillTo($billTo)
-  );
-  $request->setRefId($refId);
-  /* execute transaction request */
-  $controller = new net\authorize\api\controller\CreateTransactionController($request);
-  if ($system['authorize_net_mode'] == "sandbox") {
-    $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::SANDBOX);
-  } else {
-    $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
-  }
-  /* handle response */
-  if ($response != null) {
-    $tresponse = $response->getTransactionResponse();
-    if (($tresponse != null) && ($tresponse->getResponseCode() == "1")) {
-      return true;
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
-}
-
-
-
-/* ------------------------------- */
-/* Paystack */
-/* ------------------------------- */
-
-/**
- * paystack
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function paystack($handle, $price, $id = null)
-{
-  global $system, $user;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=packages&package_id=$id";
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=subscribe&plan_id=$id";
-      break;
-
-    case 'wallet':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=wallet";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=donate&post_id=$id";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=paid_post&post_id=$id";
-      break;
-
-    case 'movies':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=movies&movie_id=$id";
-      break;
-
-    case 'marketplace':
-      $callback = $system['system_url'] . "/webhooks/paystack.php?status=success&handle=marketplace&orders_collection_id=$id";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* Paystack */
-  $headers = [
-    'Authorization: Bearer ' . $system['paystack_secret'],
-    'Content-Type: application/json',
-  ];
-  $request_body = [
-    'email' => $user->_data['user_email'],
-    'amount' => $total * 100,
-    'callback_url' => $callback
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.paystack.co/transaction/initialize");
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!$responseJson['status']) {
-    throw new Exception($responseJson['message']);
-  }
-  return $responseJson['data']['authorization_url'];
-}
-
-
-/**
- * paystack_check
- *
- * @param string $reference
- * @return boolean
- */
-function paystack_check($reference)
-{
-  global $system;
-  $headers = [
-    'Authorization: Bearer ' . $system['paystack_secret']
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.paystack.co/transaction/verify/" . $reference);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if ($responseJson['data']['status'] == 'success') {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Razorpay */
-/* ------------------------------- */
-
-/**
- * razorpay_check
- *
- * @param string $payment_id
- * @param integer $amount
- * @return boolean
- */
-
-function razorpay_check($payment_id, $amount)
-{
-  global $system;
-  /* prepare total */
-  $total = get_payment_total_value($amount);
-  /* Razorpay */
-  $url = 'https://api.razorpay.com/v1/payments/' . $payment_id . '/capture';
-  $params = http_build_query(['amount' => $total * 100, 'currency' => $system['currency']]);
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $url);
-  curl_setopt($ch, CURLOPT_USERPWD, $system['razorpay_key_id'] . ':' . $system['razorpay_key_secret']);
-  curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if ($responseJson['error_code']) {
-    return false;
-  }
-  return true;
-}
-
-
-
-/* ------------------------------- */
-/* Cashfree */
-/* ------------------------------- */
-
-/**
- * cashfree
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @param string $billing_name
- * @param string $billing_email
- * @param string $billing_phone
- * @return string
- */
-function cashfree($handle, $price, $id, $billing_name, $billing_email, $billing_phone)
-{
-  global $system;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  $return_url = $system['system_url'] . "/webhooks/cashfree.php?orderId={order_id}";
-  switch ($handle) {
-    case 'packages':
-      $return_url .= "&handle=packages&package_id=$id";
-      break;
-
-    case 'subscribe':
-      $return_url .= "&handle=subscribe&plan_id=$id";
-      break;
-
-    case 'wallet':
-      $return_url .= "&handle=wallet";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $return_url .= "&handle=donate&post_id=$id";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $return_url .= "&handle=paid_post&post_id=$id";
-      break;
-
-    case 'movies':
-      $return_url .= "&handle=movies&movie_id=$id";
-      break;
-
-    case 'marketplace':
-      $return_url .= "&handle=marketplace&orders_collection_id=$id";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* Cashfree */
-  $x_api_version = "2023-08-01";
-  Cashfree\Cashfree::$XClientId = $system['cashfree_client_id'];
-  Cashfree\Cashfree::$XClientSecret = $system['cashfree_client_secret'];
-  if ($system['cashfree_mode'] == 'sandbox') {
-    Cashfree\Cashfree::$XEnvironment = Cashfree\Cashfree::$SANDBOX;
-  } else {
-    Cashfree\Cashfree::$XEnvironment = Cashfree\Cashfree::$PRODUCTION;
-  }
-  $cashfree = new Cashfree\Cashfree();
-  $create_orders_request = new Cashfree\Model\CreateOrderRequest();
-  $create_orders_request->setOrderAmount($total);
-  $create_orders_request->setOrderCurrency($system['system_currency']);
-  $customer_details = new Cashfree\Model\CustomerDetails();
-  $customer_details->setCustomerId(uniqid());
-  $customer_details->setCustomerName($billing_name);
-  $customer_details->setCustomerPhone($billing_phone);
-  $customer_details->setCustomerEmail($billing_email);
-  $create_orders_request->setCustomerDetails($customer_details);
-  $order_meta = new Cashfree\Model\OrderMeta();
-  $order_meta->setReturnUrl($return_url);
-  $create_orders_request->setOrderMeta($order_meta);
-  try {
-    $result = $cashfree->PGCreateOrder($x_api_version, $create_orders_request);
-    /* return payment_session_id */
-    return $result[0]->getPaymentSessionId();
-  } catch (Exception $e) {
-    throw new Exception($e->getMessage());
-  }
-}
-
-
-/**
- * cashfree_check
- *
- * @param string $orderId
- * @return boolean
- */
-function cashfree_check($orderId)
-{
-  global $system;
-  $x_api_version = "2023-08-01";
-  Cashfree\Cashfree::$XClientId = $system['cashfree_client_id'];
-  Cashfree\Cashfree::$XClientSecret = $system['cashfree_client_secret'];
-  if ($system['cashfree_mode'] == 'sandbox') {
-    Cashfree\Cashfree::$XEnvironment = Cashfree\Cashfree::$SANDBOX;
-  } else {
-    Cashfree\Cashfree::$XEnvironment = Cashfree\Cashfree::$PRODUCTION;
-  }
-  $cashfree = new Cashfree\Cashfree();
-  try {
-    $result = $cashfree->PGOrderFetchPayments($x_api_version, $orderId, null, null, null);
-    if ($result && isset($result[0][0]) && $result[0][0] && $result[0][0]->getPaymentStatus() == "SUCCESS") {
-      return true;
-    }
-    return false;
-  } catch (Exception $e) {
-    throw new Exception($e->getMessage());
-  }
-}
-
-
-
-/* ------------------------------- */
-/* Coinbase */
-/* ------------------------------- */
-
-/**
- * coinbase
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return array
- */
-function coinbase($handle, $price, $id = null)
-{
-  global $system;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  $coinbase_hash = get_hash_token();
-  switch ($handle) {
-    case 'packages':
-      $product = __($system['system_title']) . " " . __('Pro Package');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=packages&package_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      $product = __($system['system_title']) . " " . __('Subscribe');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=subscribe&plan_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      break;
-
-    case 'wallet':
-      $product = __($system['system_title']) . " " . __('Wallet');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=wallet&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $product = __($system['system_title']) . " " . __('Funding Donation');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=donate&post_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $product = __($system['system_title']) . " " . __('Paid Post');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=paid_post&post_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      break;
-
-    case 'movies':
-      $product = __($system['system_title']) . " " . __('Movies');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=movies&movie_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      break;
-
-    case 'marketplace':
-      $product = __($system['system_title']) . " " . __('Marketplace');
-      $description = __('Pay For') . " " . __($system['system_title']);
-      $URL['success'] = $system['system_url'] . "/webhooks/coinbase.php?status=success&handle=marketplace&orders_collection_id=$id&coinbase_hash=$coinbase_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/coinbase.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  $headers = [
-    "content-type: application/json",
-    "X-Cc-Api-Key: " . $system['coinbase_api_key'],
-    "X-Cc-Version: " . "2018-03-22",
-  ];
-  $request_body =  [
-    'name' =>  $product,
-    'description' => $description,
-    'pricing_type' => 'fixed_price',
-    'local_price' => [
-      'amount' => $total,
-      'currency' => $system['system_currency']
-    ],
-    'metadata' => [
-      'coinbase_hash' => $coinbase_hash
-    ],
-    "redirect_url" => $URL['success'],
-    'cancel_url' => $URL['cancel']
-  ];
-  /* Coinbase */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, 'https://api.commerce.coinbase.com/charges');
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  return [
-    "coinbase_hash" => $coinbase_hash,
-    "coinbase_code" => $responseJson['data']['code'],
-    "hosted_url" => $responseJson["data"]["hosted_url"]
-  ];
-}
-
-
-/**
- * coinbase_check
- *
- * @param string $coinbase_code
- * @return boolean
- */
-function coinbase_check($coinbase_code)
-{
-  global $system;
-  /* prepare */
-  $headers = [
-    "content-type: application/json",
-    "X-Cc-Api-Key: " . $system['coinbase_api_key'],
-    "X-Cc-Version: " . "2018-03-22",
-  ];
-  /* Coinbase */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, 'https://api.commerce.coinbase.com/charges/' . $coinbase_code);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!empty($responseJson) && isset($responseJson['data']['payments'][0]['transaction_id']) && ($responseJson['data']['payments'][0]['status'] == 'confirmed' || $responseJson['data']['payments'][0]['status'] == 'pending')) {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Shift4 */
-/* ------------------------------- */
-
-/**
- * shift4
- *
- * @param string $price
- * @return string
- */
-function shift4($price)
-{
-  global $system;
-  $total = get_payment_total_value($price);
-  $shift4 = new Shift4\Shift4Gateway($system['shift4_api_secret']);
-  $checkoutCharge = new Shift4\Request\CheckoutRequestCharge();
-  $checkoutCharge->amount($total * 100)->currency($system['system_currency']);
-  $checkoutRequest = new Shift4\Request\CheckoutRequest();
-  $checkoutRequest->charge($checkoutCharge);
-  $signedCheckoutRequest = $shift4->signCheckoutRequest($checkoutRequest);
-  return $signedCheckoutRequest;
-}
-
-
-/**
- * shift4_check
- *
- * @param string $charge_id
- * @return boolean
- */
-function shift4_check($charge_id)
-{
-  global $system;
-  /* Shift4 */
-  $url = "https://api.shift4.com/charges?limit=10";
-  $ch = curl_init($url);
-  curl_setopt($ch, CURLOPT_URL, $url);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($ch, CURLOPT_USERPWD, $system['shift4_api_secret'] . ":password");
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!empty($responseJson) && $responseJson['list'][0]['id'] == $charge_id) {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* MyFatoorah */
-/* ------------------------------- */
-
-/**
- * myfatoorah
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function myfatoorah($handle, $price, $id = null)
-{
-  global $system;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=packages&package_id=$id";
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=subscribe&plan_id=$id";
-      break;
-
-    case 'wallet':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=wallet";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=donate&post_id=$id";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=paid_post&post_id=$id";
-      break;
-
-    case 'movies':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=movies&movie_id=$id";
-      break;
-
-    case 'marketplace':
-      $callback = $system['system_url'] . "/webhooks/myfatoorah.php?status=success&handle=marketplace&orders_collection_id=$id";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* MyFatoorah */
-  $myfatoorah_api_url = ($system['myfatoorah_mode'] == "test") ? "https://apitest.myfatoorah.com/" : $system['myfatoorah_live_api_url'];
-  $myfatoorah_token = ($system['myfatoorah_mode'] == "test") ? $system['myfatoorah_test_token'] : $system['myfatoorah_live_token'];
-  $headers = [
-    'Authorization: Bearer ' . $myfatoorah_token,
-    'Content-Type: application/json',
-  ];
-
-  $request_body = [
-    'InvoiceValue' => $total,
-    'PaymentMethodId' => 2,
-    'CallBackUrl' => $callback,
-    'ErrorUrl' => $system['system_url'] . "/webhooks/myfatoorah.php?status=cancel",
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $myfatoorah_api_url . 'v2/ExecutePayment');
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request");
-  }
-  $response = json_decode($response, true);
-  return $response['Data']['PaymentURL'];
-}
-
-
-/**
- * myfatoorah_check
- *
- * @param string $payment_id
- * @return boolean
- */
-function myfatoorah_check($payment_id)
-{
-  global $system;
-  /* MyFatoorah */
-  $myfatoorah_api_url = ($system['myfatoorah_mode'] == "test") ? "https://apitest.myfatoorah.com/" : $system['myfatoorah_live_api_url'];
-  $myfatoorah_token = ($system['myfatoorah_mode'] == "test") ? $system['myfatoorah_test_token'] : $system['myfatoorah_live_token'];
-  $headers = [
-    'Authorization: Bearer ' . $myfatoorah_token,
-    'Content-Type: application/json',
-  ];
-  $request_body = [
-    'Key' => $payment_id,
-    'KeyType' => 'PaymentId',
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $myfatoorah_api_url . 'v2/GetPaymentStatus');
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $response = json_decode($response, true);
-  if ($response['Data']['InvoiceStatus'] == 'Paid') {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Epayco */
-/* ------------------------------- */
-
-function epayco_check($ref_payco, $price)
-{
-  global $system;
-  $total = get_payment_total_value($price);
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://secure.epayco.co/validation/v1/reference/$ref_payco");
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $response = json_decode($response, true);
-  if ($httpCode == 200 && $response['success'] && $response['data']['x_amount'] == $total) {
-    /* check x_transaction_state */
-    if ($response['data']['x_transaction_state'] == 'Aceptada') {
-      return true;
-    }
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Flutterwave */
-/* ------------------------------- */
-
-/**
- * flutterwave
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function flutterwave($handle, $price, $id = null)
-{
-  global $system;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=packages&package_id=$id";
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=subscribe&plan_id=$id";
-      break;
-
-    case 'wallet':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=wallet";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=donate&post_id=$id";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=paid_post&post_id=$id";
-      break;
-
-    case 'movies':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=movies&movie_id=$id";
-      break;
-
-    case 'marketplace':
-      $callback = $system['system_url'] . "/webhooks/flutterwave.php?state=success&handle=marketplace&orders_collection_id=$id";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-
-  /* Flutterwave */
-  $flutterwave_api_url = ($system['flutterwave_mode'] == "test") ? "https://api.flutterwave.com/v3/payments" : "https://api.flutterwave.com/v3/payments";
-  $headers = [
-    'Content-Type: application/json',
-    'Authorization: ' . 'Bearer ' . $system['flutterwave_secret_key'],
-  ];
-  $request_body = [
-    'tx_ref' => uniqid(),
-    'amount' => $total,
-    'currency' => $system['system_currency'],
-    'redirect_url' => $callback,
-    'customer' => [
-      'email' => $system['system_email'],
-      'phonenumber' => $system['system_phone'],
-      'name' => $system['system_title'],
-    ],
-    'customizations' => [
-      'title' => $system['system_title'],
-      'description' => __("Pay For") . " " . $system['system_title'],
-      'logo' => $system['system_logo'],
-    ],
-  ];
-
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $flutterwave_api_url);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request: " . curl_error($ch));
-  }
-  curl_close($ch);
-  if ($httpCode != 200) {
-    throw new Exception("Error Processing Request: HTTP $httpCode");
-  }
-  $response = json_decode($response, true);
-  if (isset($response['data']['link'])) {
-    return $response['data']['link'];
-  } else {
-    throw new Exception("Error Processing Request: " . json_encode($response));
-  }
-}
-
-
-
-/**
- * flutterwave_check
- *
- * @param string $tx_ref
- * @param string $transaction_id
- * @return boolean
- */
-function flutterwave_check($tx_ref, $transaction_id)
-{
-  global $system;
-  /* Flutterwave */
-  $flutterwave_api_url = ($system['flutterwave_mode'] == "test") ? "https://api.flutterwave.com/v3/transactions/$transaction_id/verify" : "https://api.flutterwave.com/v3/transactions/$transaction_id/verify";
-  $headers = [
-    'Content-Type: application',
-    'Authorization: ' . 'Bearer ' . $system['flutterwave_secret_key'],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $flutterwave_api_url);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $response = json_decode($response, true);
-  if ($httpCode == 200 && $response['status'] == 'success' && $response['data']['tx_ref'] == $tx_ref && $response['data']['status'] == 'successful') {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Verotel */
-/* ------------------------------- */
-
-/**
- * verotel
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function verotel($handle, $price, $id = null)
-{
-  global $system;
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      $customs = [
-        "custom1" => "packages",
-        'custom2' => $id,
-      ];
-      break;
-
-    case 'subscribe':
-      $customs = [
-        "custom1" => "subscribe",
-        'custom2' => $id,
-      ];
-      break;
-
-    case 'wallet':
-      $customs = [
-        "custom1" => "wallet",
-      ];
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $customs = [
-        "custom1" => "donate",
-        'custom2' => $id,
-      ];
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $customs = [
-        "custom1" => "paid_post",
-        'custom2' => $id,
-      ];
-      break;
-
-    case 'movies':
-      $customs = [
-        "custom1" => "movies",
-        'custom2' => $id,
-      ];
-      break;
-
-    case 'marketplace':
-      $customs = [
-        "custom1" => "marketplace",
-        'custom2' => $id,
-      ];
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* Verotel */
-  $flexpayClient = new Verotel\FlexPay\Client($system['verotel_shop_id'], $system['verotel_signature_key']);
-  $computed_signature = $flexpayClient->get_signature([
-    'custom1' => $customs['custom1'],
-    'custom2' => $customs['custom2'],
-    'description' => $system['system_title'],
-    'priceAmount' => $total,
-    'priceCurrency' => $system['system_currency'],
-    'shopID' => $system['verotel_shop_id'],
-    'version' => 4,
-    'type' => 'purchase',
-  ]);
-  $verotel_payment_url = $flexpayClient->get_purchase_URL([
-    'custom1' => $customs['custom1'],
-    'custom2' => $customs['custom2'],
-    'description' => $system['system_title'],
-    'priceAmount' => $total,
-    'priceCurrency' => $system['system_currency'],
-    'shopID' => $system['verotel_shop_id'],
-    'version' => 4,
-    'type' => 'purchase',
-    'successURL' => $callback,
-    'declineURL' => $system['system_url'],
-    'signature' => $computed_signature,
-  ]);
-  return $verotel_payment_url;
-}
-
-
-/**
- * verotel_check
- *
- * @param string $saleID
- * @return boolean
- */
-function verotel_check($saleID)
-{
-  global $system;
-  /* Verotel */
-  $flexpayClient = new Verotel\FlexPay\Client($system['verotel_shop_id'], $system['verotel_signature_key']);
-  $statusURL = $flexpayClient->get_status_URL(['saleID' => $saleID]);
-  $statusPageData = file_get_contents($statusURL);
-  $statusPageData = Symfony\Component\Yaml\Yaml::parse(file_get_contents($statusURL));
-  if ($statusPageData['saleResult'] == 'APPROVED') {
-    return true;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* MercadoPago */
-/* ------------------------------- */
-
-/**
- * mercadopago
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function mercadopago($handle, $price, $id = null)
-{
-  global $system, $user;
-  $total = get_payment_total_value($price);
-  switch ($handle) {
-    case 'packages':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=packages&package_id=$id";
-      break;
-
-    case 'subscribe':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=subscribe&plan_id=$id";
-      break;
-
-    case 'wallet':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=wallet";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=donate&post_id=$id";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=paid_post&post_id=$id";
-      break;
-
-    case 'movies':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=movies&movie_id=$id";
-      break;
-
-    case 'marketplace':
-      $callback = $system['system_url'] . "/webhooks/mercadopago.php?status=success&handle=marketplace&orders_collection_id=$id";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* MercadoPago */
-  $headers = [
-    'Authorization: Bearer ' . $system['mercadopago_access_token'],
-    'Content-Type: application/json',
-  ];
-  $metadata = [
-    "handle" => $handle,
-    "id" => $id,
-    "user_id" => $user->_data['user_id'],
-    "price" => $price,
-  ];
-  $request_body = [
-    "payments_methods" => [
-      "excluded_payment_methods" => [],
-      "excluded_payment_types" => [],
-      "installments" => 12,
-      "default_payment_method_id" => "account_money",
-    ],
-    'items' => [
-      [
-        'title' => "Payment for $handle",
-        'quantity' => 1,
-        'unit_price' => (float)$total,
-        'currency_id' => $system['system_currency'],
-      ]
-    ],
-    'payer' => [
-      'email' => $user->_data['user_email'],
-      'name' => $user->_data['user_firstname'] . ' ' . $user->_data['user_lastname'],
-    ],
-    'back_urls' => [
-      'success' => $callback,
-      'failure' => $system['system_url'] . '/payment_status/failure',
-      'pending' => $system['system_url'] . '/payment_status/pending',
-    ],
-    "metadata" => $metadata,
-    'notification_url' => $system['system_url'] . "/webhooks/mercadopago_callbak.php",
-    'auto_return' => 'approved'
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.mercadopago.com/checkout/preferences");
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!isset($responseJson['init_point'])) {
-    throw new Exception("Mercado Pago Error: " . json_encode($responseJson));
-  }
-  return $responseJson['init_point'];
-}
-
-
-/**
- * mercadopago_check
- *
- * @param string $payment_id
- * @return boolean
- */
-function mercadopago_check($payment_id)
-{
-  global $system;
-  if (isset($_SESSION['mercadopago_payments']) && in_array($payment_id, $_SESSION['mercadopago_payments'])) {
-    return false;
-  }
-  $headers = [
-    'Authorization: Bearer ' . $system['mercadopago_access_token'],
-    'Content-Type: application/json',
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.mercadopago.com/v1/payments/$payment_id");
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if ($httpCode == 200 && $responseJson['status'] == 'approved') {
-    $_SESSION['mercadopago_payments'][] = $payment_id;
-    return $responseJson;
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* Plisio */
-/* ------------------------------- */
-
-/**
- * plisio
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function plisio($handle, $price, $id = null)
-{
-  global $system, $user;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  $plisio_hash = get_hash_token();
-  switch ($handle) {
-    case 'packages':
-      $product = __($system['system_title']) . " " . __('Pro Package');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=packages&package_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      break;
-
-    case 'subscribe':
-      $product = __($system['system_title']) . " " . __('Subscribe');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=subscribe&plan_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      break;
-
-    case 'wallet':
-      $product = __($system['system_title']) . " " . __('Wallet');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=wallet&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      $_SESSION['wallet_replenish_amount'] = $price;
-      break;
-
-    case 'donate':
-      $product = __($system['system_title']) . " " . __('Funding Donation');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=donate&post_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      $_SESSION['donation_amount'] = $price;
-      break;
-
-    case 'paid_post':
-      $product = __($system['system_title']) . " " . __('Paid Post');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=paid_post&post_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      break;
-
-    case 'movies':
-      $product = __($system['system_title']) . " " . __('Movies');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=movies&movie_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      break;
-
-    case 'marketplace':
-      $product = __($system['system_title']) . " " . __('Marketplace');
-      $URL['success'] = $system['system_url'] . "/webhooks/plisio.php?status=success&handle=marketplace&orders_collection_id=$id&plisio_hash=$plisio_hash";
-      $URL['cancel'] = $system['system_url'] . "/webhooks/plisio.php?status=cancel";
-      break;
-
-    default:
-      _error(400);
-      break;
-  }
-  /* Plisio */
-  $request_params = [
-    'api_key' => $system['plisio_secret_key'],
-    'source_currency' => $system['system_currency'],
-    'source_amount' => $total,
-    'order_number' => uniqid(),
-    'order_name' => $product,
-    'email' => $user->_data['user_email'],
-    'callback_url' => $system['system_url'],
-    'success_callback_url' => $URL['success'],
-    'fail_callback_url' => $URL['cancel'],
-    'success_invoice_url' => $URL['success'],
-    'fail_invoice_url' => $URL['cancel'],
-  ];
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.plisio.net/api/v1/invoices/new?" . http_build_query($request_params));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    throw new Exception("Error Processing Request");
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!$responseJson['status']) {
-    throw new Exception($responseJson['message']);
-  }
-  return [
-    'plisio_hash' => $plisio_hash,
-    'txn_id' => $responseJson['data']['txn_id'],
-    'invoice_url' => $responseJson['data']['invoice_url'],
-  ];
-}
-
-
-/**
- * plisio_check
- *
- * @param string $payment_id
- * @return boolean
- */
-function plisio_check($txn_id)
-{
-  global $system;
-  $request_params = [
-    'api_key' => $system['plisio_secret_key'],
-    'txn_id' => $txn_id
-  ];
-  /* Plisio */
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, "https://api.plisio.net/api/v1/operations?" . http_build_query($request_params));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-  $response = curl_exec($ch);
-  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  if (curl_errno($ch)) {
-    return false;
-  }
-  curl_close($ch);
-  $responseJson = json_decode($response, true);
-  if (!$responseJson['status']) {
-    return false;
-  }
-  if (isset($responseJson['data']) && is_array($responseJson['data'])) {
-    foreach ($responseJson['data'] as $transaction) {
-      if ($transaction['txn_id'] == $txn_id && $transaction['status'] == 'completed') {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-
-
-/* ------------------------------- */
-/* CCBill */
-/* ------------------------------- */
-
-/**
- * ccbill
- *
- * @param string $handle
- * @param string $price
- * @param integer $id
- * @return string
- */
-function ccbill($handle, $price, $id = null)
-{
-  global $system, $user, $db, $date;
-  /* prepare */
-  $total = get_payment_total_value($price);
-  $is_recurring = false;
-  $initial_period = '2';
-  $initial_price  = number_format($total, 2, '.', '');
-  $numRebills = 99;
-  /* CCBill numeric currency codes (ISO 4217) */
-  $currency_map = [
-    'USD' => '840',
-    'EUR' => '978',
-    'GBP' => '826',
-    'CAD' => '124',
-    'AUD' => '036',
-    'JPY' => '392',
-    'CHF' => '756',
-    'DKK' => '208',
-    'NOK' => '578',
-    'SEK' => '752',
-    'NZD' => '554',
-    'ZAR' => '710',
-  ];
-  $currency_code = $currency_map[$system['system_currency']] ?? '840';
-  /* check if the handle is valid */
-  if (!in_array($handle, ['packages', 'wallet', 'donate', 'subscribe', 'paid_post', 'movies', 'marketplace'])) {
-    throw new Exception(__('Invalid payment handle'));
-  }
-  /* check if the handle is recurring */
-  if ($handle == 'packages') {
-    /* get the package */
-    $package = $user->get_package($id);
-    if (!$package) {
-      throw new Exception(__('Invalid package'));
-    }
-    switch ($package['period']) {
-      case 'day':
-        $is_recurring = true;
-        $initial_period = 1;
-        break;
-
-      case 'week':
-        $is_recurring = false;
-        $initial_period = $package['period_num'] * 7;
-        break;
-
-      case 'month':
-        $is_recurring = (in_array($package['period_num'], [1, 2, 3])) ? true : false;
-        $initial_period = $package['period_num'] * 30;
-        break;
-
-      case 'year':
-        $is_recurring = ($package['period_num'] == 1) ? true : false;
-        $initial_period = $package['period_num'] * 365;
-        break;
-
-      case 'life':
-        $is_recurring = false;
-        $initial_period = '2';
-        break;
-    }
-  } else if ($handle == 'subscribe') {
-    /* get the monetization plan */
-    $monetization_plan = $user->get_monetization_plan($id, true);
-    if (!$monetization_plan) {
-      throw new Exception(__('Invalid monetization plan'));
-    }
-    switch ($monetization_plan['period']) {
-      case 'minute':
-      case 'hour':
-        $is_recurring = false;
-        $initial_period = 2;
-        break;
-
-      case 'day':
-        $is_recurring = true;
-        $initial_period = $monetization_plan['period_num'];
-        break;
-
-      case 'week':
-        $is_recurring = false;
-        $initial_period = $monetization_plan['period_num'] * 7;
-        break;
-
-      case 'month':
-        $is_recurring = (in_array($monetization_plan['period_num'], [1, 2, 3])) ? true : false;
-        $initial_period = $monetization_plan['period_num'] * 30;
-        break;
-
-      case 'year':
-        $is_recurring = ($monetization_plan['period_num'] == 1) ? true : false;
-        $initial_period = $monetization_plan['period_num'] * 365;
-        break;
-    }
-  }
-  /* get the subaccount number */
-  $subaccount = str_pad(
-    $is_recurring ? $system['ccbill_recurring_subaccount_number'] : $system['ccbill_one_time_subaccount_number'],
-    4,
-    '0',
-    STR_PAD_LEFT
-  );
-  /* create pending payment */
-  $db->query(sprintf("INSERT INTO ccbill_payments (user_id, handle, reference_id, amount, total_amount, created_at) VALUES (%s, %s, %s, %s, %s, %s)", secure($user->_data['user_id'], 'int'), secure($handle), secure($id, 'int'), secure($price, 'float'), secure($total, 'float'), secure($date)));
-  $payment_id = $db->insert_id;
-  /* form digest */
-  if ($is_recurring) {
-    /* md5(initialPrice . initialPeriod . recurringPrice . recurringPeriod . numRebills . currencyCode . saltKey) */
-    $form_digest = md5($initial_price . $initial_period . $initial_price . $initial_period . $numRebills . $currency_code . $system['ccbill_salt_key']);
-  } else {
-    /* md5(initialPrice . initialPeriod . currencyCode . saltKey) */
-    $form_digest = md5($initial_price . $initial_period . $currency_code . $system['ccbill_salt_key']);
-  }
-  /* build CCBill FlexForms URL */
-  $params = [
-    'clientSubacc'        => $subaccount,
-    'initialPrice'        => $initial_price,
-    'initialPeriod'       => $initial_period,
-    'currencyCode'        => $currency_code,
-    'formDigest'          => $form_digest,
-    'email'               => $user->_data['user_email'],
-    'X-user-id'           => $user->_data['user_id'],
-    'X-handle'            => $handle,
-    'X-reference-id'      => $id,
-    'X-payment-id'        => $payment_id
-  ];
-  if ($is_recurring) {
-    $params['recurringPeriod'] = $initial_period;
-    $params['recurringPrice'] = $initial_price;
-    $params['numRebills'] = $numRebills;
-  }
-  return 'https://api.ccbill.com/wap-frontflex/flexforms/' . $system['ccbill_flexform_id'] . '?' . http_build_query($params);
-}
-
-
-/**
- * ccbill_get_payment
- *
- * @return array | Exception
- */
-function ccbill_get_payment()
-{
-  global $db, $user;
-  /* get the x-data from the request query */
-  $x_user_id = $_GET['X-user-id'];
-  $x_handle = $_GET['X-handle'];
-  $x_reference_id = $_GET['X-reference-id'];
-  $x_payment_id = $_GET['X-payment-id'];
-  /* if x-user-id is not the same as the user id, return false */
-  if ($x_user_id != $user->_data['user_id']) {
-    throw new Exception(__('Invalid user'));
-  }
-  /* get the payment */
-  $get_payment = $db->query(sprintf("SELECT * FROM ccbill_payments WHERE user_id = %s AND handle = %s AND reference_id = %s AND payment_id = %s", secure($x_user_id, 'int'), secure($x_handle), secure($x_reference_id, 'int'), secure($x_payment_id, 'int')));
-  if ($get_payment->num_rows == 0) {
-    throw new Exception(__('Invalid payment'));
-  }
-  $payment = $get_payment->fetch_assoc();
-  /* check if the payment details are valid */
-  if ($payment['handle'] != $x_handle) {
-    throw new Exception(__('Invalid payment handle or amount'));
-  }
-  if ($x_reference_id != null && $x_reference_id != $payment['reference_id']) {
-    throw new Exception(__('Invalid payment reference id'));
-  }
-  /* get the final redirect url */
-  switch ($payment['handle']) {
-    case 'packages':
-      $payment['success_url'] = $system['system_url'] . "/upgraded";
-      break;
-
-    case 'wallet':
-      $payment['success_url'] = $system['system_url'] . "/wallet?wallet_replenish_succeed";
-      break;
-
-    case 'donate':
-      $payment['success_url'] = $system['system_url'] . "/posts/" . $payment['reference_id'];
-      break;
-
-    case 'subscribe':
-      /* get monetization node url */
-      $monetization_plan = $user->get_monetization_plan($payment['reference_id'], true);
-      if (!$monetization_plan) {
-        throw new Exception(__('Invalid monetization plan'));
-      }
-      $payment['success_url'] = $monetization_plan['node_url'];
-      break;
-
-    case 'paid_post':
-      $payment['success_url'] = $system['system_url'] . "/posts/" . $payment['reference_id'];
-      break;
-
-    case 'movies':
-      $payment['success_url'] = $system['system_url'] . "/movies/" . $payment['reference_id'];
-      break;
-
-    case 'marketplace':
-      $payment['success_url'] = $system['system_url'] . "/market/orders";
-      break;
-
-    default:
-      throw new Exception(__('Invalid payment handle'));
-      break;
-  }
-  /* return the payment */
-  return $payment;
-}
-
-
-/**
- * ccbill_get_payment_by_payment_id
- *
- * @param integer $payment_id
- * @return array | Exception
- */
-function ccbill_get_payment_by_id($payment_id)
-{
-  global $db;
-  $get_payment = $db->query(sprintf("SELECT * FROM ccbill_payments WHERE payment_id = %s", secure($payment_id, 'int')));
-  if ($get_payment->num_rows == 0) {
-    return false;
-  }
-  return $get_payment->fetch_assoc();
-}
-
-
-/**
- * ccbill_update_payment_status
- *
- * @param integer $payment_id
- * @param string $status
- * @return void
- */
-function ccbill_update_payment_status($payment_id, $status)
-{
-  global $db, $date;
-  $db->query(sprintf("UPDATE ccbill_payments SET payment_status = %s, updated_at = %s WHERE payment_id = %s", secure($status), secure($date), secure($payment_id, 'int')));
-}
-
-
-/**
- * ccbill_log
- *
- * @param string $level
- * @param string $message
- * @param array  $context
- * @return void
- */
-function ccbill_log($level, $message, array $context = [])
-{
-  if (!DEBUGGING) return;
-  $log_dir  = ABSPATH . 'logs';
-  $log_file = $log_dir . '/ccbill.log';
-  if (!is_dir($log_dir)) {
-    mkdir($log_dir, 0755, true);
-  }
-  $line = '[' . date('Y-m-d H:i:s') . '] [' . strtoupper($level) . '] ' . $message;
-  if (!empty($context)) {
-    $line .= ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-  }
-  $line .= PHP_EOL;
-  file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
-}
-
-
-
-/* ------------------------------- */
 /* User Access */
 /* ------------------------------- */
 
 /**
  * user_access
- *
+ * 
  * @param boolean $is_ajax
  * @param boolean $bypass_subscription
  * @param boolean $bypass_getting_started
@@ -7500,8 +2686,27 @@ function user_access($is_ajax = false, $bypass_subscription = false, $bypass_get
 
 
 /**
+ * admin_access
+ * 
+ * @param string|null $permission
+ * @return void
+ */
+function admin_access($permission = null)
+{
+  global $user, $system;
+  if ($user->_is_admin) {
+    return;
+  }
+  if ($permission !== null && $user->_is_moderator && !empty($system[$permission])) {
+    return;
+  }
+  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
+}
+
+
+/**
  * user_login
- *
+ * 
  * @param integer $oauth_app_id
  * @return void
  */
@@ -7525,7 +2730,7 @@ function user_login($oauth_app_id = null)
 
 /**
  * referer_url
- *
+ * 
  * @return void
  */
 function referer_url()
@@ -7547,116 +2752,12 @@ function referer_url()
 
 
 /* ------------------------------- */
-/* Modal */
-/* ------------------------------- */
-
-/**
- * modal
- *
- * @return json
- */
-function modal()
-{
-  $args = func_get_args();
-  switch ($args[0]) {
-    case 'LOGIN':
-      return_json(["callback" => "modal('#modal-login')"]);
-      break;
-    case 'MESSAGE':
-      return_json(["callback" => "modal('#modal-message', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
-      break;
-    case 'ERROR':
-      return_json(["callback" => "modal('#modal-error', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
-      break;
-    case 'SUCCESS':
-      return_json(["callback" => "modal('#modal-success', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
-      break;
-    case 'INFO':
-      return_json(["callback" => "modal('#modal-info', {title: '" . $args[1] . "', message: '" . addslashes($args[2]) . "'})"]);
-      break;
-    default:
-      if (isset($args[1])) {
-        return_json(["callback" => "modal('" . $args[0] . "', " . $args[1] . ")"]);
-      } else {
-        return_json(["callback" => "modal('" . $args[0] . "')"]);
-      }
-      break;
-  }
-}
-
-
-
-/* ------------------------------- */
-/* Popover */
-/* ------------------------------- */
-
-/**
- * popover
- *
- * @param integer $uid
- * @param string $username
- * @param string $name
- * @return string
- */
-function popover($uid, $username, $name)
-{
-  global $system;
-  $popover = '<span class="js_user-popover" data-uid="' . $uid . '"><a href="' . $system['system_url'] . '/' . $username . '">' . $name . '</a></span>';
-  return $popover;
-}
-
-
-
-/* ------------------------------- */
-/* Page */
-/* ------------------------------- */
-
-/**
- * page_header
- *
- * @param string $title
- * @param string $description
- * @return void
- */
-function page_header($title, $description = '', $image = '')
-{
-  global $smarty, $system;
-  $description = ($description != '') ? $description : __($system['system_description']);
-  if ($image == '') {
-    if ($system['system_ogimage']) {
-      $image = $system['system_uploads'] . '/' . $system['system_ogimage'];
-    } else {
-      $image = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/og-image.jpg';
-    }
-  }
-  $smarty->assign('page_title', $title);
-  $smarty->assign('page_description', $description);
-  $smarty->assign('page_image', $image);
-}
-
-
-/**
- * page_footer
- *
- * @param string $page
- * @return void
- */
-function page_footer($page)
-{
-  global $smarty;
-  $smarty->assign('page', $page);
-  $smarty->display("$page.tpl");
-}
-
-
-
-/* ------------------------------- */
 /* Post Feelings */
 /* ------------------------------- */
 
 /**
  * get_feelings
- *
+ * 
  * @return array
  */
 function get_feelings()
@@ -7680,7 +2781,7 @@ function get_feelings()
 
 /**
  * get_feelings_types
- *
+ * 
  * @return array
  */
 function get_feelings_types()
@@ -7707,8 +2808,47 @@ function get_feelings_types()
 
 
 /**
+ * get_feeling_emoji
+ * 
+ * @param string $icon
+ * @return string
+ */
+function get_feeling_emoji($icon)
+{
+  $emojis = [
+    'grinning-face-with-smiling-eyes' => '😁',
+    'headphone' => '🎧',
+    'glasses' => '👓',
+    'video-game' => '🎮',
+    'shortcake' => '🍰',
+    'tropical-drink' => '🍹',
+    'airplane' => '✈️',
+    'books' => '📚',
+    'calendar' => '📆',
+    'birthday-cake' => '🎂',
+    'magnifying-glass-tilted-left' => '🔍',
+    'smiling-face-with-heart-eyes' => '😍',
+    'relieved-face' => '😌',
+    'flexed-biceps' => '💪',
+    'disappointed-face' => '😞',
+    'winking-face-with-tongue' => '😜',
+    'downcast-face-with-sweat' => '😓',
+    'sleeping-face' => '😴',
+    'confused-face' => '😕',
+    'worried-face' => '😟',
+    'angry-face' => '😠',
+    'pouting-face' => '😡',
+    'face-with-open-mouth' => '😮',
+    'pensive-face' => '😔',
+    'confounded-face' => '😖',
+  ];
+  return $emojis[$icon] ?? '';
+}
+
+
+/**
  * get_feeling_icon
- *
+ * 
  * @param string $needle
  * @param array $array
  * @param string $key
@@ -7732,7 +2872,7 @@ function get_feeling_icon($needle, $array, $key = "action")
 
 /**
  * censored_words
- *
+ * 
  * @param string $text
  * @return string
  */
@@ -7764,512 +2904,69 @@ function censored_words($text)
 
 
 /* ------------------------------- */
-/* Images */
-/* ------------------------------- */
-
-/**
- * get_picture
- *
- * @param string $picture
- * @param string $type
- * @param array $system
- * @return string
- */
-function get_picture($picture, $type, $system = null)
-{
-  if ($system == null) {
-    global $system;
-  }
-  if ($picture == "") {
-    switch ($type) {
-      case 'page':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_page.png';
-        break;
-
-      case 'group':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_group.png';
-        break;
-
-      case 'event':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_event.png';
-        break;
-
-      case 'blog':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_blog.png';
-        break;
-
-      case 'movie':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_movie.png';
-        break;
-
-      case 'game':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_game.png';
-        break;
-
-      case 'package':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_package.png';
-        break;
-
-      case 'flag':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_flag.png';
-        break;
-
-      case 'system':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/svg/dashboard.svg';
-        break;
-
-      case 'static_page_icon':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/svg/dashboard.svg';
-        break;
-
-      case '1':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_profile_male.png';
-        break;
-
-      case '2':
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_profile_female.png';
-        break;
-
-      default:
-        $picture = $system['system_url'] . '/content/themes/' . $system['theme'] . '/images/blank_profile.png';
-        break;
-    }
-  } else {
-    $picture = $system['system_uploads'] . '/' . $picture;
-  }
-  return $picture;
-}
-
-
-/**
- * reassemble_file_chunks
- * 
- * @param string $temp_directory
- * @param string $file_guid
- * @param string $file_name
- * @param int $totalChunks
- * @param string $final_file_path
- * @return void
- */
-function reassemble_file_chunks($temp_directory, $file_guid, $file_name, $totalChunks, $final_file_path)
-{
-  $final_file = fopen($final_file_path, 'wb');
-  if ($final_file === false) {
-    throw new Exception(__("Could not create final file"));
-  }
-  for ($i = 0; $i < $totalChunks; $i++) {
-    $chunk_file = $temp_directory . $file_guid . '_' . $file_name . ".part-" . $i;
-    if (!file_exists($chunk_file)) {
-      fclose($final_file);
-      throw new Exception(__("Missing chunk file"));
-    }
-    $chunk_handle = fopen($chunk_file, 'rb');
-    if ($chunk_handle === false) {
-      fclose($final_file);
-      throw new Exception(__("Could not open chunk file"));
-    }
-    while (!feof($chunk_handle)) {
-      $buffer = fread($chunk_handle, 8192); // Read in 8KB chunks
-      if ($buffer === false) {
-        fclose($chunk_handle);
-        fclose($final_file);
-        throw new Exception(__("Error reading chunk file"));
-      }
-      if (fwrite($final_file, $buffer) === false) {
-        fclose($chunk_handle);
-        fclose($final_file);
-        throw new Exception(__("Error writing to final file"));
-      }
-    }
-    fclose($chunk_handle);
-    unlink($chunk_file);
-  }
-  fclose($final_file);
-}
-
-
-/**
- * save_picture_from_url
- *
- * @param string $file
- * @param boolean $cropped
- * @return string
- */
-function save_picture_from_url($file, $cropped = false, $resize = false)
-{
-  global $system;
-  /* check & create uploads dir */
-  $folder = 'photos';
-  $directory = $folder . '/' . date('Y') . '/' . date('m') . '/';
-  // init image & prepare image name & path
-  require_once(ABSPATH . 'includes/class-image.php');
-  $image = new Image($file);
-  $prefix = $system['uploads_prefix'] . '_' . get_hash_token();
-  if ($cropped) {
-    $image_name = $directory . $prefix . "_cropped" . $image->_img_ext;
-    if ($resize) {
-      $image->resizeWidth($_POST['resize_width']);
-    }
-    $_POST['width'] = (isset($_POST['width'])) ? $_POST['width'] : $image->getWidth();
-    $_POST['height'] = (isset($_POST['height'])) ? $_POST['height'] : $image->getHeight();
-    $image->crop($_POST['width'], $_POST['height'], $_POST['x'], $_POST['y']);
-  } else {
-    $image_name = $directory . $prefix . $image->_img_ext;
-  }
-  $path = ABSPATH . $system['uploads_directory'] . '/' . $image_name;
-  /* set uploads directory */
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $folder)) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $folder, 0777, true);
-  }
-  if (!file_exists(ABSPATH . $system['uploads_directory'] . '/' . $folder . '/' . date('Y'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $folder . '/' . date('Y'), 0777, true);
-  }
-  if (!file_exists($system['uploads_directory'] . '/' . $folder . '/' . date('Y') . '/' . date('m'))) {
-    @mkdir(ABSPATH . $system['uploads_directory'] . '/' . $folder . '/' . date('Y') . '/' . date('m'), 0777, true);
-  }
-  /* save the new image */
-  $image->save($path, $system['uploads_quality']);
-  /* cloud storage */
-  save_file_to_cloud($path, $image_name);
-  return $image_name;
-}
-
-
-/**
- * watermark_image
- *
- * @param string $image_path
- * @param string $image_type
- * @return void
- */
-function watermark_image($image_path, $image_type)
-{
-  global $system, $user;
-  try {
-    $image = new claviska\SimpleImage();
-    $image->fromFile($image_path)->autoOrient();
-    if ($system['watermark_type'] == "icon") {
-      /* watermark using icon */
-      if (!is_empty($system['watermark_icon'])) {
-        $image->overlay(
-          $system['system_uploads'] . "/" . $system['watermark_icon'],
-          $system['watermark_position'],
-          $system['watermark_opacity'],
-          $system['watermark_xoffset'],
-          $system['watermark_yoffset']
-        );
-        $image->toFile($image_path, $image_type);
-      }
-    } else {
-      /* watermark using user name */
-      $username = parse_url($system['system_url'], PHP_URL_HOST) . '/' . $user->_data['user_name'];
-      $font_file = ABSPATH . 'content/themes/' . $system['theme'] . '/fonts/Poppins/Poppins-Regular.ttf';
-      $font_size = 20;
-      $color = '#ffffff';
-      $angle = 135;
-      $width = $image->getWidth() * 1.5;
-      $height = $image->getHeight() * 1.5;
-      /* create a new image with the text */
-      $text_image = new claviska\SimpleImage();
-      $text_image->fromNew($width, $height, 'transparent');
-      /* estimate the width and height of the text box */
-      $bbox = imagettfbbox($font_size, 0, $font_file, $username);
-      $text_width = abs($bbox[4] - $bbox[0]);
-      $text_height = abs($bbox[5] - $bbox[1]);
-      $spacing = 30;
-      /* draw the repeated text */
-      for ($x = -$width; $x < $width * 1.5; $x += $text_width + $spacing) {
-        for ($y = -$height; $y < $height * 1.5; $y += $text_height + $spacing) {
-          $text_image->text($username, [
-            'fontFile' => $font_file,
-            'size' => $font_size,
-            'color' => $color,
-            'anchor' => 'top left',
-            'xOffset' => $x,
-            'yOffset' => $y
-          ]);
-        }
-      }
-      /* rotate the text image */
-      $text_image->rotate($angle, 'transparent');
-      /* flip the text image */
-      $text_image->flip('both');
-      /* overlay this text image on the original image */
-      $image->overlay($text_image, 'center', $system['watermark_opacity']);
-      $image->toFile($image_path, $image_type);
-    }
-  } catch (Exception $e) {
-    return $e->getMessage();
-  }
-}
-
-
-/**
- * blur_image
- *
- * @param string $image_path
- * @param string $image_type
- * @return void
- */
-function blur_image($image_path, $image_type)
-{
-  global $system;
-  try {
-    $image = new claviska\SimpleImage();
-    $image->fromFile($image_path)->autoOrient();
-    $image->blur('gaussian', 25);
-    $image->toFile($image_path, $image_type);
-  } catch (Exception $e) {
-    return $e->getMessage();
-  }
-}
-
-
-
-/* ------------------------------- */
-/* Socket.io */
-/* ------------------------------- */
-
-/**
- * socket_certificate_test
- *
- * @return bool
- */
-function socket_certificate_test()
-{
-  global $system;
-  $certificate_path = $system['chat_socket_ssl_crt'] ?? null;
-  $key_path = $system['chat_socket_ssl_key'] ?? null;
-  if (!$certificate_path || !$key_path) {
-    throw new Exception(__("Certificate or key path is not configured"));
-  }
-  if (!file_exists($certificate_path)) {
-    throw new Exception(sprintf(__("Certificate file not found: %s"), $certificate_path));
-  }
-  if (!file_exists($key_path)) {
-    throw new Exception(sprintf(__("Key file not found: %s"), $key_path));
-  }
-  if (!is_readable($certificate_path)) {
-    throw new Exception(sprintf(__("Certificate file not readable: %s"), $certificate_path));
-  }
-  if (!is_readable($key_path)) {
-    throw new Exception(sprintf(__("Key file not readable: %s"), $key_path));
-  }
-  return true;
-}
-
-/**
- * socket_io_action
- *
- * @param string $action
- * @return string
- */
-function socket_io_action($action)
-{
-  global $system;
-  $php_path = $system['php_bin_path'];
-  $script_path = __DIR__ . '/../sockets/' . $system['chat_socket_server'] . '/socket.php';
-  switch ($action) {
-    case 'status':
-      $response = shell_exec("$php_path $script_path status 2>&1");
-      break;
-    case 'start':
-      $response = shell_exec("$php_path $script_path start -d 2>&1");
-      break;
-    case 'stop':
-      $response = shell_exec("$php_path $script_path stop 2>&1");
-      break;
-  }
-  return $response;
-}
-
-
-/**
- * get_all_sockets_user_ids
- *
- * @param object $io
- * @return array
- */
-function get_all_sockets_user_ids($io)
-{
-  return array_unique(array_column($io->sockets->sockets, 'userId')) ?? [];
-}
-
-
-/**
- * get_all_sockets_by_user_id
- *
- * @param object $io
- * @param int $user_id
- * @return array
- */
-function get_all_sockets_by_user_id($io, $user_id)
-{
-  $sockets = [];
-  foreach ($io->sockets->sockets as $socketId => $socket) {
-    if (isset($socket->userId) && $socket->userId == $user_id) {
-      $sockets[$socketId] = $socket;
-    }
-  }
-  return $sockets;
-}
-
-
-/**
- * handle_typing_change
- *
- * @param object $io
- * @param string $room
- * @param object $socket
- * @param object $user
- * @param boolean $is_typing
- * @return void
- */
-function handle_typing_change($io, $room, $socket, $user, $is_typing)
-{
-  $conversation_id = str_replace('conversation_', '', $room);
-  $user_display_name = html_entity_decode(($GLOBALS['system']['show_usernames_enabled']) ? $user->_data['user_name'] : $user->_data['user_firstname'],    ENT_QUOTES);
-  init_room_typing_list($room);
-  if ($is_typing) {
-    add_typing_user($room, $socket->userId, $user_display_name);
-  } else {
-    remove_typing_user($room, $socket->userId);
-  }
-  /* broadcast typing list to other users in the room */
-  $room_clients = $io->sockets->in($room)->sockets;
-  foreach ($room_clients as $client) {
-    if (!isset($client->userId)) continue;
-    $other_typing_users = array_diff_key($GLOBALS['room_typing_list'][$room], [$client->userId => null]);
-    $typing_name_list = implode(', ', $other_typing_users);
-    $client->emit('event_server_typing', [
-      'conversation_id' => $conversation_id,
-      'typing_name_list' => $typing_name_list
-    ]);
-  }
-  print("💬 [Emit] User {username: {$socket->username}, user_id: {$socket->userId}} Room: $room - Typing: " . ($is_typing ? 'true' : 'false') . "\n");
-  /* cleanup empty room typing list */
-  cleanup_empty_room_typing_list($room);
-  /* update typing status */
-  $user->update_conversation_typing_status($conversation_id, $is_typing);
-}
-
-
-/**
- * init_room_typing_list
- *
- * @param string $room
- * @return void
- */
-function init_room_typing_list($room)
-{
-  if (!isset($GLOBALS['room_typing_list'][$room])) {
-    $GLOBALS['room_typing_list'][$room] = [];
-  }
-}
-
-/**
- * add_typing_user
- *
- * @param string $room
- * @param int $user_id
- * @param string $user_display_name
- * @return void
- */
-function add_typing_user($room, $user_id, $user_display_name)
-{
-  if (!isset($GLOBALS['room_typing_list'][$room][$user_id])) {
-    $GLOBALS['room_typing_list'][$room][$user_id] = $user_display_name;
-  }
-}
-
-
-/**
- * remove_typing_user
- *
- * @param string $room
- * @param int $user_id
- * @return void
- */
-function remove_typing_user($room, $user_id)
-{
-  if (isset($GLOBALS['room_typing_list'][$room][$user_id])) {
-    unset($GLOBALS['room_typing_list'][$room][$user_id]);
-  }
-}
-
-
-/**
- * clean_room_typing_list
- *
- * @param string $room
- * @return void
- */
-function cleanup_empty_room_typing_list($room)
-{
-  if (empty($GLOBALS['room_typing_list'][$room])) {
-    unset($GLOBALS['room_typing_list'][$room]);
-  }
-}
-
-
-/**
- * cleanup_user_typing_list
- *
- * @param object $socket
- * @return array
- */
-function cleanup_user_typing_list($socket)
-{
-  $affected_rooms = [];
-  /* get only conversation rooms */
-  $conversation_rooms = array_filter($socket->rooms, function ($room) {
-    return strpos($room, 'conversation_') === 0;
-  });
-  /* filter only the typing rooms that match conversation rooms */
-  $typing_rooms = array_intersect_key($GLOBALS['room_typing_list'], array_flip($conversation_rooms));
-  /* get all rooms that the user is typing in */
-  foreach ($typing_rooms as $room => &$typing_users) {
-    if (isset($typing_users[$socket->userId])) {
-      $affected_rooms[] = $room;
-    }
-  }
-  return $affected_rooms;
-}
-
-
-
-/* ------------------------------- */
 /* Utilities */
 /* ------------------------------- */
 
 /**
  * __
- *
- * @param string $string
- *
+ * 
+ * @param string $text
  * @return string
  */
 function __($text)
 {
-  global $gettextTranslator;
+  global $gettextTranslations;
   if (!$text) {
     return '';
   }
-  if (!$gettextTranslator) {
-    return $text;
+  return $gettextTranslations[$text] ?? $text;
+}
+
+
+/**
+ * translations_load
+ * 
+ * @param string $language_code
+ * @return array
+ */
+function translations_load($language_code)
+{
+  static $loaded = [];
+  if (isset($loaded[$language_code])) {
+    return $loaded[$language_code];
   }
-  $translation = $gettextTranslator->find('', $text);
-  if (!$translation) {
-    return $text;
+  if (!$language_code || $language_code == DEFAULT_LOCALE) {
+    return $loaded[$language_code] = module_names_overrides();
   }
-  $translated_text = $translation->getTranslation($text);
-  return ($translated_text) ? $translated_text : $text;
+  if (!preg_match('/^[a-z]{2,3}_[a-z]{2,3}$/i', $language_code)) {
+    return $loaded[$language_code] = [];
+  }
+  $po_file = ABSPATH . 'content/languages/locale/' . $language_code . '/LC_MESSAGES/messages.po';
+  if (!is_file($po_file)) {
+    return $loaded[$language_code] = [];
+  }
+  $stamp = filemtime($po_file) . '-' . filesize($po_file);
+  $translations = system_cache_read('lang_' . $language_code, $stamp, 0);
+  if ($translations === null) {
+    $translations = [];
+    $po_loader = new Gettext\Loader\PoLoader();
+    foreach ($po_loader->loadFile($po_file) as $translation) {
+      if ($translation->isDisabled() || !in_array($translation->getContext(), [null, ''], true)) {
+        continue;
+      }
+      if ($translation->getTranslation()) {
+        $translations[$translation->getOriginal()] = $translation->getTranslation();
+      }
+    }
+    system_cache_write('lang_' . $language_code, $translations, $stamp);
+  }
+  return $loaded[$language_code] = $translations;
 }
 
 
 /**
  * _getallheaders
- *
+ * 
  * @return array
  */
 function _getallheaders()
@@ -8279,47 +2976,8 @@ function _getallheaders()
 
 
 /**
- * minimize_css
- *
- * @param string $file_path
- * @return string
- */
-function minimize_css($file_path)
-{
-  global $smarty;
-  $css = $smarty->fetch($file_path);
-  if (empty($css)) {
-    return $css;
-  }
-  // normalize whitespace.
-  $css = preg_replace('/\s+/', ' ', $css);
-  // remove spaces before and after comment.
-  $css = preg_replace('/(\s+)(\/\*(.*?)\*\/)(\s+)/', '$2', $css);
-  // remove all comments
-  $css = preg_replace('/\/\*(.*?)\*\//', '', $css);
-  // remove ; before }.
-  $css = preg_replace('/;(?=\s*})/', '', $css);
-  // remove space after , : ; { } */ >.
-  $css = preg_replace('/(,|:|;|\{|}|\*\/|>) /', '$1', $css);
-  // remove space before , ; { } ( ) >.
-  $css = preg_replace('/ (,|;|\{|}|\(|\)|>)/', '$1', $css);
-  // strips leading 0 on decimal values (converts 0.5px into .5px).
-  $css = preg_replace('/(:| )0\.([0-9]+)(%|em|ex|px|in|cm|mm|pt|pc)/i', '${1}.${2}${3}', $css);
-  // strips units if value is 0 (converts 0px to 0).
-  $css = preg_replace('/(:| )(\.?)0(%|em|ex|px|in|cm|mm|pt|pc)/i', '${1}0', $css);
-  // converts all zeros value into short-hand.
-  $css = preg_replace('/0 0 0 0/', '0', $css);
-  // shortern 6-character hex color codes to 3-character where possible.
-  $css = preg_replace('/#([a-f0-9])\\1([a-f0-9])\\2([a-f0-9])\\3/i', '#\1\2\3', $css);
-  // ensure 'and', 'or', and 'not' keywords in media queries are correctly spaced.
-  $css = preg_replace('/(?<!:)\b(and|or|not)\(/', '$1 (', $css);
-  return trim($css);
-}
-
-
-/**
  * get_user_ip
- *
+ * 
  * @return string
  */
 function get_user_ip()
@@ -8348,8 +3006,99 @@ function get_user_ip()
 
 
 /**
- * get_user_os
+ * ipinfo_request
  *
+ * @param string $ip
+ * @return array|false
+ */
+function ipinfo_request($ip)
+{
+  global $system;
+  $ch = curl_init();
+  curl_setopt_array($ch, [
+    CURLOPT_URL => 'https://api.ipinfo.io/lite/' . $ip,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ["Authorization: Bearer " . html_entity_decode($system['ipinfo_token'], ENT_QUOTES)],
+    CURLOPT_CONNECTTIMEOUT => 2,
+    CURLOPT_TIMEOUT => 3,
+  ]);
+  $response = curl_exec($ch);
+  $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  if ($response === false || $http_code != 200) {
+    return false;
+  }
+  $response = json_decode($response, true);
+  if (!is_array($response) || empty($response['country_code'])) {
+    return false;
+  }
+  return [
+    'country_code' => strtoupper($response['country_code']),
+    'country' => $response['country'] ?? '',
+    'asn' => $response['asn'] ?? '',
+    'isp' => $response['as_name'] ?? ''
+  ];
+}
+
+
+/**
+ * ipinfo_lookup
+ *
+ * @param string $ip
+ * @return array|false
+ */
+function ipinfo_lookup($ip)
+{
+  global $system;
+  static $cache = [];
+  if (!$system['ipinfo_enabled'] || !$system['ipinfo_token']) {
+    return false;
+  }
+  if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+    return false;
+  }
+  if (isset($cache[$ip])) {
+    return $cache[$ip];
+  }
+  /* get from cache */
+  $key = 'ipinfo:' . md5($ip);
+  $cached = redis_run(function ($redis) use ($key) {
+    return $redis->get(redis_key($key));
+  });
+  if ($cached) {
+    $cached = json_decode($cached, true);
+    if (is_array($cached)) {
+      return $cache[$ip] = $cached;
+    }
+  }
+  /* get from ipinfo */
+  $cache[$ip] = ipinfo_request($ip);
+  if ($cache[$ip]) {
+    $value = json_encode($cache[$ip]);
+    redis_run(function ($redis) use ($key, $value) {
+      $redis->setex(redis_key($key), 86400, $value);
+    });
+  }
+  return $cache[$ip];
+}
+
+
+/**
+ * ipinfo_test
+ *
+ * @return void
+ */
+function ipinfo_test()
+{
+  global $system;
+  if (!$system['ipinfo_token'] || !ipinfo_request('8.8.8.8')) {
+    throw new Exception(__("Connection Failed, Please check your settings"));
+  }
+}
+
+
+/**
+ * get_user_os
+ * 
  * @return string
  */
 function get_user_os()
@@ -8394,7 +3143,7 @@ function get_user_os()
 
 /**
  * get_user_browser
- *
+ * 
  * @return string
  */
 function get_user_browser()
@@ -8426,8 +3175,8 @@ function get_user_browser()
 
 /**
  * get_user_language_country
- *
- * @return string
+ * 
+ * @return array
  */
 function get_user_language_country()
 {
@@ -8454,9 +3203,9 @@ function get_user_language_country()
 
 /**
  * get_user_age
- *
+ * 
  * @param string $birthdate
- * @return string
+ * @return int|null
  */
 function get_user_age($birthdate)
 {
@@ -8475,7 +3224,7 @@ function get_user_age($birthdate)
 
 /**
  * get_extension
- *
+ * 
  * @param string $path
  * @return string
  */
@@ -8487,7 +3236,7 @@ function get_extension($path)
 
 /**
  * get_origin_url
- *
+ * 
  * @param string $url
  * @return string
  */
@@ -8511,7 +3260,7 @@ function get_origin_url($url)
 
 /**
  * get_base_domain
- *
+ * 
  * @param string $url
  * @return string
  */
@@ -8532,20 +3281,21 @@ function get_base_domain($url)
 
 /**
  * decode_urls
- *
+ * 
  * @param string $text
  * @return string
  */
 function decode_urls($text)
 {
   if (!$text) return $text;
-  return preg_replace('@(https?://([-\w\.]+[-\w])+(:\d+)?(/([\w/_\.#-]*(\?\S+)?[^\.\s])?)?)@', '<a href="$1" target="_blank">$1</a>', $text);
+  $pattern = '@(https?://([-\w\.]+[-\w])+(:\d+)?(/([\w/_\.#-]*(\?\S+)?[^\.\s])?)?)@';
+  return preg_replace($pattern . 'u', '<a href="$1" target="_blank">$1</a>', $text) ?? preg_replace($pattern, '<a href="$1" target="_blank">$1</a>', $text);
 }
 
 
 /**
  * get_url_text
- *
+ * 
  * @param string $string
  * @param integer $length
  * @return string
@@ -8554,7 +3304,13 @@ function get_url_text($string, $length = 10)
 {
   $string = html_entity_decode($string, ENT_QUOTES);
   $string = htmlspecialchars_decode($string, ENT_QUOTES);
-  $string = preg_replace('/[^\\pL\d]+/u', '-', $string);
+  if (function_exists('transliterator_transliterate')) {
+    $transliterated = transliterator_transliterate('Any-Latin; Latin-ASCII', $string);
+    if ($transliterated !== false) {
+      $string = $transliterated;
+    }
+  }
+  $string = preg_replace('/[^A-Za-z0-9]+/', '-', $string);
   $string = trim($string, '-');
   $words = explode("-", $string);
   if (count($words) > $length) {
@@ -8570,7 +3326,7 @@ function get_url_text($string, $length = 10)
 
 /**
  * remove_querystring_var
- *
+ * 
  * @param string $url
  * @param string $key
  * @return string
@@ -8585,7 +3341,7 @@ function remove_querystring_var($url, $key)
 
 /**
  * get_snippet_text
- *
+ * 
  * @param string $string
  * @return string
  */
@@ -8598,8 +3354,48 @@ function get_snippet_text($string)
 
 
 /**
- * get_tag
+ * get_search_text
  *
+ * @param string $string
+ * @return string
+ */
+function get_search_text($string)
+{
+  $string = mb_scrub((string) $string, 'UTF-8');
+  /* decode entities & strip tags */
+  $string = html_entity_decode($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+  $string = strip_tags(str_replace('<', ' <', $string));
+  $string = html_entity_decode($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+  /* remove diacritics */
+  $string = preg_replace('/[\x{0300}-\x{036F}\x{0591}-\x{05C7}\x{0610}-\x{061A}\x{0640}\x{064B}-\x{065F}\x{0670}\x{06D6}-\x{06ED}]+/u', '', $string);
+  /* keep words only */
+  $string = preg_replace('/[^\p{L}\p{M}\p{N}]+/u', ' ', $string);
+  return trim((string) $string);
+}
+
+
+/**
+ * get_html_purifier
+ * 
+ * @return HTMLPurifier
+ */
+function get_html_purifier()
+{
+  $config = HTMLPurifier_Config::createDefault();
+  $config->set('HTML.SafeIframe', true);
+  $config->set('URI.SafeIframeRegexp', '%^(https?:)?(\/\/www\.youtube(?:-nocookie)?\.com\/embed\/|\/\/player\.vimeo\.com\/)%');
+  $config->set('Cache.DefinitionImpl', null);
+  if ($def = $config->getHTMLDefinition(true)) {
+    $def->addElement('details', 'Block', 'Flow', 'Common', ['open' => 'Bool#open']);
+    $def->addElement('summary', 'Block', 'Flow', 'Common');
+  }
+  return new HTMLPurifier($config);
+}
+
+
+/**
+ * get_tag
+ * 
  * @param string $string
  * @return string
  */
@@ -8613,28 +3409,45 @@ function get_tag($string)
 
 /**
  * get_youtube_id
- *
+ * 
  * @param string $url
  * @param boolean $embed
  * @return string
  */
 function get_youtube_id($url, $embed = true)
 {
-  if ($embed) {
-    preg_match('/youtube\.com\/embed\/([^\&\?\/]+)/', $url, $id);
-    return $id[1];
-  } else {
-    parse_str(parse_url($url, PHP_URL_QUERY), $id);
-    return $id['v'];
+  if (!$url) {
+    return '';
   }
+  /* watch?v= */
+  if (preg_match('/[?&]v=([a-zA-Z0-9_-]{11})/', $url, $match)) {
+    return $match[1];
+  }
+  /* youtu.be/ID */
+  if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/', $url, $match)) {
+    return $match[1];
+  }
+  /* youtube.com/embed/ID and youtube-nocookie.com/embed/ID (also iframe HTML) */
+  if (preg_match('/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/', $url, $match)) {
+    return $match[1];
+  }
+  /* youtube.com/shorts/ID */
+  if (preg_match('/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/', $url, $match)) {
+    return $match[1];
+  }
+  /* youtube.com/v/ID */
+  if (preg_match('/youtube\.com\/v\/([a-zA-Z0-9_-]{11})/', $url, $match)) {
+    return $match[1];
+  }
+  return '';
 }
 
 
 /**
  * get_vimeo_id
- *
+ * 
  * @param string $url
- * @return string
+ * @return int
  */
 function get_vimeo_id($url)
 {
@@ -8644,13 +3457,13 @@ function get_vimeo_id($url)
 
 /**
  * get_video_type
- *
+ * 
  * @param string $url
  * @return string
  */
 function get_video_type($url)
 {
-  if (strpos($url, 'youtube') > 0) {
+  if (strpos($url, 'youtube') > 0 || strpos($url, 'youtu.be') > 0) {
     return 'youtube';
   } elseif (strpos($url, 'vimeo') > 0) {
     return 'vimeo';
@@ -8662,9 +3475,9 @@ function get_video_type($url)
 
 /**
  * get_array_key
- *
+ * 
  * @param array $array
- * @param integer $current
+ * @param mixed $current
  * @param integer $offset
  * @return mixed
  */
@@ -8681,7 +3494,7 @@ function get_array_key($array, $current, $offset = 1)
 
 /**
  * print_money
- *
+ * 
  * @param string $amount
  * @param string $symbol
  * @param string $dir
@@ -8704,7 +3517,7 @@ function print_money($amount, $symbol = null, $dir = null, $formated = true)
 
 /**
  * abbreviate_count
- *
+ * 
  * @param int $count
  * @return string
  */
@@ -8712,22 +3525,27 @@ function abbreviate_count($count)
 {
   if ($count < 1000) {
     return $count;
-  } elseif ($count < 1000000) {
-    return round($count / 1000) . __('K');
-  } else {
-    return round($count / 1000000) . __('M');
   }
+  $suffixes = ['K', 'M', 'B'];
+  $value = $count;
+  foreach ($suffixes as $i => $suffix) {
+    $value = round($count / pow(1000, $i + 1), 1);
+    if ($value < 1000 || $suffix == 'B') {
+      break;
+    }
+  }
+  return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.') . __($suffix);
 }
 
 
 /**
  * calculate_distance
- *
+ * 
  * @param float $lat1
  * @param float $lon1
  * @param float $lat2
  * @param float $lon2
- * @return string
+ * @return string|null
  */
 function calculate_distance($lat1, $lon1, $lat2, $lon2)
 {
@@ -8748,4 +3566,25 @@ function calculate_distance($lat1, $lon1, $lat2, $lon2)
   } else {
     return round($distance) . ' M';
   }
+}
+
+
+/**
+ * count_words
+ * 
+ * @param string $text
+ * @return int
+ */
+function count_words($text)
+{
+  /* [1] match and count all individual CJK characters */
+  $cjk_pattern = '/[\x{3040}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{AC00}-\x{D7AF}\x{1100}-\x{11FF}\x{3130}-\x{318F}]/u';
+  $cjk_count = preg_match_all($cjk_pattern, $text, $matches);
+  $cjk_count = ($cjk_count !== false) ? $cjk_count : 0;
+  /* [2] replace CJK with spaces */
+  $remaining = preg_replace($cjk_pattern, ' ', $text);
+  /* [3] count space-separated Western words & numbers safely */
+  preg_match_all('/[\p{L}\p{N}]+/u', $remaining, $western_matches);
+  $western_count = count($western_matches[0]);
+  return $cjk_count + $western_count;
 }

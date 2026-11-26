@@ -11,7 +11,7 @@
 require('bootloader.php');
 
 // check if packages enabled
-if (!$system['packages_enabled']) {
+if (!$system['packages_enabled'] || !method_exists($user, 'get_packages')) {
   _error(404);
 }
 

@@ -57,7 +57,7 @@ try {
 
   // return
   $return['share'] = $smarty->fetch("ajax.share.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.share); initialize_modal();";
+  $return['callback'] = "modal_content(response.share, true);";
 
   // return & exit
   return_json($return);

@@ -12,32 +12,10 @@ api['core/theme'] = ajax_path + "core/theme.php";
 /* data */
 api['data/load'] = ajax_path + "data/load.php";
 api['data/search'] = ajax_path + "data/search.php";
+api['data/translate'] = ajax_path + "data/translate.php";
 /* posts */
 api['posts/lightbox'] = ajax_path + "posts/lightbox.php";
-/* payments */
-api['payments/coupon'] = ajax_path + "payments/coupon.php";
-api['payments/paypal'] = ajax_path + "payments/paypal.php";
-api['payments/paystack'] = ajax_path + "payments/paystack.php";
-api['payments/stripe'] = ajax_path + "payments/stripe.php";
-api['payments/coinpayments'] = ajax_path + "payments/coinpayments.php";
-api['payments/2checkout'] = ajax_path + "payments/2checkout.php";
-api['payments/authorize'] = ajax_path + "payments/authorize.php";
-api['payments/razorpay'] = ajax_path + "payments/razorpay.php";
-api['payments/cashfree'] = ajax_path + "payments/cashfree.php";
-api['payments/coinbase'] = ajax_path + "payments/coinbase.php";
-api['payments/shift4'] = ajax_path + "payments/shift4.php";
-api['payments/myfatoorah'] = ajax_path + "payments/myfatoorah.php";
-api['payments/epayco'] = ajax_path + "payments/epayco.php";
-api['payments/flutterwave'] = ajax_path + "payments/flutterwave.php";
-api['payments/verotel'] = ajax_path + "payments/verotel.php";
-api['payments/mercadopago'] = ajax_path + "payments/mercadopago.php";
-api['payments/plisio'] = ajax_path + "payments/plisio.php";
-api['payments/ccbill'] = ajax_path + "payments/ccbill.php";
-api['payments/ccbill_status_check'] = ajax_path + "payments/ccbill_status_check.php";
-api['payments/wallet'] = ajax_path + "payments/wallet.php";
-api['payments/bank'] = ajax_path + "payments/bank.php";
-api['payments/cash_on_delivery'] = ajax_path + "payments/cash_on_delivery.php";
-api['payments/trial'] = ajax_path + "payments/trial.php";
+api['posts/lightbox-video'] = ajax_path + "posts/lightbox-video.php";
 /* ads */
 api['ads/click'] = ajax_path + "ads/click.php";
 
@@ -120,12 +98,38 @@ function get_parameter_by_name(name) {
 }
 
 
+// run moment plugin
+function run_moment(scope) {
+  var elements = (scope) ? $(scope).find(".js_moment") : $(".js_moment");
+  elements.each(function () {
+    var _this = $(this);
+    var time_utc = _this.data('time');
+    var locale = $('html').data('lang') || 'en-us';
+    var offset = moment().utcOffset();
+    var time = moment(time_utc, ["YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD H:mm:ss", moment.ISO_8601]).add({ minutes: offset }).locale(locale);
+    _this.text(time.fromNow()).attr('title', time.format("dddd, MMMM D, YYYY h:mm a"));
+  });
+}
+
+
+// auto-play videos when they are fully visible
+var auto_play_observer = new IntersectionObserver(function (entries) {
+  entries.forEach(function (entry) {
+    var video = entry.target;
+    if (entry.intersectionRatio >= 1) {
+      if (video.paused) {
+        video.play();
+        video.muted = false;
+      }
+    } else if (!video.paused) {
+      video.pause();
+    }
+  });
+}, { threshold: 1 });
+
+
 // initialize the plugins
 function initialize() {
-  // run bootstrap tooltip
-  $('body').tooltip({
-    selector: '[data-bs-toggle="tooltip"], [data-tooltip=tooltip]'
-  });
   // run scroll
   $('.js_scroller').each(function () {
     var _this = $(this);
@@ -137,23 +141,19 @@ function initialize() {
     }
     /* run if not */
     _this.parent().addClass('custom-scrollbar');
-    _this.css({ "overflow-y": "auto", "height": ini_height });
+    var css = { "overflow-y": "auto" };
+    if (ini_height !== '100%' || !_this.hasClass('flex-1')) {
+      css.height = ini_height;
+    }
+    _this.css(css);
     if (ini_start == "bottom") {
-      _this.scrollTop(_this.height());
+      _this.scrollTop(_this[0].scrollHeight);
     }
   });
   // run load-more
   /* load more data by scroll */
-  $('.js_see-more-infinite').on('inview', function (event, visible) {
-    if ((desktop_infinite_scroll && !is_mobile()) || (mobile_infinite_scroll && is_mobile())) {
-      var element = $(this);
-      if (element.hasClass('processing')) return;
-      element.addClass('processing');
-      load_more(element);
-      setTimeout(function () {
-        element.removeClass('processing');
-      }, 500);
-    }
+  $('.js_see-more-infinite').not('[data-infinite]').attr('data-infinite', 'true').each(function () {
+    load_more_observer.observe(this);
   });
   // run audio files
   $("audio.js_audio").on("play", function () {
@@ -165,13 +165,10 @@ function initialize() {
   $("video.js_video-plyr").each(function () {
     if ($(this).parents('div.plyr').length == 0) {
       var _this = $(this);
-      var _is_reel = _this.data('reel') || false;
-      var _is_disabled = (_this.data('disabled')) ? true : false;
+      var _in_lightbox = (_this.data('lightbox')) ? true : false;
       var _id = _this.attr('id');
       var _ratio = null;
-      if (_is_reel) {
-        _ratio = '9:16';
-      } else if (!fluid_videos_enabled) {
+      if (!fluid_videos_enabled && !_in_lightbox) {
         _ratio = '16:9';
       }
       var controls = ['play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'];
@@ -181,14 +178,11 @@ function initialize() {
       /* init Plyr */
       const player = new Plyr(_this[0], {
         ratio: _ratio,
-        fullscreen: (_is_reel) ? false : {
+        fullscreen: {
           iosNative: true
         },
-        controls: (_is_reel) ? ['play-large', 'mute'] : controls,
+        controls: controls,
         settings: ['captions', 'quality', 'speed', 'loop'],
-        hideControls: (_is_reel) ? false : true,
-        muted: (_is_reel) ? true : false,
-        storage: (_is_reel) ? false : true,
         i18n: {
           play: __['Play'],
           pause: __['Pause'],
@@ -205,8 +199,22 @@ function initialize() {
       /* check if video source is M3U8 (HLS) */
       const source = _this.find('source').attr('src');
       if (source && source.endsWith('.m3u8')) {
-        /* handle M3U8 (HLS) streams using hls.js */
-        if (Hls.isSupported()) {
+        /* Native HLS support for Safari */
+        const play_native_hls = function () {
+          if (!_this[0].canPlayType('application/vnd.apple.mpegurl')) return;
+          _this[0].src = source;
+          _this[0].addEventListener('loadedmetadata', function () {
+            if (auto_play_videos) {
+              _this[0].play();
+            }
+          });
+        };
+        /* handle M3U8 (HLS) streams using hls.js (loaded on demand) */
+        load_script(site_path + '/node_modules/hls.js/dist/hls.min.js').then(function () {
+          if (!Hls.isSupported()) {
+            play_native_hls();
+            return;
+          }
           const hls = new Hls();
           hls.loadSource(source);
           hls.attachMedia(_this[0]);
@@ -215,78 +223,34 @@ function initialize() {
               _this[0].play();
             }
           });
-        } else if (_this[0].canPlayType('application/vnd.apple.mpegurl')) {
-          /* Native HLS support for Safari */
-          _this[0].src = source;
-          _this[0].addEventListener('loadedmetadata', function () {
-            if (auto_play_videos) {
-              _this[0].play();
-            }
-          });
-        }
+        }, play_native_hls);
       }
-      /* disable video if _is_disabled is true */
-      if (_is_disabled) {
-        player.toggleControls(false);
-        _this.on('play', function (e) {
-          e.preventDefault();
-          player.pause();
+      /* apply the non-fullscreen class initially */
+      if (fluid_videos_enabled && !_in_lightbox) {
+        _this.parents('.plyr').addClass('fluid-video');
+        _this.parents('.plyr').addClass('non-fullscreen');
+        /* listen for fullscreen change events */
+        player.on('enterfullscreen', function () {
+          player.elements.container.classList.add('fullscreen');
+          player.elements.container.classList.remove('non-fullscreen');
         });
-        _this.on('click', function (e) {
-          e.preventDefault();
-          player.pause();
+        player.on('exitfullscreen', function () {
+          player.elements.container.classList.remove('fullscreen');
+          player.elements.container.classList.add('non-fullscreen');
         });
       }
-      /* if reels */
-      if (_is_reel) {
-        /* listen for ended event */
-        player.on('ended', function () {
-          next_reel(_this.parents('.reel-container'), true);
+      /* pause other videos when one is played */
+      player.on('play', function () {
+        $("video.js_video-plyr").each(function () {
+          if (_id !== $(this).attr('id')) {
+            this.pause();
+          }
         });
-        /* if paused remove the ended event listener */
-        _this.on('pause', function () {
-          player.off('ended');
-        });
-      } else {
-        /* apply the non-fullscreen class initially */
-        if (fluid_videos_enabled) {
-          _this.parents('.plyr').addClass('fluid-video');
-          _this.parents('.plyr').addClass('non-fullscreen');
-          /* listen for fullscreen change events */
-          player.on('enterfullscreen', function () {
-            player.elements.container.classList.add('fullscreen');
-            player.elements.container.classList.remove('non-fullscreen');
-          });
-          player.on('exitfullscreen', function () {
-            player.elements.container.classList.remove('fullscreen');
-            player.elements.container.classList.add('non-fullscreen');
-          });
-        }
-        /* pause other videos when one is played */
-        player.on('play', function () {
-          $("video.js_video-plyr").each(function () {
-            if (_id !== $(this).attr('id')) {
-              this.pause();
-            }
-          });
-        });
-        /* auto-play videos when they are fully visible */
-        if (auto_play_videos) {
-          const videoElement = _this[0];
-          videoElement.muted = true;
-          _this.fracs(function (fracs, prev_fracs) {
-            if (fracs.visible >= 1) {
-              if (videoElement.paused) {
-                videoElement.play();
-                videoElement.muted = false;
-              }
-            } else {
-              if (!videoElement.paused) {
-                videoElement.pause();
-              }
-            }
-          });
-        }
+      });
+      /* auto-play videos when they are fully visible */
+      if (auto_play_videos && !_in_lightbox) {
+        _this[0].muted = true;
+        auto_play_observer.observe(_this[0]);
       }
     }
   });
@@ -317,102 +281,263 @@ function initialize() {
       });
     }
   });
-  // run readmore plugin
+  // run read more
   $('.js_readmore').each(function () {
     var _this = $(this);
-    var height = _this.attr('data-height') || 110;
-    /* return if the plugin already running  */
-    if (_this.attr('data-readmore') !== undefined) {
+    var element = this;
+    /* return if already running */
+    if (_this.data('readmore-init')) {
       return;
     }
-    /* run if not */
-    _this.readmore({
-      collapsedHeight: height,
-      moreLink: '<a href="#">' + __['Read more'] + '</a>',
-      lessLink: '<a href="#">' + __['Read less'] + '</a>',
-      afterToggle: function (trigger, element, expanded) {
-        if (expanded) {
-          _this.css("height", "auto");
-        }
+    _this.data('readmore-init', true);
+    /* clamp to lines */
+    var lines = parseInt(_this.attr('data-lines'), 10) || parseInt(read_more_lines, 10) || 5;
+    element.style.setProperty('--read-more-lines', lines);
+    _this.addClass('line-clamp-(--read-more-lines)');
+    /* hide the next line peeking into the bottom padding */
+    if (parseFloat(_this.css('padding-bottom')) > 0) {
+      element.style.clipPath = 'inset(0 0 ' + _this.css('padding-bottom') + ' 0)';
+    }
+    /* add toggle */
+    var toggle = $('<div class="js_readmore-toggle-wrapper hidden"><button type="button" class="js_readmore-toggle cursor-pointer rounded-field text-sm font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-expanded="false">' + __['Read more'] + '</button></div>');
+    toggle.css({ 'padding-inline-start': _this.css('padding-inline-start'), 'padding-inline-end': _this.css('padding-inline-end'), 'padding-bottom': _this.css('padding-bottom') });
+    _this.after(toggle);
+    /* show toggle only when the text is truncated */
+    var check = function () {
+      if (_this.hasClass('line-clamp-(--read-more-lines)')) {
+        toggle.toggleClass('hidden', element.scrollHeight - element.clientHeight <= 1);
       }
-    });
+    };
+    check();
+    if (window.ResizeObserver) {
+      new ResizeObserver(check).observe(element);
+    }
   });
   // run autosize (expand textarea) plugin
   autosize($('.js_autosize'));
   // run moment plugin
-  $(".js_moment").each(function () {
-    var _this = $(this);
-    var time_utc = _this.data('time');
-    var locale = $('html').data('lang') || 'en-us';
-    var offset = moment().utcOffset();
-    var time = moment(time_utc).add({ minutes: offset }).locale(locale);
-    _this.text(time.fromNow()).attr('title', time.format("dddd, MMMM D, YYYY h:mm a"));
-  });
-  // run slick slider
-  if ($(".js_reels_slick").length > 0) {
-    $(".js_reels_slick").each(function () {
-      if (!$(this).hasClass('slick-initialized')) {
-        $(this).slick({
-          rtl: theme_dir_rtl,
-          dots: false,
-          infinite: true,
-          speed: 300,
-          slidesToShow: 1,
-          centerMode: true,
-          variableWidth: true
-        });
-      }
-    });
+  run_moment();
+}
+
+
+// flyonui components
+function flyonui_init() {
+  if (!window.HSStaticMethods || typeof window.HSStaticMethods.autoInit !== "function") {
+    return;
   }
-  if ($(".js_merits_slick").length > 0) {
-    $(".js_merits_slick").each(function () {
-      if (!$(this).hasClass('slick-initialized')) {
-        $(this).slick({
-          rtl: theme_dir_rtl,
-          dots: false,
-          infinite: true,
-          speed: 300,
-          slidesToShow: 1,
-          centerMode: true,
-          variableWidth: true
-        });
-      }
-    });
+  window.HSStaticMethods.autoInit();
+}
+
+
+// modal state
+var modal_state = {
+  request_id: 0,
+  pending_open: null,
+  stacked_pending_open: null,
+  /* route modal_content() to the stacked layer */
+  stacked_content: false,
+  /* dialogs that stack on top of an open modal instead of replacing it */
+  stacked_dialogs: ['#modal-confirm', '#modal-confirm-payment', '#modal-error', '#modal-message'],
+  /* placeholders a dialog can replace instead of stacking over */
+  placeholder_dialogs: ['#modal-confirm', '#modal-confirm-payment', '#modal-error', '#modal-message', '#modal-loading', '#modal-success', '#modal-info', '#modal-login']
+};
+
+
+// invalidate pending modal requests
+function modal_invalidate() {
+  modal_state.request_id++;
+}
+
+
+// run the dialog queued while a layer was opening or closing
+function modal_run_pending(stacked) {
+  var key = stacked ? 'stacked_pending_open' : 'pending_open';
+  var pending_open = modal_state[key];
+  if (!pending_open) return;
+  modal_state[key] = null;
+  pending_open();
+}
+
+
+// modal layer
+function modal_layer(stacked) {
+  return document.getElementById(stacked ? 'modal-stacked' : 'modal');
+}
+
+
+// modal instance
+function get_modal_instance(stacked) {
+  var modal_el = modal_layer(stacked);
+  if (!modal_el || typeof HSOverlay === "undefined") return null;
+  var instance = HSOverlay.getInstance(modal_el, true);
+  if (!instance) {
+    HSOverlay.autoInit();
+    instance = HSOverlay.getInstance(modal_el, true);
   }
+  return instance ? instance.element : null;
+}
+
+
+// modal content
+function modal_content(html, initialize = false) {
+  var stacked = modal_state.stacked_content;
+  var content = document.querySelector(stacked ? '#modal-stacked-content' : '#modal-content');
+  if (!content) return;
+  $(content).html(html);
+  if (stacked) {
+    /* dismiss buttons close this layer only */
+    $(content).find('[data-overlay="#modal"]').attr('data-overlay', '#modal-stacked');
+  } else {
+    $('#modal').removeData('dialog');
+  }
+  var instance = get_modal_instance(stacked);
+  if (instance) instance.updateToggles();
+  if (initialize && typeof initialize_modal === "function") initialize_modal();
+}
+
+
+// close modal (the top layer)
+function modal_close(on_closed) {
+  var modal_stacked_el = modal_layer(true);
+  var stacked = modal_stacked_el && !modal_stacked_el.classList.contains('hidden');
+  if (!stacked) modal_invalidate();
+  var modal_el = modal_layer(stacked);
+  var instance = get_modal_instance(stacked);
+  if (!modal_el || !instance || modal_el.classList.contains('hidden')) {
+    if (typeof on_closed === "function") on_closed();
+    return;
+  }
+  var completed = false;
+  var complete = function () {
+    if (completed) return;
+    completed = true;
+    if (typeof on_closed === "function") on_closed();
+  };
+  modal_el.addEventListener('close.overlay', complete, { once: true });
+  instance.close();
+  setTimeout(function () {
+    if (!completed && !modal_el.classList.contains('hidden')) instance.close(true);
+    complete();
+  }, 350);
+}
+
+
+// close all modal layers
+function modal_close_all(on_closed) {
+  var modal_stacked_el = modal_layer(true);
+  if (modal_stacked_el && !modal_stacked_el.classList.contains('hidden')) {
+    modal_close(function () {
+      modal_close(on_closed);
+    });
+  } else {
+    modal_close(on_closed);
+  }
+}
+
+
+// stacked modal
+function modal_stacked(selector, options, is_static, size) {
+  var modal_el = modal_layer(true);
+  var instance = get_modal_instance(true);
+  if (!modal_el || !instance) return;
+  /* wait while the layer is opening or closing */
+  if (!modal_el.classList.contains('hidden') && !modal_el.classList.contains('open') && !modal_el.hasAttribute('aria-overlay')) {
+    modal_state.stacked_pending_open = function () {
+      modal_stacked(selector, options, is_static, size);
+    };
+    return;
+  }
+  instance.hasAbilityToCloseOnBackdropClick = !is_static;
+  modal_el.setAttribute('data-overlay-keyboard', is_static ? 'false' : 'true');
+  modal_el.style.setProperty('--overlay-backdrop', is_static ? 'static' : 'true');
+  /* prepare modal size */
+  if (size) {
+    var large = (size == 'large' || size == 'extra-large');
+    $(modal_el).find('.modal__dialog').toggleClass('modal__dialog--lg', large).toggleClass('modal__dialog--md', !large);
+  }
+  var content = $('#modal-stacked-content');
+  content.html(render_template(selector, options));
+  /* dismiss buttons close this layer only */
+  content.find('[data-overlay="#modal"]').attr('data-overlay', '#modal-stacked');
+  if (modal_el.classList.contains('hidden')) {
+    HSOverlay.open(modal_el);
+  }
+  instance.updateToggles();
 }
 
 
 // modal
 function modal() {
-  if (arguments[0] == "#modal-login" || arguments[0] == "#chat-calling" || arguments[0] == "#chat-ringing") {
-    /* disable the backdrop (don't close modal when click outside) */
-    if ($('#modal').data('bs.modal')) {
-      $('#modal').data('bs.modal').options = { backdrop: 'static', keyboard: false };
-    } else {
-      $('#modal').modal({ backdrop: 'static', keyboard: false });
-    }
+  var selector = arguments[0];
+  var options = arguments[1];
+  var size = arguments[2];
+  var is_static = (arguments[3] === true)
+    || selector == "#modal-login"
+    || selector == "#chat-calling"
+    || selector == "#chat-ringing";
+  var modal_el = modal_layer(false);
+  var modal_stacked_el = modal_layer(true);
+  /* stack dialogs on top of an open modal */
+  var is_dialog = modal_state.stacked_dialogs.indexOf(selector) > -1;
+  if ((modal_stacked_el && !modal_stacked_el.classList.contains('hidden')) || (is_dialog && modal_el && modal_el.classList.contains('open') && !$(modal_el).data('dialog'))) {
+    modal_stacked(selector, options, is_static);
+    return;
   }
-  /* check if the modal not visible, show it */
-  if (!$('#modal').is(":visible")) $('#modal').modal('show');
+  modal_invalidate();
+  var instance = get_modal_instance();
+  if (!modal_el || !instance) return;
+  /* wait while the layer is opening or closing */
+  if (!modal_el.classList.contains('hidden') && !modal_el.classList.contains('open') && !modal_el.hasAttribute('aria-overlay')) {
+    modal_state.pending_open = function () {
+      modal(selector, options, size, is_static);
+    };
+    return;
+  }
+  instance.hasAbilityToCloseOnBackdropClick = !is_static;
+  modal_el.setAttribute('data-overlay-keyboard', is_static ? 'false' : 'true');
+  modal_el.style.setProperty('--overlay-backdrop', is_static ? 'static' : 'true');
   /* prepare modal size */
-  $('.modal-dialog').removeClass('modal-sm modal-lg modal-xl');
-  switch (arguments[2]) {
+  var dialog = modal_el.querySelector('.modal__dialog');
+  if (!dialog) return;
+  var container = modal_el.querySelector('.modal__container');
+  var publisher_dialog_classes = 'modal__dialog--scroll-inside p-0! max-w-3xl! max-h-[min(52rem,calc(100dvh-5rem))] [&>#modal-content]:flex [&>#modal-content]:min-h-0 [&>#modal-content]:flex-1 [&>#modal-content]:flex-col';
+  var call_dialog_classes = 'p-0! gap-0! overflow-hidden! bg-neutral-950! max-sm:h-full! max-sm:max-h-full! max-sm:max-w-full! max-sm:rounded-none!';
+  $(dialog).removeClass('modal__dialog--sm modal__dialog--md modal__dialog--lg modal__dialog--scroll-outside max-w-5xl max-w-4xl! max-w-md! ' + publisher_dialog_classes + ' ' + call_dialog_classes);
+  $(container).removeClass('max-sm:p-0! modal__container--scroll-outside');
+  switch (size) {
     case 'small':
-      $('.modal-dialog').addClass('modal-sm');
+      dialog.classList.add('modal__dialog--sm', 'modal__dialog--scroll-outside');
+      container.classList.add('modal__container--scroll-outside');
       break;
     case 'large':
-      $('.modal-dialog').addClass('modal-lg');
+      dialog.classList.add('modal__dialog--lg', 'modal__dialog--scroll-outside');
+      container.classList.add('modal__container--scroll-outside');
       break;
     case 'extra-large':
-      $('.modal-dialog').addClass('modal-xl');
+      dialog.classList.add('modal__dialog--lg', 'max-w-5xl', 'modal__dialog--scroll-outside');
+      container.classList.add('modal__container--scroll-outside');
+      break;
+    case 'call':
+      $(dialog).addClass('modal__dialog--lg max-w-4xl! ' + call_dialog_classes);
+      $(container).addClass('max-sm:p-0!');
+      break;
+    case 'call-audio':
+      $(dialog).addClass('modal__dialog--md max-w-md! ' + call_dialog_classes);
+      $(container).addClass('max-sm:p-0!');
+      break;
+    case 'publisher':
+      $(dialog).addClass('modal__dialog--lg ' + publisher_dialog_classes);
+      break;
+    default:
+      dialog.classList.add('modal__dialog--md', 'modal__dialog--scroll-outside');
+      container.classList.add('modal__container--scroll-outside');
       break;
   }
-  /* update the modal-content with the rendered template */
-  $('.modal-content:last').html(render_template(arguments[0], arguments[1]));
-  /* initialize modal if the function defined (user logged in) */
-  if (typeof initialize_modal === "function") {
-    initialize_modal();
+  if (modal_el.classList.contains('hidden')) {
+    HSOverlay.open(modal_el);
   }
+  modal_content(render_template(selector, options), true);
+  if (modal_state.placeholder_dialogs.indexOf(selector) > -1) $(modal_el).data('dialog', true);
 }
 
 // error modal
@@ -423,7 +548,14 @@ function show_error_modal(message = __['There is something that went wrong!']) {
 // confirm
 function confirm(title, message, callback, password_check = false) {
   $('body').off('click', '#modal-confirm-ok');
-  modal("#modal-confirm", { 'title': title, 'message': message, 'password_check': password_check });
+  var destructive = [__['Delete'], __['Delete All'], __['Delete Post'], __['Delete Comment'], __['Delete Conversation']].indexOf(title) > -1;
+  modal("#modal-confirm", {
+    'title': title,
+    'message': message,
+    'password_check': password_check,
+    'destructive': destructive,
+    'danger': destructive || password_check
+  });
   function handleClick() {
     $('body').off('click', '#modal-confirm-ok', handleClick);
     button_status($(this), "loading");
@@ -456,10 +588,24 @@ function render_template(selector, options) {
 
 
 // load more
+var load_more_observer = new IntersectionObserver(function (entries) {
+  entries.forEach(function (entry) {
+    if (!entry.isIntersecting) return;
+    if ((desktop_infinite_scroll && !is_mobile()) || (mobile_infinite_scroll && is_mobile())) {
+      var element = $(entry.target);
+      if (element.hasClass('processing')) return;
+      element.addClass('processing');
+      load_more(element);
+      setTimeout(function () {
+        element.removeClass('processing');
+      }, 500);
+    }
+  });
+});
 function load_more(element) {
-  if (element.hasClass('done') || element.hasClass('loading')) return;
+  if (element.hasClass('done') || element.hasClass('js_loading')) return;
   var _this = element;
-  var loading = _this.find('.loader');
+  var loading = _this.find('.loading-spinner');
   var text = _this.find('span');
   var remove = _this.data('remove') || false;
   if (_this.data('target-stream') !== undefined) {
@@ -482,6 +628,9 @@ function load_more(element) {
   if (_this.data('type') !== undefined) {
     data['type'] = _this.data('type');
   }
+  if (_this.data('language') !== undefined) {
+    data['language'] = _this.data('language');
+  }
   if (_this.data('uid') !== undefined) {
     data['uid'] = _this.data('uid');
   }
@@ -495,21 +644,25 @@ function load_more(element) {
     data['tpl'] = _this.data('tpl');
   }
   data['offset'] = _this.data('offset') || 1; /* we start from iteration 1 because 0 already loaded */
+  if (_this.data('cursor')) {
+    data['cursor'] = _this.data('cursor');
+  }
   /* show loader & hide text */
-  _this.addClass('loading');
+  _this.addClass('js_loading');
   text.hide();
-  loading.removeClass('x-hidden');
+  loading.removeClass('hidden');
   /* get & load data */
   $.post(api['data/load'], data, function (response) {
-    _this.removeClass('loading');
+    _this.removeClass('js_loading');
     text.show();
-    loading.addClass('x-hidden');
+    loading.addClass('hidden');
     /* check the response */
     if (response.callback) {
       eval(response.callback);
     } else {
       if (response.data) {
         data['offset']++;
+        _this.data('cursor', response.cursor || '');
         if (response.append) {
           stream.append(response.data);
           if (data['get'] == "newsfeed" && smooth_infinite_scroll && stream.children().length > 50) {
@@ -535,7 +688,11 @@ function load_more(element) {
         } else {
           stream.prepend(response.data);
         }
-        setTimeout(ui_rebuild(), 200);
+        ui_rebuild();
+        /* keep the open conversation active */
+        if ((data['get'] == "conversations" || data['get'] == "conversations_search") && typeof mark_active_chat_thread === 'function') {
+          mark_active_chat_thread();
+        }
         /* color chat box */
         if (data['get'] == "messages") {
           chat_widget = _this.parents('.chat-widget, .panel-messages');
@@ -553,9 +710,9 @@ function load_more(element) {
     _this.data('offset', data['offset']);
   }, 'json')
     .fail(function () {
-      _this.removeClass('loading');
+      _this.removeClass('js_loading');
       text.show();
-      loading.addClass('x-hidden');
+      loading.addClass('hidden');
       show_error_modal();
     });
 }
@@ -563,59 +720,35 @@ function load_more(element) {
 
 // ui rebuild
 function ui_rebuild() {
-  rebuild_photo_grid();
-  rebuild_facebook_iframes();
+  rebuild_video_durations();
 }
 
 
-// rebuild photo grid
-function rebuild_photo_grid() {
-  /* main photo */
-  $('.pg_2o3_in').each(function () {
-    if ($(this).parents('.pg_3x').length > 0) {
-      var width = height = $(this).parents('.pg_3x').width() * 0.667;
-    }
-    if ($(this).parents('.pg_4x').length > 0) {
-      var width = height = $(this).parents('.pg_4x').width() * 0.749;
-    }
-    $(this).width(width);
-    $(this).height(height);
-  });
-  /* side photos */
-  $('.pg_1o3_in').each(function () {
-    if ($(this).parents('.pg_3x').length > 0) {
-      var width = $(this).parents('.pg_3x').width() * 0.332;
-      var height = ($(this).parent('.pg_1o3').prev().height() - 1) / 2;
-    }
-    if ($(this).parents('.pg_4x').length > 0) {
-      var width = $(this).parents('.pg_4x').width() * 0.25;
-      var height = ($(this).parent('.pg_1o3').prev().height() - 2) / 3;
-    }
-    $(this).width(width);
-    $(this).height(height);
-  });
-}
-
-
-// rebuild facebook iframes
-function rebuild_facebook_iframes() {
-  $('.embed-facebook-wrapper iframe').each(function () {
-    /* get the iframe element & parent container */
-    var iframe = $(this);
-    var container = iframe.parent();
-    /* get the iframe width and height */
-    var iframeWidth = iframe.width();
-    var iframeHeight = iframe.height();
-    /* get the aspect ratio */
-    var aspectRatio = iframeWidth / iframeHeight;
-    /* get hight according to the aspect ratio */
-    var newHeight = container.width() / aspectRatio;
-    /* set the iframe width and height to 100% of the container */
-    iframe.width(container.width());
-    iframe.height(newHeight);
-    /* show the iframe and hide the placeholder */
-    iframe.show();
-    container.find('.embed-facebook-placeholder').hide();
+// rebuild video durations
+function rebuild_video_durations() {
+  $('.js_video-duration:not(.js_done)').each(function () {
+    var _this = $(this).addClass('js_done');
+    var video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.onloadedmetadata = function () {
+      var total = Math.round(video.duration);
+      if (isFinite(total) && total > 0) {
+        var hours = Math.floor(total / 3600);
+        var minutes = Math.floor((total % 3600) / 60);
+        var seconds = total % 60;
+        var parts = hours > 0 ? [hours, ('0' + minutes).slice(-2)] : [minutes];
+        parts.push(('0' + seconds).slice(-2));
+        _this.text(parts.join(':')).removeClass('hidden');
+      }
+      /* save the video size */
+      if (_this.data('video-id') && video.videoWidth && video.videoHeight && api['posts/reaction']) {
+        $.post(api['posts/reaction'], { 'do': 'update_video_size', 'id': _this.data('video-id'), 'width': video.videoWidth, 'height': video.videoHeight }, null, 'json');
+      }
+      video.removeAttribute('src');
+      video.load();
+    };
+    video.src = _this.data('src');
   });
 }
 
@@ -628,9 +761,9 @@ function button_status(element, handle) {
     element.prop('disabled', true);
     /* check if button has text or just icon */
     if (element.text().trim()) {
-      element.html('<span class="spinner-grow spinner-grow-sm mr10"></span>' + __['Loading']);
+      element.html('<span class="loading loading-spinner loading-sm me-2.5"></span>' + __['Loading']);
     } else {
-      element.html('<span class="spinner-grow spinner-grow-sm"></span>');
+      element.html('<span class="loading loading-spinner loading-sm"></span>');
     }
   } else {
     /* reset */
@@ -671,103 +804,6 @@ function count_down_timer(element_id) {
 }
 
 
-// reels navigation
-function next_reel(element, auto = false) {
-  /* check if element is existing */
-  if (element.length == 0) {
-    return;
-  }
-  /* check if the comments are shown */
-  if (auto && element.hasClass('comments-shown')) {
-    return;
-  }
-  /* play the next reel if available */
-  if (element.next('.reel-container').length > 0) {
-    element.addClass('swipe-up');
-    setTimeout(function () {
-      element.removeClass('swipe-up').addClass('hidden');
-      element.next().removeClass('hidden');
-      /* pause current reel */
-      element.find('video').each(function () {
-        this.pause();
-      });
-      /* play next reel */
-      element.next().find('video').each(function () {
-        this.play();
-      });
-      /* update the url */
-      var url = site_path + '/reels/' + element.next().data('id');
-      window.history.pushState({ state: 'new' }, '', url);
-    }, 100);
-  }
-  /* check if there are fewer than 2 remaining reels before the last one */
-  if (element.nextAll('.reel-container').length <= 2) {
-    /* load more reels */
-    var _this = element;
-    var stream = _this.parents('.reels-wrapper');
-    var loading = stream.find('.reels-loader');
-    /* prepare data object */
-    var data = {};
-    data['get'] = 'reels';
-    data['offset'] = loading.data('offset');
-    /* show loader & hide text */
-    loading.show();
-    /* get & load data */
-    $.post(api['data/load'], data, function (response) {
-      loading.hide();
-      /* check the response */
-      if (response.callback) {
-        eval(response.callback);
-      } else {
-        if (response.data) {
-          data['offset']++;
-          /* append the new data */
-          var newItems = $(response.data).appendTo(stream);
-          /* attach swipe events only to the newly added items */
-          newItems.find('.reel-video-wrapper').on('swipedown', function () {
-            prev_reel($(this).parents('.reel-container'));
-          });
-          newItems.find('.reel-video-wrapper').on('swipeup', function () {
-            next_reel($(this).parents('.reel-container'));
-          });
-          /* update the offset */
-          loading.data('offset', data['offset']);
-        }
-      }
-    }, 'json')
-      .fail(function () {
-        loading.addClass('x-hidden');
-        show_error_modal();
-      });
-  }
-}
-function prev_reel(element) {
-  /* check if element is existing */
-  if (element.length == 0) {
-    return;
-  }
-  /* play the prev reel if available */
-  if (element.prev('.reel-container').length > 0) {
-    element.addClass('swipe-down');
-    setTimeout(function () {
-      element.removeClass('swipe-down').addClass('hidden');
-      element.prev().removeClass('hidden');
-      /* pause current reel */
-      element.find('video').each(function () {
-        this.pause();
-      });
-      /* play prev reel */
-      element.prev().find('video').each(function () {
-        this.play();
-      });
-      /* update the url */
-      var url = site_path + '/reels/' + element.prev().data('id');
-      window.history.pushState({}, '', url);
-    }, 100);
-  }
-}
-
-
 // cookies
 function setCookie(cname, cvalue, exdays) {
   var d = new Date();
@@ -792,6 +828,216 @@ function getCookie(cname) {
 }
 
 
+// motion
+var ui_spring = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+function ui_motion() {
+  return typeof Element.prototype.animate === 'function' && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+function ui_animate(element, keyframes, options) {
+  if (!element || !ui_motion() || !element.getClientRects().length) return null;
+  return element.animate(keyframes, options);
+}
+/* pop an element in */
+function ui_pop(element, delay) {
+  return ui_animate(element, [
+    { transform: 'scale(0.3)', opacity: 0 },
+    { transform: 'scale(1.25)', opacity: 1, offset: 0.5 },
+    { transform: 'scale(0.92)', opacity: 1, offset: 0.75 },
+    { transform: 'scale(1)', opacity: 1 }
+  ], { duration: 460, delay: delay || 0, easing: 'ease-out', fill: 'backwards' });
+}
+/* roll a counter from its old value to the current one */
+function ui_count_roll(element, from) {
+  var counter = $(element);
+  var to = counter.text().trim();
+  from = String(from || '').trim();
+  if (!counter.length || !from || from === to || !ui_motion()) return;
+  var number = function (value) { return parseFloat(value.replace(/[^\d.]/g, '')) || 0; };
+  var shift = (number(to) >= number(from)) ? 100 : -100;
+  var style = counter.attr('style');
+  var incoming = $('<span class="inline-block"></span>').text(to);
+  var outgoing = $('<span class="absolute inset-y-0 inline-block whitespace-nowrap" aria-hidden="true"></span>').text(from).css('inset-inline-start', counter.css('padding-inline-start'));
+  counter.css({ position: 'relative', display: 'inline-flex', overflow: 'hidden' }).empty().append(incoming, outgoing);
+  var options = { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' };
+  outgoing[0].animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(' + -shift + '%)', opacity: 0 }], Object.assign({ fill: 'forwards' }, options));
+  incoming[0].animate([{ transform: 'translateY(' + shift + '%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], options).onfinish = function () {
+    counter.text(to);
+    if (style) {
+      counter.attr('style', style);
+    } else {
+      counter.removeAttr('style');
+    }
+  };
+}
+
+
+// reactions
+/* the reaction flies from the picker into the button */
+function reaction_fly(source, target, duration) {
+  var from = source.getBoundingClientRect();
+  var to = target.getBoundingClientRect();
+  if (!from.width || !to.width) return null;
+  var outer = document.createElement('div');
+  var inner = source.cloneNode(true);
+  outer.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;left:' + from.left + 'px;top:' + from.top + 'px;width:' + from.width + 'px;height:' + from.height + 'px;';
+  inner.removeAttribute('class');
+  inner.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+  var dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+  var dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+  var x = outer.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + dx + 'px)' }], { duration: duration, easing: 'cubic-bezier(0.3, 0, 0.2, 1)', fill: 'forwards' });
+  var y = inner.animate([{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(' + dy + 'px) scale(' + (to.width / from.width) + ')' }], { duration: duration, easing: 'cubic-bezier(0.5, -0.5, 0.6, 1)', fill: 'forwards' });
+  y.onfinish = function () {
+    outer.remove();
+  };
+  return {
+    cancel: function () {
+      x.cancel();
+      y.cancel();
+      outer.remove();
+    }
+  };
+}
+/* swap the reaction button icon */
+function reaction_icon_swap(icon, html, source) {
+  var element = icon[0];
+  if (!element) return;
+  (element._ui_swap || []).forEach(function (animation) {
+    animation.cancel();
+  });
+  element._ui_swap = [];
+  if (!ui_motion() || !element.getClientRects().length) {
+    icon.html(html);
+    return;
+  }
+  if (source) {
+    /* react -> fly in & land */
+    icon.html(html);
+    var duration = 420;
+    var fly = reaction_fly(source, element, duration);
+    if (!fly) {
+      element._ui_swap = [ui_pop(element)];
+      return;
+    }
+    element._ui_swap = [
+      fly,
+      element.animate([{ opacity: 0 }, { opacity: 0 }], { duration: duration }),
+      element.animate([
+        { transform: 'scale(1)' },
+        { transform: 'scale(1.35)', offset: 0.4 },
+        { transform: 'scale(0.9)', offset: 0.7 },
+        { transform: 'scale(1)' }
+      ], { duration: 420, delay: duration, easing: 'ease-out' })
+    ];
+    return;
+  }
+  /* unreact -> shrink out & pop back */
+  var out = element.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(0.4)', opacity: 0 }], { duration: 140, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+  out.onfinish = function () {
+    icon.html(html);
+    element._ui_swap = [element.animate([
+      { transform: 'scale(0.4)', opacity: 0 },
+      { transform: 'scale(1.12)', opacity: 1, offset: 0.6 },
+      { transform: 'scale(1)', opacity: 1 }
+    ], { duration: 300, easing: 'ease-out' })];
+    out.cancel();
+  };
+  element._ui_swap = [out];
+}
+/* update the reactions stats (new reactions pop in, removed ones collapse, the count rolls) */
+function reactions_stats_update(container, html, callback) {
+  if (!container || !container.length) return;
+  var element = container[0];
+  if (element._ui_stats) {
+    element._ui_stats.onfinish = null;
+    element._ui_stats.cancel();
+    element._ui_stats = null;
+  }
+  var types = function (scope) {
+    return scope.find('.reactions-stats-item img').map(function () {
+      return $(this).attr('src');
+    }).get();
+  };
+  var count = function (stats) {
+    return stats.children('span').last().clone().children('[aria-hidden]').remove().end().text();
+  };
+  var old_stats = container.find('.reactions-stats:first');
+  var old_types = types(old_stats);
+  var old_count = count(old_stats);
+  var next = $('<div></div>').html(html);
+  var new_types = types(next);
+  var apply = function () {
+    container.html(html);
+    var stats = container.find('.reactions-stats:first');
+    if (!old_stats.length) {
+      ui_pop(stats[0]);
+    } else {
+      stats.find('.reactions-stats-item').each(function () {
+        if (old_types.indexOf($(this).find('img').attr('src')) == -1) {
+          ui_pop(this);
+        }
+      });
+      ui_count_roll(stats.children('span').last(), old_count);
+    }
+    if (callback) callback();
+  };
+  /* all reactions removed -> fade the stats out, otherwise collapse the removed items */
+  var collapse = next.find('.reactions-stats').length > 0;
+  var leaving = collapse ? old_stats.find('.reactions-stats-item').filter(function () {
+    return new_types.indexOf($(this).find('img').attr('src')) == -1;
+  }) : old_stats;
+  var animation = null;
+  leaving.each(function () {
+    var from = { transform: 'scale(1)', opacity: 1 };
+    var to = { transform: 'scale(0.3)', opacity: 0 };
+    if (collapse) {
+      from.width = this.getBoundingClientRect().width + 'px';
+      Object.assign(to, { width: '0px', paddingInline: '0px', marginInlineStart: '0px' });
+    }
+    animation = ui_animate(this, [from, to], { duration: 200, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' }) || animation;
+  });
+  if (!animation) {
+    apply();
+    return;
+  }
+  element._ui_stats = animation;
+  animation.onfinish = function () {
+    element._ui_stats = null;
+    apply();
+  };
+}
+
+
+// load script (once)
+var loaded_scripts = {};
+function load_script(src) {
+  if (!loaded_scripts[src]) {
+    loaded_scripts[src] = new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = function () {
+        delete loaded_scripts[src];
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return loaded_scripts[src];
+}
+
+
+// format timer (mm:ss or hh:mm:ss)
+function format_timer(seconds, with_hours) {
+  seconds = Math.max(0, Math.floor(seconds));
+  var parts = with_hours ? [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60] : [Math.floor(seconds / 60), seconds % 60];
+  return parts.map(function (part) {
+    return String(part).padStart(2, '0');
+  }).join(':');
+}
+
+
 // images
 function base64ToFile(base64, filename) {
   var arr = base64.split(',');
@@ -811,39 +1057,52 @@ $(function () {
   // init Sngine console
   sngine_console();
 
+
   // init plugins
   initialize();
-  $(document).ajaxComplete(function () {
+  flyonui_init();
+  var background_responses = {};
+  $(document).ajaxComplete(function (event, xhr, settings) {
+    /* a background poll that returned the same as last time changed nothing on the page */
+    if (settings.url == api['data/live'] || settings.url == api['chat/live']) {
+      xhr.sngine_unchanged = (background_responses[settings.url] === xhr.responseText);
+      background_responses[settings.url] = xhr.responseText;
+      if (xhr.sngine_unchanged) {
+        return;
+      }
+    }
     initialize();
+    window.setTimeout(flyonui_init);
   });
 
 
-  // init hash
-  var _t = $('body').attr('data-hash-tok');
-  var _p = $('body').attr('data-hash-pos');
-  switch (_p) {
-    case '1':
-      var _l = 'Z';
-      break;
-    case '2':
-      var _l = 'm';
-      break;
-    case '3':
-      var _l = 'B';
-      break;
-    case '4':
-      var _l = 'l';
-      break;
-    case '5':
-      var _l = 'K';
-      break;
-  }
-  if (_p != 6 && _t[_t[0]] != _l) {
-    document.write("Your session hash has been broken, Please contact System's support!");
-  }
+  // swipes
+  var swipe_start = null;
+  document.addEventListener('touchstart', function (e) {
+    swipe_start = (e.touches.length == 1) ? { target: e.target, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { passive: true });
+  document.addEventListener('touchcancel', function () {
+    swipe_start = null;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (!swipe_start || e.touches.length > 0) return;
+    var dx = e.changedTouches[0].clientX - swipe_start.x;
+    var dy = e.changedTouches[0].clientY - swipe_start.y;
+    var target = swipe_start.target;
+    swipe_start = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 50) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      $(target).trigger((dx < 0) ? 'swipeleft' : 'swiperight');
+    } else {
+      $(target).trigger((dy < 0) ? 'swipeup' : 'swipedown');
+    }
+  }, { passive: true });
 
 
   // init sg-offcanvas-sidebar
+  if (!document.querySelector('.sg-offcanvas-sidebar')) {
+    $('[data-bs-toggle=sg-offcanvas]').addClass('hidden');
+  }
   var _scroll_pos = 0;
   $('body').on('click', '[data-bs-toggle=sg-offcanvas]', function () {
     $('.sg-offcanvas').toggleClass('active');
@@ -859,15 +1118,12 @@ $(function () {
   });
 
 
-  // run photo grid
+  // ui rebuild
   ui_rebuild();
-  $(window).on("resize", function () {
-    setTimeout(ui_rebuild(), 200);
-  });
 
 
-  // run bootstrap modal
-  $('body').on('click', '[data-toggle="modal"]', function (e) {
+  // run modal
+  $('body').on('click', '.js_modal', function (e) {
     e.preventDefault();
     if ($(e.target).hasClass('link') && $(e.target).hasClass('disabled')) {
       return false;
@@ -875,29 +1131,226 @@ $(function () {
     var url = $(this).data('url');
     var options = $(this).data('options');
     var size = $(this).data('size') || "default";
+    var static = ($(this).data('static') === true) ? true : false;
+    /* stack over the open modal */
+    var stacked = ($(this).data('stacked') === true) && !modal_layer(false).classList.contains('hidden');
     if (url.indexOf('#') == 0) {
       /* open already loaded modal with #id */
-      modal(url, options, size);
+      modal(url, options, size, static);
     } else {
       /* init loading modal */
-      modal('#modal-loading', options, size);
+      if (stacked) {
+        modal_invalidate();
+        modal_stacked('#modal-loading', options, static, size);
+      } else {
+        modal('#modal-loading', options, size, static);
+      }
+      var request_id = modal_state.request_id;
       /* get & load modal from url */
       $.getJSON(ajax_path + url, function (response) {
         /* check the response */
-        if (!response) return;
+        if (!response || request_id !== modal_state.request_id || modal_layer(stacked).classList.contains('hidden')) return;
         /* check if there is a callback */
         if (response.callback) {
-          eval(response.callback);
+          modal_state.stacked_content = stacked;
+          try {
+            eval(response.callback);
+          } finally {
+            modal_state.stacked_content = false;
+          }
         }
       })
         .fail(function () {
+          if (request_id !== modal_state.request_id || modal_layer(stacked).classList.contains('hidden')) return;
           show_error_modal();
         });
     }
   });
+  /* invalidate pending content when the modal starts closing */
+  $('body').on('click', '[data-overlay="#modal"]', function () {
+    modal_invalidate();
+  });
+  $('body').on('click', '#modal-backdrop', function () {
+    var instance = get_modal_instance();
+    if (instance && instance.hasAbilityToCloseOnBackdropClick) modal_invalidate();
+  });
+  $(document).on('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var modal_el = modal_layer(false);
+    var modal_stacked_el = modal_layer(true);
+    var instance = get_modal_instance();
+    if (modal_stacked_el && !modal_stacked_el.classList.contains('hidden')) return;
+    if (modal_el && modal_el.classList.contains('open') && instance && instance.hasAbilityToCloseOnBackdropClick) {
+      modal_invalidate();
+    }
+  });
+  /* submit modal forms with enter */
+  $('body').on('keydown', '#modal form input, #modal-stacked form input', function (event) {
+    var e = event.originalEvent || event;
+    if (e.key !== 'Enter' || e.isComposing || event.isDefaultPrevented()) return;
+    if ($(this).is('.js_mentions, [type="checkbox"], [type="radio"], [type="file"], [type="button"], [type="submit"], [type="range"], [type="color"]')) return;
+    event.preventDefault();
+    this.form.requestSubmit();
+  });
+  /* run a dialog that arrived while the modal was opening */
+  $('body').on('open.overlay', '#modal', function () {
+    modal_run_pending();
+  });
+  $('body').on('open.overlay', '#modal-stacked', function () {
+    modal_run_pending(true);
+  });
+  /* reset the modal */
+  $('body').on('close.overlay', '#modal', function () {
+    modal_invalidate();
+    $(this).removeData('dialog');
+    var instance = get_modal_instance();
+    if (instance) instance.hasAbilityToCloseOnBackdropClick = true;
+    this.setAttribute('data-overlay-keyboard', 'true');
+    this.style.setProperty('--overlay-backdrop', 'true');
+    /* reset the dialog size */
+    $(this).find('.modal__dialog').removeClass('modal__dialog--sm modal__dialog--lg max-w-5xl modal__dialog--scroll-inside p-0! max-w-3xl! max-h-[min(52rem,calc(100dvh-5rem))] max-sm:h-full! max-sm:min-h-full! max-sm:max-h-full! max-sm:rounded-none!').addClass('modal__dialog--md modal__dialog--scroll-outside');
+    $(this).find('.modal__container').removeClass('max-sm:p-0!').addClass('modal__container--scroll-outside');
+    /* restore publisher content */
+    var wrapper = $('#publisher-wapper');
+    var publisher_content = wrapper.data('publisher-detached');
+    if (publisher_content) {
+      wrapper.append(publisher_content);
+      wrapper.removeData('publisher-detached');
+    }
+    $('body').removeClass('publisher-focus');
+    /* empty the modal-content back to its original state */
+    $(this).find('#modal-content').html(
+      '<div class="modal__body"><div class="loading loading-spinner my-2.5"></div></div>'
+    );
+    modal_run_pending();
+  });
+  /* reset the stacked modal */
+  $('body').on('close.overlay', '#modal-stacked', function () {
+    var instance = get_modal_instance(true);
+    if (instance) instance.hasAbilityToCloseOnBackdropClick = true;
+    this.setAttribute('data-overlay-keyboard', 'true');
+    this.style.setProperty('--overlay-backdrop', 'true');
+    $(this).find('.modal__dialog').removeClass('modal__dialog--lg').addClass('modal__dialog--md');
+    $(this).find('#modal-stacked-content').html(
+      '<div class="modal__body"><div class="loading loading-spinner my-2.5"></div></div>'
+    );
+    modal_run_pending(true);
+  });
+
+
+  // run promoted posts carousel
+  /* pause the auto play while the user interacts with the posts */
+  function boosted_carousel_timer(element, play) {
+    var carousel = (window.HSCarousel) ? window.HSCarousel.getInstance(element, true) : null;
+    if (!carousel || !carousel.element || typeof carousel.element.resetTimer !== 'function') {
+      return;
+    }
+    carousel.element.resetTimer();
+    if (play) {
+      carousel.element.setTimer();
+    }
+  }
+  $('body').on('mouseenter focusin', '.js_boosted-carousel', function () {
+    boosted_carousel_timer(this, false);
+  });
+  $('body').on('mouseleave focusout', '.js_boosted-carousel', function () {
+    var element = this;
+    setTimeout(function () {
+      if (!$(element).is(':hover') && !$.contains(element, document.activeElement)) {
+        boosted_carousel_timer(element, true);
+      }
+    }, 0);
+  });
+  /* resize the slides when the sidebar is collapsed or expanded */
+  $('body').on('transitionend', '#site-sidebar', function (e) {
+    if (e.target !== this || e.originalEvent.propertyName !== 'width' || !window.HSCarousel) return;
+    $('.js_boosted-carousel').each(function () {
+      var carousel = window.HSCarousel.getInstance(this, true);
+      if (!carousel || !carousel.element) return;
+      carousel.element.recalculateWidth();
+      carousel.element.goTo(carousel.element.currentIndex);
+    });
+  });
 
 
   // run lightbox
+  /* update the lightbox (next & prev & post data) */
+  function lightbox_update(lightbox, response, context) {
+    $.each({ 'next': lightbox.find('.lightbox-next'), 'prev': lightbox.find('.lightbox-prev') }, function (key, button) {
+      var photo = response[key];
+      button.toggleClass('hidden', photo == null);
+      button.data('id', (photo != null) ? photo.photo_id : '');
+      button.data('source', (photo != null) ? photo.source : '');
+      button.data('context', (photo != null) ? context : '');
+    });
+    lightbox.find('.lightbox-post').replaceWith(response.lightbox);
+    if (response.download) {
+      lightbox.find('a.lightbox-download[download]').attr('href', response.download);
+    }
+  }
+  /* slide the lightbox image */
+  function lightbox_slide(lightbox, source, direction) {
+    var image = lightbox.find('.lightbox-image');
+    var loader = lightbox.find('.lightbox-loader');
+    var out_class = (direction == 'next') ? '-translate-x-16 rtl:translate-x-16' : 'translate-x-16 rtl:-translate-x-16';
+    var in_class = (direction == 'next') ? 'translate-x-16 rtl:-translate-x-16' : '-translate-x-16 rtl:translate-x-16';
+    var started = Date.now();
+    lightbox_zoom(lightbox, 1);
+    image.addClass('opacity-0 ' + out_class);
+    var loading = setTimeout(function () {
+      loader.removeClass('hidden');
+    }, 300);
+    var preload = new Image();
+    preload.onload = preload.onerror = function () {
+      setTimeout(function () {
+        clearTimeout(loading);
+        loader.addClass('hidden');
+        /* jump to the other side without transition */
+        image.addClass('transition-none').removeClass(out_class).addClass(in_class);
+        image[0].offsetWidth;
+        image.attr('src', source).removeClass('transition-none');
+        lightbox.find('.lightbox-ambient').attr('src', source);
+        /* slide in */
+        requestAnimationFrame(function () {
+          image.removeClass('opacity-0 ' + in_class);
+        });
+      }, Math.max(0, 250 - (Date.now() - started)));
+    };
+    preload.src = source;
+    lightbox.find('a.lightbox-download').attr('href', source);
+  }
+  /* zoom the lightbox image */
+  function lightbox_zoom(lightbox, zoom) {
+    zoom = Math.min(4, Math.max(1, zoom));
+    if (zoom == 1) {
+      lightbox.data({ 'pan-x': 0, 'pan-y': 0 });
+    }
+    lightbox.data('zoom', zoom);
+    lightbox.find('.lightbox-stage').css('transform', 'translate(' + (lightbox.data('pan-x') || 0) + 'px, ' + (lightbox.data('pan-y') || 0) + 'px) scale(' + zoom + ')').toggleClass('cursor-grab', zoom > 1);
+    lightbox.find('.js_lightbox-zoom-out').prop('disabled', zoom <= 1);
+    lightbox.find('.js_lightbox-zoom-in').prop('disabled', zoom >= 4);
+  }
+  /* stop the lightbox video */
+  function lightbox_video_stop(lightbox) {
+    var stage = lightbox.find('.lightbox-video-stage');
+    var video = stage.find('video.js_video-plyr')[0];
+    if (video && video.plyr) {
+      video.plyr.destroy();
+    }
+    stage.empty().addClass('hidden');
+  }
+  /* close the lightbox */
+  function lightbox_close() {
+    lightbox_video_stop($('.lightbox'));
+    if (document.fullscreenElement && $(document.fullscreenElement).is('.lightbox')) {
+      document.exitFullscreen();
+    }
+    if (typeof end_live_audience !== "undefined") {
+      end_live_audience();
+    }
+    $('body').removeClass('lightbox-open overflow-hidden');
+    $('.lightbox').remove();
+  }
   /* open the lightbox */
   $('body').on('click', '.js_lightbox', function (e) {
     e.preventDefault();
@@ -907,194 +1360,204 @@ $(function () {
     var context = $(this).data('context');
     /* load lightbox */
     var lightbox = $(render_template("#lightbox", { 'image': image }));
-    var next = lightbox.find('.lightbox-next');
-    var prev = lightbox.find('.lightbox-prev');
-    $('body').addClass('lightbox-open').append(lightbox.fadeIn('fast'));
+    $('body').addClass('lightbox-open overflow-hidden').append(lightbox.fadeIn('fast'));
     /* get photo */
     $.post(api['posts/lightbox'], { 'id': id, 'context': context }, function (response) {
       /* check the response */
       if (response.callback) {
-        $('body').removeClass('lightbox-open');
-        $('.lightbox').remove();
+        lightbox_close();
         eval(response.callback);
       } else {
-        /* update next */
-        if (response.next != null) {
-          next.show();
-          next.data('id', response.next.photo_id);
-          next.data('source', response.next.source);
-          next.data('context', context);
-        } else {
-          next.hide();
-          next.data('id', '');
-          next.data('source', '');
-          next.data('context', '');
-        }
-        /* update prev */
-        if (response.prev != null) {
-          prev.show();
-          prev.data('id', response.prev.photo_id);
-          prev.data('source', response.prev.source);
-          prev.data('context', context);
-        } else {
-          prev.hide();
-          prev.data('id', '');
-          prev.data('source', '');
-          prev.data('context', '');
-        }
-        lightbox.find('.lightbox-post').replaceWith(response.lightbox);
+        lightbox_update(lightbox, response, context);
       }
     }, 'json');
   });
   $('body').on('click', '.js_lightbox-slider', function (e) {
     /* initialize vars */
-    var id = $(this).data('id');
-    var image = $(this).data('source');
-    var context = $(this).data('context');
-    /* load lightbox */
-    var lightbox = $(this).parents('.lightbox');
-    var next = lightbox.find('.lightbox-next');
-    var prev = lightbox.find('.lightbox-prev');
-    /* loading */
-    next.hide();
-    prev.hide();
-    lightbox.find('.lightbox-post').html('<div class="loader mtb10"></div>');
-    lightbox.find('.lightbox-preview img').attr('src', uploads_path + '/' + image);
-    lightbox.find('.lightbox-download').find('a').each(
-      function () {
-        $(this).attr('href', uploads_path + '/' + image);
-      }
-    );
+    var _this = $(this);
+    var id = _this.data('id');
+    var image = _this.data('source');
+    var context = _this.data('context');
+    var lightbox = _this.parents('.lightbox');
+    if (!id || lightbox.data('sliding')) {
+      return;
+    }
+    lightbox.data('sliding', true);
+    /* slide */
+    lightbox_slide(lightbox, uploads_path + '/' + image, _this.hasClass('lightbox-next') ? 'next' : 'prev');
+    lightbox.find('.lightbox-next, .lightbox-prev').addClass('hidden');
+    lightbox.find('.lightbox-post').html('<div class="loading loading-spinner my-2.5"></div>');
     /* get photo */
     $.post(api['posts/lightbox'], { 'id': id, 'context': context }, function (response) {
       /* check the response */
       if (response.callback) {
-        $('body').removeClass('lightbox-open');
-        lightbox.remove();
+        lightbox_close();
         eval(response.callback);
       } else {
-        /* update next */
-        if (response.next != null) {
-          next.show();
-          next.data('id', response.next.photo_id);
-          next.data('source', response.next.source);
-          next.data('context', context);
-        } else {
-          next.hide();
-          next.data('id', '');
-          next.data('source', '');
-          next.data('context', '');
-        }
-        /* update prev */
-        if (response.prev != null) {
-          prev.show();
-          prev.data('id', response.prev.photo_id);
-          prev.data('source', response.prev.source);
-          prev.data('context', context);
-        } else {
-          prev.hide();
-          prev.data('id', '');
-          prev.data('source', '');
-          prev.data('context', '');
-        }
-        lightbox.find('.lightbox-post').replaceWith(response.lightbox);
+        lightbox_update(lightbox, response, context);
       }
-    }, 'json');
+    }, 'json')
+      .always(function () {
+        lightbox.removeData('sliding');
+      });
+  });
+  /* zoom in & out */
+  $('body').on('click', '.js_lightbox-zoom-in, .js_lightbox-zoom-out', function () {
+    var lightbox = $(this).parents('.lightbox');
+    lightbox_zoom(lightbox, (lightbox.data('zoom') || 1) + ($(this).hasClass('js_lightbox-zoom-in') ? 0.5 : -0.5));
+  });
+  $('body').on('dblclick', '.lightbox-stage', function () {
+    var lightbox = $(this).parents('.lightbox');
+    lightbox_zoom(lightbox, ((lightbox.data('zoom') || 1) > 1) ? 1 : 2);
+  });
+  /* pan the zoomed image */
+  $('body').on('pointerdown', '.lightbox-stage', function (e) {
+    var stage = $(this);
+    var lightbox = stage.parents('.lightbox');
+    if ((lightbox.data('zoom') || 1) <= 1) {
+      return;
+    }
+    e.preventDefault();
+    var start_x = e.clientX - (lightbox.data('pan-x') || 0);
+    var start_y = e.clientY - (lightbox.data('pan-y') || 0);
+    stage.addClass('transition-none cursor-grabbing');
+    $(document).on('pointermove.lightbox', function (event) {
+      lightbox.data({ 'pan-x': event.clientX - start_x, 'pan-y': event.clientY - start_y });
+      lightbox_zoom(lightbox, lightbox.data('zoom'));
+    }).on('pointerup.lightbox pointercancel.lightbox', function () {
+      $(document).off('.lightbox');
+      stage.removeClass('transition-none cursor-grabbing');
+    });
+  });
+  /* fullscreen */
+  $('body').on('click', '.js_lightbox-fullscreen', function () {
+    var lightbox = $(this).parents('.lightbox')[0];
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (lightbox.requestFullscreen) {
+      lightbox.requestFullscreen();
+    }
+  });
+  $(document).on('fullscreenchange', function () {
+    $('.js_lightbox-fullscreen').toggleClass('is-fullscreen', !!document.fullscreenElement);
+  });
+  /* slide the lightbox with keyboard arrows */
+  $('body').on('keydown', function (e) {
+    if ($('.lightbox').length == 0 || (e.key != 'ArrowRight' && e.key != 'ArrowLeft') || $(e.target).is('input, textarea, [contenteditable]')) {
+      return;
+    }
+    var forward = (e.key == 'ArrowRight') != ($('html').attr('dir') == 'rtl');
+    $('.lightbox').find(forward ? '.lightbox-next' : '.lightbox-prev').not('.hidden').trigger('click');
+  });
+  /* slide the lightbox with swipes */
+  $('body').on('swipeleft', '.lightbox-preview', function () {
+    if (($(this).parents('.lightbox').data('zoom') || 1) > 1) {
+      return;
+    }
+    $(this).find(($('html').attr('dir') == 'rtl') ? '.lightbox-prev' : '.lightbox-next').not('.hidden').trigger('click');
+  });
+  $('body').on('swiperight', '.lightbox-preview', function () {
+    if (($(this).parents('.lightbox').data('zoom') || 1) > 1) {
+      return;
+    }
+    $(this).find(($('html').attr('dir') == 'rtl') ? '.lightbox-next' : '.lightbox-prev').not('.hidden').trigger('click');
   });
   /* open the lightbox with no data */
   $('body').on('click', '.js_lightbox-nodata', function (e) {
     e.preventDefault();
     /* initialize vars */
-    var image = $(this).data('image');
+    var item = { 'image': $(this).data('image'), 'video': $(this).data('video'), 'download': $(this).data('download') };
     /* load lightbox */
-    var lightbox = $(render_template("#lightbox-nodata", { 'image': image }));
-    $('body').addClass('lightbox-open').append(lightbox.fadeIn('fast'));
+    var lightbox = $(render_template("#lightbox-nodata", { 'image': item.image || '' }));
+    /* gallery */
+    if ($(this).data('gallery')) {
+      var tiles = $(this).parent().children('.js_lightbox-nodata');
+      var gallery = tiles.map(function () {
+        return { 'image': $(this).data('image'), 'video': $(this).data('video'), 'download': $(this).data('download') };
+      }).get();
+      if (gallery.length > 1) {
+        lightbox.data({ 'gallery': gallery, 'gallery-index': tiles.index(this) });
+        lightbox.find('.js_lightbox-nodata-slider').removeClass('hidden');
+      }
+    }
+    lightbox.find('a.lightbox-download').prop('hidden', lightbox.find('a.lightbox-download').attr('data-' + (item.video ? 'video' : 'image')) != '1');
+    if (item.download) {
+      lightbox.find('a.lightbox-download').attr('href', item.download);
+    }
+    $('body').addClass('lightbox-open overflow-hidden').append(lightbox.fadeIn('fast'));
+    if (item.video) {
+      lightbox_nodata_show(lightbox, item);
+    }
   });
+  /* slide the lightbox gallery */
+  $('body').on('click', '.js_lightbox-nodata-slider', function () {
+    var lightbox = $(this).parents('.lightbox');
+    var gallery = lightbox.data('gallery');
+    if (!gallery) {
+      return;
+    }
+    var direction = $(this).hasClass('lightbox-next') ? 'next' : 'prev';
+    var index = (lightbox.data('gallery-index') + (direction == 'next' ? 1 : -1) + gallery.length) % gallery.length;
+    lightbox.data('gallery-index', index);
+    lightbox_nodata_show(lightbox, gallery[index], direction);
+  });
+  /* show a lightbox gallery item */
+  function lightbox_nodata_show(lightbox, item, direction) {
+    lightbox.find('a.lightbox-download').prop('hidden', lightbox.find('a.lightbox-download').attr('data-' + (item.video ? 'video' : 'image')) != '1');
+    var image = lightbox.find('.lightbox-image');
+    lightbox_video_stop(lightbox);
+    if (item.video) {
+      lightbox_zoom(lightbox, 1);
+      image.addClass('hidden');
+      lightbox.find('.lightbox-ambient').addClass('hidden');
+      lightbox.find('.js_lightbox-zoom-in, .js_lightbox-zoom-out').prop('disabled', true);
+      lightbox.find('a.lightbox-download').attr('href', item.download || item.video);
+      /* init plyr */
+      var video = $('<video class="js_video-plyr size-full" data-lightbox="true" controls playsinline preload="metadata"></video>').attr('id', 'lightbox-video-' + Date.now());
+      video.append($('<source type="video/mp4">').attr('src', item.video));
+      lightbox.find('.lightbox-video-stage').removeClass('hidden').append(video);
+      initialize();
+      if (video[0].plyr) {
+        video[0].plyr.play();
+      }
+    } else {
+      image.removeClass('hidden');
+      lightbox.find('.lightbox-ambient').removeClass('hidden');
+      lightbox.find('.js_lightbox-zoom-in').prop('disabled', false);
+      lightbox_slide(lightbox, item.image, direction);
+      if (item.download) {
+        lightbox.find('a.lightbox-download').attr('href', item.download);
+      }
+    }
+  }
   /* close the lightbox (when click outside the lightbox content) */
   $('body').on('click', '.lightbox', function (e) {
     if ($(e.target).is(".lightbox")) {
-      if (typeof end_live_audience !== "undefined") {
-        end_live_audience();
-      }
-      $('body').removeClass('lightbox-open');
-      $('.lightbox').remove();
+      lightbox_close();
     }
   });
   /* close the lightbox (when click the close button) */
   $('body').on('click', '.js_lightbox-close', function () {
-    if (typeof end_live_audience !== "undefined") {
-      end_live_audience();
-    }
-    $('body').removeClass('lightbox-open');
-    $('.lightbox').remove();
+    lightbox_close();
   });
   /* close the lightbox (when press Esc button) */
   $('body').on('keydown', function (e) {
     if (e.keyCode === 27 && $('.lightbox').length > 0) {
-      if (typeof end_live_audience !== "undefined") {
-        end_live_audience();
-      }
-      $('body').removeClass('lightbox-open');
-      $('.lightbox').remove();
+      lightbox_close();
     }
   });
 
 
-  // run reels
-  /* show reel comments */
-  $('body').on('click', '.js_reel-comments-toggle', function (e) {
-    /* initialize vars */
-    var _this = $(this);
-    var reel_container = _this.parents('.reel-container');
-    reel_container.toggleClass('comments-shown');
+  $('body').on('click', '.js_dismiss-alert', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $(this).closest('.alert, .toast').remove();
   });
-  $('body').on('click', '.js_reel-next-btn', function () {
-    next_reel($(this).parents('.reel-container'));
-  });
-  $('body').on('click', '.js_reel-prev-btn', function () {
-    prev_reel($(this).parents('.reel-container'));
-  });
-  /* reels swipes */
-  $('.reel-video-wrapper').on('swipedown', function () {
-    prev_reel($(this).parents('.reel-container'));
-  });
-  $('.reel-video-wrapper').on('swipeup', function () {
-    next_reel($(this).parents('.reel-container'));
-  });
-  /* reels swipes with keyboard */
-  if (current_page == 'reels') {
-    $('body').on('keydown', function (e) {
-      if (e.key == "ArrowDown") {
-        next_reel($('.reel-container:not(.hidden)'));
-      }
-      if (e.key == "ArrowUp") {
-        prev_reel($('.reel-container:not(.hidden)'));
-      }
-    });
-  }
 
 
   // bootsrap dropdown keep open
   $('body').on('click', '.js_dropdown-keepopen', function (e) {
     e.stopPropagation();
-  });
-
-
-  // run bootstrap btn-group
-  $('body').on('click', '.btn-group .dropdown-item', function (e) {
-    e.preventDefault();
-    var parent = $(this).parents('.btn-group');
-    /* change the value */
-    parent.find('input[type="hidden"]').val($(this).data('value'));
-    /* copy text to btn-group-text */
-    parent.find('.btn-group-text').text($(this).text());
-    /* copy icon to btn-group-icon */
-    parent.find('.btn-group-icon').attr("class", $(this).find('i.fa').attr("class")).addClass('btn-group-icon');
-    /* copy title to tooltip */
-    parent.attr('data-original-title', $(this).data('title'));
-    parent.attr('data-value', $(this).data('value'));
-    parent.data('value', $(this).data('value'));
-    parent.tooltip();
   });
 
 
@@ -1110,6 +1573,7 @@ $(function () {
 
   // run ajax-forms
   function _submitAJAXform(element) {
+    if (typeof attachment_upload_busy === 'function' && attachment_upload_busy(element)) return false;
     var url = element.data('url');
     var submit = element.find('button[type="submit"]');
     var error = element.find('.alert.alert-danger');
@@ -1135,6 +1599,7 @@ $(function () {
         if (success.is(":visible")) success.hide(); // hide previous alert
         error.html(response.message).slideDown();
       } else if (response.success) {
+        if (typeof attachment_upload_clear === 'function') attachment_upload_clear(element);
         if (error.is(":visible")) error.hide(); // hide previous alert
         success.html(response.message).slideDown();
       } else if (response.download) {
@@ -1189,20 +1654,6 @@ $(function () {
   /* load more data by click */
   $('body').on('click', '.js_see-more', function () {
     load_more($(this));
-  });
-  /* load more data by scroll */
-  $('.js_see-more-infinite').on('inview', function (event, visible) {
-    if (visible == true) {
-      if ((desktop_infinite_scroll && !is_mobile()) || (mobile_infinite_scroll && is_mobile())) {
-        var element = $(this);
-        if (element.hasClass('processing')) return;
-        element.addClass('processing');
-        load_more(element);
-        setTimeout(function () {
-          element.removeClass('processing');
-        }, 500);
-      }
-    }
   });
 
 
@@ -1299,6 +1750,22 @@ $(function () {
   });
 
 
+  // run read more toggle
+  $('body').on('click', '.js_readmore-toggle', function () {
+    var _this = $(this);
+    var text = _this.parent().prev('.js_readmore');
+    if (_this.attr('aria-expanded') === 'true') {
+      text.addClass('line-clamp-(--read-more-lines)');
+      _this.attr('aria-expanded', 'false').text(__['Read more']);
+      if (text[0].getBoundingClientRect().top < 0) {
+        text[0].scrollIntoView({ block: 'nearest' });
+      }
+    } else {
+      text.removeClass('line-clamp-(--read-more-lines)');
+      _this.attr('aria-expanded', 'true').text(__['Read less']);
+    }
+  });
+
   // run YouTube player
   $('body').on('click', '.js_youtube-player', function () {
     if (disable_yt_player) {
@@ -1307,1329 +1774,6 @@ $(function () {
     } else {
       $(this).html('<iframe src="https://www.youtube.com/embed/' + $(this).data('id') + '?autoplay=1" frameborder="0" allowfullscreen="1" referrerpolicy="strict-origin-when-cross-origin"></iframe>');
     }
-  });
-
-
-  // run payments
-  /* Payment */
-  $('body').on('click', '.js_payment-pay', function () {
-    /* hide payment-summry */
-    $('#payment-summry').hide();
-    /* show payment-methods */
-    $('#payment-methods').fadeIn();
-  });
-  /* Apply Coupon */
-  $('body').on('click', '.js_payment-apply-coupon', function () {
-    var _this = $(this);
-    var error = $('#payment-coupon-error');
-    var success = $('#payment-coupon-success');
-    var promo_code = $('#payment-promo-code').val();
-    var price = $('#payment-promo-code').data('price');
-    var handle = $('#payment-promo-code').data('handle');
-    /* validate inputs */
-    if (is_empty(handle) || is_empty(price) || is_empty(promo_code)) {
-      return;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/coupon'], { 'handle': handle, 'price': price, 'promo_code': promo_code }, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (response.callback) {
-        eval(response.callback);
-      } else if (response.error) {
-        error.html(response.message).slideDown();
-      } else if (response.success) {
-        /* show success message */
-        success.html(response.message).slideDown();
-        /* hide error message */
-        error.hide();
-        /* add is-valid class to payment-promo-code */
-        $('#payment-promo-code').addClass('is-valid');
-        _this.addClass('x-hidden');
-        _this.siblings('.js_payment-clear-coupon').removeClass('x-hidden');
-        /* update payment summary */
-        $('#payment-vat').text(response.vat);
-        $('#payment-fees').text(response.fees);
-        $('#payment-discount-percentage').text(response.discount_percentage);
-        $('#payment-discount-value').text(response.discount);
-        $('#payment-total').text(response.total_printed);
-        /* update (price|total|promo_code) to modal buttons */
-        $('.btn-payment[data-toggle="modal"]').each(function () {
-          var btn = $(this);
-          var options = btn.data('options') || {};
-          if (typeof options === 'string') {
-            options = JSON.parse(options);
-          }
-          options.initial_price = options.price;
-          options.price = response.price;
-          options.initial_total = options.total;
-          options.total = response.total;
-          options.promo_code = promo_code;
-          btn.data('options', options).attr('data-options', JSON.stringify(options));
-        });
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Clear Coupon */
-  $('body').on('click', '.js_payment-clear-coupon', function () {
-    var _this = $(this);
-    /* hide clear button */
-    _this.addClass('x-hidden');
-    /* show apply button */
-    _this.siblings('.js_payment-apply-coupon').removeClass('x-hidden');
-    /* reset payment summary */
-    $('#payment-vat').text($('#payment-vat').data('initial-value'));
-    $('#payment-fees').text($('#payment-fees').data('initial-value'));
-    $('#payment-discount-percentage').text(0);
-    $('#payment-discount-value').text(0);
-    $('#payment-total').text($('#payment-total').data('initial-value'));
-    /* remove is-valid class from payment-promo-code */
-    $('#payment-promo-code').removeClass('is-valid');
-    /* reset payment-promo-code */
-    $('#payment-promo-code').val('');
-    /* hide success message */
-    $('#payment-coupon-success').hide();
-    /* reset (price|total|promo_code) to modal buttons */
-    $('.btn-payment[data-toggle="modal"]').each(function () {
-      var btn = $(this);
-      var options = btn.data('options') || {};
-      if (typeof options === 'string') {
-        options = JSON.parse(options);
-      }
-      options.price = options.initial_price;
-      options.total = options.initial_total;
-      delete options.promo_code;
-      btn.data('options', options).attr('data-options', JSON.stringify(options));
-    });
-  });
-  /* PayPal */
-  $('body').on('click', '.js_payment-paypal', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/paypal'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Stripe */
-  $('body').on('click', '.js_payment-stripe', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    data['method'] = _this.data('method');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/stripe'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-      /* check if there is a session */
-      if (response.session) {
-        var stripe = Stripe(stripe_key);
-        /* check if stripe payment element enabled */
-        if (stripe_payment_element_enabled) {
-          var paymentElementAppearance = {
-            theme: (theme_mode_night) ? 'night' : 'stripe',
-            locale: 'auto',
-          };
-          var elements = stripe.elements({ clientSecret: response.session.client_secret, appearance: paymentElementAppearance });
-          var paymentElementOptions = {
-            layout: {
-              type: 'accordion',
-              defaultCollapsed: false,
-              radios: false,
-              spacedAccordionItems: true
-            },
-          };
-          var paymentElement = elements.create("payment", paymentElementOptions);
-          modal('#stripe-payment-element');
-          paymentElement.mount("#stripe-payment-element-details");
-          $('#stripe-payment-element-form').on('submit', async function (e) {
-            e.preventDefault();
-            var form = $("#stripe-payment-element-form");
-            var submit = form.find('button[type="submit"]');
-            var error = form.find('.alert.alert-danger');
-            /* button loading */
-            button_status(submit, "loading");
-            const { errorObj } = await stripe.confirmPayment({
-              elements,
-              confirmParams: {
-                return_url: response.session.success_url,
-              },
-            });
-            if (errorObj) {
-              error.html(errorObj.message).slideDown();
-            }
-            /* button reset */
-            button_status(submit, "reset");
-          });
-        } else {
-          stripe.redirectToCheckout({
-            sessionId: response.session.id
-          }).then(function (result) {
-            /* button reset */
-            button_status(_this, "reset");
-            /* handle error */
-            modal('#modal-message', { title: __['Error'], message: result.error.message });
-          });
-        }
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Paystack */
-  $('body').on('click', '.js_payment-paystack', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/paystack'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* CoinPayments */
-  $('body').on('click', '.js_payment-coinpayments', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/coinpayments'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (response.coinpayments_form) {
-        $(response.coinpayments_form).appendTo('body').trigger("submit");
-      }
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* 2Checkout */
-  $('body').on('submit', '#twocheckout_form', function (e) {
-    e.preventDefault();
-    TCO.loadPubKey("production", function () {
-      twocheckout_token_request();
-    });
-    return false;
-  });
-  function twocheckout_token_request() {
-    var form = $("#twocheckout_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    button_status(submit, "loading");
-    if (form.find('input[name="card_number"]').val() != '' && form.find('input[select="card_exp_month"]').val() != '' && form.find('select[name="card_exp_year"]').val() != '' && form.find('input[name="card_cvv"]').val() != '' && form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '' && form.find('input[name="billing_address"]').val() != '' && form.find('input[name="billing_city"]').val() != '' && form.find('input[name="billing_state"]').val() != '' && form.find('select[name="billing_country"]').val() != '' && form.find('input[name="billing_zip_code"]').val() != '') {
-      /* setup token request arguments */
-      var args = {
-        sellerId: twocheckout_merchant_code,
-        publishableKey: twocheckout_publishable_key,
-        ccNo: form.find('input[name="card_number"]').val(),
-        cvv: form.find('input[name="card_cvv"]').val(),
-        expMonth: form.find('select[name="card_exp_month"]').val(),
-        expYear: form.find('select[name="card_exp_year"]').val()
-      };
-      /* make the token request */
-      TCO.requestToken(twocheckout_success_callback, twocheckout_error_callback, args);
-    } else {
-      button_status(submit, "reset");
-      error.html(__['You must fill in all of the fields']).slideDown();
-    }
-  };
-  function twocheckout_success_callback(data) {
-    var form = $("#twocheckout_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    /* update token */
-    form.find('input[name="token"]').val(data.response.token.token);
-    /* get ajax response */
-    $.post(api['payments/2checkout'], form.serialize(), function (response) {
-      /* button reset */
-      button_status(submit, "reset");
-      /* handle response */
-      if (response.error) {
-        error.html(response.message).slideDown();
-      } else {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(submit, "reset");
-        /* handle error */
-        error.html(__['There is something that went wrong!']).slideDown();
-      });
-  };
-  function twocheckout_error_callback(data) {
-    var form = $("#twocheckout_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    if (data.errorCode === 200) {
-      twocheckout_token_request();
-    } else {
-      button_status(submit, "reset");
-      error.html(data.errorMsg).slideDown();
-    }
-  };
-  /* Authorize.net */
-  $('body').on('submit', '#authorizenet_form', function (e) {
-    e.preventDefault();
-    var form = $("#authorizenet_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    button_status(submit, "loading");
-    if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
-      /* get ajax response */
-      $.post(api['payments/authorize'], form.serialize(), function (response) {
-        /* button reset */
-        button_status(submit, "reset");
-        /* handle response */
-        if (response.error) {
-          error.html(response.message).slideDown();
-        } else {
-          eval(response.callback);
-        }
-      }, "json")
-        .fail(function () {
-          /* button reset */
-          button_status(submit, "reset");
-          /* handle error */
-          error.html(__['There is something that went wrong!']).slideDown();
-        });
-    } else {
-      button_status(submit, "reset");
-      error.html(__['You must fill in all of the fields']).slideDown();
-    }
-  });
-  /* Razorpay */
-  $('body').on('submit', '#razorpay_form', function (e) {
-    e.preventDefault();
-    var form = $("#razorpay_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    button_status(submit, "loading");
-    if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
-      var data = {};
-      var promo_code = form.find('input[name="promo_code"]').val();
-      if (!is_empty(promo_code)) {
-        data['promo_code'] = promo_code;
-      }
-      data['handle'] = form.find('input[name="handle"]').val();
-      if (data['handle'] == "packages") {
-        data['package_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "wallet") {
-        data['price'] = form.find('input[name="price"]').val();
-      }
-      if (data['handle'] == "donate") {
-        data['post_id'] = form.find('input[name="id"]').val();
-        data['price'] = form.find('input[name="price"]').val();
-      }
-      if (data['handle'] == "subscribe") {
-        data['plan_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "paid_post") {
-        data['post_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "movies") {
-        data['movie_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "marketplace") {
-        data['orders_collection_id'] = form.find('input[name="id"]').val();
-      }
-      var options = {
-        "key": razorpay_key,
-        "amount": Math.round(form.find('input[name="total"]').val() * 100),
-        "currency": currency,
-        "name": site_title,
-        "netbanking": true,
-        "prefill": {
-          "name": form.find('input[name="billing_name"]').val(),
-          "email": form.find('input[name="billing_email"]').val(),
-          "contact": form.find('input[name="billing_phone"]').val(),
-        },
-        "handler": function (transaction) {
-          data['razorpay_payment_id'] = transaction.razorpay_payment_id;
-          $.post(api['payments/razorpay'], data, function (response) {
-            /* button reset */
-            button_status(submit, "reset");
-            /* check the response */
-            if (!response) return;
-            /* check if there is a callback */
-            if (response.callback) {
-              eval(response.callback);
-            }
-          }, "json")
-            .fail(function () {
-              /* button reset */
-              button_status(submit, "reset");
-              /* handle error */
-              show_error_modal();
-            });
-        },
-      };
-      var rzp1 = new Razorpay(options);
-      rzp1.open();
-    } else {
-      button_status(submit, "reset");
-      error.html(__['You must fill in all of the fields']).slideDown();
-    }
-  });
-  /* Cashfree */
-  $('body').on('submit', '#cashfree_form', function (e) {
-    e.preventDefault();
-    var form = $("#cashfree_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    button_status(submit, "loading");
-    if (form.find('input[name="billing_name"]').val() != '' && form.find('input[name="billing_email"]').val() != '' && form.find('input[name="billing_phone"]').val() != '') {
-      var data = {};
-      var promo_code = form.find('input[name="promo_code"]').val();
-      if (!is_empty(promo_code)) {
-        data['promo_code'] = promo_code;
-      }
-      data['handle'] = form.find('input[name="handle"]').val();
-      if (data['handle'] == "packages") {
-        data['package_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "wallet") {
-        data['price'] = form.find('input[name="price"]').val();
-      }
-      if (data['handle'] == "donate") {
-        data['post_id'] = form.find('input[name="id"]').val();
-        data['price'] = form.find('input[name="price"]').val();
-      }
-      if (data['handle'] == "subscribe") {
-        data['plan_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "paid_post") {
-        data['post_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "movies") {
-        data['movie_id'] = form.find('input[name="id"]').val();
-      }
-      if (data['handle'] == "marketplace") {
-        data['orders_collection_id'] = form.find('input[name="id"]').val();
-      }
-      data['billing_name'] = form.find('input[name="billing_name"]').val();
-      data['billing_email'] = form.find('input[name="billing_email"]').val();
-      data['billing_phone'] = form.find('input[name="billing_phone"]').val();
-      /* post the request */
-      $.post(api['payments/cashfree'], data, function (response) {
-        /* button reset */
-        button_status(submit, "reset");
-        /* check the response */
-        if (!response) return;
-        /* check if there is a callback */
-        if (response.callback) {
-          eval(response.callback);
-        }
-        /* check if there is a session */
-        if (response.payment_session_id) {
-          const cashfree = Cashfree();
-          cashfree.checkout({
-            "mode": cashfree_mode,
-            "paymentSessionId": response.payment_session_id,
-          }).then(function (result) {
-            /* button reset */
-            button_status(submit, "reset");
-            /* handle error */
-            modal('#modal-message', { title: __['Error'], message: result.error.message });
-          });
-        }
-      }, "json")
-        .fail(function () {
-          /* button reset */
-          button_status(submit, "reset");
-          /* handle error */
-          show_error_modal();
-        });
-    } else {
-      button_status(submit, "reset");
-      error.html(__['You must fill in all of the fields']).slideDown();
-    }
-  });
-  /* Coinbase */
-  $('body').on('click', '.js_payment-coinbase', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/coinbase'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Shift4 */
-  $('body').on('click', '.js_payment-shift4', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'token';
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/shift4'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-      /* hide the modal */
-      $('#modal').modal('hide');
-      /* open the checkout */
-      Shift4Checkout.key = shift4_key;
-      Shift4Checkout.open({
-        checkoutRequest: response.token,
-        name: site_title,
-      });
-      Shift4Checkout.success = function (result) {
-        data['do'] = 'verifiy';
-        data['shift4'] = result;
-        $.post(api['payments/shift4'], data, function (response) {
-          /* check the response */
-          if (!response) return;
-          /* check if there is a callback */
-          if (response.callback) {
-            eval(response.callback);
-          }
-        }, "json")
-          .fail(function () {
-            /* handle error */
-            show_error_modal();
-          });
-      };
-      Shift4Checkout.error = function (errorMessage) {
-        /* handle error */
-        modal('#modal-message', { title: __['Error'], message: errorMessage });
-      };
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* MyFatoorah */
-  $('body').on('click', '.js_payment-myfatoorah', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/myfatoorah'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-      /* check if there is a session */
-      if (response.session) {
-        var myfatoorah = new MyFatoorah();
-        myfatoorah.init(response.session);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Epayco */
-  $('body').on('click', '.js_payment-epayco', function () {
-    var _this = $(this);
-    var handle = _this.data('handle');
-    price = _this.data('price');
-    total = _this.data('total');
-    var callback = site_path + '/webhooks/epayco.php?status=success&';
-    if (handle == "packages") {
-      callback += "handle=packages&package_id=" + _this.data('id');
-    }
-    if (handle == "wallet") {
-      callback += "handle=wallet&price=" + price;
-    }
-    if (handle == "donate") {
-      callback += "handle=donate&post_id=" + _this.data('id') + "&price=" + price;
-    }
-    if (handle == "subscribe") {
-      callback += "handle=subscribe&plan_id=" + _this.data('id');
-    }
-    if (handle == "paid_post") {
-      callback += "handle=paid_post&post_id=" + _this.data('id');
-    }
-    if (handle == "movies") {
-      callback += "handle=movies&movie_id=" + _this.data('id');
-    }
-    if (handle == "marketplace") {
-      callback += "handle=marketplace&orders_collection_id=" + _this.data('id');
-    }
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      callback += "&promo_code=" + payment_promo_code;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* hide current modal */
-    $('#modal').modal('hide');
-    /* init ePayco */
-    var ePaycoHandler = ePayco.checkout.configure({
-      key: epayco_key,
-      test: epayco_test,
-    });
-    var ePaycoObject = {
-      name: site_title,
-      description: site_title,
-      invoice: guid(),
-      currency: "cop",
-      amount: total,
-      tax_base: "0",
-      tax: "0",
-      tax_ico: "0",
-      country: "co",
-      lang: "es",
-      external: "false",
-      confirmation: callback,
-      response: callback,
-    };
-    ePaycoHandler.open(ePaycoObject);
-    /* handle if user clicked close of ePayco */
-    ePaycoHandler.onClosed(function () {
-      /* reload the page */
-      location.reload();
-    });
-  });
-  /* Flutterwave */
-  $('body').on('click', '.js_payment-flutterwave', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/flutterwave'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Verotel */
-  $('body').on('click', '.js_payment-verotel', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/verotel'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* MercadoPago */
-  $('body').on('click', '.js_payment-mercadopago', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/mercadopago'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Plisio */
-  $('body').on('click', '.js_payment-plisio', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/plisio'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Ccbill */
-  $('body').on('click', '.js_payment-ccbill', function () {
-    var _this = $(this);
-    var data = {};
-    data['handle'] = _this.data('handle');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    if (data['handle'] == "packages") {
-      data['package_id'] = _this.data('id');
-    }
-    if (data['handle'] == "wallet") {
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "donate") {
-      data['post_id'] = _this.data('id');
-      data['price'] = _this.data('price');
-    }
-    if (data['handle'] == "subscribe") {
-      data['plan_id'] = _this.data('id');
-    }
-    if (data['handle'] == "paid_post") {
-      data['post_id'] = _this.data('id');
-    }
-    if (data['handle'] == "movies") {
-      data['movie_id'] = _this.data('id');
-    }
-    if (data['handle'] == "marketplace") {
-      data['orders_collection_id'] = _this.data('id');
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/ccbill'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Wallet */
-  $('body').on('click', '.js_payment-wallet-package', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'wallet_package_payment';
-    data['package_id'] = _this.data('id');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/wallet'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  $('body').on('click', '.js_payment-wallet-monetization', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'wallet_monetization_payment';
-    data['plan_id'] = _this.data('id');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/wallet'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  $('body').on('click', '.js_payment-wallet-paid-post', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'wallet_paid_post';
-    data['post_id'] = _this.data('id');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/wallet'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  $('body').on('click', '.js_payment-wallet-donate', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'wallet_donate';
-    data['post_id'] = _this.data('id');
-    data['amount'] = _this.data('price');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    var payment_promo_code = $('#payment-promo-code').val();
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/wallet'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  $('body').on('click', '.js_payment-wallet-marketplace', function () {
-    var _this = $(this);
-    var data = {};
-    data['do'] = 'wallet_marketplace';
-    data['orders_collection_id'] = _this.data('id');
-    var payment_promo_code = $('#payment-promo-code').val();
-    if (!is_empty(payment_promo_code)) {
-      data['promo_code'] = payment_promo_code;
-    }
-    var payment_promo_code = $('#payment-promo-code').val();
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/wallet'], data, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Bank Transfer */
-  $('body').on('submit', '#banktransfer_form', function (e) {
-    e.preventDefault();
-    var form = $("#banktransfer_form");
-    var submit = form.find('button[type="submit"]');
-    var error = form.find('.alert.alert-danger');
-    button_status(submit, "loading");
-    /* get ajax response */
-    $.post(api['payments/bank'], form.serialize(), function (response) {
-      /* button reset */
-      button_status(submit, "reset");
-      /* handle response */
-      if (response.error) {
-        error.html(response.message).slideDown();
-      } else {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(submit, "reset");
-        /* handle error */
-        error.html(__['There is something that went wrong!']).slideDown();
-      });
-  });
-  /* Cash On Delivery */
-  $('body').on('click', '.js_payment-cod-marketplace', function () {
-    var _this = $(this);
-    /* button loading */
-    button_status(_this, "loading");
-    /* post the request */
-    $.post(api['payments/cash_on_delivery'], { 'orders_collection_id': _this.data('id') }, function (response) {
-      /* button reset */
-      button_status(_this, "reset");
-      /* check the response */
-      if (!response) return;
-      /* check if there is a callback */
-      if (response.callback) {
-        eval(response.callback);
-      }
-    }, "json")
-      .fail(function () {
-        /* button reset */
-        button_status(_this, "reset");
-        /* handle error */
-        show_error_modal();
-      });
-  });
-  /* Free Trial */
-  $('body').on('click', '.js_try-package', function (e) {
-    e.preventDefault();
-    var id = $(this).data('id');
-    confirm(__['Try Package'], __['Are you sure you want to subscribe to this free package?'], function () {
-      $.post(api['payments/trial'], { 'type': 'package', 'package_id': id }, function (response) {
-        /* check the response */
-        if (response.callback) {
-          eval(response.callback);
-        }
-      }, 'json')
-        .fail(function () {
-          show_error_modal();
-        });
-    });
-    return false;
   });
 
 
@@ -2651,10 +1795,22 @@ $(function () {
   if (theme_mode_night) {
     $('.table').addClass('table-dark');
   }
+  function set_theme_mode(is_night) {
+    var root = document.documentElement;
+    var name = (root.getAttribute('data-theme') || '').replace(/-dark$/, '');
+    if (name) {
+      root.setAttribute('data-theme', is_night ? name + '-dark' : name);
+    }
+    if (typeof tinymce !== 'undefined' && typeof init_tinymce_editor === 'function') {
+      init_tinymce_editor();
+      init_tinymce_advanced_editor();
+    }
+  }
   $('body').on('click', '.js_theme-mode', function () {
     _this = $(this);
     mode = _this.data('mode');
     if (mode == "night") {
+      set_theme_mode(true);
       $('body').addClass('night-mode');
       $('body').attr('data-bs-theme', 'dark');
       $('.table').addClass('table-dark');
@@ -2663,6 +1819,7 @@ $(function () {
       $.post(api['core/theme'], { 'mode': mode });
 
     } else {
+      set_theme_mode(false);
       $('body').removeClass('night-mode');
       $('body').attr('data-bs-theme', 'light');
       $('.table').removeClass('table-dark');
@@ -2683,11 +1840,11 @@ $(function () {
     _this.attr('data-visible', !isVisible);
     input.attr('type', isVisible ? 'password' : 'text');
     if (isVisible) {
-      eyeSlash.addClass('x-hidden');
-      eye.removeClass('x-hidden');
+      eyeSlash.addClass('hidden');
+      eye.removeClass('hidden');
     } else {
-      eyeSlash.removeClass('x-hidden');
-      eye.addClass('x-hidden');
+      eyeSlash.removeClass('hidden');
+      eye.addClass('hidden');
     }
   });
 

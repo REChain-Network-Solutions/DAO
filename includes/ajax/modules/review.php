@@ -78,7 +78,7 @@ try {
 
       // prepare publisher
       $return['publisher'] = $smarty->fetch("ajax.review.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.publisher);";
+      $return['callback'] = "modal_content(response.publisher);";
       break;
 
     case 'publish-review':
@@ -116,7 +116,7 @@ try {
 
       // prepare publisher
       $return['publisher'] = $smarty->fetch("ajax.review.reply.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.publisher);";
+      $return['callback'] = "modal_content(response.publisher);";
       break;
 
     case 'publish-reply':

@@ -15,6 +15,132 @@ trait MoviesTrait
   /* ------------------------------- */
 
   /**
+   * movies_genres_map
+   * 
+   * @return array
+   */
+  private function movies_genres_map()
+  {
+    global $db;
+    static $map = null;
+    if ($map === null) {
+      $map = [];
+      $get_genres = $db->query("SELECT * FROM movies_genres ORDER BY genre_order ASC");
+      while ($genre = $get_genres->fetch_assoc()) {
+        $genre['genre_url'] = get_url_text($genre['genre_name']);
+        $map[$genre['genre_id']] = $genre;
+      }
+    }
+    return $map;
+  }
+
+
+  /**
+   * decorate_movie
+   * 
+   * @param array $movie
+   * @return array
+   */
+  private function decorate_movie($movie)
+  {
+    $movie['poster'] = get_picture($movie['poster'], 'movie');
+    $movie['movie_url'] = get_url_text($movie['title']);
+    $movie['genres_list'] = $this->get_movie_genres($movie['genres']);
+    /* duration */
+    $movie['duration_text'] = '';
+    $duration = (int) $movie['duration'];
+    if ($duration > 0) {
+      $movie['duration_text'] = ($duration >= 60) ? floor($duration / 60) . __("h") . ' ' . ($duration % 60) . __("m") : $duration . __("m");
+    }
+    /* views */
+    $views = (int) $movie['views'];
+    if ($views >= 1000000) {
+      $movie['views_text'] = round($views / 1000000, 1) . __("M");
+    } elseif ($views >= 1000) {
+      $movie['views_text'] = round($views / 1000, 1) . __("K");
+    } else {
+      $movie['views_text'] = $views;
+    }
+    return $movie;
+  }
+
+
+  /**
+   * movies_where_query
+   * 
+   * @param array $args
+   * @return string
+   */
+  private function movies_where_query($args = [])
+  {
+    $where = [];
+    /* filter */
+    switch ((isset($args['filter'])) ? $args['filter'] : '') {
+      case 'free':
+        $where[] = "is_paid = '0'";
+        break;
+
+      case 'paid':
+        $where[] = "is_paid = '1'";
+        break;
+    }
+    /* genre */
+    if (!empty($args['genre_id'])) {
+      $where[] = sprintf("find_in_set(%s, genres) > 0", secure($args['genre_id'], 'int'));
+    }
+    /* search query */
+    if (!empty($args['query'])) {
+      $where[] = sprintf('(title LIKE %1$s OR description LIKE %1$s OR stars LIKE %1$s)', secure($args['query'], 'search'));
+    }
+    /* excluded movie */
+    if (!empty($args['exclude'])) {
+      $where[] = sprintf("movie_id != %s", secure($args['exclude'], 'int'));
+    }
+    return ($where) ? " WHERE " . implode(" AND ", $where) . " " : " ";
+  }
+
+
+  /**
+   * get_movies
+   * 
+   * @param array $args
+   * @return array
+   */
+  public function get_movies($args = [])
+  {
+    global $db;
+    $movies = [];
+    /* prepare order query */
+    $order_query = ((isset($args['filter']) && $args['filter'] == 'trending')) ? " ORDER BY views DESC, movie_id DESC " : " ORDER BY movie_id DESC ";
+    /* prepare limit query */
+    $limit_query = "";
+    if (!empty($args['limit'])) {
+      $offset = (!empty($args['offset'])) ? $args['offset'] : 0;
+      $limit_query = sprintf(" LIMIT %s, %s", secure($offset, 'int', false), secure($args['limit'], 'int', false));
+    }
+    $get_movies = $db->query("SELECT * FROM movies" . $this->movies_where_query($args) . $order_query . $limit_query);
+    while ($movie = $get_movies->fetch_assoc()) {
+      $movies[] = $this->decorate_movie($movie);
+    }
+    return $movies;
+  }
+
+
+  /**
+   * count_movies
+   * 
+   * @param array $args
+   * @return integer
+   */
+  public function count_movies($args = [])
+  {
+    global $db;
+    $get_count = $db->query("SELECT COUNT(*) AS count FROM movies" . $this->movies_where_query($args));
+    return (int) $get_count->fetch_assoc()['count'];
+  }
+
+
+  /**
    * get_movies_genres
    * 
    * @param boolean $sorted
@@ -62,14 +188,13 @@ trait MoviesTrait
    */
   public function get_movie_genres($movie_genres)
   {
-    global $db;
     $genres = [];
     if ($movie_genres) {
-      $get_genres = $db->query("SELECT * FROM movies_genres WHERE genre_id IN (" . $movie_genres . ")");
-      if ($get_genres->num_rows > 0) {
-        while ($genre = $get_genres->fetch_assoc()) {
-          $genre['genre_url'] = get_url_text($genre['genre_name']);
-          $genres[] = $genre;
+      $map = $this->movies_genres_map();
+      foreach (explode(',', $movie_genres) as $genre_id) {
+        $genre_id = (int) trim($genre_id);
+        if ($genre_id && isset($map[$genre_id])) {
+          $genres[] = $map[$genre_id];
         }
       }
     }
@@ -90,13 +215,11 @@ trait MoviesTrait
     if ($get_movie->num_rows == 0) {
       return false;
     }
-    $movie = $get_movie->fetch_assoc();
-    $movie['poster'] = get_picture($movie['poster'], 'movie');
-    $movie['movie_url'] = get_url_text($movie['title']);
-    $movie['genres_list'] = $this->get_movie_genres($movie['genres']);
+    $movie = $this->decorate_movie($get_movie->fetch_assoc());
     $movie['can_watch'] = true;
-    /* check if is paid */
-    if ($movie['is_paid']) {
+    /* check if is paid (checkout needs Payments & Monetization) */
+    $movie_checkout = licence_has_entitlement('monetization') && is_file(ABSPATH . 'includes/assets/js/core/payments.js');
+    if ($movie['is_paid'] && $movie_checkout) {
       $movie['can_watch'] = false;
       if ($this->_logged_in) {
         if ($this->_data['user_group'] < 3) {

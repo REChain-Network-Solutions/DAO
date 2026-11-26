@@ -14,7 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // user access (exclude these loads from login)
-if ($system["system_public"] && !in_array($_POST['get'], ["newsfeed", "reels", "posts_profile", "posts_page", "posts_group", "posts_event", "suggested_pages", "suggested_groups", "suggested_events", "blogs", "category_blogs", "funding", "games", "search_posts", "search_blogs", "search_users", "search_pages", "search_groups", "search_events", "reviews"])) {
+if ($system["system_public"] && !in_array($_POST['get'], ["newsfeed", "reels", "posts_profile", "posts_page", "posts_group", "posts_event", "suggested_pages", "suggested_groups", "suggested_events", "search_posts", "search_users", "search_pages", "search_groups", "search_events", "reviews", "live_now", "live_ended"])) {
   user_access(true);
 }
 
@@ -22,7 +22,7 @@ if ($system["system_public"] && !in_array($_POST['get'], ["newsfeed", "reels", "
 if (!isset($_POST['offset']) || !is_numeric($_POST['offset'])) {
   _error(400);
 }
-if (isset($_POST['tpl']) && !in_array($_POST['tpl'], ["box", "list"])) {
+if (isset($_POST['tpl']) && (!in_array($_POST['tpl'], ["box", "list", "people", "groups"]) || ($_POST['tpl'] == "people" && !in_array($_POST['get'], ["new_people", "find_people", "friend_requests", "friend_requests_sent"])) || ($_POST['tpl'] == "groups" && !in_array($_POST['get'], ["groups", "suggested_groups", "category_groups", "joined_groups"])))) {
   _error(400);
 }
 
@@ -34,21 +34,42 @@ try {
   // initialize the attach type
   $append = true;
 
+  // search lists stop after 50 pages (their order can't be read from an index)
+  if ($_POST['offset'] > 50 && in_array($_POST['get'], ['search_posts', 'search_users', 'search_pages', 'search_groups', 'search_events', 'conversations_search'])) {
+    return_json($return);
+  }
+
+  // lists continue from the cursors of the previous page (one per list, in call order)
+  $cursors = (isset($_POST['cursor']) && is_string($_POST['cursor'])) ? explode('~', $_POST['cursor']) : [];
+  $next_cursors = [];
+  $get_posts = function ($args) use ($user, &$cursors, &$next_cursors) {
+    $args['cursor'] = $cursors[count($next_cursors)] ?? null;
+    $posts = $user->get_posts($args);
+    /* a list that ended keeps its last cursor */
+    $next_cursors[] = $user->_cursor ?? (string) $args['cursor'];
+    return $posts;
+  };
+  /* single lists: pass $cursor to the getter, then keep the cursor it leaves */
+  $cursor = $cursors[0] ?? null;
+  $keep_cursor = function () use ($user, &$next_cursors, $cursor) {
+    $next_cursors[] = $user->_cursor ?? (string) $cursor;
+  };
+
   // get data
   switch ($_POST['get']) {
     case 'newsfeed':
       /* get newsfeed */
       if ($user->_logged_in && $system['newsfeed_merge_enabled']) {
         /* first get the posts from normal newsfeed */
-        $data_newsfeed = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_recent_results']]);
+        $data_newsfeed = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_recent_results']]);
         /* second get the posts from popular */
-        $data_popular = $user->get_posts(['get' => 'popular', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_popular_results']]);
+        $data_popular = $get_posts(['get' => 'popular', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_popular_results']]);
         $data_popular = array_map(function ($element) {
           $element['source'] = "popular";
           return $element;
         }, $data_popular);
         /* third get the posts from discover */
-        $data_discover = $user->get_posts(['get' => 'discover', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_discover_results']]);
+        $data_discover = $get_posts(['get' => 'discover', 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset'], 'results' => $system['merge_discover_results']]);
         $data_discover = array_map(function ($element) {
           $element['source'] = "discover";
           return $element;
@@ -56,20 +77,12 @@ try {
         /* merge the three arrays */
         $data = array_merge($data_newsfeed, $data_popular, $data_discover);
       } else {
-        $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+        $data = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       }
 
-      if ($user->_logged_in && $system['reels_enabled']) {
-        // get posts (reels)
-        /* first get the reels from discover */
-        $offset = $_POST['offset'] - 1;
-        $reels_discover = $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $offset]);
-        /* second get the reels from newsfeed */
-        $reels_newsfeed = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $offset]);
-        /* merge the two arrays */
-        $reels = array_merge($reels_discover, $reels_newsfeed);
-        /* randomize the array */
-        shuffle($reels);
+      if ($user->_logged_in && $system['reels_enabled'] && $_POST['offset'] == 1) {
+        // get reels
+        $reels = $user->get_reels_feed(['results' => 10, 'light' => true]);
         /* assign variables */
         $smarty->assign('reels', $reels);
       }
@@ -92,7 +105,7 @@ try {
       $smarty->assign('widgets', $widgets);
 
       // get ads campaigns
-      $ads_campaigns = $user->ads_campaigns('newsfeed');
+      $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns('newsfeed') : [];
       /* assign variables */
       $smarty->assign('ads_campaigns', $ads_campaigns);
 
@@ -116,10 +129,10 @@ try {
 
     case 'popular':
       /* get popular */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
 
       // get ads campaigns
-      $ads_campaigns = $user->ads_campaigns('newsfeed');
+      $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns('newsfeed') : [];
       /* assign variables */
       $smarty->assign('ads_campaigns', $ads_campaigns);
 
@@ -143,10 +156,10 @@ try {
 
     case 'discover':
       /* get discover */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
 
       // get ads campaigns
-      $ads_campaigns = $user->ads_campaigns('newsfeed');
+      $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns('newsfeed') : [];
       /* assign variables */
       $smarty->assign('ads_campaigns', $ads_campaigns);
 
@@ -173,27 +186,50 @@ try {
     case 'memories':
     case 'boosted':
       /* get [saved || scheduled || memories || boosted] */
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       break;
 
     case 'reels':
       /* get reels */
-      /* first get the reels from public */
-      $data_discover = ($user->_logged_in) ? $user->get_posts(['get' => 'discover', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $_POST['offset']]) : [];
-      /* second get the reels from friends */
-      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'reel', 'category' => $_POST['category'], 'offset' => $_POST['offset']]);
-      /* merge the two arrays */
-      $data = array_merge($data_discover, $data_friends);
+      if (!$system['reels_enabled']) {
+        _error(404);
+      }
+      /* check id */
+      if (isset($_POST['id']) && $_POST['id'] !== '' && !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_reels_feed(['tab' => $_POST['filter'] ?? '', 'cursor' => $cursor, 'exclude' => $_POST['id'] ?? null]);
+      $keep_cursor();
       break;
 
     case 'watch':
       /* get watch */
       /* first get the videos from public */
-      $data_discover = $user->get_posts(['get' => 'discover', 'filter' => 'video', 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data_discover = $get_posts(['get' => 'discover', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       /* second get the videos from friends */
-      $data_friends = $user->get_posts(['get' => 'newsfeed', 'filter' => 'video', 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      $data_friends = $get_posts(['get' => 'newsfeed', 'filter' => 'video', 'results' => $system['watch_results'], 'category' => $_POST['category'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
       /* merge the two arrays */
       $data = array_merge($data_discover, $data_friends);
+      break;
+
+    case 'watch_following':
+      /* get friends & following videos */
+      $data = $get_posts(['get' => 'following', 'filter' => 'video', 'results' => $system['watch_results'], 'country' => $_POST['country'], 'offset' => $_POST['offset']]);
+      break;
+
+    case 'watch_manage':
+      /* get my videos */
+      $data = $get_posts(['get' => 'posts_profile', 'id' => $user->_data['user_id'], 'filter' => 'video', 'results' => $system['watch_results'], 'offset' => $_POST['offset']]);
+      break;
+
+    case 'live_now':
+    case 'live_ended':
+      if (!$system['live_enabled']) {
+        _error(400);
+      }
+      /* get live posts */
+      $data = $user->get_live_posts(['view' => $_POST['filter'], 'status' => ($_POST['get'] == "live_ended") ? "ended" : "live", 'category_id' => $_POST['category'], 'country_id' => $_POST['country'], 'query' => $_POST['query'], 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'posts_profile':
@@ -210,10 +246,10 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'offset' => $_POST['offset'], 'id' => $_POST['id'], 'query' => $_POST['query']]);
+      $data = $get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'offset' => $_POST['offset'], 'id' => $_POST['id'], 'query' => $_POST['query']]);
 
       // get ads campaigns
-      $ads_campaigns = $user->ads_campaigns('newsfeed');
+      $ads_campaigns = method_exists($user, 'ads_campaigns') ? $user->ads_campaigns('newsfeed') : [];
       /* assign variables */
       $smarty->assign('ads_campaigns', $ads_campaigns);
 
@@ -241,7 +277,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_profile', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_profile', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
       break;
 
     case 'blogs_page':
@@ -250,7 +286,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_page', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_page', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
       break;
 
     case 'blogs_group':
@@ -259,7 +295,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_group', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_group', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
       break;
 
     case 'blogs_event':
@@ -268,7 +304,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_event', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_event', 'id' => $_POST['id'], 'filter' => 'article', 'offset' => $_POST['offset']]);
       break;
 
     case 'products_profile':
@@ -277,7 +313,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_profile', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_profile', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
       break;
 
     case 'products_page':
@@ -286,7 +322,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_page', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_page', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
       break;
 
     case 'products_group':
@@ -295,7 +331,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_group', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_group', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
       break;
 
     case 'products_event':
@@ -304,7 +340,7 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_posts(['get' => 'posts_event', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
+      $data = $get_posts(['get' => 'posts_event', 'id' => $_POST['id'], 'filter' => 'product', 'offset' => $_POST['offset']]);
       break;
 
     case 'shares':
@@ -313,26 +349,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_shares($_POST['id'], $_POST['offset']);
-      break;
-
-    case 'blogs':
-      /* get blogs */
-      $data = $user->get_blogs(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
-      break;
-
-    case 'category_blogs':
-      /* get category blogs */
-      /* check id */
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-      $data = $user->get_blogs(["category" => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
-      break;
-
-    case 'funding':
-      /* get funding */
-      $data = $user->get_funding(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->who_shares($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'post_comments':
@@ -341,7 +359,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_comments($_POST['id'], $_POST['offset'], true, false);
+      $data = $user->get_comments($_POST['id'], $_POST['offset'], true, false, [], "recent", null, $cursor);
+      $keep_cursor();
       break;
 
     case 'post_comments_top':
@@ -359,7 +378,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_comments($_POST['id'], $_POST['offset'], true, false, [], "all");
+      $data = $user->get_comments($_POST['id'], $_POST['offset'], true, false, [], "all", null, $cursor);
+      $keep_cursor();
       break;
 
     case 'photo_comments':
@@ -368,7 +388,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_comments($_POST['id'], $_POST['offset'], false, false);
+      $data = $user->get_comments($_POST['id'], $_POST['offset'], false, false, [], "recent", null, $cursor);
+      $keep_cursor();
       break;
 
     case 'photo_comments_top':
@@ -386,7 +407,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_comments($_POST['id'], $_POST['offset'], false, false, [], "all");
+      $data = $user->get_comments($_POST['id'], $_POST['offset'], false, false, [], "all", null, $cursor);
+      $keep_cursor();
       break;
 
     case 'comment_replies':
@@ -396,7 +418,8 @@ try {
         _error(400);
       }
       $append = false;
-      $data = $user->get_replies($_POST['id'], $_POST['offset'], false);
+      $data = $user->get_replies($_POST['id'], $_POST['offset'], false, [], $cursor);
+      $keep_cursor();
       break;
 
     case 'photos':
@@ -405,7 +428,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_photos($_POST['id'], $_POST['type'], $_POST['offset'], false);
+      $data = $user->get_photos($_POST['id'], $_POST['type'], $_POST['offset'], false, false, $cursor);
+      $keep_cursor();
       $context = ($_POST['type'] == "album") ? "album" : "photos";
       $smarty->assign('context', $context);
       $smarty->assign('type', $_POST['type']);
@@ -425,7 +449,8 @@ try {
       if (!isset($_POST['type']) || !in_array($_POST['type'], ['user', 'page', 'group', 'event'])) {
         _error(400);
       }
-      $data = $user->get_photos($_POST['id'], $_POST['type'], $_POST['offset'], false);
+      $data = $user->get_photos($_POST['id'], $_POST['type'], $_POST['offset'], false, false, $cursor);
+      $keep_cursor();
       $smarty->assign('id', $_POST['id']);
       $smarty->assign('filter', $_POST['filter']);
       $smarty->assign('type', $_POST['type']);
@@ -437,7 +462,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_albums($_POST['id'], $_POST['type'], $_POST['offset']);
+      $data = $user->get_albums($_POST['id'], $_POST['type'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'videos':
@@ -446,7 +472,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_videos($_POST['id'], $_POST['type'], $_POST['offset']);
+      $data = $user->get_videos($_POST['id'], $_POST['type'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'videos_reels':
@@ -455,7 +482,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_reels($_POST['id'], $_POST['type'], $_POST['offset']);
+      $data = $user->get_reels($_POST['id'], $_POST['type'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'post_reactions':
@@ -464,7 +492,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['post_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
+      $data = $user->who_reacts(['post_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset'], 'cursor' => $cursor])['data'];
+      $keep_cursor();
       break;
 
     case 'photo_reactions':
@@ -473,7 +502,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['photo_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
+      $data = $user->who_reacts(['photo_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset'], 'cursor' => $cursor])['data'];
+      $keep_cursor();
       break;
 
     case 'comment_reactions':
@@ -482,7 +512,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_reacts(['comment_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset']])['data'];
+      $data = $user->who_reacts(['comment_id' => $_POST['id'], 'reaction_type' => $_POST['filter'], 'offset' => $_POST['offset'], 'cursor' => $cursor])['data'];
+      $keep_cursor();
       break;
 
     case 'donors':
@@ -491,7 +522,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_donates($_POST['id'], $_POST['offset']);
+      $data = $user->who_donates($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'voters':
@@ -500,12 +532,14 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_votes($_POST['id'], $_POST['offset']);
+      $data = $user->who_votes($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'blocks':
       /* get blocks */
-      $data = $user->get_blocked($_POST['offset'])['data'];
+      $data = $user->get_blocked($_POST['offset'], $cursor)['data'];
+      $keep_cursor();
       break;
 
     case 'affiliates':
@@ -514,17 +548,20 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_affiliates($_POST['uid'], $_POST['offset']);
+      $data = $user->get_affiliates($_POST['uid'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'friend_requests':
       /* get friend requests */
-      $data = $user->get_friend_requests($_POST['offset']);
+      $data = $user->get_friend_requests($_POST['offset'], null, $cursor);
+      $keep_cursor();
       break;
 
     case 'friend_requests_sent':
       /* get friend requests sent */
-      $data = $user->get_friend_requests_sent($_POST['offset']);
+      $data = $user->get_friend_requests_sent($_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'mutual_friends':
@@ -533,12 +570,41 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_mutual_friends($_POST['uid'], $_POST['offset']);
+      $data = $user->get_mutual_friends($_POST['uid'], $_POST['offset'], $cursor);
+      $keep_cursor();
+      break;
+
+    case 'dating_browse':
+      /* get dating members */
+      parse_str((string) ($_POST['filter'] ?? ''), $filters);
+      $data = $user->get_dating_browse($filters, $cursor);
+      $keep_cursor();
+      break;
+
+    case 'dating_likes':
+      /* get dating likes */
+      $data = $user->get_dating_likes($cursor);
+      $keep_cursor();
+      break;
+
+    case 'dating_matches':
+      /* get dating matches */
+      $data = $user->get_dating_matches($cursor);
+      $keep_cursor();
       break;
 
     case 'new_people':
       /* get new people */
-      $data = $user->get_new_people($_POST['offset']);
+      $data = $user->get_new_people($_POST['offset'], false, $cursor);
+      $keep_cursor();
+      break;
+
+    case 'find_people':
+      /* search users */
+      user_access(true);
+      $filters = $user->get_people_search_filters($_POST['filter'] ?? null);
+      $data = $user->search_users($filters['distance_value'], $filters['query'], $filters['city'], $filters['country'], $filters['gender'], $filters['relationship'], $filters['online_status'], $filters['verified_status'], $_POST['offset'], $filters, $cursor);
+      $keep_cursor();
       break;
 
     case 'friends':
@@ -547,7 +613,8 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_friends($_POST['uid'], $_POST['offset']);
+      $data = $user->get_friends($_POST['uid'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'followers':
@@ -556,7 +623,8 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_followers($_POST['uid'], $_POST['offset']);
+      $data = $user->get_followers($_POST['uid'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'followings':
@@ -565,7 +633,8 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_followings($_POST['uid'], $_POST['offset']);
+      $data = $user->get_followings($_POST['uid'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'subscribers':
@@ -578,7 +647,8 @@ try {
       if (!isset($_POST['type']) || !in_array($_POST['type'], ['user', 'page', 'group'])) {
         _error(400);
       }
-      $data = $user->get_subscribers($_POST['uid'], $_POST['type'], $_POST['offset']);
+      $data = $user->get_subscribers($_POST['uid'], $_POST['type'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'subscriptions':
@@ -587,7 +657,8 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_subscriptions($_POST['uid'], $_POST['offset']);
+      $data = $user->get_subscriptions($_POST['uid'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'page_invites':
@@ -596,7 +667,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_page_invites($_POST['id'], $_POST['offset']);
+      $data = $user->get_page_invites($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'page_members':
@@ -605,7 +677,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_page_members($_POST['id'], $_POST['offset']);
+      $data = $user->get_page_members($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'page_admins':
@@ -614,7 +687,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_page_admins($_POST['id'], $_POST['offset']);
+      $data = $user->get_page_admins($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'group_members':
@@ -623,7 +697,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_group_members($_POST['id'], $_POST['offset']);
+      $data = $user->get_group_members($_POST['id'], $_POST['offset'], false, $cursor);
+      $keep_cursor();
       break;
 
     case 'group_members_manage':
@@ -632,7 +707,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_group_members($_POST['id'], $_POST['offset'], true);
+      $data = $user->get_group_members($_POST['id'], $_POST['offset'], true, $cursor);
+      $keep_cursor();
       break;
 
     case 'group_admins':
@@ -641,7 +717,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_group_admins($_POST['id'], $_POST['offset']);
+      $data = $user->get_group_admins($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
 
@@ -651,7 +728,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_group_invites($_POST['id'], $_POST['offset']);
+      $data = $user->get_group_invites($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'group_requests':
@@ -660,7 +738,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_group_requests($_POST['id'], $_POST['offset']);
+      $data = $user->get_group_requests($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'event_going':
@@ -669,7 +748,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_event_members($_POST['id'], 'going', $_POST['offset']);
+      $data = $user->get_event_members($_POST['id'], 'going', $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'event_interested':
@@ -678,7 +758,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_event_members($_POST['id'], 'interested', $_POST['offset']);
+      $data = $user->get_event_members($_POST['id'], 'interested', $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'event_invited':
@@ -687,7 +768,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_event_members($_POST['id'], 'invited', $_POST['offset']);
+      $data = $user->get_event_members($_POST['id'], 'invited', $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'event_invites':
@@ -696,17 +778,20 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_event_invites($_POST['id'], $_POST['offset']);
+      $data = $user->get_event_invites($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'pages':
       /* get viewer pages */
-      $data = $user->get_pages(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_pages(['offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'suggested_pages':
       /* get suggested pages */
-      $data = $user->get_pages(['suggested' => true, 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_pages(['suggested' => true, 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'category_pages':
@@ -715,7 +800,8 @@ try {
         _error(400);
       }
       /* get category pages */
-      $data = $user->get_pages(['suggested' => true, 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_pages(['suggested' => true, 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'liked_pages':
@@ -725,22 +811,26 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_pages(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_pages(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'boosted_pages':
       /* get boosted pages */
-      $data = $user->get_pages(['boosted' => true, 'offset' => $_POST['offset']]);
+      $data = $user->get_pages(['boosted' => true, 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'groups':
       /* get viewer groups */
-      $data = $user->get_groups(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_groups(['offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'suggested_groups':
       /* get suggested groups */
-      $data = $user->get_groups(['suggested' => true, 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_groups(['suggested' => true, 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'category_groups':
@@ -749,7 +839,8 @@ try {
         _error(400);
       }
       /* get category groups */
-      $data = $user->get_groups(['suggested' => true, 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_groups(['suggested' => true, 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'joined_groups':
@@ -759,22 +850,26 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_groups(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_groups(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'country' => $_POST['country'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'boosted_groups':
       /* get boosted groups */
-      $data = $user->get_groups(['boosted' => true, 'offset' => $_POST['offset']]);
+      $data = $user->get_groups(['boosted' => true, 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'events':
       /* get viewer events */
-      $data = $user->get_events(['offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'suggested_events':
       /* get suggested events */
-      $data = $user->get_events(['suggested' => true, 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['suggested' => true, 'sort' => 'upcoming', 'offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'category_events':
@@ -783,22 +878,26 @@ try {
         _error(400);
       }
       /* get category events */
-      $data = $user->get_events(['suggested' => true, 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['suggested' => true, 'sort' => 'upcoming', 'category_id' => $_POST['id'], 'offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'going_events':
       /* get going events */
-      $data = $user->get_events(['filter' => 'going', 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['filter' => 'going', 'offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'interested_events':
       /* get interested events */
-      $data = $user->get_events(['filter' => 'interested', 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['filter' => 'interested', 'offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'invited_events':
       /* get invited events */
-      $data = $user->get_events(['filter' => 'invited', 'offset' => $_POST['offset'], 'country' => $_POST['country']]);
+      $data = $user->get_events(['filter' => 'invited', 'offset' => $_POST['offset'], 'type' => $_POST['type'] ?? null, 'country' => $_POST['country'] ?? null, 'language' => $_POST['language'] ?? null, 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'profile_events':
@@ -807,7 +906,8 @@ try {
       if (!isset($_POST['uid']) || !is_numeric($_POST['uid'])) {
         _error(400);
       }
-      $data = $user->get_events(['user_id' => $_POST['uid'], 'offset' => $_POST['offset']]);
+      $data = $user->get_events(['user_id' => $_POST['uid'], 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'page_events':
@@ -816,41 +916,36 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_events(['page_id' => $_POST['id'], 'results' => $system['max_results_even'], 'offset' => $_POST['offset']]);
+      $data = $user->get_events(['page_id' => $_POST['id'], 'results' => $system['max_results_even'], 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'boosted_events':
       /* get boosted events */
-      $data = $user->get_events(['boosted' => true, 'offset' => $_POST['offset']]);
-      break;
-
-    case 'games':
-      /* get games */
-      $data = $user->get_games($_POST['offset']);
-      break;
-
-    case 'genre_games':
-      /* check id */
-      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
-        _error(400);
-      }
-      /* get games */
-      $data = $user->get_games($_POST['offset'], false, $_POST['id']);
-      break;
-
-    case 'played_games':
-      /* get played games */
-      $data = $user->get_games($_POST['offset'], true);
+      $data = $user->get_events(['boosted' => true, 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+      $keep_cursor();
       break;
 
     case 'notifications':
       /* get notifications */
-      $data = $user->get_notifications($_POST['offset']);
+      $data = $user->get_notifications($_POST['offset'], null, $cursor);
+      $keep_cursor();
       break;
 
     case 'conversations':
       /* get conversations */
-      $data = $user->get_conversations($_POST['offset'])['data'];
+      $data = $user->get_conversations($_POST['offset'], $cursor)['data'];
+      $keep_cursor();
+      break;
+
+    case 'conversations_search':
+      /* search conversations */
+      $data = $user->search_conversations($_POST['query'] ?? '', $_POST['filter'] ?? 'all', $_POST['offset'])['data'];
+      break;
+
+    case 'shortcuts':
+      /* get shortcuts */
+      $data = $user->get_shortcuts(['manage' => true, 'query' => (isset($_POST['query']) && is_string($_POST['query'])) ? $_POST['query'] : '', 'offset' => $_POST['offset']]);
       break;
 
     case 'messages':
@@ -860,7 +955,31 @@ try {
         _error(400);
       }
       $append = false;
-      $data = $user->get_conversation_messages($_POST['id'], $_POST['offset'])['messages'];
+      $data = $user->get_conversation_messages($_POST['id'], $_POST['offset'], null, false, $cursor)['messages'];
+      $keep_cursor();
+      $smarty->assign('conversation', $user->get_conversation($_POST['id']));
+      break;
+
+    case 'page_conversations':
+      /* get page conversations */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $data = $user->get_page_conversations($_POST['id'], $_POST['offset'], $cursor)['data'];
+      $keep_cursor();
+      break;
+
+    case 'page_messages':
+      /* get page conversation messages */
+      /* check id */
+      if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        _error(400);
+      }
+      $append = false;
+      $data = $user->get_conversation_messages($_POST['id'], $_POST['offset'], null, true, $cursor)['messages'];
+      $keep_cursor();
+      $smarty->assign('conversation', $user->get_conversation($_POST['id'], true));
       break;
 
     case 'job_candidates':
@@ -869,7 +988,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_job_candidates($_POST['id'], $_POST['offset']);
+      $data = $user->get_job_candidates($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'course_candidates':
@@ -878,11 +998,11 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_course_candidates($_POST['id'], $_POST['offset']);
+      $data = $user->get_course_candidates($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'search_posts':
-    case 'search_blogs':
     case 'search_users':
     case 'search_pages':
     case 'search_groups':
@@ -899,18 +1019,22 @@ try {
     case 'orders':
       /* get orders */
       if (isset($_POST['filter'])) {
-        $data = $user->get_orders(['offset' => $_POST['offset'], 'filter' => $_POST['filter']]);
+        $data = $user->get_orders(['offset' => $_POST['offset'], 'filter' => $_POST['filter'], 'cursor' => $cursor]);
+        $keep_cursor();
       } else {
-        $data = $user->get_orders(['offset' => $_POST['offset']]);
+        $data = $user->get_orders(['offset' => $_POST['offset'], 'cursor' => $cursor]);
+        $keep_cursor();
       }
       break;
 
     case 'sales_orders':
       /* get orders */
       if (isset($_POST['filter'])) {
-        $data = $user->get_orders(['sales_orders' => 'true', 'offset' => $_POST['offset'], 'filter' => $_POST['filter']]);
+        $data = $user->get_orders(['sales_orders' => 'true', 'offset' => $_POST['offset'], 'filter' => $_POST['filter'], 'cursor' => $cursor]);
+        $keep_cursor();
       } else {
-        $data = $user->get_orders(['sales_orders' => 'true', 'offset' => $_POST['offset']]);
+        $data = $user->get_orders(['sales_orders' => 'true', 'offset' => $_POST['offset'], 'cursor' => $cursor]);
+        $keep_cursor();
       }
       break;
 
@@ -919,7 +1043,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->get_reviews($_POST['id'], $_POST['type'], $_POST['offset']);
+      $data = $user->get_reviews($_POST['id'], $_POST['type'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     case 'coupon_users':
@@ -927,7 +1052,8 @@ try {
       if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
         _error(400);
       }
-      $data = $user->who_used_coupon($_POST['id'], $_POST['offset']);
+      $data = $user->who_used_coupon($_POST['id'], $_POST['offset'], $cursor);
+      $keep_cursor();
       break;
 
     default:
@@ -946,6 +1072,9 @@ try {
     /* return */
     $return['append'] = $append;
     $return['data'] = $smarty->fetch("ajax.load_more.tpl");
+    if (array_filter($next_cursors)) {
+      $return['cursor'] = implode('~', $next_cursors);
+    }
   }
 
   // return & exit

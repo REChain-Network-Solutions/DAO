@@ -327,11 +327,13 @@ trait ToolsTrait
         if ($check_friendship->num_rows > 0) continue;
         /* add friend */
         $db->query(sprintf("INSERT INTO friends (user_one_id, user_two_id, status) VALUES (%s, %s, '1')", secure($user_id, 'int'),  secure($auto_friend['user_id'], 'int')));
+        relations_cache_forget($user_id, $auto_friend['user_id']);
         /* check if the user is already following the target */
         $check_following = $db->query(sprintf("SELECT * FROM followings WHERE user_id = %s AND following_id = %s", secure($user_id, 'int'), secure($auto_friend['user_id'], 'int')));
         if ($check_following->num_rows > 0) continue;
         /* follow */
         $db->query(sprintf("INSERT INTO followings (user_id, following_id) VALUES (%s, %s)", secure($user_id, 'int'),  secure($auto_friend['user_id'], 'int')));
+        relations_cache_forget($user_id, $auto_friend['user_id']);
       }
     }
   }
@@ -387,6 +389,7 @@ trait ToolsTrait
         $check_following = $db->query(sprintf("SELECT * FROM followings WHERE user_id = %s AND following_id = %s", secure($user_id, 'int'), secure($auto_following['user_id'], 'int')));
         if ($check_following->num_rows > 0) continue;
         $db->query(sprintf("INSERT INTO followings (user_id, following_id) VALUES (%s, %s)", secure($user_id, 'int'),  secure($auto_following['user_id'], 'int')));
+        relations_cache_forget($user_id, $auto_following['user_id']);
       }
     }
   }
@@ -445,6 +448,8 @@ trait ToolsTrait
         $db->query(sprintf("INSERT INTO pages_likes (user_id, page_id) VALUES (%s, %s)", secure($user_id, 'int'),  secure($auto_like['page_id'], 'int')));
         /* update likes counter +1 */
         $db->query(sprintf("UPDATE pages SET page_likes = page_likes + 1  WHERE page_id = %s", secure($auto_like['page_id'], 'int')));
+        /* add shortcut */
+        $this->add_shortcut($auto_like['page_id'], 'page', $user_id);
       }
     }
   }
@@ -503,6 +508,8 @@ trait ToolsTrait
         $db->query(sprintf("INSERT INTO groups_members (user_id, group_id, approved) VALUES (%s, %s, '1')", secure($user_id, 'int'),  secure($auto_join['group_id'], 'int')));
         /* update members counter +1 */
         $db->query(sprintf("UPDATE `groups` SET group_members = group_members + 1  WHERE group_id = %s", secure($auto_join['group_id'], 'int')));
+        /* add shortcut */
+        $this->add_shortcut($auto_join['group_id'], 'group', $user_id);
       }
     }
   }
@@ -681,5 +688,103 @@ trait ToolsTrait
     $this->backup_database();
     /* backup files */
     $this->backup_files();
+  }
+
+
+  /**
+   * get_backups
+   *
+   * @return array
+   */
+  public function get_backups()
+  {
+    $backups = [];
+    $folders = glob(ABSPATH . 'content/backups/*/*', GLOB_ONLYDIR);
+    if (!$folders) {
+      return $backups;
+    }
+    foreach ($folders as $folder) {
+      $id = basename($folder);
+      if (!ctype_digit($id)) {
+        continue;
+      }
+      $backup = ['id' => $id, 'time' => (int) $id, 'path' => $folder, 'files' => [], 'size' => 0];
+      /* database file */
+      $database_files = glob($folder . '/*.sql');
+      if ($database_files) {
+        $backup['files']['database'] = ['name' => basename($database_files[0]), 'path' => $database_files[0], 'size' => (int) @filesize($database_files[0])];
+      }
+      /* files archive */
+      $archive_files = glob($folder . '/*.zip');
+      if ($archive_files) {
+        $backup['files']['files'] = ['name' => basename($archive_files[0]), 'path' => $archive_files[0], 'size' => (int) @filesize($archive_files[0])];
+      }
+      /* set type & size */
+      foreach ($backup['files'] as $file) {
+        $backup['size'] += $file['size'];
+      }
+      if (isset($backup['files']['database']) && isset($backup['files']['files'])) {
+        $backup['type'] = 'full';
+      } elseif (isset($backup['files']['database'])) {
+        $backup['type'] = 'database';
+      } elseif (isset($backup['files']['files'])) {
+        $backup['type'] = 'files';
+      } else {
+        $backup['type'] = 'processing';
+      }
+      $backups[] = $backup;
+    }
+    /* newest first */
+    usort($backups, function ($a, $b) {
+      return $b['time'] <=> $a['time'];
+    });
+    return $backups;
+  }
+
+
+  /**
+   * get_backup
+   *
+   * @param integer $backup_id
+   * @return array|false
+   */
+  public function get_backup($backup_id)
+  {
+    if (!ctype_digit((string) $backup_id)) {
+      return false;
+    }
+    foreach ($this->get_backups() as $backup) {
+      if ($backup['id'] === (string) $backup_id) {
+        return $backup;
+      }
+    }
+    return false;
+  }
+
+
+  /**
+   * delete_backup
+   *
+   * @param integer $backup_id
+   * @return void
+   */
+  public function delete_backup($backup_id)
+  {
+    $backup = $this->get_backup($backup_id);
+    if (!$backup) {
+      throw new Exception(__("This backup is not available"));
+    }
+    /* delete files */
+    foreach (array_diff(scandir($backup['path']) ?: [], ['.', '..']) as $file) {
+      if (is_file($backup['path'] . '/' . $file)) {
+        @unlink($backup['path'] . '/' . $file);
+      }
+    }
+    /* delete backup folder */
+    if (!@rmdir($backup['path'])) {
+      throw new Exception(__("Unable to delete this backup, Make sure the backup folder is writable (chmod 777)"));
+    }
+    /* delete day folder if empty */
+    @rmdir(dirname($backup['path']));
   }
 }

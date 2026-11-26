@@ -59,12 +59,12 @@ trait ReportsTrait
 
       case 'message':
         /* check the message */
-        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_messages WHERE message_id = %s", secure($id, 'int')));
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_messages INNER JOIN conversations_users ON conversations_messages.conversation_id = conversations_users.conversation_id WHERE conversations_messages.message_id = %s AND conversations_users.user_id = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
         break;
 
       case 'conversation':
         /* check the conversation */
-        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations WHERE conversation_id = %s", secure($id, 'int')));
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM conversations_users WHERE conversation_id = %s AND user_id = %s", secure($id, 'int'), secure($this->_data['user_id'], 'int')));
         break;
 
       case 'forum_thread':
@@ -75,6 +75,11 @@ trait ReportsTrait
       case 'forum_reply':
         /* check the forum thread */
         $check = $db->query(sprintf("SELECT COUNT(*) as count FROM forums_replies WHERE reply_id = %s", secure($id, 'int')));
+        break;
+
+      case 'story':
+        /* check the story */
+        $check = $db->query(sprintf("SELECT COUNT(*) as count FROM stories WHERE story_id = %s", secure($id, 'int')));
         break;
 
       case 'ads_campaign':

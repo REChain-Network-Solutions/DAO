@@ -65,6 +65,6 @@ function getBlockedUsers($req, $res)
   if ($user->_data['user_demo']) {
     throw new AuthorizationException(__("You can't do this with demo account"));
   }
-  $return = $user->get_blocked($req->query['offset']);
-  apiResponse($res, ['data' => $return['data'], 'has_more' => $return['has_more']]);
+  $return = $user->get_blocked($req->query['offset'], $req->query['cursor'] ?? null);
+  apiResponse($res, ['data' => $return['data'], 'has_more' => $return['has_more'], 'cursor' => $return['cursor']]);
 }

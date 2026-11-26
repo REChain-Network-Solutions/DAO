@@ -41,7 +41,7 @@ try {
   $smarty->assign('type', $_GET['type']);
   /* return */
   $return['profile_photos'] = $smarty->fetch("ajax.profile_photos.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.profile_photos);";
+  $return['callback'] = "modal_content(response.profile_photos);";
 
   // return & exit
   return_json($return);

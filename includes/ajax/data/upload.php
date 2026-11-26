@@ -33,7 +33,9 @@ try {
   // return
   return_json([($_POST["multiple"] == "true") ? "files" : "file" => $response]);
 } catch (Exception $e) {
-  if ($_POST['handle'] == 'tinymce') {
+  if (($_POST['item_upload'] ?? '') === 'true' && in_array($_POST['handle'], ['publisher', 'publisher-mini', 'comment', 'chat'], true)) {
+    return_json(['error' => true, 'message' => $e->getMessage()]);
+  } elseif ($_POST['handle'] == 'tinymce') {
     return_json(["error" => $e->getMessage()]);
   } else {
     modal("ERROR", __("Error"), $e->getMessage());

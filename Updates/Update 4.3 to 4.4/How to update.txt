@@ -5,13 +5,7 @@
 !!! IMPORTANT !!!
 ==============================================================================================================
 == Backup your database and your website files just in case something wrong happened                        ==
-== Uninstall any Sngine plugin(s) from your Sngine both files and any database changes made by this plugin  ==
-== If you can't do it ask the plugin author(s) for support and help                                         ==
 ==============================================================================================================
-
-You can check our video tutorial from here: https://www.youtube.com/watch?v=Jch1GaWuBbE
-
-Note: Make sure you are running on the default Sngine theme 
 
 1- Shutdown your system from the admin panel
 
@@ -21,9 +15,9 @@ Note: Make sure you are running on the default Sngine theme
 -- content/uploads (folder)
 -- includes/config.php (file)
 
-3- Copy "update.php" file from "Update 4.3 to 4.4" folder to your server
+3- Copy "update.php" to your server
 
-4- Run the "update.php" file (http://yourdomain.com/path_to_script/update.php)
+4- Run the "update.php" file (http://yourdomain.com/update.php)
 
 5- Empty this folder "content/themes/default/templates_compiled"
 
@@ -31,21 +25,15 @@ Note: Make sure you are running on the default Sngine theme
 == After Update ==
 =========================================================
 
-1- Remove any browser cache and cookies ( Check this to learn how: https://bit.ly/SngineClearCache )
+1- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
 
-2- Only for Cloudflare users, Don't forget to flush your website cache from Cloudflare
+2- Go to your admin panel (http://yourdomain.com/admincp) and make site live again
 
-3- Go to your admin panel (http://yourdomain.com/path_to_script/admincp) and make site live again
-
-4- Delete "update.php" from your script folder after updating
+3- Delete "update.php" from your script folder after updating
 
 And That's it, Have Fun :)
 
 =======================================================================================================
 
-Don't forget to check Sngine blog for a lot of tutorials:
-https://blog.sngine.com/
-
 If you need help/support:
 Open support ticket here and our team will help you: https://www.zamblek.com/support
-** Kindly make sure you don't have expired support **

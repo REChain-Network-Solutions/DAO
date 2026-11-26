@@ -29,6 +29,36 @@ $app->post('/chat/actions/leave', function ($req, $res) {
 });
 
 
+// [post] actions [rename]
+$app->post('/chat/actions/rename', function ($req, $res) {
+  renameConversation($req, $res);
+});
+
+
+// [post] actions [add]
+$app->post('/chat/actions/add', function ($req, $res) {
+  addConversationUser($req, $res);
+});
+
+
+// [post] actions [remove]
+$app->post('/chat/actions/remove', function ($req, $res) {
+  removeConversationUser($req, $res);
+});
+
+
+// [post] actions [pin]
+$app->post('/chat/actions/pin', function ($req, $res) {
+  pinMessage($req, $res);
+});
+
+
+// [post] actions [unpin]
+$app->post('/chat/actions/unpin', function ($req, $res) {
+  unpinMessage($req, $res);
+});
+
+
 // [post] reactions [react]
 $app->post('/chat/reactions/react', function ($req, $res) {
   reactMessage($req, $res);
@@ -44,6 +74,12 @@ $app->get('/chat/reactions/who_reacts', function ($req, $res) {
 # [get] conversations
 $app->get('/chat/conversations', function ($req, $res) {
   getConversations($req, $res);
+});
+
+
+# [get] page conversations
+$app->get('/chat/page/conversations', function ($req, $res) {
+  getPageConversations($req, $res);
 });
 
 

@@ -28,7 +28,7 @@ if (!$system['courses_enabled']) {
 
 // check courses permission
 if (in_array($_GET['do'], ['create', 'publish', 'edit']) && !$user->_data['can_create_courses']) {
-  if (!$user->check_module_package_permission("courses_permission")) {
+  if ($user->check_module_package_permission("courses_permission")) {
     return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
   } else {
     modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -63,7 +63,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.course.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'publish':
@@ -123,6 +123,9 @@ try {
       /* check course cover */
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your course")]);
+      }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
       }
       /* set custom fields */
       try {
@@ -195,48 +198,42 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.course.editor.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'application':
-      // valid inputs
-      if (!isset($_GET['post_id']) || !is_numeric($_GET['post_id'])) {
-        _error(400);
-      }
-
-      // check if user applied before
-      if ($user->check_user_course_application($_GET['post_id'])) {
-        modal("ERROR", __("Sorry"), __("You already applied for this course before"));
-      }
-
-      // get post
-      $post = $user->get_post($_GET['post_id'], false);
-      if (!$post) {
-        modal("MESSAGE", __("Error"), __("This content is no longer exist"));
-      }
-      /* assign variables */
-      $smarty->assign('post', $post);
-
-      // return
-      $return['template'] = $smarty->fetch("ajax.course.apply.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
-      break;
-
     case 'apply':
       // valid inputs
       if (!isset($_GET['post_id']) || !is_numeric($_GET['post_id'])) {
         _error(400);
       }
 
-      // check if user applied before
-      if ($user->check_user_course_application($_GET['post_id'])) {
-        modal("ERROR", __("Sorry"), __("You already applied for this course before"));
-      }
-
       // get post
       $post = $user->get_post($_GET['post_id'], false);
-      if (!$post) {
-        modal("MESSAGE", __("Error"), __("This content is no longer exist"));
+      $application_error = null;
+      if (!$post || $post['post_type'] != 'course' || !$post['can_get_details'] || empty($post['course'])) {
+        $application_error = __("This content is no longer exist");
+      } elseif ($post['author_id'] == $user->_data['user_id']) {
+        $application_error = __("You cannot apply to your own course");
+      } elseif (!$post['course']['available']) {
+        $application_error = __("This course is closed for applications");
+      } elseif ($post['course']['i_applied']) {
+        $application_error = __("You already applied for this course before");
+      }
+      if ($application_error) {
+        if ($_GET['do'] == 'apply') {
+          return_json(['error' => true, 'message' => $application_error]);
+        }
+        modal("ERROR", __("Sorry"), $application_error);
+      }
+
+      if ($_GET['do'] == 'application') {
+        /* assign variables */
+        $smarty->assign('post', $post);
+        /* return */
+        $return['template'] = $smarty->fetch("ajax.course.apply.tpl");
+        $return['callback'] = "modal_content(response.template, true);";
+        break;
       }
 
       // valid inputs
@@ -264,7 +261,11 @@ try {
       $user->send_course_application($post, $_POST);
 
       // return
-      modal("SUCCESS", __("Done"), __("Your application has been submitted successfully"));
+      $return['post_id'] = (int) $post['post_id'];
+      $return['application_label'] = __("Application submitted");
+      $return['success_title'] = __("Done");
+      $return['success_message'] = __("Your application has been submitted successfully");
+      $return['callback'] = '$("[data-course-application=\"" + response.post_id + "\"]").prop("disabled", true).removeClass("js_modal js_course-enroll button--primary").addClass("button--tertiary").removeAttr("data-url").text(response.application_label); modal("#modal-success", {title: response.success_title, message: response.success_message});';
       break;
 
     case 'candidates':
@@ -282,7 +283,7 @@ try {
 
       // return
       $return['template'] = $smarty->fetch("ajax.course.candidates.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     default:

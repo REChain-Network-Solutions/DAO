@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Offline / error screen -->
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_message">Check your internet connection and try again.</string>
+    <string name="error_title">Something went wrong</string>
+    <string name="error_message">The page couldn\'t be loaded. Please try again.</string>
+    <string name="retry">Try again</string>
+
+    <!-- File upload -->
+    <string name="upload_title">Upload</string>
+    <string name="upload_take_photo">Take a photo</string>
+    <string name="upload_record_video">Record a video</string>
+    <string name="upload_gallery">Photos &amp; videos</string>
+    <string name="upload_files">Browse files</string>
+
+    <!-- Downloads -->
+    <string name="download_started">Downloading %1$s…</string>
+    <string name="download_failed">This file can\'t be downloaded.</string>
+
+    <!-- Permissions -->
+    <string name="permission_denied">Permission needed. You can allow it in Settings.</string>
+    <string name="open_settings">Settings</string>
+
+    <!-- Links -->
+    <string name="no_app_for_link">No app found to open this link.</string>
+    <string name="share_via">Share via</string>
+    <string name="share_visit">Visit: %1$s</string>
+</resources>

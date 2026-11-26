@@ -21,15 +21,10 @@ user_access(false, true);
 try {
 
   // get view content
-  switch ($_GET['view']) {
+  switch ($_GET['view'] ?? '') {
     case '':
       // page header
       page_header(__("Settings") . " &rsaquo; " . __("Account Settings"));
-
-      // show settings categories
-      if (isset($_GET['show_categories'])) {
-        $smarty->assign('show_categories', true);
-      }
       break;
 
     case 'profile':
@@ -110,9 +105,10 @@ try {
           // get user sessions
           $sessions = [];
           if (!$user->_data['user_demo']) {
-            $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s", secure($user->_data['user_id'], 'int')));
+            $get_sessions = $db->query(sprintf("SELECT * FROM users_sessions WHERE user_id = %s ORDER BY session_id = %s DESC, session_date DESC, session_id DESC", secure($user->_data['user_id'], 'int'), secure($user->_data['active_session_id'], 'int')));
             if ($get_sessions->num_rows > 0) {
               while ($session = $get_sessions->fetch_assoc()) {
+                $session['user_location'] = $user->get_session_location($session);
                 $sessions[] = $session;
               }
             }
@@ -315,7 +311,7 @@ try {
       }
 
       // get packages payments
-      $smarty->assign('packages_payments', $user->get_packages_payments(["get_all" => true]));
+      $smarty->assign('packages_payments', method_exists($user, 'get_packages_payments') ? $user->get_packages_payments(["get_all" => true]) : []);
       break;
 
     case 'monetization':
@@ -331,10 +327,10 @@ try {
           page_header(__("Settings") . " &rsaquo; " . __("Monetization"));
 
           // get monetozaion plans
-          $smarty->assign('monetization_plans', $user->get_monetization_plans());
+          $smarty->assign('monetization_plans', method_exists($user, 'get_monetization_plans') ? $user->get_monetization_plans() : []);
 
           // get subscribers count
-          $smarty->assign('subscribers_count', $user->get_subscribers_count());
+          $smarty->assign('subscribers_count', method_exists($user, 'get_subscribers_count') ? $user->get_subscribers_count() : 0);
           break;
 
         case 'coupons':
@@ -342,7 +338,7 @@ try {
           page_header(__("Settings") . " &rsaquo; " . __("Monetization Coupons"));
 
           // get coupons
-          $smarty->assign('coupons', $user->get_monetization_coupons());
+          $smarty->assign('coupons', method_exists($user, 'get_monetization_coupons') ? $user->get_monetization_coupons() : []);
           break;
 
         case 'payments':
@@ -372,7 +368,7 @@ try {
 
           // get earnings
           $earnings = [];
-          $get_earnings = $db->query(sprintf("SELECT log_subscriptions.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, users.user_verified FROM log_subscriptions INNER JOIN users ON log_subscriptions.subscriber_id = users.user_id WHERE log_subscriptions.node_id = %s AND log_subscriptions.node_type = 'profile'", secure($user->_data['user_id'], 'int')));
+          $get_earnings = $db->query(sprintf("SELECT log_subscriptions.*, users.user_id, users.user_name, users.user_firstname, users.user_lastname, users.user_gender, users.user_picture, users.user_subscribed, packages.name as package_name, users.user_verified FROM log_subscriptions INNER JOIN users ON log_subscriptions.subscriber_id = users.user_id LEFT JOIN packages ON users.user_subscribed = '1' AND users.user_package = packages.package_id WHERE log_subscriptions.node_id = %s AND log_subscriptions.node_type = 'profile'", secure($user->_data['user_id'], 'int')));
           if ($get_earnings->num_rows > 0) {
             while ($earning = $get_earnings->fetch_assoc()) {
               $earning['user_picture'] = get_picture($earning['user_picture'], $earning['user_gender']);
@@ -599,7 +595,7 @@ try {
 
     case 'coinpayments':
       // check if coinpayments enabled
-      if (!$system['coinpayments_enabled']) {
+      if (!$system['coinpayments_enabled'] || !licence_module_installed() || !method_exists($user, 'get_coinpayments_transactions')) {
         _error(404);
       }
 
@@ -695,8 +691,8 @@ try {
   $smarty->assign('custom_fields', $user->get_custom_fields(["for" => "user", "get" => "settings", "node_id" => $user->_data['user_id']]));
 
   /* assign variables */
-  $smarty->assign('view', $_GET['view']);
-  $smarty->assign('sub_view', $_GET['sub_view']);
+  $smarty->assign('view', $_GET['view'] ?? '');
+  $smarty->assign('sub_view', $_GET['sub_view'] ?? '');
 } catch (Exception $e) {
   _error(__("Error"), $e->getMessage());
 }

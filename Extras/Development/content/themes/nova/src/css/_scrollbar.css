@@ -1,0 +1,29 @@
+/* Shared slim scrollbar */
+:root {
+  --scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+}
+
+[data-theme="nova-dark"],
+[data-theme="admin-dark"] {
+  --scrollbar-thumb: color-mix(in oklab, var(--color-base-content) 22%, transparent);
+}
+
+:root,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 999px;
+}

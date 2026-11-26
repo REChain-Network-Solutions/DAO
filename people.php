@@ -15,6 +15,9 @@ user_access();
 
 try {
 
+  // get friend requests
+  $user->_data['friend_requests'] = $user->get_friend_requests();
+
   // get view content
   switch ($_GET['view']) {
     case '':
@@ -29,22 +32,18 @@ try {
       // page header
       page_header(__("Find People"));
 
-      // valid inputs
-      if (!isset($_POST['submit'])) {
-        redirect('/people');
+      // search filters
+      $filters = $user->get_people_search_filters($_GET);
+      $smarty->assign('people_search_filters', json_encode($filters, JSON_INVALID_UTF8_SUBSTITUTE));
+      foreach ($filters as $key => $value) {
+        if (strpos($key, 'fld_') !== 0) {
+          $smarty->assign($key, htmlspecialchars((string) $value, ENT_QUOTES, 'utf-8'));
+        }
       }
 
       // search users
-      $people = $user->search_users($_POST['distance_value'], $_POST['query'], $_POST['city'], $_POST['country'], $_POST['gender'], $_POST['relationship'], $_POST['online_status'], $_POST['verified_status']);
+      $people = $user->search_users($filters['distance_value'], $filters['query'], $filters['city'], $filters['country'], $filters['gender'], $filters['relationship'], $filters['online_status'], $filters['verified_status'], 0, $filters);
       $smarty->assign('people', $people);
-      $smarty->assign('distance_value', $_POST['distance_value']);
-      $smarty->assign('query', htmlentities($_POST['query'], ENT_QUOTES, 'utf-8'));
-      $smarty->assign('city', htmlentities($_POST['city'], ENT_QUOTES, 'utf-8'));
-      $smarty->assign('country', $_POST['country']);
-      $smarty->assign('gender', $_POST['gender']);
-      $smarty->assign('relationship', $_POST['relationship']);
-      $smarty->assign('online_status', $_POST['online_status']);
-      $smarty->assign('verified_status', $_POST['verified_status']);
       break;
 
     case 'friend_requests':
@@ -84,10 +83,15 @@ try {
   $smarty->assign('genders', $user->get_genders());
 
   // get custom fields
-  $smarty->assign('custom_fields', $user->get_custom_fields(["get" => "search"]));
+  $custom_fields = $user->get_custom_fields(["get" => "search"]);
+  foreach ($custom_fields as &$custom_field) {
+    $custom_field['value'] = $filters['fld_' . $custom_field['field_id']] ?? ($custom_field['type'] == 'multipleselectbox' ? [] : ($custom_field['type'] == 'selectbox' ? 'any' : ''));
+  }
+  unset($custom_field);
+  $smarty->assign('custom_fields', $custom_fields);
 
   // get ads campaigns
-  $smarty->assign('ads_campaigns', $user->ads_campaigns());
+  $smarty->assign('ads_campaigns', method_exists($user, 'ads_campaigns') ? $user->ads_campaigns() : []);
 
   // get ads
   $smarty->assign('ads', $user->ads('people'));

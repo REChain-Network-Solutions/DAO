@@ -27,12 +27,14 @@ trait HashtagsTrait
     if ($user_id) {
       $where_query = " AND hashtags_posts.post_id IN (SELECT post_id FROM posts WHERE posts.user_id = " . secure($user_id, 'int') . " AND posts.user_type = 'user')";
     }
-    $get_trending_hashtags = $db->query(sprintf("SELECT hashtags.hashtag, COUNT(hashtags_posts.id) AS frequency FROM hashtags INNER JOIN hashtags_posts ON hashtags.hashtag_id = hashtags_posts.hashtag_id WHERE hashtags_posts.created_at > DATE_SUB(CURDATE(), INTERVAL 1 %s) " . $where_query . "GROUP BY hashtags_posts.hashtag_id ORDER BY frequency DESC LIMIT %s", secure($system['trending_hashtags_interval'], "", false), secure($system['trending_hashtags_limit'], 'int', false)));
-    if ($get_trending_hashtags->num_rows > 0) {
-      while ($hashtag = $get_trending_hashtags->fetch_assoc()) {
-        $hashtag['hashtag'] = html_entity_decode($hashtag['hashtag'], ENT_QUOTES);
-        $hashtags[] = $hashtag;
-      }
+    $get_trending_hashtags = function () use ($db, $system, $where_query) {
+      return $db->query(sprintf("SELECT hashtags.hashtag, COUNT(hashtags_posts.id) AS frequency FROM hashtags INNER JOIN hashtags_posts ON hashtags.hashtag_id = hashtags_posts.hashtag_id WHERE hashtags_posts.created_at > DATE_SUB(CURDATE(), INTERVAL 1 %s) " . $where_query . "GROUP BY hashtags_posts.hashtag_id ORDER BY frequency DESC LIMIT %s", secure($system['trending_hashtags_interval'], "", false), secure($system['trending_hashtags_limit'], 'int', false)))->fetch_all(MYSQLI_ASSOC);
+    };
+    /* the site-wide list is the same for everyone */
+    $trending_hashtags = ($user_id) ? $get_trending_hashtags() : widget_cache('trending_hashtags:' . $system['trending_hashtags_interval'] . ':' . $system['trending_hashtags_limit'], 300, $get_trending_hashtags);
+    foreach ($trending_hashtags as $hashtag) {
+      $hashtag['hashtag'] = html_entity_decode($hashtag['hashtag'], ENT_QUOTES);
+      $hashtags[] = $hashtag;
     }
     return $hashtags;
   }
@@ -74,7 +76,8 @@ trait HashtagsTrait
       $pattern = '/<span class="mention"[^>]*data-denotation-char="#"[^>]*data-value="([^"]+)"[^>]*>.*?<\/span>\s*<\/span>/i';
       $text = preg_replace($pattern, '#$1', $text);
       /* then decode normal hashtags */
-      $pattern = '/(\s|^)((#|\x{ff03}){1}([0-9_\p{L}&;]*[_\p{L}&;][0-9_\p{L}&;]*))/u';
+      $entity = '&(?!(?:lt|gt|amp|quot|nbsp);)[a-z][a-z0-9]*;';
+      $pattern = '/(\s|^|&nbsp;)((#|\x{ff03}){1}((?:[0-9_\p{L}]|' . $entity . ')*(?:[_\p{L}]|' . $entity . ')(?:[0-9_\p{L}]|' . $entity . ')*))/ui';
       $text = preg_replace_callback($pattern, function ($matches) use ($trending_hashtags, $post_id) {
         global $system, $db, $date;
         if ($trending_hashtags) {

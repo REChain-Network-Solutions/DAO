@@ -1,0 +1,61 @@
+/**
+ * Embed Page
+ * Minimal styles for the public video embed iframe.
+ */
+
+:root {
+  --body-font-family: Inter, Helvetica, sans-serif;
+  --plyr-color-main: #5e72e4;
+  --plyr-font-family: var(--body-font-family);
+  --plyr-font-size-base: 15px;
+  --plyr-font-size-small: 13px;
+  --plyr-font-size-large: 18px;
+  --plyr-font-size-xlarge: 21px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--body-font-family);
+}
+
+.embed-video-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.embed-video-wrapper .plyr,
+.embed-video-wrapper video {
+  width: 100%;
+  height: 100%;
+}
+
+.embed-video-wrapper .plyr--video {
+  font-family: var(--body-font-family);
+}
+
+.embed-video-wrapper .plyr__control--overlaid {
+  background: var(--plyr-color-main);
+}
+
+.embed-video-wrapper .plyr--video .plyr__control.plyr__tab-focus,
+.embed-video-wrapper .plyr--video .plyr__control:hover,
+.embed-video-wrapper .plyr--video .plyr__control[aria-expanded="true"] {
+  background: var(--plyr-color-main);
+}
+
+.embed-video-wrapper .plyr__menu__container .plyr__control[role="menuitemradio"][aria-checked="true"]::before {
+  background: var(--plyr-color-main);
+}
+
+.embed-video-wrapper .plyr--full-ui input[type="range"] {
+  color: var(--plyr-color-main);
+}

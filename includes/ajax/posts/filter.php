@@ -24,11 +24,15 @@ try {
   switch ($_GET['handle']) {
     case 'posts':
       // get filtered posts
-      $posts = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'id' => $_POST['id']]);
+      $category = (isset($_POST['category']) && is_numeric($_POST['category'])) ? (int) $_POST['category'] : null;
+      $country = (isset($_POST['country']) && is_numeric($_POST['country'])) ? (int) $_POST['country'] : 'all';
+      $posts = $user->get_posts(['get' => $_POST['get'], 'filter' => $_POST['filter'], 'category' => $category, 'country' => $country, 'id' => $_POST['id']]);
       /* assign variables */
       $smarty->assign('posts', $posts);
       $smarty->assign('_get', $_POST['get']);
       $smarty->assign('_filter', $_POST['filter']);
+      $smarty->assign('_category', $category);
+      $smarty->assign('_country', $country);
       $smarty->assign('_id', $_POST['id']);
       /* return */
       $return['posts'] = $smarty->fetch("ajax.posts.tpl");

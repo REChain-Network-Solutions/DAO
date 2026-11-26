@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>{$template_subject}</title>
+    {include file='emails/__email_styles.tpl'}
+  </head>
+
+  <body>
+    <span class="preheader">{$template_subject}</span>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body">
+      <tr>
+        <td>&nbsp;</td>
+        <td class="container">
+
+          <div class="email-header">
+            <a href="{$system['system_url']}">
+              {if $system['system_logo']}
+              <img src="{$system['system_uploads']}/{$system['system_logo']}" alt="{__($system['system_title'])}">
+              {else}
+              <span class="site-name">{__($system['system_title'])}</span>
+              {/if}
+            </a>
+          </div>
+
+          <div class="content">
+            <table role="presentation" class="main">
+              <tr>
+                <td class="header-bar">&nbsp;</td>
+              </tr>
+              <tr>
+                <td class="wrapper">
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <h1>{__("New Login Alert")}</h1>
+                        <p>{__("Hi")} {$receiver['user_name']},</p>
+                        <p>{__("Your account was just logged in from a new location.")}</p>
+
+                        <p>
+                          <strong>{__("Country")}:</strong> {$login['country']|escape}<br>
+                          <strong>{__("Network")}:</strong> {$login['isp']|escape}<br>
+                          <strong>{__("IP Address")}:</strong> {$login['ip']|escape}<br>
+                          <strong>{__("Browser")}:</strong> {$login['browser']|escape}<br>
+                          <strong>{__("OS")}:</strong> {$login['os']|escape}<br>
+                          <strong>{__("Date")}:</strong> {$login['time']}
+                        </p>
+
+                        <p><a href="{$system['system_url']}/settings/security/sessions">{__("Review your sessions")}</a></p>
+
+                        <hr>
+
+                        <p class="note">{__("If this was not you, end the session and change your password immediately as your account may be compromised.")}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="footer">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td class="content-block">
+                    <p>&copy; {$smarty.now|date_format:"%Y"} <a href="{$system['system_url']}">{__($system['system_title'])}</a>. {__("All rights reserved.")}</p>
+                    <p>{__("You are receiving this email because your account was logged in from a new location at")} <a href="{$system['system_url']}">{__($system['system_title'])}</a>.</p>
+                    <p><a href="{$system['system_url']}/settings/notifications">{__("Manage email notification preferences")}</a></p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+  </body>
+
+</html>

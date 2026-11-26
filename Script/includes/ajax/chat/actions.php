@@ -79,7 +79,7 @@ try {
       }
 
       // update typing status
-      $user->update_conversation_typing_status($_POST['conversation_id'], $_POST['is_typing']);
+      $user->update_conversation_typing_status($_POST['conversation_id'], $_POST['is_typing'], !empty($_POST['as_page']));
       break;
 
     case 'seen':
@@ -89,7 +89,7 @@ try {
       }
 
       // update seen status
-      $user->update_conversation_seen_status((array)$_POST['ids']);
+      $user->update_conversation_seen_status((array)$_POST['ids'], !empty($_POST['as_page']));
       break;
 
     case 'color':
@@ -100,6 +100,91 @@ try {
 
       // color converstaion
       $user->set_conversation_color($_POST['conversation_id'], $_POST['color']);
+      break;
+
+    case 'rename':
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // rename conversation
+      $return['conversation_id'] = $_POST['conversation_id'];
+      $return['conversation'] = $user->rename_conversation($_POST['conversation_id'], $_POST['name'] ?? '');
+      break;
+
+    case 'add':
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      if (!isset($_POST['user_id']) || !is_numeric($_POST['user_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // add conversation user
+      $return['conversation_id'] = $_POST['conversation_id'];
+      $return['conversation'] = $user->add_conversation_user($_POST['conversation_id'], $_POST['user_id']);
+      $return['added_user_id'] = $_POST['user_id'];
+      break;
+
+    case 'remove':
+      // valid inputs
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      if (!isset($_POST['user_id']) || !is_numeric($_POST['user_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+
+      // remove conversation user
+      $return['conversation_id'] = $_POST['conversation_id'];
+      $return['conversation'] = $user->remove_conversation_user($_POST['conversation_id'], $_POST['user_id']);
+      $return['removed_user_id'] = $_POST['user_id'];
+      break;
+
+    case 'delete_message':
+      if (!isset($_POST['message_id']) || !is_numeric($_POST['message_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      $user->delete_conversation_message($_POST['message_id']);
+      $return['message_id'] = $_POST['message_id'];
+      break;
+
+    case 'react_message':
+      if (!isset($_POST['message_id']) || !is_numeric($_POST['message_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      $user->react_message($_POST['message_id'], $_POST['reaction']);
+      $return['message'] = $user->get_conversation_message_by_id($_POST['message_id']);
+      break;
+
+    case 'unreact_message':
+      if (!isset($_POST['message_id']) || !is_numeric($_POST['message_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      $user->unreact_message($_POST['message_id'], $_POST['reaction']);
+      $return['message'] = $user->get_conversation_message_by_id($_POST['message_id']);
+      break;
+
+    case 'pin':
+      if (!isset($_POST['message_id']) || !is_numeric($_POST['message_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      $conversation = $user->pin_conversation_message($_POST['message_id'], !empty($_POST['as_page']));
+      $return['conversation'] = $conversation;
+      $smarty->assign('conversation', $conversation);
+      $return['pin_html'] = $smarty->fetch("__chat_pin.tpl");
+      break;
+
+    case 'unpin':
+      if (!isset($_POST['conversation_id']) || !is_numeric($_POST['conversation_id'])) {
+        throw new BadRequestException(__("Invalid request"));
+      }
+      $conversation = $user->unpin_conversation_message($_POST['conversation_id'], !empty($_POST['as_page']));
+      $return['conversation'] = $conversation;
+      $smarty->assign('conversation', $conversation);
+      $return['pin_html'] = $smarty->fetch("__chat_pin.tpl");
       break;
 
     default:

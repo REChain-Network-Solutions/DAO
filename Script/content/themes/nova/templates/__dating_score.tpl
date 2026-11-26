@@ -1,0 +1,4 @@
+<div class="pointer-events-auto inline-flex items-center rounded-full border border-white/25 bg-black/35 font-medium text-white shadow-lg shadow-black/20 backdrop-blur-md {if $_size}gap-2 py-1.5 ps-2 pe-3 text-sm{else}gap-1.5 py-1 ps-1.5 pe-2.5 text-xs{/if}" title='{__("Match")} · {__("Based on interests, age, distance and preferences")}'>
+  <span class="radial-progress text-[color:var(--to)] [--from:#a855f7] [--to:#ef4444] before:[background:radial-gradient(farthest-side,var(--from)_98%,#0000)_top/var(--thickness)_var(--thickness)_no-repeat,conic-gradient(var(--from),var(--to)_var(--radialprogress),rgb(255_255_255/0.25)_0)]" style="--value:{$_score}; --size:{if $_size}1.25rem{else}1rem{/if}; --thickness:4px;" role="progressbar" aria-valuenow="{$_score}" aria-valuemin="0" aria-valuemax="100" aria-label='{__("Match")}'></span>
+  {$_score}%
+</div>

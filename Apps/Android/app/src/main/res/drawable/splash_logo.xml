@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Splash screen logo. To rebrand, replace res/drawable-nodpi/splash_logo_image.png
+    (square PNG, 512×512 or larger, transparent background works best).
+    The system crops the icon to a circle; the inset keeps the whole logo visible.
+    Lower the inset to make the logo bigger, raise it to make it smaller.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_logo_image"
+    android:inset="24%" />

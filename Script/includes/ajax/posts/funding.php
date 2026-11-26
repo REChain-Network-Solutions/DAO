@@ -28,7 +28,7 @@ if (!$system['funding_enabled']) {
 
 // check offers permission
 if (in_array($_GET['do'], ['create', 'publish', 'edit']) && !$user->_data['can_raise_funding']) {
-  if (!$user->check_module_package_permission("funding_permission")) {
+  if ($user->check_module_package_permission("funding_permission")) {
     return_json(["callback" => "window.location = '" . $system['system_url'] . "/packages?highlight=true';"]);
   } else {
     modal("MESSAGE", __("Error"), __("You don't have the permission to do this"));
@@ -48,8 +48,9 @@ try {
       }
 
       // return
+      $smarty->assign('funding_categories', $user->get_categories("funding_categories"));
       $return['template'] = $smarty->fetch("ajax.funding.publisher.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'publish':
@@ -87,6 +88,16 @@ try {
       if (is_empty($_POST['cover_image'])) {
         return_json(['error' => true, 'message' => __("Add cover image for your funding request")]);
       }
+      if (!is_valid_upload_source($_POST['cover_image'])) {
+        _error(400);
+      }
+      /* check funding category */
+      if (is_empty($_POST['category'])) {
+        return_json(['error' => true, 'message' => __("select valid category for your funding")]);
+      }
+      if (!$user->get_category("funding_categories", $_POST['category'])) {
+        return_json(['error' => true, 'message' => __("select valid category for your funding")]);
+      }
 
       /* prepare inputs */
       $inputs['is_anonymous'] = '0';
@@ -113,10 +124,11 @@ try {
       }
       /* assign variables */
       $smarty->assign('post', $post);
+      $smarty->assign('funding_categories', $user->get_categories("funding_categories"));
 
       // return
       $return['template'] = $smarty->fetch("ajax.funding.editor.tpl");
-      $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template); initialize_modal();";
+      $return['callback'] = "modal_content(response.template, true);";
       break;
 
     case 'donate':

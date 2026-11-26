@@ -42,7 +42,7 @@ try {
   $smarty->assign('post', $post);
   /* return */
   $return['template'] = $smarty->fetch("ajax.who_reviews.tpl");
-  $return['callback'] = "$('#modal').modal('show'); $('.modal-content:last').html(response.template);";
+  $return['callback'] = "modal_content(response.template);";
 
   // return & exit
   return_json($return);

@@ -23,6 +23,9 @@ if ($user->_data['user_demo']) {
   modal("ERROR", __("Demo Restriction"), __("You can't do this with demo account"));
 }
 
+// refresh the compiled system cache
+register_shutdown_function('system_cache_flush');
+
 // handle permissions groups
 try {
 
@@ -51,9 +54,11 @@ try {
       $_POST['gifts_permission'] = (isset($_POST['gifts_permission'])) ? '1' : '0';
       $_POST['stories_permission'] = (isset($_POST['stories_permission'])) ? '1' : '0';
       $_POST['posts_permission'] = (isset($_POST['posts_permission'])) ? '1' : '0';
+      $_POST['comments_permission'] = (isset($_POST['comments_permission'])) ? '1' : '0';
       $_POST['schedule_posts_permission'] = (isset($_POST['schedule_posts_permission'])) ? '1' : '0';
       $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
       $_POST['collaborative_posts_permission'] = (isset($_POST['collaborative_posts_permission'])) ? '1' : '0';
+      $_POST['rich_text_posts_permission'] = (isset($_POST['rich_text_posts_permission'])) ? '1' : '0';
       $_POST['colored_posts_permission'] = (isset($_POST['colored_posts_permission'])) ? '1' : '0';
       $_POST['activity_posts_permission'] = (isset($_POST['activity_posts_permission'])) ? '1' : '0';
       $_POST['polls_posts_permission'] = (isset($_POST['polls_posts_permission'])) ? '1' : '0';
@@ -72,6 +77,7 @@ try {
       $_POST['ads_permission'] = (isset($_POST['ads_permission'])) ? '1' : '0';
       $_POST['funding_permission'] = (isset($_POST['funding_permission'])) ? '1' : '0';
       $_POST['monetization_permission'] = (isset($_POST['monetization_permission'])) ? '1' : '0';
+      $_POST['dating_permission'] = (isset($_POST['dating_permission'])) ? '1' : '0';
       $_POST['tips_permission'] = (isset($_POST['tips_permission'])) ? '1' : '0';
       $_POST['custom_affiliates_system'] = (isset($_POST['custom_affiliates_system'])) ? '1' : '0';
       $_POST['custom_points_system'] = (isset($_POST['custom_points_system'])) ? '1' : '0';
@@ -97,9 +103,11 @@ try {
         gifts_permission,
         stories_permission,
         posts_permission,
+        comments_permission,
         schedule_posts_permission,
         anonymous_posts_permission,
         collaborative_posts_permission,
+        rich_text_posts_permission,
         colored_posts_permission,
         activity_posts_permission,
         polls_posts_permission,
@@ -118,6 +126,7 @@ try {
         ads_permission,
         funding_permission,
         monetization_permission,
+        dating_permission,
         tips_permission,
         custom_affiliates_system,
         affiliates_per_user,
@@ -142,7 +151,7 @@ try {
         affiliates_percentage_10,
         custom_points_system,
         points_per_currency
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
         secure($_POST['title']),
         secure($_POST['pages_permission'], 'int'),
         secure($_POST['groups_permission'], 'int'),
@@ -162,9 +171,11 @@ try {
         secure($_POST['gifts_permission'], 'int'),
         secure($_POST['stories_permission'], 'int'),
         secure($_POST['posts_permission'], 'int'),
+        secure($_POST['comments_permission'], 'int'),
         secure($_POST['schedule_posts_permission'], 'int'),
         secure($_POST['anonymous_posts_permission'], 'int'),
         secure($_POST['collaborative_posts_permission'], 'int'),
+        secure($_POST['rich_text_posts_permission'], 'int'),
         secure($_POST['colored_posts_permission'], 'int'),
         secure($_POST['activity_posts_permission'], 'int'),
         secure($_POST['polls_posts_permission'], 'int'),
@@ -183,6 +194,7 @@ try {
         secure($_POST['ads_permission'], 'int'),
         secure($_POST['funding_permission'], 'int'),
         secure($_POST['monetization_permission'], 'int'),
+        secure($_POST['dating_permission'], 'int'),
         secure($_POST['tips_permission'], 'int'),
         secure($_POST['custom_affiliates_system'], 'int'),
         secure($_POST['affiliates_per_user'], 'float'),
@@ -242,9 +254,11 @@ try {
       $_POST['gifts_permission'] = (isset($_POST['gifts_permission'])) ? '1' : '0';
       $_POST['stories_permission'] = (isset($_POST['stories_permission'])) ? '1' : '0';
       $_POST['posts_permission'] = (isset($_POST['posts_permission'])) ? '1' : '0';
+      $_POST['comments_permission'] = (isset($_POST['comments_permission'])) ? '1' : '0';
       $_POST['schedule_posts_permission'] = (isset($_POST['schedule_posts_permission'])) ? '1' : '0';
       $_POST['anonymous_posts_permission'] = (isset($_POST['anonymous_posts_permission'])) ? '1' : '0';
       $_POST['collaborative_posts_permission'] = (isset($_POST['collaborative_posts_permission'])) ? '1' : '0';
+      $_POST['rich_text_posts_permission'] = (isset($_POST['rich_text_posts_permission'])) ? '1' : '0';
       $_POST['colored_posts_permission'] = (isset($_POST['colored_posts_permission'])) ? '1' : '0';
       $_POST['activity_posts_permission'] = (isset($_POST['activity_posts_permission'])) ? '1' : '0';
       $_POST['polls_posts_permission'] = (isset($_POST['polls_posts_permission'])) ? '1' : '0';
@@ -263,6 +277,7 @@ try {
       $_POST['ads_permission'] = (isset($_POST['ads_permission'])) ? '1' : '0';
       $_POST['funding_permission'] = (isset($_POST['funding_permission'])) ? '1' : '0';
       $_POST['monetization_permission'] = (isset($_POST['monetization_permission'])) ? '1' : '0';
+      $_POST['dating_permission'] = (isset($_POST['dating_permission'])) ? '1' : '0';
       $_POST['tips_permission'] = (isset($_POST['tips_permission'])) ? '1' : '0';
       $_POST['custom_affiliates_system'] = (isset($_POST['custom_affiliates_system'])) ? '1' : '0';
       $_POST['custom_points_system'] = (isset($_POST['custom_points_system'])) ? '1' : '0';
@@ -288,9 +303,11 @@ try {
         gifts_permission = %s,
         stories_permission = %s,
         posts_permission = %s,
+        comments_permission = %s,
         schedule_posts_permission = %s,
         anonymous_posts_permission = %s,
         collaborative_posts_permission = %s,
+        rich_text_posts_permission = %s,
         colored_posts_permission = %s,
         activity_posts_permission = %s,
         polls_posts_permission = %s,
@@ -309,6 +326,7 @@ try {
         ads_permission = %s,
         funding_permission = %s,
         monetization_permission = %s,
+        dating_permission = %s,
         tips_permission = %s,
         custom_affiliates_system = %s,
         affiliates_per_user = %s,
@@ -353,9 +371,11 @@ try {
         secure($_POST['gifts_permission'], 'int'),
         secure($_POST['stories_permission'], 'int'),
         secure($_POST['posts_permission'], 'int'),
+        secure($_POST['comments_permission'], 'int'),
         secure($_POST['schedule_posts_permission'], 'int'),
         secure($_POST['anonymous_posts_permission'], 'int'),
         secure($_POST['collaborative_posts_permission'], 'int'),
+        secure($_POST['rich_text_posts_permission'], 'int'),
         secure($_POST['colored_posts_permission'], 'int'),
         secure($_POST['activity_posts_permission'], 'int'),
         secure($_POST['polls_posts_permission'], 'int'),
@@ -374,6 +394,7 @@ try {
         secure($_POST['ads_permission'], 'int'),
         secure($_POST['funding_permission'], 'int'),
         secure($_POST['monetization_permission'], 'int'),
+        secure($_POST['dating_permission'], 'int'),
         secure($_POST['tips_permission'], 'int'),
         secure($_POST['custom_affiliates_system'], 'int'),
         secure($_POST['affiliates_per_user'], 'float'),
@@ -426,6 +447,8 @@ try {
       $_POST['mods_marketplace_permission'] = (isset($_POST['mods_marketplace_permission'])) ? '1' : '0';
       $_POST['mods_funding_permission'] = (isset($_POST['mods_funding_permission'])) ? '1' : '0';
       $_POST['mods_monetization_permission'] = (isset($_POST['mods_monetization_permission'])) ? '1' : '0';
+      $_POST['mods_dating_permission'] = (isset($_POST['mods_dating_permission'])) ? '1' : '0';
+      $_POST['mods_stories_permission'] = (isset($_POST['mods_stories_permission'])) ? '1' : '0';
       $_POST['mods_tips_permission'] = (isset($_POST['mods_tips_permission'])) ? '1' : '0';
       $_POST['mods_payments_permission'] = (isset($_POST['mods_payments_permission'])) ? '1' : '0';
       $_POST['mods_developers_permission'] = (isset($_POST['mods_developers_permission'])) ? '1' : '0';
@@ -456,6 +479,8 @@ try {
         'mods_marketplace_permission' => secure($_POST['mods_marketplace_permission']),
         'mods_funding_permission' => secure($_POST['mods_funding_permission']),
         'mods_monetization_permission' => secure($_POST['mods_monetization_permission']),
+        'mods_dating_permission' => secure($_POST['mods_dating_permission']),
+        'mods_stories_permission' => secure($_POST['mods_stories_permission']),
         'mods_tips_permission' => secure($_POST['mods_tips_permission']),
         'mods_payments_permission' => secure($_POST['mods_payments_permission']),
         'mods_developers_permission' => secure($_POST['mods_developers_permission']),

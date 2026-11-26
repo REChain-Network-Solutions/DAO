@@ -11,11 +11,10 @@
 function loadData($req, $res)
 {
   global $user;
-  global $user;
   switch ($req->query['get']) {
     case 'new_people':
       /* get new people */
-      $data = $user->get_new_people($req->query['offset'], $req->query['random']);
+      $data = $user->get_new_people((int) ($req->query['offset'] ?? 0), filter_var($req->query['random'] ?? false, FILTER_VALIDATE_BOOLEAN), $req->query['cursor'] ?? null);
       break;
     default:
       throw new BadRequestException(__("Invalid request"));
@@ -24,7 +23,7 @@ function loadData($req, $res)
   if (!$data) {
     throw new NoDataException(__("No data found"));
   }
-  apiResponse($res, ['data' => $data]);
+  apiResponse($res, ['data' => $data, 'cursor' => $user->_cursor]);
 }
 
 

@@ -1,0 +1,11 @@
+a:1:{i:15;a:2:{s:4:"name";s:11:"PHPSocketIO";s:6:"listen";s:23:"socketIO://0.0.0.0:3000";}}
+----------------------------------------------GLOBAL STATUS----------------------------------------------------
+Workerman version:4.2.1          PHP version:8.4.20
+start time:2026-05-28 03:13:25   run 1 days 5 hours   
+load average: 1.57, 1.63, 1.74   event-loop:\Workerman\Events\Select
+1 workers       1 processes
+worker_name  exit_status      exit_count
+PHPSocketIO  0                0
+----------------------------------------------PROCESS STATUS---------------------------------------------------
+pid	memory  listening               worker_name  connections send_fail timers  total_request qps    status
+15	11.36M  socketIO://0.0.0.0:3000 PHPSocketIO  1           0         1       5353         

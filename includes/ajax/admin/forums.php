@@ -14,9 +14,7 @@ require('../../../bootstrap.php');
 is_ajax();
 
 // check admin|moderator permission
-if (!$user->_is_admin && ($user->_is_moderator && !$system['mods_forums_permission'])) {
-  modal("MESSAGE", __("System Message"), __("You don't have the right permission to access this"));
-}
+admin_access('mods_forums_permission');
 
 // check demo account
 if ($user->_data['user_demo']) {
@@ -26,10 +24,18 @@ if ($user->_data['user_demo']) {
 // handle forums
 try {
 
+  /* valid inputs */
+  if (!is_empty($_POST['forum_color']) && !preg_match('/^#[0-9a-fA-F]{3,8}$/', $_POST['forum_color'])) {
+    throw new Exception(__("Please enter a valid color"));
+  }
+  if (!is_empty($_POST['forum_icon']) && !preg_match('/^[a-z0-9-]+$/', $_POST['forum_icon'])) {
+    _error(400);
+  }
+
   switch ($_GET['do']) {
     case 'add_forum':
       /* insert */
-      $db->query(sprintf("INSERT INTO forums (forum_name, forum_description, forum_section, forum_order) VALUES (%s, %s, %s, %s)", secure($_POST['forum_name']), secure($_POST['forum_description']), secure($_POST['forum_section'], 'int'), secure($_POST['forum_order'], 'int')));
+      $db->query(sprintf("INSERT INTO forums (forum_name, forum_description, forum_color, forum_icon, forum_section, forum_order) VALUES (%s, %s, %s, %s, %s, %s)", secure($_POST['forum_name']), secure($_POST['forum_description']), secure($_POST['forum_color']), secure($_POST['forum_icon']), secure($_POST['forum_section'], 'int'), secure($_POST['forum_order'], 'int')));
       /* return */
       return_json(['callback' => 'window.location = "' . $system['system_url'] . '/' . $control_panel['url'] . '/forums";']);
       break;
@@ -43,7 +49,7 @@ try {
         throw new Exception(__("You can not set the forum as a section to itself"));
       }
       /* update */
-      $db->query(sprintf("UPDATE forums SET forum_name = %s, forum_description = %s, forum_section = %s, forum_order = %s WHERE forum_id = %s", secure($_POST['forum_name']), secure($_POST['forum_description']), secure($_POST['forum_section'], 'int'), secure($_POST['forum_order'], 'int'), secure($_GET['id'], 'int')));
+      $db->query(sprintf("UPDATE forums SET forum_name = %s, forum_description = %s, forum_color = %s, forum_icon = %s, forum_section = %s, forum_order = %s WHERE forum_id = %s", secure($_POST['forum_name']), secure($_POST['forum_description']), secure($_POST['forum_color']), secure($_POST['forum_icon']), secure($_POST['forum_section'], 'int'), secure($_POST['forum_order'], 'int'), secure($_GET['id'], 'int')));
       /* return */
       return_json(['success' => true, 'message' => __("Forum info have been updated")]);
       break;

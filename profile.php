@@ -94,6 +94,16 @@ try {
   if ($system['videos_enabled']) {
     $profile['videos_count'] = $user->get_videos_count($profile['user_id'], 'user');
   }
+  /* get profile reels count */
+  if ($system['reels_enabled']) {
+    $profile['reels_count'] = $user->get_reels_count($profile['user_id'], 'user');
+  }
+  /* get profile friends & followers count */
+  if ($system['friends_enabled']) {
+    $profile['friends_count'] = $friends_count;
+  }
+  $profile['followers_count'] = $user->get_followers_count($profile['user_id']);
+  $profile['followings_count'] = $user->get_followings_count($profile['user_id']);
   /* check if can write blogs */
   $profile['can_write_blogs'] = $system['blogs_enabled'] && $user->check_user_permission($profile['user_id'], 'blogs_permission');
   /* check if can sell products */
@@ -194,9 +204,6 @@ try {
         $user->_data['merits_balance'] = $user->get_user_merits_balance();
       }
 
-      /* get followers count */
-      $profile['followers_count'] = $user->get_followers_count($profile['user_id']);
-
       /* get custom fields */
       $smarty->assign('custom_fields', $user->get_custom_fields(["for" => "user", "get" => "profile", "node_id" => $profile['user_id']]));
 
@@ -222,15 +229,11 @@ try {
       if ($system['friends_enabled']) {
         /* check top friends first */
         $profile['friends'] = $user->get_top_friends($profile['user_id']);
-        if ($profile['friends']) {
-          $profile['friends_count'] = $friends_count;
-        } else {
+        if (!$profile['friends']) {
           /* no top friends, get all friends */
           $profile['friends'] = $user->get_friends($profile['user_id']);
-          if ($profile['friends']) {
-            $profile['friends_count'] = $friends_count;
-          }
         }
+        $profile['friends'] = array_slice($profile['friends'], 0, $system['min_results_even']);
       }
 
       /* get subscribers */
@@ -260,27 +263,22 @@ try {
 
       /* get photos */
       if (!$profile['needs_subscription']) {
-        $profile['photos'] = $user->get_photos($profile['user_id'], 'user', 0, true, true);
+        $profile['photos'] = $user->get_photos($profile['user_id'], 'user', 0, true, true, null, 9);
       }
 
       /* get pinned post */
       $pinned_post = $user->get_post($profile['user_pinned_post'], true, false, true);
       $smarty->assign('pinned_post', $pinned_post);
 
-      /* prepare publisher */
-      $smarty->assign('feelings', get_feelings());
-      $smarty->assign('feelings_types', get_feelings_types());
-      if ($system['colored_posts_enabled']) {
-        $smarty->assign('colored_patterns', $user->get_posts_colored_patterns());
-      }
-      if ($user->_data['can_upload_videos']) {
-        $smarty->assign('videos_categories', $user->get_categories("posts_videos_categories"));
-      }
-
       /* get posts */
       $posts = $user->get_posts(['get' => 'posts_profile', 'id' => $profile['user_id']]);
       /* assign variables */
       $smarty->assign('posts', $posts);
+      break;
+
+    case 'about':
+      /* get custom fields */
+      $smarty->assign('custom_fields', $user->get_custom_fields(["for" => "user", "get" => "profile", "node_id" => $profile['user_id']]));
       break;
 
     case 'friends':
@@ -290,25 +288,16 @@ try {
       }
       /* get friends */
       $profile['friends'] = $user->get_friends($profile['user_id']);
-      if ($profile['friends']) {
-        $profile['friends_count'] = $friends_count;
-      }
       break;
 
     case 'followers':
       /* get followers */
       $profile['followers'] = $user->get_followers($profile['user_id']);
-      if ($profile['followers']) {
-        $profile['followers_count'] = $user->get_followers_count($profile['user_id']);
-      }
       break;
 
     case 'followings':
       /* get followings */
       $profile['followings'] = $user->get_followings($profile['user_id']);
-      if ($profile['followings']) {
-        $profile['followings_count'] = $user->get_followings_count($profile['user_id']);
-      }
       break;
 
     case 'subscribers':
@@ -401,6 +390,10 @@ try {
       break;
 
     case 'products':
+      redirect('/' . $profile['user_name'] . '/listings');
+      break;
+
+    case 'listings':
       /* get content */
       if (!$profile['needs_subscription']) {
         /* get posts (products) */
@@ -472,6 +465,11 @@ try {
 
 // page header
 page_header($profile['name'], $profile['user_biography'], $profile['user_picture']);
+
+// get stories
+if ($system['stories_enabled'] && $user->_logged_in) {
+  $profile['stories'] = $user->get_profile_stories($profile['user_id']);
+}
 
 // assign variables
 $smarty->assign('profile', $profile);

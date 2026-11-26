@@ -30,12 +30,12 @@ try {
   switch ($_GET['do']) {
     case 'create':
       // valid inputs
-      if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-        _error(400);
+      if (!isset($_POST['forum_id']) || !is_numeric($_POST['forum_id'])) {
+        throw new Exception(__("You must select a forum for your thread"));
       }
 
       // create thread
-      $thread_id = $user->post_forum_thread($_GET['id'], $_POST['title'], $_POST['text']);
+      $thread_id = $user->post_forum_thread($_POST['forum_id'], $_POST['title'], $_POST['text']);
 
       // return
       $return['path'] = $system['system_url'] . '/forums/thread/' . $thread_id . '/' . get_url_text($_POST['title']);
@@ -52,6 +52,22 @@ try {
 
       // return
       $return['path'] = $system['system_url'] . '/forums/thread/' . $_GET['id'] . '/' . get_url_text($_POST['title']);
+      break;
+
+    case 'pin':
+    case 'unpin':
+    case 'lock':
+    case 'unlock':
+      // valid inputs
+      if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        _error(400);
+      }
+
+      // update thread status
+      $user->update_forum_thread_status($_GET['id'], $_GET['do']);
+
+      // return
+      $return['callback'] = 'window.location.reload();';
       break;
 
     default:
